@@ -1,8 +1,85 @@
 use crate::cpuid;
 use crate::cpuid::fns;
 
+const VENDOR_AMD: &str = "AuthenticAMD";
+const VENDOR_CENTAUR: &str = "CentaurHauls";
+const VENDOR_CYRIX: &str = "CyrixInstead";
+const VENDOR_DMP: &str = "Vortex86 SoC";
+const VENDOR_HYGON: &str = "HygonGenuine";
+const VENDOR_INTEL: &str = "GenuineIntel";
+const VENDOR_NEXGEN: &str = "NexGenDriven";
+const VENDOR_NSC: &str = "Geode by NSC";
+const VENDOR_RISE: &str = "RiseRiseRise";
+const VENDOR_SIS: &str = "SiS SiS SiS ";
+const VENDOR_TRANSMETA: &str = "GenuineTMx86";
+const VENDOR_UMC: &str = "UMC UMC UMC ";
+
+#[derive(Debug)]
+pub struct CpuArch {
+    model: String,
+    micro_arch: MicroArch,
+    code_name: String,
+    brand_name: String,
+    vendor_string: String,
+}
+
+impl CpuArch {
+    pub fn new(
+        model: String,
+        micro_arch: MicroArch,
+        code_name: &'static str,
+        brand_name: &str,
+        vendor_string: &str,
+    ) -> Self {
+        CpuArch {
+            model: model.to_string(),
+            micro_arch,
+            code_name: code_name.to_string(),
+            brand_name: brand_name.to_string(),
+            vendor_string: vendor_string.to_string(),
+        }
+    }
+
+    pub fn find(model: String, s: CpuSignature, vendor_string: &str) -> Self {
+        let arch = |s: MicroArch, code_name: &'static str, brand_name: String| -> Self {
+            CpuArch::new(model, s, code_name, &brand_name, vendor_string)
+        };
+
+        // Brand for Centaur CPUs...is complicated
+        if vendor_string == VENDOR_CENTAUR {
+            return match (
+                s.extended_family,
+                s.family,
+                s.extended_model,
+                s.model,
+                s.stepping,
+            ) {
+                (_, _, _, _, _) => arch(MicroArch::Unknown, "", CpuBrand::Unknown.into()),
+            };
+        }
+
+        let brand = CpuBrand::from(vendor_string.to_string());
+        let brand_arch = |s: MicroArch, code_name: &'static str | -> Self {
+            arch(s, code_name, brand.into())
+        };
+
+        match (
+            s.extended_family,
+            s.family,
+            s.extended_model,
+            s.model,
+            s.stepping,
+        ) {
+            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, ""),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
+    Unknown,
+
     // AMD
     Am486,
     Am5x86,
@@ -29,6 +106,37 @@ pub enum MicroArch {
     Zen4C,
     Zen5,
     Zen5C,
+
+    // Centaur (IDT)
+    Winchip,
+    Winchip2,
+    Winchip2A,
+    Winchip2B,
+    Winchip3,
+
+    // Centaur (Via)
+    Samuel,
+    Samuel2,
+    Ezra,
+    EzraT,
+    Nehemiah,
+    NehemiahP,
+    Esther,
+    Isiah,
+
+    // Centaur (Zhaoxin)
+    Wudaokou,
+    Lujiazui,
+
+    // Cyrix
+    FiveX86,
+    M1,
+    M2,
+    MediaGx,
+    Geode, //Cyrix/NatSemi
+
+    // DM&P
+    VortexDX3,
 
     // Intel
     I486,
@@ -74,34 +182,55 @@ pub enum MicroArch {
     Northwood,
     Prescott,
     CedarMill,
+
+    // Rise
+    MP6,
+    MP6Shrink,
+
+    // Transmeta
+    Crusoe,
+    Infineon,
+
+    // UMC
+    U5S,
+    U5D
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuBrand {
     AMD,
     Cyrix,
+    DMP,
     Hygon,
     IDT,
     Intel,
     NationalSemiconductor,
+    NexGen,
     Rise,
+    SiS,
+    Transmeta,
     Umc,
     Unknown,
     Via,
     Zhaoxin,
 }
 
-impl From<&String> for CpuBrand {
-    fn from(brand: &String) -> Self {
+impl From<String> for CpuBrand {
+    fn from(brand: String) -> Self {
         match brand.as_str() {
-            "AuthenticAMD" => CpuBrand::AMD,
+            VENDOR_AMD => CpuBrand::AMD,
             // Well, this one is more complicated...
-            "CentaurHauls" => CpuBrand::Via,
-            "CyrixInstead" => CpuBrand::Cyrix,
-            "GenuineIntel" => CpuBrand::Intel,
-            "Geode by NSC" => CpuBrand::NationalSemiconductor,
-            "RiseRiseRise" => CpuBrand::Rise,
-            "UMC UMC UMC " => CpuBrand::Umc,
+            // "CentaurHauls" => CpuBrand::Via,
+            VENDOR_CYRIX => CpuBrand::Cyrix,
+            VENDOR_DMP => CpuBrand::Via,
+            VENDOR_HYGON => CpuBrand::Hygon,
+            VENDOR_INTEL => CpuBrand::Intel,
+            VENDOR_NEXGEN => CpuBrand::NexGen,
+            VENDOR_NSC => CpuBrand::NationalSemiconductor,
+            VENDOR_RISE => CpuBrand::Rise,
+            VENDOR_SIS => CpuBrand::SiS,
+            VENDOR_TRANSMETA => CpuBrand::Transmeta,
+            VENDOR_UMC => CpuBrand::Umc,
             _ => CpuBrand::Unknown,
         }
     }
@@ -109,19 +238,25 @@ impl From<&String> for CpuBrand {
 
 impl Into<String> for CpuBrand {
     fn into(self) -> String {
-        match self {
-            CpuBrand::AMD => "AMD".to_string(),
-            CpuBrand::Cyrix => "Cyrix".to_string(),
-            CpuBrand::Hygon => "Hygon".to_string(),
-            CpuBrand::IDT => "IDT".to_string(),
-            CpuBrand::Intel => "Intel".to_string(),
-            CpuBrand::NationalSemiconductor => "National Semiconductor".to_string(),
-            CpuBrand::Rise => "Rise".to_string(),
-            CpuBrand::Umc => "UMC".to_string(),
-            CpuBrand::Unknown => "Unknown".to_string(),
-            CpuBrand::Via => "Via".to_string(),
-            CpuBrand::Zhaoxin => "Zhaoxin".to_string(),
-        }
+        let s = match self {
+            CpuBrand::AMD => "AMD",
+            CpuBrand::Cyrix => "Cyrix",
+            CpuBrand::DMP => "DM&P",
+            CpuBrand::Hygon => "Hygon",
+            CpuBrand::IDT => "IDT",
+            CpuBrand::Intel => "Intel",
+            CpuBrand::NationalSemiconductor => "National Semiconductor",
+            CpuBrand::NexGen => "NexGen",
+            CpuBrand::Rise => "Rise",
+            CpuBrand::SiS => "SiS",
+            CpuBrand::Transmeta => "Transmeta",
+            CpuBrand::Umc => "UMC",
+            CpuBrand::Via => "Via",
+            CpuBrand::Zhaoxin => "Zhaoxin",
+            _ => "Unknown"
+        };
+
+        s.to_string()
     }
 }
 
@@ -208,23 +343,21 @@ impl CpuSignature {
 
 #[derive(Debug)]
 pub struct Cpu {
-    brand: String,
-    model: String,
+    cpu_arch: CpuArch,
     threads: u32,
-    vendor_string: String,
     signature: CpuSignature,
     features: CpuFeatures,
 }
 
 impl Cpu {
     pub fn new() -> Self {
-        let vendor_string = fns::vendor_id();
-
         Self {
-            brand: CpuBrand::from(&vendor_string).into(),
-            model: fns::model_string(),
+            cpu_arch: CpuArch::find(
+                fns::model_string(),
+                CpuSignature::detect(),
+                fns::vendor_id().as_str(),
+            ),
             threads: fns::logical_cores(),
-            vendor_string,
             signature: CpuSignature::detect(),
             features: CpuFeatures::detect(),
         }
