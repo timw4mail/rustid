@@ -54,6 +54,8 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
+                (0, 7, 1, 11, 0) => arch(MicroArch::Wudaokou, "WuDaoKou", CpuBrand::Zhaoxin.into()),
+                (0, 7, 3, 11, 0) => arch(MicroArch::Lujiazui, "LuJiaZui", CpuBrand::Zhaoxin.into()),
                 (_, _, _, _, _) => arch(MicroArch::Unknown, "", CpuBrand::Unknown.into()),
             };
         }
