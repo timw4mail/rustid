@@ -2,17 +2,106 @@ use crate::cpuid;
 use crate::cpuid::fns;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MicroArch {
+    // AMD
+    Am486,
+    Am5x86,
+    SSA5,
+    K5,
+    K6,
+    K7,
+    K8,
+    K10,
+    Bobcat,
+    Puma2008,
+    Bulldozer,
+    Piledriver,
+    Steamroller,
+    Excavator,
+    Jaguar,
+    Puma2014,
+    Zen,
+    ZenPlus,
+    Zen2,
+    Zen3,
+    Zen3Plus,
+    Zen4,
+    Zen4C,
+    Zen5,
+    Zen5C,
+
+    // Intel
+    I486,
+    P5,
+    P5MMX,
+    Lakemont,
+    P6Pro,
+    P6PentiumII,
+    P6PentiumIII,
+    Dothan,
+    Yonah,
+    Merom,
+    Penryn,
+    Nehalem,
+    Westmere,
+    Bonnel,
+    Saltwell,
+    Silvermont,
+    IvyBridge,
+    Haswell,
+    Broadwell,
+    Airmont,
+    KabyLake,
+    Skylake,
+    CascadeLake,
+    KnightsLanding,
+    Goldmont,
+    PalmCove,
+    SunnyCove,
+    GoldmontPlus,
+    IcyLake,
+    Tremont,
+    TigerLake,
+    WhiskyLake,
+    SapphireRapids,
+    AlderLake,
+    CoffeeLake,
+    CometLake,
+    RaptorLake,
+    KnightsFerry,
+    KnightsCorner,
+    Willamette,
+    Northwood,
+    Prescott,
+    CedarMill,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuBrand {
     AMD,
+    Cyrix,
+    Hygon,
+    IDT,
     Intel,
+    NationalSemiconductor,
+    Rise,
+    Umc,
     Unknown,
+    Via,
+    Zhaoxin,
 }
 
 impl From<&String> for CpuBrand {
     fn from(brand: &String) -> Self {
         match brand.as_str() {
             "AuthenticAMD" => CpuBrand::AMD,
+            // Well, this one is more complicated...
+            "CentaurHauls" => CpuBrand::Via,
+            "CyrixInstead" => CpuBrand::Cyrix,
             "GenuineIntel" => CpuBrand::Intel,
+            "Geode by NSC" => CpuBrand::NationalSemiconductor,
+            "RiseRiseRise" => CpuBrand::Rise,
+            "UMC UMC UMC " => CpuBrand::Umc,
             _ => CpuBrand::Unknown,
         }
     }
@@ -22,8 +111,16 @@ impl Into<String> for CpuBrand {
     fn into(self) -> String {
         match self {
             CpuBrand::AMD => "AMD".to_string(),
+            CpuBrand::Cyrix => "Cyrix".to_string(),
+            CpuBrand::Hygon => "Hygon".to_string(),
+            CpuBrand::IDT => "IDT".to_string(),
             CpuBrand::Intel => "Intel".to_string(),
+            CpuBrand::NationalSemiconductor => "National Semiconductor".to_string(),
+            CpuBrand::Rise => "Rise".to_string(),
+            CpuBrand::Umc => "UMC".to_string(),
             CpuBrand::Unknown => "Unknown".to_string(),
+            CpuBrand::Via => "Via".to_string(),
+            CpuBrand::Zhaoxin => "Zhaoxin".to_string(),
         }
     }
 }
