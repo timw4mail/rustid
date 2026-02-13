@@ -162,61 +162,15 @@ impl CpuFeatures {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-/// The Raw CPU Signature
-pub struct RawSignature {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct CpuSignature {
     extended_family: u32,
     family: u32,
     extended_model: u32,
     model: u32,
     stepping: u32,
-}
-
-impl RawSignature {
-    pub fn new(ef: u32, f: u32, em: u32, m: u32, s: u32) -> Self {
-        Self {
-            extended_family: ef,
-            family: f,
-            extended_model: em,
-            model: m,
-            stepping: s,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-/// CPU Stepping, Model, and Family
-pub struct DisplaySignature {
-    family: u32,
-    model: u32,
-    stepping: u32,
-}
-impl From<RawSignature> for DisplaySignature {
-    fn from(sig: RawSignature) -> Self {
-        let display_family = if sig.family == 0xF {
-            sig.family + sig.extended_family
-        } else {
-            sig.family
-        };
-
-        let display_model = if sig.family == 0x6 || sig.family == 0xF {
-            (sig.extended_model << 4) + sig.model
-        } else {
-            sig.model
-        };
-
-        Self {
-            family: display_family,
-            model: display_model,
-            stepping: sig.stepping,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct CpuSignature {
-    raw: RawSignature,
-    display: DisplaySignature,
+    display_family: u32,
+    display_model: u32,
 }
 
 impl CpuSignature {
@@ -228,11 +182,26 @@ impl CpuSignature {
         let extended_model = (res.eax >> 16) & 0xF;
         let extended_family = (res.eax >> 20) & 0xFF;
 
-        let raw = RawSignature::new(extended_family, family, extended_model, model, stepping);
+        let display_family = if family == 0xF {
+            family + extended_family
+        } else {
+            family
+        };
+
+        let display_model = if family == 0x6 || family == 0xF {
+            (extended_model << 4) + model
+        } else {
+            model
+        };
 
         Self {
-            raw,
-            display: DisplaySignature::from(raw),
+            extended_model,
+            extended_family,
+            family,
+            model,
+            stepping,
+            display_family,
+            display_model,
         }
     }
 }
