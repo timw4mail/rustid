@@ -54,6 +54,7 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
+                // Zhaoxin
                 (0, 7, 1, 11, 0) => arch(MicroArch::Wudaokou, "WuDaoKou", CpuBrand::Zhaoxin.into()),
                 (0, 7, 3, 11, 0) => arch(MicroArch::Lujiazui, "LuJiaZui", CpuBrand::Zhaoxin.into()),
                 (_, _, _, _, _) => arch(MicroArch::Unknown, "", CpuBrand::Unknown.into()),
@@ -61,9 +62,8 @@ impl CpuArch {
         }
 
         let brand = CpuBrand::from(vendor_string.to_string());
-        let brand_arch = |s: MicroArch, code_name: &'static str | -> Self {
-            arch(s, code_name, brand.into())
-        };
+        let brand_arch =
+            |s: MicroArch, code_name: &'static str| -> Self { arch(s, code_name, brand.into()) };
 
         match (
             s.extended_family,
@@ -73,6 +73,7 @@ impl CpuArch {
             s.stepping,
         ) {
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
+            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix"),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, ""),
         }
     }
@@ -195,7 +196,7 @@ pub enum MicroArch {
 
     // UMC
     U5S,
-    U5D
+    U5D,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -255,7 +256,7 @@ impl Into<String> for CpuBrand {
             CpuBrand::Umc => "UMC",
             CpuBrand::Via => "Via",
             CpuBrand::Zhaoxin => "Zhaoxin",
-            _ => "Unknown"
+            _ => "Unknown",
         };
 
         s.to_string()
