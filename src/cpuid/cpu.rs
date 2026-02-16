@@ -72,8 +72,12 @@ impl CpuArch {
             s.model,
             s.stepping,
         ) {
+            // AMD
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix"),
+
+            // Intel
+            (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, ""),
         }
     }
