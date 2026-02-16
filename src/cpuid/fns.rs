@@ -11,9 +11,9 @@ pub fn vendor_id() -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// Gets the CPU brand string.
+/// Gets the CPU model string.
 pub fn model_string() -> String {
-    let mut brand = String::new();
+    let mut model = String::new();
     // Check if extended functions are supported
     let max_extended_leaf = native_cpuid(0x8000_0000).eax;
     if max_extended_leaf < 0x8000_0004 {
@@ -26,12 +26,37 @@ pub fn model_string() -> String {
             let bytes = reg.to_le_bytes();
             for &b in &bytes {
                 if b != 0 {
-                    brand.push(b as char);
+                    model.push(b as char);
                 }
             }
         }
     }
-    brand.trim().to_string()
+    model.trim().to_string()
+}
+
+pub fn easter_egg() -> String {
+    let mut out = String::new();
+
+    let addr = match vendor_id().as_str() {
+        "AuthenticAMD" => 0x8FFF_FFFF,
+        "Rise Rise Rise" => 0x0000_5A4E,
+        _ => 1,
+    };
+
+    if addr != 1 {
+        let res = native_cpuid(addr);
+
+        for &reg in &[res.eax, res.ebx, res.ecx, res.edx] {
+            let bytes = reg.to_le_bytes();
+            for &b in &bytes {
+                if b != 0 {
+                    out.push(b as char)
+                }
+            }
+        }
+    }
+
+    out.trim().to_string()
 }
 
 /// Returns the number of logical cores.
@@ -43,8 +68,16 @@ pub fn logical_cores() -> u32 {
 // ! CPU Feature Lookups
 // ------------------------------------------------------------------------
 
+pub fn has_fpu() -> bool {
+    (native_cpuid(1).edx & (1 << 0)) != 0
+}
+
 pub fn has_mmx() -> bool {
     (native_cpuid(1).edx & (1 << 23)) != 0
+}
+
+pub fn has_3dnow() -> bool {
+    (native_cpuid(1).edx & (1 << 31)) != 0
 }
 
 pub fn has_sse() -> bool {

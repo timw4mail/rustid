@@ -7,9 +7,7 @@ compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn main() {
-    let cpu = Cpu::new();
-
-    println!("{:#?}", cpu);
+    Cpu::new().display();
 
     // println!("CPU Vendor:    {}", cpu.vendor_id());
     // println!("CPU Brand:     {}", cpu.brand_string());
