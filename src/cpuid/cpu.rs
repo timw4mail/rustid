@@ -74,7 +74,9 @@ impl CpuArch {
         ) {
             // AMD
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
+            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer"),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix"),
+
 
             // Intel
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
