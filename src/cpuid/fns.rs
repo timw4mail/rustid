@@ -1,5 +1,7 @@
 //! CPUID Function Wrappers
 
+use crate::cpuid::brand::CpuBrand;
+
 use super::cpuid;
 
 /// Returns the number of logical cores.
@@ -24,6 +26,10 @@ pub fn has_mmx() -> bool {
 }
 
 pub fn has_3dnow() -> bool {
+    if CpuBrand::detect() == CpuBrand::Intel {
+        return false;
+    }
+
     (cpuid(1).edx & (1 << 31)) != 0
 }
 

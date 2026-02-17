@@ -80,6 +80,7 @@ pub enum MicroArch {
     Bonnel,
     Saltwell,
     Silvermont,
+    SandyBridge,
     IvyBridge,
     Haswell,
     Broadwell,
@@ -340,6 +341,7 @@ impl CpuArch {
             // Pentium Pro
             (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
+            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge"),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
         }
     }
