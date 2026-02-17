@@ -135,15 +135,15 @@ impl CpuArch {
         model: String,
         micro_arch: MicroArch,
         code_name: &'static str,
-        brand_name: &str,
-        vendor_string: &str,
+        brand_name: impl Into<String>,
+        vendor_string: impl Into<String>,
     ) -> Self {
         CpuArch {
             model: model.to_string(),
             micro_arch,
             code_name: code_name.to_string(),
-            brand_name: brand_name.to_string(),
-            vendor_string: vendor_string.to_string(),
+            brand_name: brand_name.into(),
+            vendor_string: vendor_string.into(),
         }
     }
 
@@ -238,20 +238,26 @@ impl CpuArch {
             s.model,
             s.stepping,
         ) {
-            // AMD
+            // 486
             (0, 4, 0, 3, _) => brand_arch(MicroArch::Am486, "Am486DX2"),
             (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB"),
             (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4"),
             (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB"),
+
+            // K5
             (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86"),
             (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB"),
             (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5 (K5)"),
             (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "K5"),
+
+            // K6
             (0, 5, 0, 6 | 7, _) => brand_arch(MicroArch::K6, "K6"),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)"),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)"),
             (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)"),
             (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)"),
+
+            // K7
             (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon"),
             (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto"),
             (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire"),
@@ -260,6 +266,12 @@ impl CpuArch {
             (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan"),
             (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred"),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton"),
+
+            // K8
+
+            // K10
+
+            // Zen
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
             (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer"),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael"),
@@ -269,8 +281,14 @@ impl CpuArch {
     }
 
     fn find_centaur(model: impl Into<String>, s: CpuSignature, vendor_string: &str) -> Self {
-        let arch = |s: MicroArch, code_name: &'static str, brand_name: String| -> Self {
-            CpuArch::new(model.into(), s, code_name, &brand_name, vendor_string)
+        let brand = match s.family {
+            5 => CpuBrand::IDT,
+            6 => CpuBrand::Via,
+            _ => CpuBrand::Zhaoxin,
+        };
+
+        let brand_arch = |s: MicroArch, code_name: &'static str| -> Self {
+            CpuArch::new(model.into(), s, code_name, brand, vendor_string)
         };
 
         match (
@@ -281,35 +299,29 @@ impl CpuArch {
             s.stepping,
         ) {
             // IDT
-            (0, 5, 0, 4, _) => arch(MicroArch::Winchip, "C6", CpuBrand::IDT.into()),
-            (0, 5, 0, 8, 5) => arch(MicroArch::Winchip2, "C2", CpuBrand::IDT.into()),
-            (0, 5, 0, 8, 7) => arch(MicroArch::Winchip2A, "W2A", CpuBrand::IDT.into()),
-            (0, 5, 0, 8, 10) => arch(MicroArch::Winchip2B, "W2B", CpuBrand::IDT.into()),
-            (0, 5, 0, 9, _) => arch(MicroArch::Winchip3, "C3", CpuBrand::IDT.into()),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6"),
+            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "C2"),
+            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "W2A"),
+            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "W2B"),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "C3"),
 
             // VIA
-            (0, 6, 0, 6, _) => arch(MicroArch::Samuel, "Samuel (C5A)", CpuBrand::Via.into()),
-            (0, 6, 0, 7, 0..=7) => arch(MicroArch::Samuel2, "Samuel 2 (C5B)", CpuBrand::Via.into()),
-            (0, 6, 0, 7, 8..=15) => arch(MicroArch::Ezra, "Ezra (C5C)", CpuBrand::Via.into()),
-            (0, 6, 0, 8, _) => arch(MicroArch::EzraT, "Ezra-T (C5N)", CpuBrand::Via.into()),
-            (0, 6, 0, 9, 0..=7) => {
-                arch(MicroArch::Nehemiah, "Nehemiah (C5XL)", CpuBrand::Via.into())
-            }
-            (0, 6, 0, 9, 8..=15) => arch(
-                MicroArch::NehemiahP,
-                "Nehemiah+ (C5P)",
-                CpuBrand::Via.into(),
-            ),
-            (0, 6, 0, 10, _) => arch(MicroArch::Esther, "Esther (C5J)", CpuBrand::Via.into()),
-            (0, 6, 1, 9 | 10 | 11 | 12, 8) => {
-                arch(MicroArch::Isaiah, "Isaiah (CNS)", CpuBrand::Via.into())
-            }
-            (0, 6, 1, 15, _) => arch(MicroArch::Isaiah, "Isaiah (CN)", CpuBrand::Via.into()),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "Samuel (C5A)"),
+            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "Samuel 2 (C5B)"),
+            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "Ezra (C5C)"),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::EzraT, "Ezra-T (C5N)"),
+            (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "Nehemiah (C5XL)"),
+            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "Nehemiah+ (C5P)"),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "Esther (C5J)"),
+            (0, 6, 1, 9 | 10 | 11 | 12, 8) => brand_arch(MicroArch::Isaiah, "Isaiah (CNS)"),
+            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "Isaiah (CN)"),
 
             // Zhaoxin
-            (0, 7, 1, 11, 0) => arch(MicroArch::Wudaokou, "WuDaoKou", CpuBrand::Zhaoxin.into()),
-            (0, 7, 3, 11, 0) => arch(MicroArch::Lujiazui, "LuJiaZui", CpuBrand::Zhaoxin.into()),
-            (_, _, _, _, _) => arch(MicroArch::Unknown, "", CpuBrand::Unknown.into()),
+            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou"),
+            (0, 7, 3, 11, 0) => brand_arch(MicroArch::Lujiazui, "LuJiaZui"),
+
+            // Anything else
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, ""),
         }
     }
 
