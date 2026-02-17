@@ -37,7 +37,7 @@ impl From<String> for CpuBrand {
             // Well, this one is more complicated...
             // "CentaurHauls" => CpuBrand::Via,
             VENDOR_CYRIX => CpuBrand::Cyrix,
-            VENDOR_DMP => CpuBrand::Via,
+            VENDOR_DMP => CpuBrand::DMP,
             VENDOR_HYGON => CpuBrand::Hygon,
             VENDOR_INTEL => CpuBrand::Intel,
             VENDOR_NEXGEN => CpuBrand::NexGen,
