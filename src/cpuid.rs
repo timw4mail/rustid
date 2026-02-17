@@ -9,8 +9,10 @@ use std::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 #[cfg(target_arch = "x86")]
 use std::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
+pub mod brand;
 pub mod cpu;
 pub mod fns;
+pub mod micro_arch;
 
 pub use cpu::*;
 

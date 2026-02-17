@@ -34,7 +34,7 @@ pub fn model_string() -> String {
     model.trim().to_string()
 }
 
-pub fn easter_egg() -> String {
+pub fn easter_egg() -> Option<String> {
     let mut out = String::new();
 
     let addr = match vendor_id().as_str() {
@@ -56,7 +56,14 @@ pub fn easter_egg() -> String {
         }
     }
 
-    out.trim().to_string()
+    let out = out.trim().to_string();
+    let has_easter_egg = out.len() > 0;
+
+    if has_easter_egg {
+        Some(out)
+    } else {
+        None
+    }
 }
 
 /// Returns the number of logical cores.
@@ -70,6 +77,10 @@ pub fn logical_cores() -> u32 {
 
 pub fn has_fpu() -> bool {
     (native_cpuid(1).edx & (1 << 0)) != 0
+}
+
+pub fn has_amd64() -> bool {
+    (native_cpuid(0x8000_0001).edx & (1 << 29)) != 0
 }
 
 pub fn has_mmx() -> bool {
