@@ -1,6 +1,7 @@
 use crate::cpuid;
-use crate::cpuid::fns;
+use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::CpuArch;
+use crate::cpuid::{cpuid, fns};
 
 #[derive(Debug)]
 pub struct CpuFeatures {
@@ -58,7 +59,7 @@ pub struct CpuSignature {
 
 impl CpuSignature {
     pub fn detect() -> Self {
-        let res = cpuid::native_cpuid(1);
+        let res = cpuid::cpuid(1);
         let stepping = res.eax & 0xF;
         let model = (res.eax >> 4) & 0xF;
         let family = (res.eax >> 8) & 0xF;
@@ -102,15 +103,65 @@ impl Cpu {
     pub fn new() -> Self {
         Self {
             cpu_arch: CpuArch::find(
-                fns::model_string(),
+                Self::model_string(),
                 CpuSignature::detect(),
-                fns::vendor_id().as_str(),
+                CpuBrand::vendor_id().as_str(),
             ),
-            easter_egg: fns::easter_egg(),
+            easter_egg: Self::easter_egg(),
             threads: fns::logical_cores(),
             signature: CpuSignature::detect(),
             features: CpuFeatures::detect(),
         }
+    }
+
+    /// Gets the CPU model string.
+    fn model_string() -> String {
+        let mut model = String::new();
+        // Check if extended functions are supported
+        let max_extended_leaf = cpuid(0x8000_0000).eax;
+        if max_extended_leaf < 0x8000_0004 {
+            return "Unknown".to_string();
+        }
+
+        for leaf in 0x8000_0002..=0x8000_0004 {
+            let res = cpuid(leaf);
+            for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
+                for &b in &reg.to_le_bytes() {
+                    if b != 0 {
+                        model.push(b as char);
+                    }
+                }
+            }
+        }
+        model.trim().to_string()
+    }
+
+    fn easter_egg() -> Option<String> {
+        let mut out = String::new();
+
+        let addr = match CpuBrand::detect() {
+            CpuBrand::AMD => 0x8FFF_FFFF,
+            CpuBrand::Rise => 0x0000_5A4E,
+            _ => 1,
+        };
+
+        if addr != 1 {
+            let res = cpuid(addr);
+
+            for &reg in &[res.eax, res.ebx, res.ecx, res.edx] {
+                let bytes = reg.to_le_bytes();
+                for &b in &bytes {
+                    if b != 0 {
+                        out.push(b as char)
+                    }
+                }
+            }
+        }
+
+        let out = out.trim().to_string();
+        let has_easter_egg = out.len() > 0;
+
+        if has_easter_egg { Some(out) } else { None }
     }
 
     pub fn display(&self) {
@@ -124,14 +175,14 @@ mod tests {
 
     #[test]
     fn test_vendor_id() {
-        let vendor = fns::vendor_id();
+        let vendor = CpuBrand::vendor_id();
         println!("Vendor: {}", vendor);
         assert!(!vendor.is_empty());
     }
 
     #[test]
     fn test_model_string() {
-        let model = fns::model_string();
+        let model = Cpu::model_string();
         println!("Model: {}", model);
         assert!(!model.is_empty());
     }
