@@ -2,7 +2,7 @@ use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
 use heapless::String;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ufmt::derive::uDebug)]
 pub enum MicroArch {
     Unknown,
 
@@ -130,6 +130,25 @@ pub struct CpuArch {
     code_name: &'static str,
     brand_name: String<64>,
     vendor_string: String<64>,
+}
+
+impl ufmt::uDebug for CpuArch {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.write_str("CpuArch { model: \"")?;
+        f.write_str(self.model.as_str())?;
+        f.write_str("\", micro_arch: ")?;
+        ufmt::uDebug::fmt(&self.micro_arch, f)?;
+        f.write_str(", code_name: \"")?;
+        f.write_str(self.code_name)?;
+        f.write_str("\", brand_name: \"")?;
+        f.write_str(self.brand_name.as_str())?;
+        f.write_str("\", vendor_string: \"")?;
+        f.write_str(self.vendor_string.as_str())?;
+        f.write_str("\" }")
+    }
 }
 
 impl CpuArch {

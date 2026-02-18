@@ -23,6 +23,32 @@ pub struct CpuFeatures {
     bmi2: bool,
 }
 
+impl ufmt::uDebug for CpuFeatures {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let mut s = f.debug_struct("CpuFeatures")?;
+        s.field("fpu", &self.fpu)?
+            .field("amd64", &self.amd64)?
+            .field("three_d_now", &self.three_d_now)?
+            .field("mmx", &self.mmx)?
+            .field("sse", &self.sse)?
+            .field("sse2", &self.sse2)?
+            .field("sse3", &self.sse3)?
+            .field("sse41", &self.sse41)?
+            .field("sse42", &self.sse42)?
+            .field("ssse3", &self.ssse3)?
+            .field("avx", &self.avx)?
+            .field("avx2", &self.avx2)?
+            .field("avx512f", &self.avx512f)?
+            .field("fma", &self.fma)?
+            .field("bmi1", &self.bmi1)?
+            .field("bmi2", &self.bmi2)?
+            .finish()
+    }
+}
+
 impl CpuFeatures {
     pub fn detect() -> Self {
         Self {
@@ -55,6 +81,23 @@ pub struct CpuSignature {
     pub stepping: u32,
     pub display_family: u32,
     pub display_model: u32,
+}
+
+impl ufmt::uDebug for CpuSignature {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuSignature")?
+            .field("extended_family", &self.extended_family)?
+            .field("family", &self.family)?
+            .field("extended_model", &self.extended_model)?
+            .field("model", &self.model)?
+            .field("stepping", &self.stepping)?
+            .field("display_family", &self.display_family)?
+            .field("display_model", &self.display_model)?
+            .finish()
+    }
 }
 
 impl CpuSignature {
@@ -97,6 +140,32 @@ pub struct Cpu {
     threads: u32,
     signature: CpuSignature,
     features: CpuFeatures,
+}
+
+impl ufmt::uDebug for Cpu {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.write_str("Cpu { cpu_arch: ")?;
+        ufmt::uDebug::fmt(&self.cpu_arch, f)?;
+        f.write_str(", easter_egg: ")?;
+        match &self.easter_egg {
+            Some(s) => {
+                f.write_str("Some(\"")?;
+                f.write_str(s.as_str())?;
+                f.write_str("\")")?;
+            }
+            None => f.write_str("None")?,
+        }
+        f.write_str(", threads: ")?;
+        ufmt::uDebug::fmt(&self.threads, f)?;
+        f.write_str(", signature: ")?;
+        ufmt::uDebug::fmt(&self.signature, f)?;
+        f.write_str(", features: ")?;
+        ufmt::uDebug::fmt(&self.features, f)?;
+        f.write_str(" }")
+    }
 }
 
 impl Cpu {
@@ -176,6 +245,30 @@ impl Cpu {
     pub fn display(&self) {
         #[cfg(not(target_os = "none"))]
         std::println!("{:#?}", self);
+
+        #[cfg(target_os = "none")]
+        {
+            use ufmt::uWrite;
+            struct DosWriter;
+            impl uWrite for DosWriter {
+                type Error = ();
+                fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
+                    for &b in s.as_bytes() {
+                        unsafe {
+                            core::arch::asm!(
+                                "int 0x21",
+                                in("ah") 0x02u8,
+                                in("dl") b,
+                                clobber_abi("system"),
+                            );
+                        }
+                    }
+                    Ok(())
+                }
+            }
+            let mut writer = DosWriter;
+            let _ = ufmt::uwriteln!(writer, "{:#?}", self);
+        }
     }
 }
 

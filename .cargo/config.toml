@@ -1,5 +1,5 @@
 [target.i386-dos]
 linker = "rust-lld"
 rustflags = [
-    "-C", "panic=abort",
+    "-C", "link-arg=-Tlink.x"
 ]
