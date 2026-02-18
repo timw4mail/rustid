@@ -1,7 +1,7 @@
-use crate::cpuid;
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::CpuArch;
 use crate::cpuid::{fns, x86_cpuid};
+use heapless::String;
 
 #[derive(Debug)]
 pub struct CpuFeatures {
@@ -59,7 +59,7 @@ pub struct CpuSignature {
 
 impl CpuSignature {
     pub fn detect() -> Self {
-        let res = cpuid::x86_cpuid(1);
+        let res = x86_cpuid(1);
         let stepping = res.eax & 0xF;
         let model = (res.eax >> 4) & 0xF;
         let family = (res.eax >> 8) & 0xF;
@@ -93,7 +93,7 @@ impl CpuSignature {
 #[derive(Debug)]
 pub struct Cpu {
     cpu_arch: CpuArch,
-    easter_egg: Option<String>,
+    easter_egg: Option<String<64>>,
     threads: u32,
     signature: CpuSignature,
     features: CpuFeatures,
@@ -103,7 +103,7 @@ impl Cpu {
     pub fn new() -> Self {
         Self {
             cpu_arch: CpuArch::find(
-                Self::model_string(),
+                Self::model_string().as_str(),
                 CpuSignature::detect(),
                 CpuBrand::vendor_id().as_str(),
             ),
@@ -115,12 +115,13 @@ impl Cpu {
     }
 
     /// Gets the CPU model string.
-    fn model_string() -> String {
-        let mut model = String::new();
+    fn model_string() -> String<64> {
+        let mut model: String<64> = String::new();
         // Check if extended functions are supported
         let max_extended_leaf = x86_cpuid(0x8000_0000).eax;
         if max_extended_leaf < 0x8000_0004 {
-            return "Unknown".to_string();
+            let _ = model.push_str("Unknown");
+            return model;
         }
 
         for leaf in 0x8000_0002..=0x8000_0004 {
@@ -128,16 +129,20 @@ impl Cpu {
             for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
                 for &b in &reg.to_le_bytes() {
                     if b != 0 {
-                        model.push(b as char);
+                        let _ = model.push(b as char);
                     }
                 }
             }
         }
-        model.trim().to_string()
+
+        let trimmed = model.trim();
+        let mut out: String<64> = String::new();
+        let _ = out.push_str(trimmed);
+        out
     }
 
-    fn easter_egg() -> Option<String> {
-        let mut out = String::new();
+    fn easter_egg() -> Option<String<64>> {
+        let mut out: String<64> = String::new();
 
         let addr = match CpuBrand::detect() {
             CpuBrand::AMD => 0x8FFF_FFFF,
@@ -152,38 +157,44 @@ impl Cpu {
                 let bytes = reg.to_le_bytes();
                 for &b in &bytes {
                     if b != 0 {
-                        out.push(b as char)
+                        let _ = out.push(b as char);
                     }
                 }
             }
         }
 
-        let out = out.trim().to_string();
-        let has_easter_egg = out.len() > 0;
-
-        if has_easter_egg { Some(out) } else { None }
+        let trimmed = out.trim();
+        if trimmed.len() > 0 {
+            let mut final_out: String<64> = String::new();
+            let _ = final_out.push_str(trimmed);
+            Some(final_out)
+        } else {
+            None
+        }
     }
 
     pub fn display(&self) {
-        println!("{:#?}", self);
+        #[cfg(not(target_os = "none"))]
+        std::println!("{:#?}", self);
     }
 }
 
 #[cfg(test)]
+#[cfg(not(target_os = "none"))]
 mod tests {
     use super::*;
 
     #[test]
     fn test_vendor_id() {
         let vendor = CpuBrand::vendor_id();
-        println!("Vendor: {}", vendor);
+        std::println!("Vendor: {}", vendor);
         assert!(!vendor.is_empty());
     }
 
     #[test]
     fn test_model_string() {
         let model = Cpu::model_string();
-        println!("Model: {}", model);
+        std::println!("Model: {}", model);
         assert!(!model.is_empty());
     }
 }

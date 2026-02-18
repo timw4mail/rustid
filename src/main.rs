@@ -1,6 +1,22 @@
+#![cfg_attr(all(not(test), target_os = "none"), no_std)]
+#![cfg_attr(all(not(test), target_os = "none"), no_main)]
+
 pub mod cpuid;
 
 use cpuid::Cpu;
+
+#[cfg(all(not(test), target_os = "none"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+#[cfg(all(not(test), target_os = "none"))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    main();
+    loop {}
+}
 
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");

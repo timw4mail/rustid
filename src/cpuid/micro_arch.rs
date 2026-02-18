@@ -1,5 +1,6 @@
 use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
+use heapless::String;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
@@ -124,47 +125,57 @@ pub enum MicroArch {
 
 #[derive(Debug)]
 pub struct CpuArch {
-    model: String,
+    model: String<64>,
     micro_arch: MicroArch,
-    code_name: String,
-    brand_name: String,
-    vendor_string: String,
+    code_name: &'static str,
+    brand_name: String<64>,
+    vendor_string: String<64>,
 }
 
 impl CpuArch {
     pub fn new(
-        model: String,
+        model: &str,
         micro_arch: MicroArch,
         code_name: &'static str,
-        brand_name: impl Into<String>,
-        vendor_string: impl Into<String>,
+        brand_name: &str,
+        vendor_string: &str,
     ) -> Self {
+        let mut model_s = String::new();
+        let _ = model_s.push_str(model);
+
+        let mut brand_s = String::new();
+        let _ = brand_s.push_str(brand_name);
+
+        let mut vendor_s = String::new();
+        let _ = vendor_s.push_str(vendor_string);
+
         CpuArch {
-            model: model.to_string(),
+            model: model_s,
             micro_arch,
-            code_name: code_name.to_string(),
-            brand_name: brand_name.into(),
-            vendor_string: vendor_string.into(),
+            code_name,
+            brand_name: brand_s,
+            vendor_string: vendor_s,
         }
     }
 
-    pub fn find(model: String, s: CpuSignature, vendor_string: &str) -> Self {
-        let arch = |s: MicroArch, code_name: &'static str, brand_name: String| -> Self {
-            CpuArch::new(model.clone(), s, code_name, &brand_name, vendor_string)
+    pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
+        let arch = |ma: MicroArch, code_name: &'static str, brand_name: &str| -> Self {
+            CpuArch::new(model, ma, code_name, brand_name, vendor_string)
         };
 
         // Brand for Centaur CPUs is by signature, not vendor string
         if vendor_string == VENDOR_CENTAUR {
-            return Self::find_centaur(&model, s, vendor_string);
+            return Self::find_centaur(model, s, vendor_string);
         }
 
-        let brand = CpuBrand::from(vendor_string.to_string());
-        let brand_arch =
-            |s: MicroArch, code_name: &'static str| -> Self { arch(s, code_name, brand.into()) };
+        let brand = CpuBrand::from(vendor_string);
+        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
+            arch(ma, code_name, brand.as_str())
+        };
 
         match brand {
-            CpuBrand::AMD => Self::find_amd(&model, s),
-            CpuBrand::Intel => Self::find_intel(&model, s),
+            CpuBrand::AMD => Self::find_amd(model, s),
+            CpuBrand::Intel => Self::find_intel(model, s),
             CpuBrand::DMP => match (
                 s.extended_family,
                 s.family,
@@ -227,9 +238,9 @@ impl CpuArch {
         }
     }
 
-    fn find_amd(model: impl Into<String>, s: CpuSignature) -> Self {
-        let brand_arch = |s: MicroArch, code_name: &'static str| -> Self {
-            CpuArch::new(model.into(), s, code_name, "AMD", VENDOR_AMD)
+    fn find_amd(model: &str, s: CpuSignature) -> Self {
+        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
+            Self::new(model, ma, code_name, "AMD", VENDOR_AMD)
         };
 
         match (
@@ -270,16 +281,14 @@ impl CpuArch {
 
             // K8
 
-
             // K10
-
             (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate"),
 
             // Bulldozer/Piledriver/Steamroller
-            (6, 15, 0, 0|1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi"),
-            (6, 15, 0|1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera"),
-            (6, 15, 3, 0|8, _) => brand_arch(MicroArch::Steamroller, "Godavari"),
-            (6, 15, 6|7, 0|5, _) => brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo"),
+            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi"),
+            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera"),
+            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari"),
+            (6, 15, 6 | 7, 0 | 5, _) => brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo"),
 
             // Zen
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
@@ -290,15 +299,15 @@ impl CpuArch {
         }
     }
 
-    fn find_centaur(model: impl Into<String>, s: CpuSignature, vendor_string: &str) -> Self {
+    fn find_centaur(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
         let brand = match s.family {
             5 => CpuBrand::IDT,
             6 => CpuBrand::Via,
             _ => CpuBrand::Zhaoxin,
         };
 
-        let brand_arch = |s: MicroArch, code_name: &'static str| -> Self {
-            CpuArch::new(model.into(), s, code_name, brand, vendor_string)
+        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
+            Self::new(model, ma, code_name, brand.as_str(), vendor_string)
         };
 
         match (
@@ -335,9 +344,9 @@ impl CpuArch {
         }
     }
 
-    fn find_intel(model: impl Into<String>, s: CpuSignature) -> Self {
-        let brand_arch = |s: MicroArch, code_name: &'static str| -> Self {
-            CpuArch::new(model.into(), s, code_name, "Intel", VENDOR_INTEL)
+    fn find_intel(model: &str, s: CpuSignature) -> Self {
+        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
+            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL)
         };
 
         match (

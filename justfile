@@ -14,7 +14,11 @@ build:
 build-release:
     cargo build --release
 
-# Compile for 486-class machines
+# Build for DOS (32-bit DPMI)
+build-dos:
+    cargo build --target i386-dos.json --release
+
+# Build for 32-bit Linux
 build-486:
     rustup target add i586-unknown-linux-gnu
     RUSTFLAGS="-C target-cpu=i486" cargo build --target i586-unknown-linux-gnu --release
