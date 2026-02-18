@@ -66,6 +66,7 @@ mod intrinsics {
 
 #[cfg(all(not(test), target_os = "none"))]
 #[unsafe(no_mangle)]
+#[unsafe(link_section = ".startup")]
 pub extern "C" fn _start() -> ! {
     Cpu::new().display_table();
 

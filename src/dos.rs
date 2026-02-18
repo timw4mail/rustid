@@ -3,6 +3,9 @@ use ufmt::uWrite;
 
 #[macro_export]
 macro_rules! print {
+    ($s:literal) => {
+        $crate::dos::_print_str($s)
+    };
     ($($arg:tt)*) => {
         {
             use ufmt::uWrite;
@@ -16,12 +19,24 @@ macro_rules! println {
     () => {
         $crate::print!("\r\n")
     };
+    ($s:literal) => {
+        {
+            $crate::print!($s);
+            $crate::print!("\r\n");
+        }
+    };
     ($($arg:tt)*) => {
         {
             $crate::print!($($arg)*);
             $crate::print!("\r\n");
         }
     };
+}
+
+pub fn _print_str(s: &str) {
+    for &b in s.as_bytes() {
+        printc(b);
+    }
 }
 
 pub struct DosWriter;
