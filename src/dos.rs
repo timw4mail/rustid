@@ -46,10 +46,8 @@ impl uWrite for DosWriter {
 }
 
 pub fn printc(ch: u8) {
-    // unsafe { asm!("int 0x21", in("ah") 0x02_u8, in("dl") ch) }
-
     unsafe {
-        core::arch::asm!(
+        asm!(
             "int 0x21",
             in("ah") 0x02_u8,
             in("dl") ch,
@@ -61,7 +59,7 @@ pub fn printc(ch: u8) {
 pub fn exit() -> ! {
     // Exit to DOS via INT 21h, AH=4Ch
     unsafe {
-        core::arch::asm!(
+        asm!(
         "int 0x21",
         in("ah") 0x4C_u8,
         in("al") 0_u8,

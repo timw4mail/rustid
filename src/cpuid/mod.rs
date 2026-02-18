@@ -41,12 +41,14 @@ impl From<CpuidResult> for CpuInfo {
 }
 
 /// Calls CPUID with the given leaf (EAX).
+#[allow(unused_unsafe)]
 pub fn x86_cpuid(leaf: u32) -> CpuInfo {
     unsafe { __cpuid(leaf).into() }
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
     unsafe { __cpuid_count(leaf, sub_leaf).into() }
 }

@@ -252,7 +252,6 @@ impl Cpu {
         #[cfg(target_os = "none")]
         {
             use crate::dos::DosWriter;
-            use ufmt::uWrite;
 
             let mut writer = DosWriter;
             let _ = ufmt::uwriteln!(writer, "CPU INFO:\n");

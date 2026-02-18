@@ -61,6 +61,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unused)]
 fn main() {
     Cpu::new().display_table();
 }
