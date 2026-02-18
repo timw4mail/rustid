@@ -1,10 +1,11 @@
-[target.i386-dos]
+[target.i486-dos]
 linker = "rust-lld"
 rustflags = [
-	"-C", "link-arg=-Tlink.x"
+	"-C", "link-arg=-Tlink.x",
+	"-C", "panic=abort",
+	"-C", "target-cpu=i486"
 ]
-
 [target.i586-unknown-linux-gnu]
 rustflags = [
-	"-C", "target-cpu=i386"
+	"-C", "target-cpu=i486"
 ]

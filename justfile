@@ -2,6 +2,10 @@
 default:
 	@just --list
 
+info:
+	@echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
+
+
 # Check code validity and style
 check:
 	cargo check
@@ -18,16 +22,11 @@ build:
 build-release:
 	cargo build --release
 
-# Build for DOS (32-bit DPMI)
+# Build for DOS
 build-dos:
 	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
-	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc
-	cp ./target/i386-dos/release/rustid rustid.com
-
-build-dos-release:
-	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
-	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc --release
-	cp ./target/i386-dos/release/rustid rustid.com
+	cargo +nightly build -Zjson-target-spec --target i486-dos.json -Z build-std=core,alloc --release
+	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
 
 # Build for 32-bit Linux
 build-486:
@@ -44,6 +43,11 @@ clean:
 run:
 	cargo run
 
+[windows]
+run-dos: build-dos
+	"C:\DOSBox-X\dosbox-x.exe" .
+
+[linux, unix]
 run-dos: build-dos
 	dosbox-x .
 

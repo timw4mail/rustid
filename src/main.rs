@@ -50,12 +50,24 @@ mod intrinsics {
         }
         0
     }
+
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn memset(s: *mut u8, c: i32, n: usize) -> *mut u8 {
+        let mut i = 0;
+        while i < n {
+            unsafe {
+                *s.add(i) = c as u8;
+            }
+            i += 1;
+        }
+        s
+    }
 }
 
 #[cfg(all(not(test), target_os = "none"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    Cpu::new().display();
+    Cpu::new().display_table();
 
     dos::exit();
 }

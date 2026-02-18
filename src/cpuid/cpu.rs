@@ -267,8 +267,8 @@ impl Cpu {
         #[cfg(target_os = "none")]
         use crate::println;
 
-        println!("CPU Name:     {}", self.cpu_arch.model);
-        println!("CPU Vendor:    {}", self.cpu_arch.vendor_string);
+        println!("CPU Name:     {}", self.cpu_arch.model.as_str());
+        println!("CPU Vendor:    {}", self.cpu_arch.vendor_string.as_str());
         println!(
             "CPU Signature: Family {}, Model {}, Stepping {}",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
@@ -287,7 +287,7 @@ impl Cpu {
         }
 
         if let Some(easter_egg) = &self.easter_egg {
-            println!("Easter Egg: {}", easter_egg);
+            println!("Easter Egg: {}", easter_egg.as_str());
         }
 
         println!("Features:");
