@@ -20,8 +20,8 @@ build-release:
 
 # Build for DOS (32-bit DPMI)
 build-dos:
-    cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc --release
-    cp ./target/i386-dos/release/rustid rustid.exe
+	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc --release
+	cp ./target/i386-dos/release/rustid rustid.exe
 
 # Build for 32-bit Linux
 build-486:
@@ -31,6 +31,7 @@ build-486:
 # Remove build files
 clean:
 	cargo clean
+	rm -f rustid.com
 	rm -f rustid.exe
 
 # Build and run the app

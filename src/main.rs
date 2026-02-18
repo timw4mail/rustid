@@ -1,6 +1,8 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+compile_error!("This crate only supports x86 and x86_64 architectures.");
 pub mod cpuid;
 
 use cpuid::Cpu;
@@ -52,45 +54,18 @@ pub extern "C" fn _start() -> ! {
         core::ptr::write_volatile(0xB8000 as *mut u16, 0x0F21);
     }
 
-    if check_cpuid() {
-        main();
-    } else {
-        // Output error manually if possible or just exit
-    }
+    main();
 
     // Exit to DOS via INT 21h, AH=4Ch
     unsafe {
         core::arch::asm!(
             "int 0x21",
-            in("ah") 0x4Cu8,
-            in("al") 0u8,
+            in("ah") 0x4C_u8,
+            in("al") 0_u8,
             options(noreturn)
         );
     }
 }
-
-#[cfg(all(not(test), target_os = "none"))]
-fn check_cpuid() -> bool {
-    let res: u32;
-    unsafe {
-        core::arch::asm!(
-            "pushfd",
-            "pop eax",
-            "mov ecx, eax",
-            "xor eax, 0x200000",
-            "push eax",
-            "popfd",
-            "pushfd",
-            "pop eax",
-            "xor eax, ecx",
-            out("eax") res,
-        );
-    }
-    (res & 0x200000) != 0
-}
-
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn main() {
