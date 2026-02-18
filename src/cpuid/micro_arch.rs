@@ -270,7 +270,16 @@ impl CpuArch {
 
             // K8
 
+
             // K10
+
+            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate"),
+
+            // Bulldozer/Piledriver/Steamroller
+            (6, 15, 0, 0|1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi"),
+            (6, 15, 0|1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera"),
+            (6, 15, 3, 0|8, _) => brand_arch(MicroArch::Steamroller, "Godavari"),
+            (6, 15, 6|7, 0|5, _) => brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo"),
 
             // Zen
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),

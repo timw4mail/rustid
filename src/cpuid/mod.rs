@@ -4,10 +4,10 @@
 //! supported features (like SSE, AVX), and other hardware details.
 
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
-use std::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
 pub mod brand;
 pub mod cpu;
