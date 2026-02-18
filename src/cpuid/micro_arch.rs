@@ -332,7 +332,7 @@ impl CpuArch {
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "Nehemiah (C5XL)"),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "Nehemiah+ (C5P)"),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "Esther (C5J)"),
-            (0, 6, 1, 9 | 10 | 11 | 12, 8) => brand_arch(MicroArch::Isaiah, "Isaiah (CNS)"),
+            (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "Isaiah (CNS)"),
             (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "Isaiah (CN)"),
 
             // Zhaoxin
@@ -358,6 +358,8 @@ impl CpuArch {
         ) {
             // Pentium Pro
             (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
+
+            // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge"),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
