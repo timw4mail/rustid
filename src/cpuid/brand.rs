@@ -1,4 +1,4 @@
-use crate::cpuid::cpuid;
+use crate::cpuid::x86_cpuid;
 
 pub const VENDOR_AMD: &str = "AuthenticAMD";
 pub const VENDOR_CENTAUR: &str = "CentaurHauls";
@@ -39,7 +39,7 @@ impl CpuBrand {
 
     /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
     pub fn vendor_id() -> String {
-        let res = cpuid(0);
+        let res = x86_cpuid(0);
         let mut bytes = Vec::with_capacity(12);
         for &reg in &[res.ebx, res.edx, res.ecx] {
             bytes.extend_from_slice(&reg.to_le_bytes());

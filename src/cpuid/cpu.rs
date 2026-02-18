@@ -1,7 +1,7 @@
 use crate::cpuid;
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::CpuArch;
-use crate::cpuid::{cpuid, fns};
+use crate::cpuid::{fns, x86_cpuid};
 
 #[derive(Debug)]
 pub struct CpuFeatures {
@@ -59,7 +59,7 @@ pub struct CpuSignature {
 
 impl CpuSignature {
     pub fn detect() -> Self {
-        let res = cpuid::cpuid(1);
+        let res = cpuid::x86_cpuid(1);
         let stepping = res.eax & 0xF;
         let model = (res.eax >> 4) & 0xF;
         let family = (res.eax >> 8) & 0xF;
@@ -118,13 +118,13 @@ impl Cpu {
     fn model_string() -> String {
         let mut model = String::new();
         // Check if extended functions are supported
-        let max_extended_leaf = cpuid(0x8000_0000).eax;
+        let max_extended_leaf = x86_cpuid(0x8000_0000).eax;
         if max_extended_leaf < 0x8000_0004 {
             return "Unknown".to_string();
         }
 
         for leaf in 0x8000_0002..=0x8000_0004 {
-            let res = cpuid(leaf);
+            let res = x86_cpuid(leaf);
             for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
                 for &b in &reg.to_le_bytes() {
                     if b != 0 {
@@ -146,7 +146,7 @@ impl Cpu {
         };
 
         if addr != 1 {
-            let res = cpuid(addr);
+            let res = x86_cpuid(addr);
 
             for &reg in &[res.eax, res.ebx, res.ecx, res.edx] {
                 let bytes = reg.to_le_bytes();
