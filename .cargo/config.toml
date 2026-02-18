@@ -1,5 +1,10 @@
 [target.i386-dos]
 linker = "rust-lld"
 rustflags = [
-    "-C", "link-arg=-Tlink.x"
+	"-C", "link-arg=-Tlink.x"
+]
+
+[target.i586-unknown-linux-gnu]
+rustflags = [
+	"-C", "target-cpu=i386"
 ]

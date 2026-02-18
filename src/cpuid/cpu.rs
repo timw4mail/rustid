@@ -21,6 +21,7 @@ pub struct CpuFeatures {
     fma: bool,
     bmi1: bool,
     bmi2: bool,
+    rdrand: bool,
 }
 
 impl ufmt::uDebug for CpuFeatures {
@@ -45,6 +46,7 @@ impl ufmt::uDebug for CpuFeatures {
             .field("fma", &self.fma)?
             .field("bmi1", &self.bmi1)?
             .field("bmi2", &self.bmi2)?
+            .field("rdrand", &self.rdrand)?
             .finish()
     }
 }
@@ -68,6 +70,7 @@ impl CpuFeatures {
             fma: fns::has_fma(),
             bmi1: fns::has_bmi1(),
             bmi2: fns::has_bmi2(),
+            rdrand: fns::has_rdrand(),
         }
     }
 }
@@ -135,11 +138,11 @@ impl CpuSignature {
 
 #[derive(Debug)]
 pub struct Cpu {
-    cpu_arch: CpuArch,
-    easter_egg: Option<String<64>>,
-    threads: u32,
-    signature: CpuSignature,
-    features: CpuFeatures,
+    pub cpu_arch: CpuArch,
+    pub easter_egg: Option<String<64>>,
+    pub threads: u32,
+    pub signature: CpuSignature,
+    pub features: CpuFeatures,
 }
 
 impl ufmt::uDebug for Cpu {
@@ -248,7 +251,7 @@ impl Cpu {
 
         #[cfg(target_os = "none")]
         {
-            use crate::cpuid::dos::DosWriter;
+            use crate::dos::DosWriter;
             use ufmt::uWrite;
 
             let mut writer = DosWriter;
@@ -256,6 +259,55 @@ impl Cpu {
             let mut writer = DosWriter;
             let _ = ufmt::uwriteln!(writer, "{:#?}", self);
         }
+    }
+
+    pub fn display_table(&self) {
+        #[cfg(not(target_os = "none"))]
+        use std::println;
+
+        #[cfg(target_os = "none")]
+        use crate::println;
+
+        println!("CPU Name:     {}", self.cpu_arch.model);
+        println!("CPU Vendor:    {}", self.cpu_arch.vendor_string);
+        println!(
+            "CPU Signature: Family {}, Model {}, Stepping {}",
+            self.signature.display_family, self.signature.display_model, self.signature.stepping
+        );
+        println!(
+            "          Raw: EF {}, F {}, EM {}, M {}, S {}",
+            self.signature.extended_family,
+            self.signature.family,
+            self.signature.extended_model,
+            self.signature.model,
+            self.signature.stepping
+        );
+
+        if self.threads > 1 {
+            println!("Logical Cores: {}", self.threads);
+        }
+
+        if let Some(easter_egg) = &self.easter_egg {
+            println!("Easter Egg: {}", easter_egg);
+        }
+
+        println!("Features:");
+        println!("  FPU:      {}", self.features.fpu);
+        println!("  AMD64:    {}", self.features.amd64);
+        println!("  3DNow!:   {}", self.features.three_d_now);
+        println!("  MMX:      {}", self.features.mmx);
+        println!("  SSE:      {}", self.features.sse);
+        println!("  SSE2:     {}", self.features.sse2);
+        println!("  SSE3:     {}", self.features.sse3);
+        println!("  SSE4.1:   {}", self.features.sse41);
+        println!("  SSE4.2:   {}", self.features.sse42);
+        println!("  AVX:      {}", self.features.avx);
+        println!("  AVX2:     {}", self.features.avx2);
+        println!("  AVX-512F: {}", self.features.avx512f);
+        println!("  FMA:      {}", self.features.fma);
+        println!("  BMI1:     {}", self.features.bmi1);
+        println!("  BMI2:     {}", self.features.bmi2);
+        println!("  RDRAND:   {}", self.features.rdrand);
     }
 }
 

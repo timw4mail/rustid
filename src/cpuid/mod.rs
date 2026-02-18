@@ -14,10 +14,6 @@ pub mod cpu;
 pub mod fns;
 pub mod micro_arch;
 
-#[cfg(target_os = "none")]
-#[macro_use]
-pub mod dos;
-
 pub use cpu::*;
 
 /// Represents the result of a CPUID instruction call.
@@ -45,7 +41,6 @@ impl From<CpuidResult> for CpuInfo {
 }
 
 /// Calls CPUID with the given leaf (EAX).
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn x86_cpuid(leaf: u32) -> CpuInfo {
     unsafe { __cpuid(leaf).into() }
 }

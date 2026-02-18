@@ -129,6 +129,7 @@ impl ufmt::uDebug for MicroArch {
         f: &mut ufmt::Formatter<'_, W>,
     ) -> Result<(), W::Error> {
         let s = match self {
+            MicroArch::Zen => "Zen",
             MicroArch::Unknown => "Unknown",
             MicroArch::Am486 => "Am486",
             MicroArch::Zen4 => "Zen4",
@@ -142,11 +143,11 @@ impl ufmt::uDebug for MicroArch {
 
 #[derive(Debug)]
 pub struct CpuArch {
-    model: String<64>,
-    micro_arch: MicroArch,
-    code_name: &'static str,
-    brand_name: String<64>,
-    vendor_string: String<64>,
+    pub model: String<64>,
+    pub micro_arch: MicroArch,
+    pub code_name: &'static str,
+    pub brand_name: String<64>,
+    pub vendor_string: String<64>,
 }
 
 impl ufmt::uDebug for CpuArch {

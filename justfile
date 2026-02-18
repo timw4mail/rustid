@@ -21,13 +21,18 @@ build-release:
 # Build for DOS (32-bit DPMI)
 build-dos:
 	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc
+	cp ./target/i386-dos/release/rustid rustid.com
+
+build-dos-release:
+	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc --release
-	cp ./target/i386-dos/release/rustid rustid.exe
+	cp ./target/i386-dos/release/rustid rustid.com
 
 # Build for 32-bit Linux
 build-486:
 	rustup target add i586-unknown-linux-gnu
-	RUSTFLAGS="-C target-cpu=i486" cargo build --target i586-unknown-linux-gnu --release
+	cargo build --target i586-unknown-linux-gnu --release
 
 # Remove build files
 clean:

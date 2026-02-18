@@ -53,6 +53,7 @@ impl CpuBrand {
                 let _ = s.push(b as char);
             }
         }
+
         s
     }
 

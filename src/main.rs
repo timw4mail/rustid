@@ -4,6 +4,12 @@
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 pub mod cpuid;
+#[cfg(target_os = "none")]
+#[macro_use]
+pub mod dos;
+
+#[cfg(target_os = "none")]
+pub use dos::*;
 
 use cpuid::Cpu;
 
@@ -49,48 +55,12 @@ mod intrinsics {
 #[cfg(all(not(test), target_os = "none"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    // VGA "heartbeat": write '!' to top-left corner
-    unsafe {
-        core::ptr::write_volatile(0xB8000 as *mut u16, 0x0F21);
-    }
+    Cpu::new().display();
 
-    main();
-
-    // Exit to DOS via INT 21h, AH=4Ch
-    unsafe {
-        core::arch::asm!(
-            "int 0x21",
-            in("ah") 0x4C_u8,
-            in("al") 0_u8,
-            options(noreturn)
-        );
-    }
+    dos::exit();
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn main() {
-    Cpu::new().display();
-
-    // println!("CPU Vendor:    {}", cpu.vendor_id());
-    // println!("CPU Brand:     {}", cpu.brand_string());
-    // let (stepping, model, family) = cpu.signature();
-    // println!(
-    //     "CPU Signature: Family {}, Model {}, Stepping {}",
-    //     family, model, stepping
-    // );
-    // println!("Logical Cores: {}", cpu.logical_cores());
-
-    // println!("Features:");
-    // println!("  SSE:      {}", cpu.has_sse());
-    // println!("  SSE2:     {}", cpu.has_sse2());
-    // println!("  SSE3:     {}", cpu.has_sse3());
-    // println!("  SSE4.1:   {}", cpu.has_sse41());
-    // println!("  SSE4.2:   {}", cpu.has_sse42());
-    // println!("  AVX:      {}", cpu.has_avx());
-    // println!("  AVX2:     {}", cpu.has_avx2());
-    // println!("  AVX-512F: {}", cpu.has_avx512f());
-    // println!("  FMA:      {}", cpu.has_fma());
-    // println!("  BMI1:     {}", cpu.has_bmi1());
-    // println!("  BMI2:     {}", cpu.has_bmi2());
-    // println!("  RDRAND:   {}", cpu.has_rdrand());
+    Cpu::new().display_table();
 }
