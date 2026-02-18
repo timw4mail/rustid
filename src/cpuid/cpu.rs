@@ -248,36 +248,12 @@ impl Cpu {
 
         #[cfg(target_os = "none")]
         {
+            use crate::cpuid::dos::DosWriter;
             use ufmt::uWrite;
-            struct DosWriter;
-            impl uWrite for DosWriter {
-                type Error = ();
-                fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
-                    for &b in s.as_bytes() {
-                        if b == b'\n' {
-                            unsafe {
-                                core::arch::asm!(
-                                    "int 0x21",
-                                    in("ah") 0x02_u8,
-                                    in("dl") b'\r',
-                                    clobber_abi("system"),
-                                );
-                            }
-                        }
-                        unsafe {
-                            core::arch::asm!(
-                                "int 0x21",
-                                in("ah") 0x02_u8,
-                                in("dl") b,
-                                clobber_abi("system"),
-                            );
-                        }
-                    }
-                    Ok(())
-                }
-            }
+
             let mut writer = DosWriter;
-            let _ = writer.write_str("CPU INFO:\n");
+            let _ = ufmt::uwriteln!(writer, "CPU INFO:\n");
+            let mut writer = DosWriter;
             let _ = ufmt::uwriteln!(writer, "{:#?}", self);
         }
     }

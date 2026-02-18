@@ -14,6 +14,10 @@ pub mod cpu;
 pub mod fns;
 pub mod micro_arch;
 
+#[cfg(target_os = "none")]
+#[macro_use]
+pub mod dos;
+
 pub use cpu::*;
 
 /// Represents the result of a CPUID instruction call.

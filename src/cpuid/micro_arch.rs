@@ -2,7 +2,7 @@ use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
 use heapless::String;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ufmt::derive::uDebug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     Unknown,
 
@@ -123,6 +123,23 @@ pub enum MicroArch {
     U5D,
 }
 
+impl ufmt::uDebug for MicroArch {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let s = match self {
+            MicroArch::Unknown => "Unknown",
+            MicroArch::Am486 => "Am486",
+            MicroArch::Zen4 => "Zen4",
+            MicroArch::I486 => "I486",
+            MicroArch::P5 => "P5",
+            _ => "OtherArch",
+        };
+        f.write_str(s)
+    }
+}
+
 #[derive(Debug)]
 pub struct CpuArch {
     model: String<64>,
@@ -159,13 +176,13 @@ impl CpuArch {
         brand_name: &str,
         vendor_string: &str,
     ) -> Self {
-        let mut model_s = String::new();
+        let mut model_s: String<64> = String::new();
         let _ = model_s.push_str(model);
 
-        let mut brand_s = String::new();
+        let mut brand_s: String<64> = String::new();
         let _ = brand_s.push_str(brand_name);
 
-        let mut vendor_s = String::new();
+        let mut vendor_s: String<64> = String::new();
         let _ = vendor_s.push_str(vendor_string);
 
         CpuArch {
