@@ -20,6 +20,7 @@ build-release:
 
 # Build for DOS (32-bit DPMI)
 build-dos:
+	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 	cargo +nightly build -Zjson-target-spec --target i386-dos.json -Z build-std=core,alloc --release
 	cp ./target/i386-dos/release/rustid rustid.exe
 
@@ -37,6 +38,9 @@ clean:
 # Build and run the app
 run:
 	cargo run
+
+run-dos: build-dos
+	dosbox-x .
 
 # Run all the tests
 test:
