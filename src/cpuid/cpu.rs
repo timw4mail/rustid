@@ -1,5 +1,5 @@
 use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::micro_arch::CpuArch;
+use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
 
@@ -150,6 +150,24 @@ impl Cpu {
         out
     }
 
+    fn display_model_string(&self) -> String<64> {
+        if &self.arch.model != "Unknown" {
+            return self.arch.model.clone();
+        }
+
+        let mut out: String<64> = String::new();
+
+        let str = match self.arch.micro_arch {
+            MicroArch::P6Pro => "Intel Pentium Pro",
+            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+            _ => "Unknown",
+        };
+
+        let _ = out.push_str(str.trim());
+
+        out
+    }
+
     fn easter_egg() -> Option<String<64>> {
         let mut out: String<64> = String::new();
 
@@ -188,9 +206,13 @@ impl Cpu {
     }
 
     pub fn display_table(&self) {
-        println!("CPU Name:     {}", self.arch.model.as_str());
+        println!(
+            "CPU Vendor:    {} ({})",
+            self.arch.vendor_string.as_str(),
+            self.arch.brand_name.as_str()
+        );
+        println!("CPU Name:      {}", self.display_model_string().as_str());
         println!("CPU Codename:  {}", self.arch.code_name);
-        println!("CPU Vendor:    {}", self.arch.vendor_string.as_str());
         println!(
             "CPU Signature: Family {}, Model {}, Stepping {}",
             self.signature.display_family, self.signature.display_model, self.signature.stepping

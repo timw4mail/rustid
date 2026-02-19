@@ -8,6 +8,7 @@ macro_rules! print {
     };
     ($($arg:tt)*) => {
         {
+            #[allow(unused)]
             use ufmt::uWrite;
             let _ = ufmt::uwrite!(&mut $crate::dos::DosWriter {}, $($arg)*);
         }
