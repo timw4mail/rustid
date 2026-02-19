@@ -179,6 +179,7 @@ impl Cpu {
             },
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+            MicroArch::Unknown => "No CPUID, 486 or earlier CPU",
             _ => "Unknown",
         };
 

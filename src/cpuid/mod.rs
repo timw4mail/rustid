@@ -29,6 +29,17 @@ pub struct CpuInfo {
     pub edx: u32,
 }
 
+impl Default for CpuInfo {
+    fn default() -> Self {
+        Self {
+            eax: 0,
+            ebx: 0,
+            ecx: 0,
+            edx: 0,
+        }
+    }
+}
+
 impl From<CpuidResult> for CpuInfo {
     fn from(res: CpuidResult) -> Self {
         Self {
@@ -40,9 +51,31 @@ impl From<CpuidResult> for CpuInfo {
     }
 }
 
+/// Check for Cyrix CPUs and enable CPUID on them.
+pub fn init() {
+    #[cfg(target_arch = "x86")]
+    {
+        if (!fns::has_cpuid()) && fns::is_cyrix() {
+            unsafe {
+                fns::enable_cyrix_cpuid();
+            }
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    {}
+
+    // TODO: Implement CPU detection for ARM.
+    #[cfg(target_arch = "aarch64")]
+    {}
+}
+
 /// Calls CPUID with the given leaf (EAX).
 #[allow(unused_unsafe)]
 pub fn x86_cpuid(leaf: u32) -> CpuInfo {
+    if !fns::has_cpuid() {
+        return CpuInfo::default();
+    }
     unsafe { __cpuid(leaf).into() }
 }
 
@@ -50,5 +83,8 @@ pub fn x86_cpuid(leaf: u32) -> CpuInfo {
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
+    if !fns::has_cpuid() {
+        return CpuInfo::default();
+    }
     unsafe { __cpuid_count(leaf, sub_leaf).into() }
 }

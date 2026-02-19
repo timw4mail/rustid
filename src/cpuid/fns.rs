@@ -2,6 +2,95 @@
 
 use super::x86_cpuid;
 
+#[allow(unused_imports)]
+use core::arch::asm;
+
+/// Returns true if the CPUID instruction is supported.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub fn has_cpuid() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    return true;
+
+    #[cfg(target_arch = "x86")]
+    {
+        let supported: u32;
+        unsafe {
+            asm!(
+            "pushfd",
+            "pop eax",
+            "mov ecx, eax",
+            "xor eax, 0x200000",
+            "push eax",
+            "popfd",
+            "pushfd",
+            "pop eax",
+            "push ecx",
+            "popfd",
+            "xor eax, ecx",
+            "and eax, 0x200000",
+            out("eax") supported,
+            out("ecx") _,
+            );
+        }
+        supported != 0
+    }
+}
+
+/// Returns true if the CPU is a Cyrix processor (detected without CPUID).
+///
+/// Cyrix processors are unique in that they do not modify flags during a `div`
+/// instruction, whereas other x86 processors do.
+pub fn is_cyrix() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    return false;
+
+    #[cfg(target_arch = "x86")]
+    {
+        let flags: i8;
+        unsafe {
+            asm!(
+                "xor ax, ax",
+                "sahf",         // Clear flags (ZF, PF, AF, CF, SF)
+                "mov ax, 5",
+                "mov bx, 2",
+                "div bl",       // On non-Cyrix, this modifies flags
+                "lahf",         // Load flags into AH
+                out("ah") flags,
+                out("al") _,
+                out("bx") _,
+            );
+        }
+        // Check if flags (ZF, PF, etc.) are still 0
+        (flags & 0xF) == 0
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    false
+}
+
+/// Enables CPUID on Cyrix 5x86 and 6x86 processors.
+///
+/// This sets bit 7 of CCR4 (Configuration Control Register 4).
+#[cfg(target_arch = "x86")]
+pub unsafe fn enable_cyrix_cpuid() {
+    unsafe {
+        // Port 0x22 is the index port, 0x23 is the data port.
+        // CCR4 is index 0xE8.
+        asm!(
+        "out 0x22, al",
+        "in al, 0x23",
+        "or al, 0x80",
+        "mov ah, al",
+        "mov al, 0xE8",
+        "out 0x22, al",
+        "mov al, ah",
+        "out 0x23, al",
+        inout("al") 0xE8_u8 => _,
+        out("ah") _,
+        );
+    }
+}
+
 pub fn max_leaf() -> u32 {
     x86_cpuid(0).eax
 }

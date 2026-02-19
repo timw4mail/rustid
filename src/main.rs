@@ -1,116 +1,11 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
-pub mod cpuid;
-#[cfg(target_os = "none")]
-#[macro_use]
-pub mod dos;
 
-#[cfg(target_os = "none")]
-pub use dos::*;
-
-use cpuid::Cpu;
-
-#[cfg(all(not(test), target_os = "none"))]
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
-
-#[cfg(all(not(test), target_os = "none"))]
-mod intrinsics {
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-        let mut i = 0;
-        while i < n {
-            unsafe {
-                *dest.add(i) = *src.add(i);
-            }
-
-            i += 1;
-        }
-        dest
-    }
-
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
-        let mut i = 0;
-        while i < n {
-            unsafe {
-                let a = *s1.add(i);
-                let b = *s2.add(i);
-
-                if a != b {
-                    return a as i32 - b as i32;
-                }
-            }
-            i += 1;
-        }
-        0
-    }
-
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn memset(s: *mut u8, c: i32, n: usize) -> *mut u8 {
-        let mut i = 0;
-        while i < n {
-            unsafe {
-                *s.add(i) = c as u8;
-            }
-            i += 1;
-        }
-        s
-    }
-}
-
-#[cfg(all(not(test), target_os = "none"))]
-#[unsafe(no_mangle)]
-#[unsafe(link_section = ".startup")]
-pub extern "C" fn _start() -> ! {
-    main();
-
-    dos::exit();
-}
-
-fn cli_help() {
-    println!("Usage: rustid [debug] [help]");
-}
-
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn main() {
-    let cpu = Cpu::new();
-
-    #[cfg(target_os = "none")]
-    {
-        cpu.display_table();
-    }
-
-    #[cfg(not(target_os = "none"))]
-    {
-        use std::env;
-
-        let argument = env::args().nth(1);
-
-        match argument {
-            Some(arg) => {
-                match arg.as_str() {
-                    "debug" => cpu.debug(),
-                    "help" => cli_help(),
-                    "everything" => {
-                        println!("Usage: rustid [debug]");
-                        cpu.display_table();
-                        cpu.debug();
-                    }
-                    _ => cpu.display_table(),
-                }
-            }
-            None => {
-                cpu.display_table();
-            }
-        }
-    }
+    rustid::cli_main();
 }

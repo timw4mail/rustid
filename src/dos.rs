@@ -1,6 +1,21 @@
 use core::arch::asm;
 use ufmt::uWrite;
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
 
+#[cfg(not(test))]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".startup")]
+pub extern "C" fn _start() -> ! {
+    use crate::cli_main;
+
+    cli_main();
+
+    exit();
+}
 #[macro_export]
 macro_rules! print {
     ($s:literal) => {
@@ -52,7 +67,7 @@ impl uWrite for DosWriter {
     }
 }
 
-pub fn printc(ch: u8) {
+fn printc(ch: u8) {
     unsafe {
         asm!(
             "int 0x21",

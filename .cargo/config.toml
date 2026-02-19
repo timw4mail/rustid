@@ -1,10 +1,16 @@
+[unstable]
+build-std = ["core", "compiler_builtins", "alloc"]
+build-std-features = ["compiler-builtins-mem"]
+
 [target.i486-dos]
 linker = "rust-lld"
 rustflags = [
 	"-C", "link-arg=-Tlink.x",
 	"-C", "panic=abort",
-	"-C", "target-cpu=i486"
+	"-C", "target-cpu=i486",
+	"-C", "opt-level=z"
 ]
+
 [target.i586-unknown-linux-gnu]
 rustflags = [
 	"-C", "target-cpu=i486"
