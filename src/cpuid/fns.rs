@@ -25,18 +25,15 @@ pub fn logical_cores() -> u32 {
 // ! CPU Feature Lookups
 // ------------------------------------------------------------------------
 
+// ------------------------------------------------------------------------
+// ! Leaf 0000_0001h
+// ------------------------------------------------------------------------
+
 pub fn has_fpu() -> bool {
     if max_leaf() < 1 {
         return false;
     }
     (x86_cpuid(1).edx & (1 << 0)) != 0
-}
-
-pub fn has_amd64() -> bool {
-    if max_extended_leaf() < 0x8000_0001 {
-        return false;
-    }
-    (x86_cpuid(0x8000_0001).edx & (1 << 29)) != 0
 }
 
 pub fn has_mmx() -> bool {
@@ -46,12 +43,22 @@ pub fn has_mmx() -> bool {
     (x86_cpuid(1).edx & (1 << 23)) != 0
 }
 
-pub fn has_3dnow() -> bool {
-    if max_extended_leaf() < 0x8000_0001 {
+pub fn has_cmov() -> bool {
+    if max_leaf() < 1 {
         return false;
     }
+    (x86_cpuid(1).edx & (1 << 15)) != 0
+}
 
-    (x86_cpuid(0x8000_0001).edx & (1 << 31)) != 0
+pub fn has_fcmov() -> bool {
+    has_fpu() && has_cmov()
+}
+
+pub fn has_cx8() -> bool {
+    if max_leaf() < 1 {
+        return false;
+    }
+    (x86_cpuid(1).edx & (1 << 8)) != 0
 }
 
 pub fn has_sse() -> bool {
@@ -103,20 +110,6 @@ pub fn has_avx() -> bool {
     (x86_cpuid(1).ecx & (1 << 28)) != 0
 }
 
-pub fn has_avx2() -> bool {
-    if max_leaf() < 7 {
-        return false;
-    }
-    (x86_cpuid(7).ebx & (1 << 5)) != 0
-}
-
-pub fn has_avx512f() -> bool {
-    if max_leaf() < 7 {
-        return false;
-    }
-    (x86_cpuid(7).ebx & (1 << 16)) != 0
-}
-
 pub fn has_fma() -> bool {
     if max_leaf() < 1 {
         return false;
@@ -129,6 +122,38 @@ pub fn has_f16c() -> bool {
         return false;
     }
     (x86_cpuid(1).ecx & (1 << 29)) != 0
+}
+
+pub fn has_pclmulqdq() -> bool {
+    if max_leaf() < 1 {
+        return false;
+    }
+    (x86_cpuid(1).ecx & (1 << 1)) != 0
+}
+
+pub fn has_rdrand() -> bool {
+    if max_leaf() < 1 {
+        return false;
+    }
+    (x86_cpuid(1).ecx & (1 << 30)) != 0
+}
+
+// ----------------------------------------------------------------------------
+// ! Leaf 0000_0007h
+// ----------------------------------------------------------------------------
+
+pub fn has_avx2() -> bool {
+    if max_leaf() < 7 {
+        return false;
+    }
+    (x86_cpuid(7).ebx & (1 << 5)) != 0
+}
+
+pub fn has_avx512f() -> bool {
+    if max_leaf() < 7 {
+        return false;
+    }
+    (x86_cpuid(7).ebx & (1 << 16)) != 0
 }
 
 pub fn has_bmi1() -> bool {
@@ -145,16 +170,21 @@ pub fn has_bmi2() -> bool {
     (x86_cpuid(7).ebx & (1 << 8)) != 0
 }
 
-pub fn has_pclmulqdq() -> bool {
-    if max_leaf() < 1 {
+// ----------------------------------------------------------------------------
+// ! Leaf 8000_0001h
+// ----------------------------------------------------------------------------
+
+pub fn has_3dnow() -> bool {
+    if max_extended_leaf() < 0x8000_0001 {
         return false;
     }
-    (x86_cpuid(1).ecx & (1 << 1)) != 0
+
+    (x86_cpuid(0x8000_0001).edx & (1 << 31)) != 0
 }
 
-pub fn has_rdrand() -> bool {
-    if max_leaf() < 1 {
+pub fn has_amd64() -> bool {
+    if max_extended_leaf() < 0x8000_0001 {
         return false;
     }
-    (x86_cpuid(1).ecx & (1 << 30)) != 0
+    (x86_cpuid(0x8000_0001).edx & (1 << 29)) != 0
 }

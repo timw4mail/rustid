@@ -3,8 +3,16 @@ use crate::cpuid::micro_arch::CpuArch;
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
 
+#[cfg(not(target_os = "none"))]
+use std::println;
+
+#[cfg(target_os = "none")]
+use crate::println;
+
 #[derive(Debug)]
 pub struct CpuFeatures {
+    cx8: bool,
+    cmov: bool,
     fpu: bool,
     amd64: bool,
     three_d_now: bool,
@@ -24,36 +32,11 @@ pub struct CpuFeatures {
     rdrand: bool,
 }
 
-impl ufmt::uDebug for CpuFeatures {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        let mut s = f.debug_struct("CpuFeatures")?;
-        s.field("fpu", &self.fpu)?
-            .field("amd64", &self.amd64)?
-            .field("three_d_now", &self.three_d_now)?
-            .field("mmx", &self.mmx)?
-            .field("sse", &self.sse)?
-            .field("sse2", &self.sse2)?
-            .field("sse3", &self.sse3)?
-            .field("sse41", &self.sse41)?
-            .field("sse42", &self.sse42)?
-            .field("ssse3", &self.ssse3)?
-            .field("avx", &self.avx)?
-            .field("avx2", &self.avx2)?
-            .field("avx512f", &self.avx512f)?
-            .field("fma", &self.fma)?
-            .field("bmi1", &self.bmi1)?
-            .field("bmi2", &self.bmi2)?
-            .field("rdrand", &self.rdrand)?
-            .finish()
-    }
-}
-
 impl CpuFeatures {
     pub fn detect() -> Self {
         Self {
+            cx8: fns::has_cx8(),
+            cmov: fns::has_cmov(),
             fpu: fns::has_fpu(),
             amd64: fns::has_amd64(),
             three_d_now: fns::has_3dnow(),
@@ -84,23 +67,6 @@ pub struct CpuSignature {
     pub stepping: u32,
     pub display_family: u32,
     pub display_model: u32,
-}
-
-impl ufmt::uDebug for CpuSignature {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.debug_struct("CpuSignature")?
-            .field("extended_family", &self.extended_family)?
-            .field("family", &self.family)?
-            .field("extended_model", &self.extended_model)?
-            .field("model", &self.model)?
-            .field("stepping", &self.stepping)?
-            .field("display_family", &self.display_family)?
-            .field("display_model", &self.display_model)?
-            .finish()
-    }
 }
 
 impl CpuSignature {
@@ -143,32 +109,6 @@ pub struct Cpu {
     pub threads: u32,
     pub signature: CpuSignature,
     pub features: CpuFeatures,
-}
-
-impl ufmt::uDebug for Cpu {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.write_str("Cpu { cpu_arch: ")?;
-        ufmt::uDebug::fmt(&self.cpu_arch, f)?;
-        f.write_str(", easter_egg: ")?;
-        match &self.easter_egg {
-            Some(s) => {
-                f.write_str("Some(\"")?;
-                f.write_str(s.as_str())?;
-                f.write_str("\")")?;
-            }
-            None => f.write_str("None")?,
-        }
-        f.write_str(", threads: ")?;
-        ufmt::uDebug::fmt(&self.threads, f)?;
-        f.write_str(", signature: ")?;
-        ufmt::uDebug::fmt(&self.signature, f)?;
-        f.write_str(", features: ")?;
-        ufmt::uDebug::fmt(&self.features, f)?;
-        f.write_str(" }")
-    }
 }
 
 impl Cpu {
@@ -245,36 +185,23 @@ impl Cpu {
         }
     }
 
-    pub fn display(&self) {
-        #[cfg(not(target_os = "none"))]
-        std::println!("{:#?}", self);
-
-        #[cfg(target_os = "none")]
-        {
-            use crate::dos::DosWriter;
-
-            let mut writer = DosWriter;
-            let _ = ufmt::uwriteln!(writer, "CPU INFO:\n");
-            let mut writer = DosWriter;
-            let _ = ufmt::uwriteln!(writer, "{:#?}", self);
-        }
+    #[cfg(not(target_os = "none"))]
+    pub fn debug(&self) {
+        println!("{:#?}", self);
     }
 
     pub fn display_table(&self) {
-        #[cfg(not(target_os = "none"))]
-        use std::println;
-
-        #[cfg(target_os = "none")]
-        use crate::println;
-
-        println!("CPU Name:     {}", self.cpu_arch.model.as_str());
+        if self.cpu_arch.model.as_str() != "Unknown" {
+            println!("CPU Name:     {}", self.cpu_arch.model.as_str());
+        }
+        println!("CPU Codename:  {}", self.cpu_arch.code_name);
         println!("CPU Vendor:    {}", self.cpu_arch.vendor_string.as_str());
         println!(
             "CPU Signature: Family {}, Model {}, Stepping {}",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
         );
         println!(
-            "          Raw: EF {}, F {}, EM {}, M {}, S {}",
+            "               ({}, {}, {}, {}, {})",
             self.signature.extended_family,
             self.signature.family,
             self.signature.extended_model,
@@ -291,22 +218,30 @@ impl Cpu {
         }
 
         println!("Features:");
-        println!("  FPU:      {}", self.features.fpu);
-        println!("  AMD64:    {}", self.features.amd64);
-        println!("  3DNow!:   {}", self.features.three_d_now);
-        println!("  MMX:      {}", self.features.mmx);
-        println!("  SSE:      {}", self.features.sse);
-        println!("  SSE2:     {}", self.features.sse2);
-        println!("  SSE3:     {}", self.features.sse3);
-        println!("  SSE4.1:   {}", self.features.sse41);
-        println!("  SSE4.2:   {}", self.features.sse42);
-        println!("  AVX:      {}", self.features.avx);
-        println!("  AVX2:     {}", self.features.avx2);
-        println!("  AVX-512F: {}", self.features.avx512f);
-        println!("  FMA:      {}", self.features.fma);
-        println!("  BMI1:     {}", self.features.bmi1);
-        println!("  BMI2:     {}", self.features.bmi2);
-        println!("  RDRAND:   {}", self.features.rdrand);
+        if self.signature.family <= 6 {
+            println!("  FPU:      {}", self.features.fpu);
+            println!("  3DNow!:   {}", self.features.three_d_now);
+            println!("  MMX:      {}", self.features.mmx);
+            println!("  CMOV:     {}", self.features.cmov);
+            println!("  CMPXCHG8B:{}", self.features.cx8);
+            println!("  SSE:      {}", self.features.sse);
+            println!("  SSE2:     {}", self.features.sse2);
+            println!("  AMD64:    {}", self.features.amd64);
+        }
+
+        if self.features.amd64 {
+            println!("  SSE3:     {}", self.features.sse3);
+            println!("  SSSE3:    {}", self.features.ssse3);
+            println!("  SSE4.1:   {}", self.features.sse41);
+            println!("  SSE4.2:   {}", self.features.sse42);
+            println!("  AVX:      {}", self.features.avx);
+            println!("  AVX2:     {}", self.features.avx2);
+            println!("  AVX-512F: {}", self.features.avx512f);
+            println!("  FMA:      {}", self.features.fma);
+            println!("  BMI1:     {}", self.features.bmi1);
+            println!("  BMI2:     {}", self.features.bmi2);
+            println!("  RDRAND:   {}", self.features.rdrand);
+        }
     }
 }
 
@@ -318,14 +253,14 @@ mod tests {
     #[test]
     fn test_vendor_id() {
         let vendor = CpuBrand::vendor_id();
-        std::println!("Vendor: {}", vendor);
+        println!("Vendor: {}", vendor);
         assert!(!vendor.is_empty());
     }
 
     #[test]
     fn test_model_string() {
         let model = Cpu::model_string();
-        std::println!("Model: {}", model);
+        println!("Model: {}", model);
         assert!(!model.is_empty());
     }
 }

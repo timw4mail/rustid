@@ -393,6 +393,26 @@ impl CpuArch {
             s.model,
             s.stepping,
         ) {
+            // 486
+            (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX"),
+            (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50"),
+            (0, 4, 0, 2, _) => brand_arch(MicroArch::I486, "i80486SX"),
+            (0, 4, 0, 3, _) => brand_arch(MicroArch::I486, "i80486DX2"),
+            (0, 4, 0, 4, _) => brand_arch(MicroArch::I486, "i80486SL"),
+            (0, 4, 0, 5, _) => brand_arch(MicroArch::I486, "i80486SX2"),
+            (0, 4, 0, 7, _) => brand_arch(MicroArch::I486, "i80486DX2WB"),
+            (0, 4, 0, 8, _) => brand_arch(MicroArch::I486, "i80486DX4"),
+            (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB"),
+
+            // Pentium
+            (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5"),
+            (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C"),
+            (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T"),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5MMX, "P55C"),
+            (0, 5, 0, 7, _) => brand_arch(MicroArch::P5MMX, "P54C"),
+            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5MMX, "P55C (250nm)"),
+            (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont"),
+
             // Pentium Pro
             (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
 
