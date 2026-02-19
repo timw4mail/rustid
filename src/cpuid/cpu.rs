@@ -158,6 +158,25 @@ impl Cpu {
         let mut out: String<64> = String::new();
 
         let str = match self.arch.micro_arch {
+            MicroArch::Am486 => match self.arch.code_name {
+                "Am486DX2" => "AMD 486 DX2",
+                "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
+                "Am486DX4" => "AMD 486 DX4",
+                "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
+                _ => "486 Class CPU",
+            },
+            MicroArch::I486 => match self.arch.code_name {
+                "i80486DX" => "Intel or AMD 486 DX",
+                "i80486DX-50" => "Intel or AMD 486 DX-50",
+                "i80486SX" => "Intel or AMD 486 SX",
+                "i80486DX2" => "Intel 486 DX2",
+                "i80486SL" => "Intel 486 SL",
+                "i80486SX2" => "Intel or AMD 486 SX2",
+                "i80486DX2WB" => "Intel 486 DX2 with Write-Back Cache",
+                "i80486DX4" => "Intel 486 DX4",
+                "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
+                _ => "486 Class CPU",
+            },
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
             _ => "Unknown",
