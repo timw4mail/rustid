@@ -3,11 +3,10 @@ use crate::cpuid::micro_arch::CpuArch;
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
 
-#[cfg(not(target_os = "none"))]
-use std::println;
-
 #[cfg(target_os = "none")]
 use crate::println;
+#[cfg(not(target_os = "none"))]
+use std::println;
 
 #[derive(Debug)]
 pub struct CpuFeatures {
@@ -104,7 +103,7 @@ impl CpuSignature {
 
 #[derive(Debug)]
 pub struct Cpu {
-    pub cpu_arch: CpuArch,
+    pub arch: CpuArch,
     pub easter_egg: Option<String<64>>,
     pub threads: u32,
     pub signature: CpuSignature,
@@ -114,7 +113,7 @@ pub struct Cpu {
 impl Cpu {
     pub fn new() -> Self {
         Self {
-            cpu_arch: CpuArch::find(
+            arch: CpuArch::find(
                 Self::model_string().as_str(),
                 CpuSignature::detect(),
                 CpuBrand::vendor_id().as_str(),
@@ -129,9 +128,7 @@ impl Cpu {
     /// Gets the CPU model string.
     fn model_string() -> String<64> {
         let mut model: String<64> = String::new();
-        // Check if extended functions are supported
-        let max_extended_leaf = x86_cpuid(0x8000_0000).eax;
-        if max_extended_leaf < 0x8000_0004 {
+        if fns::max_extended_leaf() < 0x8000_0004 {
             let _ = model.push_str("Unknown");
             return model;
         }
@@ -191,11 +188,9 @@ impl Cpu {
     }
 
     pub fn display_table(&self) {
-        if self.cpu_arch.model.as_str() != "Unknown" {
-            println!("CPU Name:     {}", self.cpu_arch.model.as_str());
-        }
-        println!("CPU Codename:  {}", self.cpu_arch.code_name);
-        println!("CPU Vendor:    {}", self.cpu_arch.vendor_string.as_str());
+        println!("CPU Name:     {}", self.arch.model.as_str());
+        println!("CPU Codename:  {}", self.arch.code_name);
+        println!("CPU Vendor:    {}", self.arch.vendor_string.as_str());
         println!(
             "CPU Signature: Family {}, Model {}, Stepping {}",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
@@ -220,10 +215,10 @@ impl Cpu {
         println!("Features:");
         if self.signature.family <= 6 {
             println!("  FPU:      {}", self.features.fpu);
+            println!("  CMPXCHG8B:{}", self.features.cx8);
             println!("  3DNow!:   {}", self.features.three_d_now);
             println!("  MMX:      {}", self.features.mmx);
             println!("  CMOV:     {}", self.features.cmov);
-            println!("  CMPXCHG8B:{}", self.features.cx8);
             println!("  SSE:      {}", self.features.sse);
             println!("  SSE2:     {}", self.features.sse2);
             println!("  AMD64:    {}", self.features.amd64);

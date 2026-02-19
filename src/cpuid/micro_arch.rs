@@ -356,10 +356,10 @@ impl CpuArch {
         ) {
             // IDT
             (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6"),
-            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "C2"),
-            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "W2A"),
-            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "W2B"),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "C3"),
+            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "Winchip 2 (C2)"),
+            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "Winchip 2A (W2A)"),
+            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "Winchip 2B (W2B)"),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "Winchip 3 (C3)"),
 
             // VIA
             (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "Samuel (C5A)"),
