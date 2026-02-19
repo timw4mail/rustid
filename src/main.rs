@@ -1,6 +1,8 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 pub mod cpuid;
@@ -68,13 +70,47 @@ mod intrinsics {
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 pub extern "C" fn _start() -> ! {
-    Cpu::new().display_table();
+    main();
 
     dos::exit();
+}
+
+fn cli_help() {
+    println!("Usage: rustid [debug] [help]");
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused)]
 fn main() {
-    Cpu::new().display_table();
+    let cpu = Cpu::new();
+
+    #[cfg(target_os = "none")]
+    {
+        cpu.display_table();
+    }
+
+    #[cfg(not(target_os = "none"))]
+    {
+        use std::env;
+
+        let argument = env::args().nth(1);
+
+        match argument {
+            Some(arg) => {
+                match arg.as_str() {
+                    "debug" => cpu.debug(),
+                    "help" => cli_help(),
+                    "everything" => {
+                        println!("Usage: rustid [debug]");
+                        cpu.display_table();
+                        cpu.debug();
+                    }
+                    _ => cpu.display_table(),
+                }
+            }
+            None => {
+                cpu.display_table();
+            }
+        }
+    }
 }

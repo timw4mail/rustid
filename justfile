@@ -50,11 +50,11 @@ run:
 
 [windows]
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .
+	"C:\DOSBox-X\dosbox-x.exe" rustid.com /fastlaunch
 
 [linux, unix]
 run-dos: build-dos
-	dosbox-x .
+	dosbox-x rustid.com -fastlaunch
 
 # Run all the tests
 test:

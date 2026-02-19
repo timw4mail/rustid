@@ -225,6 +225,8 @@ impl Cpu {
     }
 
     pub fn display_table(&self) {
+        println!();
+
         println!(
             "CPU Vendor:    {} ({})",
             self.arch.vendor_string.as_str(),
@@ -254,8 +256,11 @@ impl Cpu {
         }
 
         println!("Features:");
-        if self.signature.family <= 6 {
+        if self.signature.display_family < 5 {
             println!("  FPU:      {}", self.features.fpu);
+        }
+
+        if self.signature.display_family > 4 && self.signature.display_family <= 6 {
             println!("  CMPXCHG8B:{}", self.features.cx8);
             println!("  3DNow!:   {}", self.features.three_d_now);
             println!("  MMX:      {}", self.features.mmx);
@@ -278,6 +283,8 @@ impl Cpu {
             println!("  BMI2:     {}", self.features.bmi2);
             println!("  RDRAND:   {}", self.features.rdrand);
         }
+
+        println!();
     }
 }
 
