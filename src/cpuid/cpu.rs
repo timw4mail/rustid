@@ -1,7 +1,7 @@
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{fns, x86_cpuid};
-use heapless::String;
+use heapless::{String, Vec};
 
 #[cfg(target_os = "none")]
 use crate::println;
@@ -29,10 +29,71 @@ pub struct CpuFeatures {
     bmi1: bool,
     bmi2: bool,
     rdrand: bool,
+    list: Vec<&'static str, 64>,
 }
 
 impl CpuFeatures {
     pub fn detect() -> Self {
+        let mut out: Vec<_, _> = Vec::new();
+
+        if fns::has_fpu() {
+            let _ = out.push("fpu");
+        };
+        if fns::has_cx8() {
+            let _ = out.push("cx8");
+        };
+        if fns::has_cmov() {
+            let _ = out.push("cmov");
+        };
+        if fns::has_3dnow() {
+            let _ = out.push("three_d_now");
+        };
+        if fns::has_mmx() {
+            let _ = out.push("mmx");
+        };
+        if fns::has_sse() {
+            let _ = out.push("sse");
+        };
+        if fns::has_amd64() {
+            let _ = out.push("amd64");
+        };
+        if fns::has_sse2() {
+            let _ = out.push("sse2");
+        };
+        if fns::has_sse3() {
+            let _ = out.push("sse3");
+        };
+        if fns::has_sse41() {
+            let _ = out.push("sse41");
+        };
+        if fns::has_sse42() {
+            let _ = out.push("sse42");
+        };
+        if fns::has_ssse3() {
+            let _ = out.push("ssse3");
+        };
+        if fns::has_avx() {
+            let _ = out.push("avx");
+        };
+        if fns::has_avx2() {
+            let _ = out.push("avx2");
+        };
+        if fns::has_avx512f() {
+            let _ = out.push("avx512f");
+        };
+        if fns::has_fma() {
+            let _ = out.push("fma");
+        };
+        if fns::has_bmi1() {
+            let _ = out.push("bmi1");
+        };
+        if fns::has_bmi2() {
+            let _ = out.push("bmi2");
+        };
+        if fns::has_rdrand() {
+            let _ = out.push("rdrand");
+        };
+
         Self {
             cx8: fns::has_cx8(),
             cmov: fns::has_cmov(),
@@ -53,6 +114,7 @@ impl CpuFeatures {
             bmi1: fns::has_bmi1(),
             bmi2: fns::has_bmi2(),
             rdrand: fns::has_rdrand(),
+            list: out,
         }
     }
 }

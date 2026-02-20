@@ -1,4 +1,4 @@
-use crate::cpuid::x86_cpuid;
+use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
 
 pub const VENDOR_AMD: &str = "AuthenticAMD";
@@ -13,6 +13,7 @@ pub const VENDOR_RISE: &str = "RiseRiseRise";
 pub const VENDOR_SIS: &str = "SiS SiS SiS ";
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
+pub const VENDOR_UNKNOWN: &str = "NoneNoneNone";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuBrand {
@@ -35,7 +36,18 @@ pub enum CpuBrand {
 
 impl CpuBrand {
     pub fn detect() -> Self {
-        Self::from(Self::vendor_id())
+        let vendor_str = Self::vendor_id();
+        let vendor = if vendor_str.is_empty() {
+            if (!fns::has_cpuid()) && fns::is_cyrix() {
+                VENDOR_CYRIX
+            } else {
+                VENDOR_UNKNOWN
+            }
+        } else {
+            vendor_str.as_str()
+        };
+
+        Self::from(vendor)
     }
 
     /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
@@ -73,7 +85,7 @@ impl CpuBrand {
             CpuBrand::Umc => "UMC",
             CpuBrand::Via => "Via",
             CpuBrand::Zhaoxin => "Zhaoxin",
-            _ => "Unknown",
+            CpuBrand::Unknown => "Unknown",
         }
     }
 }
