@@ -32,6 +32,35 @@ pub struct CpuFeatures {
     list: Vec<&'static str, 64>,
 }
 
+impl ufmt::uDebug for CpuFeatures {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuFeatures")?
+            .field("cx8", &self.cx8)?
+            .field("cmov", &self.cmov)?
+            .field("fpu", &self.fpu)?
+            .field("amd64", &self.amd64)?
+            .field("three_d_now", &self.three_d_now)?
+            .field("mmx", &self.mmx)?
+            .field("sse", &self.sse)?
+            .field("sse2", &self.sse2)?
+            .field("sse3", &self.sse3)?
+            .field("sse41", &self.sse41)?
+            .field("sse42", &self.sse42)?
+            .field("ssse3", &self.ssse3)?
+            .field("avx", &self.avx)?
+            .field("avx2", &self.avx2)?
+            .field("avx512f", &self.avx512f)?
+            .field("fma", &self.fma)?
+            .field("bmi1", &self.bmi1)?
+            .field("bmi2", &self.bmi2)?
+            .field("rdrand", &self.rdrand)?
+            .finish()
+    }
+}
+
 impl CpuFeatures {
     pub fn detect() -> Self {
         let mut out: Vec<_, _> = Vec::new();
@@ -130,6 +159,23 @@ pub struct CpuSignature {
     pub display_model: u32,
 }
 
+impl ufmt::uDebug for CpuSignature {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuSignature")?
+            .field("extended_family", &self.extended_family)?
+            .field("family", &self.family)?
+            .field("extended_model", &self.extended_model)?
+            .field("model", &self.model)?
+            .field("stepping", &self.stepping)?
+            .field("display_family", &self.display_family)?
+            .field("display_model", &self.display_model)?
+            .finish()
+    }
+}
+
 impl CpuSignature {
     pub fn detect() -> Self {
         let res = x86_cpuid(1);
@@ -170,6 +216,23 @@ pub struct Cpu {
     pub threads: u32,
     pub signature: CpuSignature,
     pub features: CpuFeatures,
+}
+
+impl ufmt::uDebug for Cpu {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let mut none: String<64> = String::new();
+        let _ = none.push_str("_None_");
+
+        f.debug_struct("Cpu")?
+            .field("arch", &self.arch)?
+            .field("threads", &self.threads)?
+            .field("signature", &self.signature)?
+            .field("features", &self.features)?
+            .finish()
+    }
 }
 
 impl Cpu {
@@ -220,6 +283,7 @@ impl Cpu {
         let mut out: String<64> = String::new();
 
         let str = match self.arch.micro_arch {
+            // AMD
             MicroArch::Am486 => match self.arch.code_name {
                 "Am486DX2" => "AMD 486 DX2",
                 "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
@@ -227,6 +291,9 @@ impl Cpu {
                 "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
                 _ => "486 Class CPU",
             },
+            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+
+            //Intel
             MicroArch::I486 => match self.arch.code_name {
                 "i80486DX" => "Intel or AMD 486 DX",
                 "i80486DX-50" => "Intel or AMD 486 DX-50",
@@ -240,9 +307,25 @@ impl Cpu {
                 _ => "486 Class CPU",
             },
             MicroArch::P6Pro => "Intel Pentium Pro",
-            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
-            MicroArch::Unknown => "No CPUID, 486 or earlier CPU",
-            _ => "Unknown",
+            MicroArch::P6PentiumII => "Intel Pentium II",
+            MicroArch::P6PentiumIII => "Intel Pentium !!!",
+
+            // Cyrix
+            MicroArch::FiveX86 => "Cyrix 5x86",
+            MicroArch::M1 => "Cyrix 6x86",
+
+            _ => {
+                if self.signature.family == 0
+                    && self.signature.model == 0
+                    && self.signature.extended_family == 0
+                    && self.signature.extended_model == 0
+                    && self.signature.stepping == 0
+                {
+                    "No CPUID, 486 or earlier CPU"
+                } else {
+                    "Unknown"
+                }
+            }
         };
 
         let _ = out.push_str(str.trim());
@@ -282,9 +365,12 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
     pub fn debug(&self) {
+        #[cfg(not(target_os = "none"))]
         println!("{:#?}", self);
+
+        #[cfg(target_os = "none")]
+        println!("{:?}", self);
     }
 
     pub fn display_table(&self) {
@@ -298,7 +384,7 @@ impl Cpu {
         println!("CPU Name:      {}", self.display_model_string().as_str());
         println!("CPU Codename:  {}", self.arch.code_name);
         println!(
-            "CPU Signature: Family {}, Model {}, Stepping {}",
+            "CPU Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
         );
         println!(

@@ -2,6 +2,8 @@ use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
 use heapless::String;
 
+const UNK: &str = "Unknown";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     Unknown,
@@ -123,6 +125,135 @@ pub enum MicroArch {
     U5D,
 }
 
+impl Into<String<64>> for MicroArch {
+    fn into(self) -> String<64> {
+        let s = match self {
+            MicroArch::Unknown => UNK,
+
+            // AMD
+            MicroArch::Am486 => "Am486",
+            MicroArch::Am5x86 => "Am5x86",
+            MicroArch::SSA5 => "SSA5",
+            MicroArch::K5 => "K5",
+            MicroArch::K6 => "K6",
+            MicroArch::K7 => "K7",
+            MicroArch::K8 => "K8",
+            MicroArch::K10 => "K10",
+            MicroArch::Bobcat => "Bobcat",
+            MicroArch::Puma2008 => "Puma2008",
+            MicroArch::Bulldozer => "Bulldozer",
+            MicroArch::Piledriver => "Piledriver",
+            MicroArch::Steamroller => "Steamroller",
+            MicroArch::Excavator => "Excavator",
+            MicroArch::Jaguar => "Jaguar",
+            MicroArch::Puma2014 => "Puma2014",
+            MicroArch::Zen => "Zen",
+            MicroArch::ZenPlus => "ZenPlus",
+            MicroArch::Zen2 => "Zen2",
+            MicroArch::Zen3 => "Zen3",
+            MicroArch::Zen3Plus => "Zen3Plus",
+            MicroArch::Zen4 => "Zen4",
+            MicroArch::Zen4C => "Zen4C",
+            MicroArch::Zen5 => "Zen5",
+            MicroArch::Zen5C => "Zen5C",
+
+            // Centaur (IDT)
+            MicroArch::Winchip => "Winchip",
+            MicroArch::Winchip2 => "Winchip2",
+            MicroArch::Winchip2A => "Winchip2A",
+            MicroArch::Winchip2B => "Winchip2B",
+            MicroArch::Winchip3 => "Winchip3",
+
+            // Centaur (VIA)
+            MicroArch::Samuel => "Samuel",
+            MicroArch::Samuel2 => "Samuel2",
+            MicroArch::Ezra => "Ezra",
+            MicroArch::EzraT => "EzraT",
+            MicroArch::Nehemiah => "Nehemiah",
+            MicroArch::NehemiahP => "NehemiahP",
+            MicroArch::Esther => "Esther",
+            MicroArch::Isaiah => "Isaiah",
+
+            // Centaur (Zhaoxin)
+            MicroArch::Wudaokou => "Wudaokou",
+            MicroArch::Lujiazui => "Lujiazui",
+
+            // Cyrix
+            MicroArch::FiveX86 => "FiveX86",
+            MicroArch::M1 => "M1",
+            MicroArch::M2 => "M2",
+            MicroArch::MediaGx => "MediaGx",
+            MicroArch::Geode => "Geode",
+
+            // DM& P
+            MicroArch::VortexDX3 => "VortexDX3",
+
+            // Intel
+            MicroArch::I486 => "I486",
+            MicroArch::P5 => "P5",
+            MicroArch::P5MMX => "P5 MMX",
+            MicroArch::Lakemont => "Lakemont",
+            MicroArch::P6Pro => "P6 (Pentium Pro)",
+            MicroArch::P6PentiumII => "P6 (PentiumII)",
+            MicroArch::P6PentiumIII => "P6 (PentiumIII)",
+            MicroArch::Dothan => "Dothan",
+            MicroArch::Yonah => "Yonah",
+            MicroArch::Merom => "Merom",
+            MicroArch::Penryn => "Penryn",
+            MicroArch::Nehalem => "Nehalem",
+            MicroArch::Westmere => "Westmere",
+            MicroArch::Bonnel => "Bonnel",
+            MicroArch::Saltwell => "Saltwell",
+            MicroArch::Silvermont => "Silvermont",
+            MicroArch::SandyBridge => "SandyBridge",
+            MicroArch::IvyBridge => "IvyBridge",
+            MicroArch::Haswell => "Haswell",
+            MicroArch::Broadwell => "Broadwell",
+            MicroArch::Airmont => "Airmont",
+            MicroArch::KabyLake => "KabyLake",
+            MicroArch::Skylake => "Skylake",
+            MicroArch::CascadeLake => "CascadeLake",
+            MicroArch::KnightsLanding => "KnightsLanding",
+            MicroArch::Goldmont => "Goldmont",
+            MicroArch::PalmCove => "PalmCove",
+            MicroArch::SunnyCove => "SunnyCove",
+            MicroArch::GoldmontPlus => "GoldmontPlus",
+            MicroArch::IcyLake => "IcyLake",
+            MicroArch::Tremont => "Tremont",
+            MicroArch::TigerLake => "TigerLake",
+            MicroArch::WhiskyLake => "WhiskyLake",
+            MicroArch::SapphireRapids => "SapphireRapids",
+            MicroArch::AlderLake => "AlderLake",
+            MicroArch::CoffeeLake => "CoffeeLake",
+            MicroArch::CometLake => "CometLake",
+            MicroArch::RaptorLake => "RaptorLake",
+            MicroArch::KnightsFerry => "KnightsFerry",
+            MicroArch::KnightsCorner => "KnightsCorner",
+            MicroArch::Willamette => "Willamette",
+            MicroArch::Northwood => "Northwood",
+            MicroArch::Prescott => "Prescott",
+            MicroArch::CedarMill => "CedarMill",
+
+            // Rise
+            MicroArch::MP6 => "MP6",
+            MicroArch::MP6Shrink => "MP6 (die shrink)",
+
+            // Transmeta
+            MicroArch::Crusoe => "Crusoe",
+            MicroArch::Efficeon => "Efficeon",
+
+            // UMC
+            MicroArch::U5S => "U5S",
+            MicroArch::U5D => "U5D",
+        };
+
+        let mut out: String<64> = String::new();
+        let _ = out.push_str(s);
+
+        out
+    }
+}
+
 impl ufmt::uDebug for MicroArch {
     fn fmt<W: ufmt::uWrite + ?Sized>(
         &self,
@@ -130,7 +261,7 @@ impl ufmt::uDebug for MicroArch {
     ) -> Result<(), W::Error> {
         let s = match self {
             MicroArch::Zen => "Zen",
-            MicroArch::Unknown => "Unknown",
+            MicroArch::Unknown => UNK,
             MicroArch::Am486 => "Am486",
             MicroArch::Zen4 => "Zen4",
             MicroArch::I486 => "I486",
@@ -221,7 +352,7 @@ impl CpuArch {
                 s.stepping,
             ) {
                 (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3"),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Cyrix => match (
                 s.extended_family,
@@ -231,10 +362,10 @@ impl CpuArch {
                 s.stepping,
             ) {
                 (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86"),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::M1, "M1/6x86"),
+                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1/6x86"),
                 (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm"),
                 (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2/6x86MX"),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Rise => match (
                 s.extended_family,
@@ -243,9 +374,10 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "mP6"),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "mP6"),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin"),
+                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "Lynx"),
+                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP6Shrink, UNK),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Umc | CpuBrand::Transmeta => match (
                 s.extended_family,
@@ -262,7 +394,7 @@ impl CpuArch {
                 (0, 5, 0, 4, _) => brand_arch(MicroArch::Crusoe, "Crusoe"),
                 (0, 15, 0, 2 | 3, _) => brand_arch(MicroArch::Efficeon, "Efficeon"),
 
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Hygon
             | CpuBrand::IDT
@@ -271,7 +403,7 @@ impl CpuArch {
             | CpuBrand::SiS
             | CpuBrand::Unknown
             | CpuBrand::Via
-            | CpuBrand::Zhaoxin => brand_arch(MicroArch::Unknown, "Unknown"),
+            | CpuBrand::Zhaoxin => brand_arch(MicroArch::Unknown, UNK),
         }
     }
 
@@ -332,7 +464,7 @@ impl CpuArch {
             (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer"),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael"),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix"),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
         }
     }
 
@@ -416,10 +548,25 @@ impl CpuArch {
             // Pentium Pro
             (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
 
+            // Pentium 2
+            (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::P6PentiumII, UNK),
+            (0, 6, 0, 3, 2) => brand_arch(MicroArch::P6PentiumII, "Deschutes"), // Pentium II Overdrive
+            (0, 6, 0, 3, _) => brand_arch(MicroArch::P6PentiumII, "Klamath"),
+            (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumII, UNK),
+            (0, 6, 0, 5, 1) => brand_arch(MicroArch::P6PentiumII, "Deschutes"),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::P6PentiumII, "Dixon / Mendocino"),
+
+            // Pentium 3
+            (0, 6, 0, 7, _) => brand_arch(MicroArch::P6PentiumIII, "Katmai"),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine"),
+            (0, 6, 0, 9, 5) => brand_arch(MicroArch::P6PentiumIII, "Banias"),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine T"),
+            (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin"),
+
             // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge"),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, "Unknown"),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
         }
     }
 }
