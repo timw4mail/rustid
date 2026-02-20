@@ -9,7 +9,11 @@ info:
 
 # Check code validity and style
 check:
-	cargo check
+	cargo check --all-targets
+
+# Fix linting erros
+fix:
+	cargo fix --all-targets
 
 # Automatic code formatting
 fmt:
@@ -48,8 +52,8 @@ clean:
 	rm -f rustid.exe
 
 # Build and run the app
-run:
-	cargo run
+run arg="":
+	cargo run {{arg}}
 
 # Run the dos build in DOSBox-X
 [windows]

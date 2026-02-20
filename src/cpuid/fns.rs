@@ -48,22 +48,23 @@ pub fn is_cyrix() -> bool {
 
     #[cfg(target_arch = "x86")]
     {
-        let flags: i8;
+        let flags: u8;
         unsafe {
             asm!(
                 "xor ax, ax",
-                "sahf",         // Clear flags (ZF, PF, AF, CF, SF)
+                "sahf",         // Clear flags (SF, ZF, AF, PF, CF)
                 "mov ax, 5",
                 "mov bx, 2",
-                "div bl",       // On non-Cyrix, this modifies flags
+                "div bl",       // Cyrix CPUs do not modify flags on 'div'
                 "lahf",         // Load flags into AH
                 out("ah") flags,
                 out("al") _,
                 out("bx") _,
             );
         }
-        // Check if flags (ZF, PF, etc.) are still 0
-        (flags & 0xF) == 0
+        // Cyrix: flags (SF, ZF, AF, PF, CF) remain unchanged (0).
+        // Mask 0xD5 (11010101b) selects these flags.
+        (flags & 0xD5) == 0
     }
 
     #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
