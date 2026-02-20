@@ -338,7 +338,7 @@ impl CpuArch {
 
         let brand = CpuBrand::from(vendor_string);
         let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            arch(ma, code_name, brand.as_str())
+            arch(ma, code_name, brand.to_brand_name())
         };
 
         match brand {
@@ -476,7 +476,7 @@ impl CpuArch {
         };
 
         let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            Self::new(model, ma, code_name, brand.as_str(), vendor_string)
+            Self::new(model, ma, code_name, brand.to_brand_name(), vendor_string)
         };
 
         match (

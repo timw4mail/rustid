@@ -13,7 +13,6 @@ pub const VENDOR_RISE: &str = "RiseRiseRise";
 pub const VENDOR_SIS: &str = "SiS SiS SiS ";
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
-pub const VENDOR_UNKNOWN: &str = "NoneNoneNone";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuBrand {
@@ -39,28 +38,24 @@ impl ufmt::uDebug for CpuBrand {
         &self,
         f: &mut ufmt::Formatter<'_, W>,
     ) -> Result<(), W::Error> {
-        f.write_str(self.as_str())
+        f.write_str(self.to_brand_name())
     }
 }
 
 impl CpuBrand {
     pub fn detect() -> Self {
-        let vendor_str = Self::vendor_id();
-        let vendor = if vendor_str.is_empty() {
-            if (!fns::has_cpuid()) && fns::is_cyrix() {
-                VENDOR_CYRIX
-            } else {
-                VENDOR_UNKNOWN
-            }
+        let vendor_str = Self::vendor_str();
+        let vendor_str = if vendor_str.is_empty() && fns::is_cyrix() {
+            VENDOR_CYRIX
         } else {
             vendor_str.as_str()
         };
 
-        Self::from(vendor)
+        Self::from(vendor_str)
     }
 
     /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
-    pub fn vendor_id() -> String<12> {
+    fn vendor_str() -> String<12> {
         let res = x86_cpuid(0);
         let mut bytes = [0u8; 12];
 
@@ -78,7 +73,25 @@ impl CpuBrand {
         s
     }
 
-    pub fn as_str(&self) -> &str {
+    pub fn to_vendor_str(&self) -> &str {
+        match self {
+            CpuBrand::AMD => VENDOR_AMD,
+            CpuBrand::Cyrix => VENDOR_CYRIX,
+            CpuBrand::DMP => VENDOR_DMP,
+            CpuBrand::Hygon => VENDOR_HYGON,
+            CpuBrand::IDT | CpuBrand::Via | CpuBrand::Zhaoxin => VENDOR_CENTAUR,
+            CpuBrand::Intel => VENDOR_INTEL,
+            CpuBrand::NationalSemiconductor => VENDOR_NSC,
+            CpuBrand::NexGen => VENDOR_NEXGEN,
+            CpuBrand::Rise => VENDOR_RISE,
+            CpuBrand::SiS => VENDOR_SIS,
+            CpuBrand::Transmeta => VENDOR_TRANSMETA,
+            CpuBrand::Umc => VENDOR_UMC,
+            CpuBrand::Unknown => "Unknown",
+        }
+    }
+
+    pub fn to_brand_name(&self) -> &str {
         match self {
             CpuBrand::AMD => "AMD",
             CpuBrand::Cyrix => "Cyrix",

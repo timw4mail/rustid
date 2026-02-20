@@ -69,9 +69,30 @@ impl From<CpuidResult> for CpuInfo {
 pub fn init() {
     #[cfg(target_arch = "x86")]
     {
-        if (!fns::has_cpuid()) && fns::is_cyrix() {
+        #[cfg(target_os = "none")]
+        use crate::println;
+        #[cfg(not(target_os = "none"))]
+        use std::println;
+
+        let has_cpuid = fns::has_cpuid();
+
+        if (!has_cpuid) {
+            println!("The CPU does not appear to have CPUID, or it is disabled.");
+            println!("Checking for Cyrix CPUs...");
+        }
+
+        if (!has_cpuid) && fns::is_cyrix() {
+            println!("Attempting to enable CPUID on Cyrix CPU...");
             unsafe {
                 fns::enable_cyrix_cpuid();
+            }
+
+            let has_cpuid = fns::has_cpuid();
+
+            if (has_cpuid) {
+                println!("CPUID is now enabled on Cyrix CPU.");
+            } else {
+                println!("Failed to enable CPUID on Cyrix CPU.");
             }
         }
     }

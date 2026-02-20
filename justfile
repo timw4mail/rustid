@@ -2,6 +2,7 @@
 default:
 	@just --list
 
+# Shows basic info about this machine
 info:
 	@echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
 
@@ -28,6 +29,8 @@ build-dos:
 	cargo install cargo-binutils
 	rustup component add llvm-tools-preview
 	rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+	# Cleanup old binary
+	rm -f rustid.com
 	# Build initial binary
 	cargo +nightly build -Zjson-target-spec --target i486-dos.json -Z build-std=core,alloc --release
 	# Convert to proper DOS com binary
@@ -48,10 +51,12 @@ clean:
 run:
 	cargo run
 
+# Run the dos build in DOSBox-X
 [windows]
 run-dos: build-dos
 	"C:\DOSBox-X\dosbox-x.exe" rustid.com /fastlaunch
 
+# Run the dos build in DOSBox-X
 [linux, unix]
 run-dos: build-dos
 	dosbox-x rustid.com -fastlaunch

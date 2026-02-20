@@ -6,7 +6,6 @@ use super::x86_cpuid;
 use core::arch::asm;
 
 /// Returns true if the CPUID instruction is supported.
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn has_cpuid() -> bool {
     #[cfg(target_arch = "x86_64")]
     return true;
@@ -16,24 +15,27 @@ pub fn has_cpuid() -> bool {
         let supported: u32;
         unsafe {
             asm!(
-            "pushfd",
-            "pop eax",
-            "mov ecx, eax",
-            "xor eax, 0x200000",
-            "push eax",
-            "popfd",
-            "pushfd",
-            "pop eax",
-            "push ecx",
-            "popfd",
-            "xor eax, ecx",
-            "and eax, 0x200000",
-            out("eax") supported,
-            out("ecx") _,
+                "pushfd",
+                "pop eax",
+                "mov ecx, eax",
+                "xor eax, 0x200000",
+                "push eax",
+                "popfd",
+                "pushfd",
+                "pop eax",
+                "push ecx",
+                "popfd",
+                "xor eax, ecx",
+                "and eax, 0x200000",
+                out("eax") supported,
+                out("ecx") _,
             );
         }
         supported != 0
     }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    false
 }
 
 /// Returns true if the CPU is a Cyrix processor (detected without CPUID).
