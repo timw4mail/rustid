@@ -362,7 +362,7 @@ impl CpuArch {
                 s.stepping,
             ) {
                 (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86"),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::M1, "M1/6x86"),
+                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1/6x86"),
                 (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm"),
                 (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2/6x86MX"),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
@@ -374,8 +374,9 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "mP6"),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "mP6"),
+                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin"),
+                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "Lynx"),
+                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP6Shrink, UNK),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Umc | CpuBrand::Transmeta => match (

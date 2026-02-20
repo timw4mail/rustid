@@ -221,6 +221,7 @@ impl Cpu {
         let mut out: String<64> = String::new();
 
         let str = match self.arch.micro_arch {
+            // AMD
             MicroArch::Am486 => match self.arch.code_name {
                 "Am486DX2" => "AMD 486 DX2",
                 "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
@@ -228,6 +229,9 @@ impl Cpu {
                 "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
                 _ => "486 Class CPU",
             },
+            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+
+            //Intel
             MicroArch::I486 => match self.arch.code_name {
                 "i80486DX" => "Intel or AMD 486 DX",
                 "i80486DX-50" => "Intel or AMD 486 DX-50",
@@ -243,7 +247,11 @@ impl Cpu {
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::P6PentiumII => "Intel Pentium II",
             MicroArch::P6PentiumIII => "Intel Pentium !!!",
-            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+
+            // Cyrix
+            MicroArch::FiveX86 => "Cyrix 5x86",
+            MicroArch::M1 => "Cyrix 6x86",
+
             _ => {
                 if self.signature.family == 0
                     && self.signature.model == 0
