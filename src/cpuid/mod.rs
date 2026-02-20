@@ -29,6 +29,20 @@ pub struct CpuInfo {
     pub edx: u32,
 }
 
+impl ufmt::uDebug for CpuInfo {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuInfo")?
+            .field("eax", &self.eax)?
+            .field("ebx", &self.ebx)?
+            .field("ecx", &self.ecx)?
+            .field("edx", &self.edx)?
+            .finish()
+    }
+}
+
 impl Default for CpuInfo {
     fn default() -> Self {
         Self {

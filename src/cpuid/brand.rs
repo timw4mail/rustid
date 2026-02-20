@@ -33,6 +33,15 @@ pub enum CpuBrand {
     Zhaoxin,
 }
 
+impl ufmt::uDebug for CpuBrand {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.write_str(self.as_str())
+    }
+}
+
 impl CpuBrand {
     pub fn detect() -> Self {
         Self::from(Self::vendor_id())

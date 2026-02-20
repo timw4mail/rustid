@@ -52,7 +52,7 @@ pub fn cli_main() {
                 "debug" => {
                     version();
                     cpu.debug();
-                },
+                }
                 "help" => cli_help(),
                 "everything" => {
                     version();
@@ -64,7 +64,7 @@ pub fn cli_main() {
                 _ => {
                     version();
                     cpu.display_table()
-                },
+                }
             },
             None => {
                 version();

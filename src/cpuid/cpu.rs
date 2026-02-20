@@ -31,6 +31,35 @@ pub struct CpuFeatures {
     rdrand: bool,
 }
 
+impl ufmt::uDebug for CpuFeatures {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuFeatures")?
+            .field("cx8", &self.cx8)?
+            .field("cmov", &self.cmov)?
+            .field("fpu", &self.fpu)?
+            .field("amd64", &self.amd64)?
+            .field("three_d_now", &self.three_d_now)?
+            .field("mmx", &self.mmx)?
+            .field("sse", &self.sse)?
+            .field("sse2", &self.sse2)?
+            .field("sse3", &self.sse3)?
+            .field("sse41", &self.sse41)?
+            .field("sse42", &self.sse42)?
+            .field("ssse3", &self.ssse3)?
+            .field("avx", &self.avx)?
+            .field("avx2", &self.avx2)?
+            .field("avx512f", &self.avx512f)?
+            .field("fma", &self.fma)?
+            .field("bmi1", &self.bmi1)?
+            .field("bmi2", &self.bmi2)?
+            .field("rdrand", &self.rdrand)?
+            .finish()
+    }
+}
+
 impl CpuFeatures {
     pub fn detect() -> Self {
         Self {
@@ -66,6 +95,23 @@ pub struct CpuSignature {
     pub stepping: u32,
     pub display_family: u32,
     pub display_model: u32,
+}
+
+impl ufmt::uDebug for CpuSignature {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        f.debug_struct("CpuSignature")?
+            .field("extended_family", &self.extended_family)?
+            .field("family", &self.family)?
+            .field("extended_model", &self.extended_model)?
+            .field("model", &self.model)?
+            .field("stepping", &self.stepping)?
+            .field("display_family", &self.display_family)?
+            .field("display_model", &self.display_model)?
+            .finish()
+    }
 }
 
 impl CpuSignature {
@@ -108,6 +154,23 @@ pub struct Cpu {
     pub threads: u32,
     pub signature: CpuSignature,
     pub features: CpuFeatures,
+}
+
+impl ufmt::uDebug for Cpu {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let mut none: String<64> = String::new();
+        let _ = none.push_str("_None_");
+
+        f.debug_struct("Cpu")?
+            .field("arch", &self.arch)?
+            .field("threads", &self.threads)?
+            .field("signature", &self.signature)?
+            .field("features", &self.features)?
+            .finish()
+    }
 }
 
 impl Cpu {
@@ -230,9 +293,12 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
     pub fn debug(&self) {
+        #[cfg(not(target_os = "none"))]
         println!("{:#?}", self);
+
+        #[cfg(target_os = "none")]
+        println!("{:?}", self);
     }
 
     pub fn display_table(&self) {

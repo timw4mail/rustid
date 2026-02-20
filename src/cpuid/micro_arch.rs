@@ -123,6 +123,135 @@ pub enum MicroArch {
     U5D,
 }
 
+impl Into<String<64>> for MicroArch {
+    fn into(self) -> String<64> {
+        let s = match self {
+            MicroArch::Unknown => "Unknown",
+
+            // AMD
+            MicroArch::Am486 => "Am486",
+            MicroArch::Am5x86 => "Am5x86",
+            MicroArch::SSA5 => "SSA5",
+            MicroArch::K5 => "K5",
+            MicroArch::K6 => "K6",
+            MicroArch::K7 => "K7",
+            MicroArch::K8 => "K8",
+            MicroArch::K10 => "K10",
+            MicroArch::Bobcat => "Bobcat",
+            MicroArch::Puma2008 => "Puma2008",
+            MicroArch::Bulldozer => "Bulldozer",
+            MicroArch::Piledriver => "Piledriver",
+            MicroArch::Steamroller => "Steamroller",
+            MicroArch::Excavator => "Excavator",
+            MicroArch::Jaguar => "Jaguar",
+            MicroArch::Puma2014 => "Puma2014",
+            MicroArch::Zen => "Zen",
+            MicroArch::ZenPlus => "ZenPlus",
+            MicroArch::Zen2 => "Zen2",
+            MicroArch::Zen3 => "Zen3",
+            MicroArch::Zen3Plus => "Zen3Plus",
+            MicroArch::Zen4 => "Zen4",
+            MicroArch::Zen4C => "Zen4C",
+            MicroArch::Zen5 => "Zen5",
+            MicroArch::Zen5C => "Zen5C",
+
+            // Centaur (IDT)
+            MicroArch::Winchip => "Winchip",
+            MicroArch::Winchip2 => "Winchip2",
+            MicroArch::Winchip2A => "Winchip2A",
+            MicroArch::Winchip2B => "Winchip2B",
+            MicroArch::Winchip3 => "Winchip3",
+
+            // Centaur (VIA)
+            MicroArch::Samuel => "Samuel",
+            MicroArch::Samuel2 => "Samuel2",
+            MicroArch::Ezra => "Ezra",
+            MicroArch::EzraT => "EzraT",
+            MicroArch::Nehemiah => "Nehemiah",
+            MicroArch::NehemiahP => "NehemiahP",
+            MicroArch::Esther => "Esther",
+            MicroArch::Isaiah => "Isaiah",
+
+            // Centaur (Zhaoxin)
+            MicroArch::Wudaokou => "Wudaokou",
+            MicroArch::Lujiazui => "Lujiazui",
+
+            // Cyrix
+            MicroArch::FiveX86 => "FiveX86",
+            MicroArch::M1 => "M1",
+            MicroArch::M2 => "M2",
+            MicroArch::MediaGx => "MediaGx",
+            MicroArch::Geode => "Geode",
+
+            // DM& P
+            MicroArch::VortexDX3 => "VortexDX3",
+
+            // Intel
+            MicroArch::I486 => "I486",
+            MicroArch::P5 => "P5",
+            MicroArch::P5MMX => "P5 MMX",
+            MicroArch::Lakemont => "Lakemont",
+            MicroArch::P6Pro => "P6 (Pentium Pro)",
+            MicroArch::P6PentiumII => "P6 (PentiumII)",
+            MicroArch::P6PentiumIII => "P6 (PentiumIII)",
+            MicroArch::Dothan => "Dothan",
+            MicroArch::Yonah => "Yonah",
+            MicroArch::Merom => "Merom",
+            MicroArch::Penryn => "Penryn",
+            MicroArch::Nehalem => "Nehalem",
+            MicroArch::Westmere => "Westmere",
+            MicroArch::Bonnel => "Bonnel",
+            MicroArch::Saltwell => "Saltwell",
+            MicroArch::Silvermont => "Silvermont",
+            MicroArch::SandyBridge => "SandyBridge",
+            MicroArch::IvyBridge => "IvyBridge",
+            MicroArch::Haswell => "Haswell",
+            MicroArch::Broadwell => "Broadwell",
+            MicroArch::Airmont => "Airmont",
+            MicroArch::KabyLake => "KabyLake",
+            MicroArch::Skylake => "Skylake",
+            MicroArch::CascadeLake => "CascadeLake",
+            MicroArch::KnightsLanding => "KnightsLanding",
+            MicroArch::Goldmont => "Goldmont",
+            MicroArch::PalmCove => "PalmCove",
+            MicroArch::SunnyCove => "SunnyCove",
+            MicroArch::GoldmontPlus => "GoldmontPlus",
+            MicroArch::IcyLake => "IcyLake",
+            MicroArch::Tremont => "Tremont",
+            MicroArch::TigerLake => "TigerLake",
+            MicroArch::WhiskyLake => "WhiskyLake",
+            MicroArch::SapphireRapids => "SapphireRapids",
+            MicroArch::AlderLake => "AlderLake",
+            MicroArch::CoffeeLake => "CoffeeLake",
+            MicroArch::CometLake => "CometLake",
+            MicroArch::RaptorLake => "RaptorLake",
+            MicroArch::KnightsFerry => "KnightsFerry",
+            MicroArch::KnightsCorner => "KnightsCorner",
+            MicroArch::Willamette => "Willamette",
+            MicroArch::Northwood => "Northwood",
+            MicroArch::Prescott => "Prescott",
+            MicroArch::CedarMill => "CedarMill",
+
+            // Rise
+            MicroArch::MP6 => "MP6",
+            MicroArch::MP6Shrink => "MP6 (die shrink)",
+
+            // Transmeta
+            MicroArch::Crusoe => "Crusoe",
+            MicroArch::Efficeon => "Efficeon",
+
+            // UMC
+            MicroArch::U5S => "U5S",
+            MicroArch::U5D => "U5D",
+        };
+
+        let mut out: String<64> = String::new();
+        let _ = out.push_str(s);
+
+        out
+    }
+}
+
 impl ufmt::uDebug for MicroArch {
     fn fmt<W: ufmt::uWrite + ?Sized>(
         &self,
