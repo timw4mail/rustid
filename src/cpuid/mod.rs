@@ -76,7 +76,7 @@ pub fn init() {
 
         let has_cpuid = fns::has_cpuid();
 
-        if (!has_cpuid) {
+        if !has_cpuid {
             println!("The CPU does not appear to have CPUID, or it is disabled.");
             println!("Checking for Cyrix CPUs...");
         }
@@ -89,7 +89,7 @@ pub fn init() {
 
             let has_cpuid = fns::has_cpuid();
 
-            if (has_cpuid) {
+            if has_cpuid {
                 println!("CPUID is now enabled on Cyrix CPU.");
             } else {
                 println!("Failed to enable CPUID on Cyrix CPU.");

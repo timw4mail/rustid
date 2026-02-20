@@ -136,3 +136,20 @@ impl From<String<12>> for CpuBrand {
         Self::from(brand.as_str())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(target_os = "none")]
+    use crate::println;
+    #[cfg(not(target_os = "none"))]
+    use std::println;
+
+    #[test]
+    fn test_vendor_id() {
+        let vendor = CpuBrand::vendor_str();
+        println!("Vendor: {}", vendor);
+        assert!(!vendor.is_empty());
+    }
+}

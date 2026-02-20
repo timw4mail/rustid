@@ -275,14 +275,12 @@ impl Cpu {
         out
     }
 
-    fn display_model_string(&self) -> String<64> {
+    fn display_model_string(&self) -> &str {
         if &self.arch.model != "Unknown" {
-            return self.arch.model.clone();
+            return &self.arch.model;
         }
 
-        let mut out: String<64> = String::new();
-
-        let str = match self.arch.micro_arch {
+        match self.arch.micro_arch {
             // AMD
             MicroArch::Am486 => match self.arch.code_name {
                 "Am486DX2" => "AMD 486 DX2",
@@ -326,11 +324,7 @@ impl Cpu {
                     "Unknown"
                 }
             }
-        };
-
-        let _ = out.push_str(str.trim());
-
-        out
+        }
     }
 
     fn easter_egg() -> Option<String<64>> {
@@ -375,13 +369,12 @@ impl Cpu {
 
     pub fn display_table(&self) {
         println!();
-
         println!(
             "CPU Vendor:    {} ({})",
             self.arch.vendor_string.as_str(),
             self.arch.brand_name.as_str()
         );
-        println!("CPU Name:      {}", self.display_model_string().as_str());
+        println!("CPU Name:      {}", self.display_model_string());
         println!("CPU Codename:  {}", self.arch.code_name);
         println!(
             "CPU Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
@@ -438,16 +431,13 @@ impl Cpu {
 }
 
 #[cfg(test)]
-#[cfg(not(target_os = "none"))]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_vendor_id() {
-        let vendor = CpuBrand::vendor_id();
-        println!("Vendor: {}", vendor);
-        assert!(!vendor.is_empty());
-    }
+    #[cfg(target_os = "none")]
+    use crate::println;
+    #[cfg(not(target_os = "none"))]
+    use std::println;
 
     #[test]
     fn test_model_string() {
