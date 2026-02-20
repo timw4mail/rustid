@@ -6,6 +6,8 @@ use super::x86_cpuid;
 use core::arch::asm;
 
 /// Returns true if the CPUID instruction is supported.
+///
+/// Verified on real hardware
 pub fn has_cpuid() -> bool {
     #[cfg(target_arch = "x86_64")]
     return true;
@@ -42,6 +44,8 @@ pub fn has_cpuid() -> bool {
 ///
 /// Cyrix processors are unique in that they do not modify flags during a `div`
 /// instruction, whereas other x86 processors do.
+///
+/// Verified on real hardware
 pub fn is_cyrix() -> bool {
     #[cfg(target_arch = "x86_64")]
     return false;

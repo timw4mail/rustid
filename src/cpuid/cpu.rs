@@ -309,8 +309,9 @@ impl Cpu {
             MicroArch::P6PentiumIII => "Intel Pentium !!!",
 
             // Cyrix
-            MicroArch::FiveX86 => "Cyrix 5x86",
-            MicroArch::M1 => "Cyrix 6x86",
+            MicroArch::FiveX86 => "5x86",
+            MicroArch::M1 => "6x86",
+            MicroArch::M2 => "6x86MX (MII)",
 
             _ => {
                 if self.signature.family == 0

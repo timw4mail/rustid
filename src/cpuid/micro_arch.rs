@@ -362,9 +362,9 @@ impl CpuArch {
                 s.stepping,
             ) {
                 (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86"),
-                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1/6x86"),
+                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1"),
                 (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm"),
-                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2/6x86MX"),
+                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2"),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
             },
             CpuBrand::Rise => match (
