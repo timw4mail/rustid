@@ -179,8 +179,18 @@ impl Cpu {
             },
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
-            MicroArch::Unknown => "No CPUID, 486 or earlier CPU",
-            _ => "Unknown",
+            _ => {
+                if self.signature.family == 0
+                    && self.signature.model == 0
+                    && self.signature.extended_family == 0
+                    && self.signature.extended_model == 0
+                    && self.signature.stepping == 0
+                {
+                    "No CPUID, 486 or earlier CPU"
+                } else {
+                    "Unknown"
+                }
+            }
         };
 
         let _ = out.push_str(str.trim());

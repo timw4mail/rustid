@@ -49,7 +49,10 @@ pub fn cli_main() {
         match argument {
             Some(arg) => match arg.as_str() {
                 "version" => version(),
-                "debug" => cpu.debug(),
+                "debug" => {
+                    version();
+                    cpu.debug();
+                },
                 "help" => cli_help(),
                 "everything" => {
                     version();
@@ -58,9 +61,13 @@ pub fn cli_main() {
                     println!("---");
                     cpu.debug();
                 }
-                _ => cpu.display_table(),
+                _ => {
+                    version();
+                    cpu.display_table()
+                },
             },
             None => {
+                version();
                 cpu.display_table();
             }
         }
