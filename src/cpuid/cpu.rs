@@ -241,6 +241,8 @@ impl Cpu {
                 _ => "486 Class CPU",
             },
             MicroArch::P6Pro => "Intel Pentium Pro",
+            MicroArch::P6PentiumII => "Intel Pentium II",
+            MicroArch::P6PentiumIII => "Intel Pentium !!!",
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
             _ => {
                 if self.signature.family == 0
@@ -312,7 +314,7 @@ impl Cpu {
         println!("CPU Name:      {}", self.display_model_string().as_str());
         println!("CPU Codename:  {}", self.arch.code_name);
         println!(
-            "CPU Signature: Family {}, Model {}, Stepping {}",
+            "CPU Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
         );
         println!(
