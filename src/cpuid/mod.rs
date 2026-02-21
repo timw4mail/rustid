@@ -54,7 +54,7 @@ impl From<CpuidResult> for CpuInfo {
     }
 }
 
-/// Check for Cyrix CPUs and enable CPUID on them.
+/// Check for CPUID
 pub fn init() {
     #[cfg(target_arch = "x86")]
     {
@@ -63,25 +63,14 @@ pub fn init() {
         #[cfg(not(target_os = "none"))]
         use std::println;
 
-        let has_cpuid = fns::has_cpuid();
-
-        if !has_cpuid {
-            println!("The CPU does not appear to have CPUID, or it is disabled.");
-            println!("Checking for Cyrix CPUs...");
-        }
-
-        if (!has_cpuid) && fns::is_cyrix() {
-            println!("Attempting to enable CPUID on Cyrix CPU...");
-            unsafe {
-                fns::enable_cyrix_cpuid();
-            }
-
-            let has_cpuid = fns::has_cpuid();
-
-            if has_cpuid {
-                println!("CPUID is now enabled on Cyrix CPU.");
+        if !fns::has_cpuid() {
+            if fns::is_cyrix() {
+                println!("This CPU might have CPUID support, but it is disabled.");
+                println!("For DOS, you can download a utility from ");
+                println!("  https://www.deinmeister.de/cypower.com");
+                println!("If run before rustid, CPUID should be enabled");
             } else {
-                println!("Failed to enable CPUID on Cyrix CPU.");
+                println!("The CPU does not appear to have CPUID");
             }
         }
     }

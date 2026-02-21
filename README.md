@@ -64,5 +64,5 @@ Features:
 - [cpufetch](https://github.com/Dr-Noob/cpufetch) (a similar tool that might work better for you)
 - [Paradice CPUID Guide](https://www.paradicesoftware.com/specs/cpuid/) - helpful for Cyrix workarounds
 - [CPU-World](https://www.cpu-world.com/index.html)
-- My own hardware collection
+- [My own hardware collection](https://timshome.page/collection/cpu)
 

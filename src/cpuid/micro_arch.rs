@@ -148,29 +148,29 @@ impl From<MicroArch> for String<64> {
             MicroArch::Jaguar => "Jaguar",
             MicroArch::Puma2014 => "Puma2014",
             MicroArch::Zen => "Zen",
-            MicroArch::ZenPlus => "ZenPlus",
-            MicroArch::Zen2 => "Zen2",
-            MicroArch::Zen3 => "Zen3",
-            MicroArch::Zen3Plus => "Zen3Plus",
-            MicroArch::Zen4 => "Zen4",
-            MicroArch::Zen4C => "Zen4C",
-            MicroArch::Zen5 => "Zen5",
-            MicroArch::Zen5C => "Zen5C",
+            MicroArch::ZenPlus => "Zen+",
+            MicroArch::Zen2 => "Zen 2",
+            MicroArch::Zen3 => "Zen 3",
+            MicroArch::Zen3Plus => "Zen 3P+",
+            MicroArch::Zen4 => "Zen 4",
+            MicroArch::Zen4C => "Zen 4C",
+            MicroArch::Zen5 => "Zen 5",
+            MicroArch::Zen5C => "Zen 5C",
 
             // Centaur (IDT)
             MicroArch::Winchip => "Winchip",
-            MicroArch::Winchip2 => "Winchip2",
-            MicroArch::Winchip2A => "Winchip2A",
-            MicroArch::Winchip2B => "Winchip2B",
-            MicroArch::Winchip3 => "Winchip3",
+            MicroArch::Winchip2 => "Winchip 2",
+            MicroArch::Winchip2A => "Winchip 2A",
+            MicroArch::Winchip2B => "Winchip 2B",
+            MicroArch::Winchip3 => "Winchip 3",
 
             // Centaur (VIA)
             MicroArch::Samuel => "Samuel",
-            MicroArch::Samuel2 => "Samuel2",
+            MicroArch::Samuel2 => "Samuel 2",
             MicroArch::Ezra => "Ezra",
             MicroArch::EzraT => "EzraT",
             MicroArch::Nehemiah => "Nehemiah",
-            MicroArch::NehemiahP => "NehemiahP",
+            MicroArch::NehemiahP => "Nehemiah P",
             MicroArch::Esther => "Esther",
             MicroArch::Isaiah => "Isaiah",
 
@@ -179,10 +179,10 @@ impl From<MicroArch> for String<64> {
             MicroArch::Lujiazui => "Lujiazui",
 
             // Cyrix
-            MicroArch::FiveX86 => "FiveX86",
+            MicroArch::FiveX86 => "5x86",
             MicroArch::M1 => "M1",
             MicroArch::M2 => "M2",
-            MicroArch::MediaGx => "MediaGx",
+            MicroArch::MediaGx => "MediaGX",
             MicroArch::Geode => "Geode",
 
             // DM& P
@@ -424,15 +424,16 @@ impl CpuArch {
             (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB"),
             (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4"),
             (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB"),
-
-            // K5
             (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86"),
             (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB"),
-            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5 (K5)"),
-            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "K5"),
+
+            // K5
+            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5"),
+            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86"),
 
             // K6
-            (0, 5, 0, 6 | 7, _) => brand_arch(MicroArch::K6, "K6"),
+            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6"),
+            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot"),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)"),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)"),
             (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)"),
@@ -547,10 +548,10 @@ impl CpuArch {
 
             // Pentium Pro
             (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
+            (0, 6, 0, 3, 2) => brand_arch(MicroArch::P6PentiumII, "P6T"), // Pentium II Overdrive
 
             // Pentium 2
             (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::P6PentiumII, UNK),
-            (0, 6, 0, 3, 2) => brand_arch(MicroArch::P6PentiumII, "Deschutes"), // Pentium II Overdrive
             (0, 6, 0, 3, _) => brand_arch(MicroArch::P6PentiumII, "Klamath"),
             (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumII, UNK),
             (0, 6, 0, 5, 1) => brand_arch(MicroArch::P6PentiumII, "Deschutes"),
