@@ -10,25 +10,6 @@ use std::println;
 
 #[derive(Debug)]
 pub struct CpuFeatures {
-    cx8: bool,
-    cmov: bool,
-    fpu: bool,
-    amd64: bool,
-    three_d_now: bool,
-    mmx: bool,
-    sse: bool,
-    sse2: bool,
-    sse3: bool,
-    sse41: bool,
-    sse42: bool,
-    ssse3: bool,
-    avx: bool,
-    avx2: bool,
-    avx512f: bool,
-    fma: bool,
-    bmi1: bool,
-    bmi2: bool,
-    rdrand: bool,
     list: Vec<&'static str, 64>,
 }
 
@@ -37,27 +18,16 @@ impl ufmt::uDebug for CpuFeatures {
         &self,
         f: &mut ufmt::Formatter<'_, W>,
     ) -> Result<(), W::Error> {
-        f.debug_struct("CpuFeatures")?
-            .field("cx8", &self.cx8)?
-            .field("cmov", &self.cmov)?
-            .field("fpu", &self.fpu)?
-            .field("amd64", &self.amd64)?
-            .field("three_d_now", &self.three_d_now)?
-            .field("mmx", &self.mmx)?
-            .field("sse", &self.sse)?
-            .field("sse2", &self.sse2)?
-            .field("sse3", &self.sse3)?
-            .field("sse41", &self.sse41)?
-            .field("sse42", &self.sse42)?
-            .field("ssse3", &self.ssse3)?
-            .field("avx", &self.avx)?
-            .field("avx2", &self.avx2)?
-            .field("avx512f", &self.avx512f)?
-            .field("fma", &self.fma)?
-            .field("bmi1", &self.bmi1)?
-            .field("bmi2", &self.bmi2)?
-            .field("rdrand", &self.rdrand)?
-            .finish()
+        f.write_str("CpuFeatures { list: [")?;
+        for (i, feature) in self.list.iter().enumerate() {
+            if i > 0 {
+                f.write_str(", ")?;
+            }
+            f.write_str("\"")?;
+            f.write_str(feature)?;
+            f.write_str("\"")?;
+        }
+        f.write_str("] }")
     }
 }
 
@@ -66,83 +36,64 @@ impl CpuFeatures {
         let mut out: Vec<_, _> = Vec::new();
 
         if fns::has_fpu() {
-            let _ = out.push("fpu");
+            let _ = out.push("FPU");
         };
         if fns::has_cx8() {
-            let _ = out.push("cx8");
+            let _ = out.push("CMPXCHG8B");
         };
         if fns::has_cmov() {
-            let _ = out.push("cmov");
+            let _ = out.push("CMOV");
         };
         if fns::has_3dnow() {
-            let _ = out.push("three_d_now");
+            let _ = out.push("3DNow!");
         };
         if fns::has_mmx() {
-            let _ = out.push("mmx");
+            let _ = out.push("MMX");
         };
         if fns::has_sse() {
-            let _ = out.push("sse");
+            let _ = out.push("SSE");
         };
         if fns::has_amd64() {
-            let _ = out.push("amd64");
+            let _ = out.push("AMD64");
         };
         if fns::has_sse2() {
-            let _ = out.push("sse2");
+            let _ = out.push("SSSE2");
         };
         if fns::has_sse3() {
-            let _ = out.push("sse3");
+            let _ = out.push("SSE3");
         };
         if fns::has_sse41() {
-            let _ = out.push("sse41");
+            let _ = out.push("SSE4.1");
         };
         if fns::has_sse42() {
-            let _ = out.push("sse42");
+            let _ = out.push("SSE4.2");
         };
         if fns::has_ssse3() {
-            let _ = out.push("ssse3");
+            let _ = out.push("SSSE3");
         };
         if fns::has_avx() {
-            let _ = out.push("avx");
+            let _ = out.push("AVX");
         };
         if fns::has_avx2() {
-            let _ = out.push("avx2");
+            let _ = out.push("AVX2");
         };
         if fns::has_avx512f() {
-            let _ = out.push("avx512f");
+            let _ = out.push("AVX512F");
         };
         if fns::has_fma() {
-            let _ = out.push("fma");
+            let _ = out.push("FMA");
         };
         if fns::has_bmi1() {
-            let _ = out.push("bmi1");
+            let _ = out.push("BMI1");
         };
         if fns::has_bmi2() {
-            let _ = out.push("bmi2");
+            let _ = out.push("BMI2");
         };
         if fns::has_rdrand() {
-            let _ = out.push("rdrand");
+            let _ = out.push("RDRAND");
         };
 
         Self {
-            cx8: fns::has_cx8(),
-            cmov: fns::has_cmov(),
-            fpu: fns::has_fpu(),
-            amd64: fns::has_amd64(),
-            three_d_now: fns::has_3dnow(),
-            mmx: fns::has_mmx(),
-            sse: fns::has_sse(),
-            sse2: fns::has_sse2(),
-            sse3: fns::has_sse3(),
-            sse41: fns::has_sse41(),
-            sse42: fns::has_sse42(),
-            ssse3: fns::has_ssse3(),
-            avx: fns::has_avx(),
-            avx2: fns::has_avx2(),
-            avx512f: fns::has_avx512f(),
-            fma: fns::has_fma(),
-            bmi1: fns::has_bmi1(),
-            bmi2: fns::has_bmi2(),
-            rdrand: fns::has_rdrand(),
             list: out,
         }
     }
@@ -235,6 +186,12 @@ impl ufmt::uDebug for Cpu {
     }
 }
 
+impl Default for Cpu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Cpu {
     pub fn new() -> Self {
         Self {
@@ -310,7 +267,7 @@ impl Cpu {
 
             // Cyrix
             MicroArch::FiveX86 => "5x86",
-            MicroArch::M1 => "6x86",
+            MicroArch::M1 => if fns::has_cx8() { "6x86L" } else { "6x86" },
             MicroArch::M2 => "6x86MX (MII)",
 
             _ => {
@@ -351,7 +308,7 @@ impl Cpu {
         }
 
         let trimmed = out.trim();
-        if trimmed.len() > 0 {
+        if !trimmed.is_empty() {
             let mut final_out: String<64> = String::new();
             let _ = final_out.push_str(trimmed);
             Some(final_out)
@@ -399,33 +356,37 @@ impl Cpu {
         }
 
         println!("Features:");
-        if self.signature.display_family < 5 {
-            println!("  FPU:      {}", self.features.fpu);
-        }
+        self.features.list.iter().for_each(|feature| {
+            println!("   {}", feature);
+        });
 
-        if self.signature.display_family > 4 && self.signature.display_family <= 6 {
-            println!("  CMPXCHG8B:{}", self.features.cx8);
-            println!("  3DNow!:   {}", self.features.three_d_now);
-            println!("  MMX:      {}", self.features.mmx);
-            println!("  CMOV:     {}", self.features.cmov);
-            println!("  SSE:      {}", self.features.sse);
-            println!("  SSE2:     {}", self.features.sse2);
-            println!("  AMD64:    {}", self.features.amd64);
-        }
-
-        if self.features.amd64 {
-            println!("  SSE3:     {}", self.features.sse3);
-            println!("  SSSE3:    {}", self.features.ssse3);
-            println!("  SSE4.1:   {}", self.features.sse41);
-            println!("  SSE4.2:   {}", self.features.sse42);
-            println!("  AVX:      {}", self.features.avx);
-            println!("  AVX2:     {}", self.features.avx2);
-            println!("  AVX-512F: {}", self.features.avx512f);
-            println!("  FMA:      {}", self.features.fma);
-            println!("  BMI1:     {}", self.features.bmi1);
-            println!("  BMI2:     {}", self.features.bmi2);
-            println!("  RDRAND:   {}", self.features.rdrand);
-        }
+        // if self.signature.display_family < 5 {
+        //     println!("  FPU:      {}", self.features.fpu);
+        // }
+        //
+        // if self.signature.display_family > 4 && self.signature.display_family <= 6 {
+        //     println!("  CMPXCHG8B:{}", self.features.cx8);
+        //     println!("  3DNow!:   {}", self.features.three_d_now);
+        //     println!("  MMX:      {}", self.features.mmx);
+        //     println!("  CMOV:     {}", self.features.cmov);
+        //     println!("  SSE:      {}", self.features.sse);
+        //     println!("  SSE2:     {}", self.features.sse2);
+        //     println!("  AMD64:    {}", self.features.amd64);
+        // }
+        //
+        // if self.features.amd64 {
+        //     println!("  SSE3:     {}", self.features.sse3);
+        //     println!("  SSSE3:    {}", self.features.ssse3);
+        //     println!("  SSE4.1:   {}", self.features.sse41);
+        //     println!("  SSE4.2:   {}", self.features.sse42);
+        //     println!("  AVX:      {}", self.features.avx);
+        //     println!("  AVX2:     {}", self.features.avx2);
+        //     println!("  AVX-512F: {}", self.features.avx512f);
+        //     println!("  FMA:      {}", self.features.fma);
+        //     println!("  BMI1:     {}", self.features.bmi1);
+        //     println!("  BMI2:     {}", self.features.bmi2);
+        //     println!("  RDRAND:   {}", self.features.rdrand);
+        // }
 
         println!();
     }

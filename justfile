@@ -11,6 +11,10 @@ info:
 check:
 	cargo check --all-targets
 
+# More in-depth code style checking
+lint:
+	cargo clippy
+
 # Fix linting erros
 fix:
 	cargo fix --all-targets

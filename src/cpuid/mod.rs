@@ -17,7 +17,7 @@ pub mod micro_arch;
 pub use cpu::*;
 
 /// Represents the result of a CPUID instruction call.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CpuInfo {
     /// EAX register value
     pub eax: u32,
@@ -40,17 +40,6 @@ impl ufmt::uDebug for CpuInfo {
             .field("ecx", &self.ecx)?
             .field("edx", &self.edx)?
             .finish()
-    }
-}
-
-impl Default for CpuInfo {
-    fn default() -> Self {
-        Self {
-            eax: 0,
-            ebx: 0,
-            ecx: 0,
-            edx: 0,
-        }
     }
 }
 

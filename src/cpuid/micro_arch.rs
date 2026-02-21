@@ -125,9 +125,9 @@ pub enum MicroArch {
     U5D,
 }
 
-impl Into<String<64>> for MicroArch {
-    fn into(self) -> String<64> {
-        let s = match self {
+impl From<MicroArch> for String<64> {
+    fn from(ma: MicroArch) -> String<64> {
+        let s = match ma {
             MicroArch::Unknown => UNK,
 
             // AMD

@@ -94,7 +94,7 @@ impl CpuBrand {
     pub fn to_brand_name(&self) -> &str {
         match self {
             CpuBrand::AMD => "AMD",
-            CpuBrand::Cyrix => "Cyrix",
+            CpuBrand::Cyrix => "Cyrix/IBM/ST/TI",
             CpuBrand::DMP => "DM&P",
             CpuBrand::Hygon => "Hygon",
             CpuBrand::IDT => "IDT",

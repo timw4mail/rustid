@@ -1,6 +1,6 @@
 # Rustid
 
-A lightweight CPU identification tool written in Rust. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets.
+A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets.
 
 **AI Disclaimer**: This application is developed using some AI, mostly to help with the build environment for dos, and the original code commit.
 
@@ -42,7 +42,7 @@ This produces a `rustid.com` binary compatible with DOS environments (like DOSBo
 Simply run the compiled binary to see your CPU details:
 
 ```bash
-rustid
+cargo run
 ```
 
 Example Output:
@@ -57,3 +57,12 @@ Features:
   FPU:      true
   ...
 ```
+
+## Information References
+
+- [sandpile.org](https://sandpile.org/x86/cpuid.htm) - One of the best known x86 references
+- [cpufetch](https://github.com/Dr-Noob/cpufetch) (a similar tool that might work better for you)
+- [Paradice CPUID Guide](https://www.paradicesoftware.com/specs/cpuid/) - helpful for Cyrix workarounds
+- [CPU-World](https://www.cpu-world.com/index.html)
+- My own hardware collection
+

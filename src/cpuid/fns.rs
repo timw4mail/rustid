@@ -77,23 +77,73 @@ pub fn is_cyrix() -> bool {
 
 /// Enables CPUID on Cyrix 5x86 and 6x86 processors.
 ///
-/// This sets bit 7 of CCR4 (Configuration Control Register 4).
+///
+///
+/// # Safety
+/// This modifies internal CPU registers, so we need to make sure this is only
+/// run on Cyrix machines, and only after checking that the CPUID instruction
+/// is not enabled
+///
+/// See: https://www.paradicesoftware.com/specs/cpuid/note_enablecyrix.htm
 #[cfg(target_arch = "x86")]
+#[allow(named_asm_labels)]
 pub unsafe fn enable_cyrix_cpuid() {
     unsafe {
-        // Port 0x22 is the index port, 0x23 is the data port.
-        // CCR4 is index 0xE8.
         asm!(
-        "out 0x22, al",
-        "in al, 0x23",
-        "or al, 0x80",
-        "mov ah, al",
-        "mov al, 0xE8",
-        "out 0x22, al",
-        "mov al, ah",
-        "out 0x23, al",
-        inout("al") 0xE8_u8 => _,
-        out("ah") _,
+            "cli",
+            // Get Cyrix reg C3h
+            "mov al, 0xC3",
+            "out $22, al",
+            "in al, $23",
+            // Enable config access
+            "mov cl, al",
+            "mov bl, al",
+            "and bl, 0xf",
+            "or bl, 0x10",
+            // Set Cyrix reg c3h
+            "mov al, 0xC3",
+            "out 0x22, al",
+            "mov al, bl",
+            "out 0x23, al",
+            // Get Cyrix reg e8
+            "mov al, 0xE8",
+            "out 0x22, al",
+            "in al, 0x23",
+            // Set CPUID bit
+            "or al, 0x80", // Set bit 7 to enable CPUID
+            "mov bl, al",
+            // Set Cyrix reg e8
+            "mov al, 0xE8",
+            "out 0x22, al",
+            "mov al, bl",
+            "out 0x23, al",
+            // Get Cyrix reg Fe
+            "mov al, 0xFE",
+            "out 0x23, al",
+            "in al, 0x23",
+            // Is CPU a 6x86(L)?
+            "and al, 0xF0",
+            "cmp al, 0x30",
+            "jne not6x86",
+            // Get Cyrix reg e9
+            "mov al, 0xE9",
+            "out 0x22, al",
+            "in al, 0x23",
+            // Fix 6x86 SLOP bug
+            "and al, 0xFD",
+            "mov bl, al",
+            // Set Cyrix reg e9
+            "mov al, 0xE9",
+            "out 0x22, al",
+            "mov al, bl",
+            "out 0x23, al",
+            "not6x86:",
+            // Set Cyrix reg c3
+            "mov al, 0xC3",
+            "out 0x22, al",
+            "mov al, cl",
+            "out 0x23, al",
+            "sti",
         );
     }
 }
