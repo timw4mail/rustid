@@ -198,7 +198,7 @@ impl Cpu {
             arch: CpuArch::find(
                 Self::model_string().as_str(),
                 CpuSignature::detect(),
-                CpuBrand::detect().to_vendor_str(),
+                CpuBrand::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
             threads: fns::logical_cores(),
@@ -325,6 +325,9 @@ impl Cpu {
         println!("{:?}", self);
     }
 
+    // TODO: Show cpu process node
+    // TODO: Show cpu cache size(s)
+    // TODO: Show cpu speed
     pub fn display_table(&self) {
         println!();
         println!(

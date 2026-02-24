@@ -55,7 +55,7 @@ impl CpuBrand {
     }
 
     /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
-    fn vendor_str() -> String<12> {
+    pub fn vendor_str() -> String<12> {
         let res = x86_cpuid(0);
         let mut bytes = [0u8; 12];
 
