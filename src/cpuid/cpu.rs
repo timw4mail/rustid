@@ -50,11 +50,11 @@ impl CpuFeatures {
         if fns::has_mmx() {
             let _ = out.push("MMX");
         };
-        if fns::has_sse() {
-            let _ = out.push("SSE");
-        };
         if fns::has_amd64() {
             let _ = out.push("AMD64");
+        };
+        if fns::has_sse() {
+            let _ = out.push("SSE");
         };
         if fns::has_sse2() {
             let _ = out.push("SSSE2");
@@ -93,9 +93,7 @@ impl CpuFeatures {
             let _ = out.push("RDRAND");
         };
 
-        Self {
-            list: out,
-        }
+        Self { list: out }
     }
 }
 
@@ -198,7 +196,7 @@ impl Cpu {
             arch: CpuArch::find(
                 Self::model_string().as_str(),
                 CpuSignature::detect(),
-                CpuBrand::vendor_str(),
+                &CpuBrand::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
             threads: fns::logical_cores(),
@@ -267,7 +265,13 @@ impl Cpu {
 
             // Cyrix
             MicroArch::FiveX86 => "5x86",
-            MicroArch::M1 => if fns::has_cx8() { "6x86L" } else { "6x86" },
+            MicroArch::M1 => {
+                if fns::has_cx8() {
+                    "6x86L"
+                } else {
+                    "6x86"
+                }
+            }
             MicroArch::M2 => "6x86MX (MII)",
 
             _ => {
@@ -359,9 +363,12 @@ impl Cpu {
         }
 
         println!("Features:");
+        let mut features: String<512> = String::new();
         self.features.list.iter().for_each(|feature| {
-            println!("   {}", feature);
+            let _ = features.push_str(" ");
+            let _ = features.push_str(feature);
         });
+        println!("   {}", &features);
 
         // if self.signature.display_family < 5 {
         //     println!("  FPU:      {}", self.features.fpu);
