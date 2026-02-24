@@ -329,6 +329,8 @@ impl Cpu {
     // TODO: Show cpu cache size(s)
     // TODO: Show cpu speed
     pub fn display_table(&self) {
+        let ma: String<64> = self.arch.micro_arch.into();
+
         println!();
         println!(
             "Vendor:    {} ({})",
@@ -336,6 +338,7 @@ impl Cpu {
             self.arch.brand_name.as_str()
         );
         println!("Model:     {}", self.display_model_string());
+        println!("MicroArch: {}", ma.as_str());
         println!("Codename:  {}", self.arch.code_name);
         if let Some(tech) = &self.arch.technology {
             println!("Node:      {}", tech.as_str());
