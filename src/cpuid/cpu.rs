@@ -41,18 +41,27 @@ impl CpuFeatures {
         if fns::has_fpu() {
             let _ = out.push("FPU");
         };
+        if fns::has_tsc() {
+            let _ = out.push("TSC");
+        }
         if fns::has_cx8() {
             let _ = out.push("CMPXCHG8B");
         };
+        if fns::has_cx16() {
+            let _ = out.push("CMPXCHG16B");
+        }
         if fns::has_cmov() {
             let _ = out.push("CMOV");
-        };
-        if fns::has_3dnow() {
-            let _ = out.push("3DNow!");
         };
         if fns::has_mmx() {
             let _ = out.push("MMX");
         };
+        if fns::has_3dnow() {
+            let _ = out.push("3DNow!");
+        };
+        if fns::has_ht() {
+            let _ = out.push("HT");
+        }
         if fns::has_amd64() {
             let _ = out.push("AMD64");
         };
@@ -64,6 +73,9 @@ impl CpuFeatures {
         };
         if fns::has_sse3() {
             let _ = out.push("SSE3");
+        };
+        if fns::has_sse4a() {
+            let _ = out.push("SSE4A");
         };
         if fns::has_sse41() {
             let _ = out.push("SSE4.1");
@@ -314,23 +326,22 @@ impl Cpu {
         println!("{:?}", self);
     }
 
-    // TODO: Show cpu process node
     // TODO: Show cpu cache size(s)
     // TODO: Show cpu speed
     pub fn display_table(&self) {
         println!();
         println!(
-            "CPU Vendor:    {} ({})",
+            "Vendor:    {} ({})",
             self.arch.vendor_string.as_str(),
             self.arch.brand_name.as_str()
         );
-        println!("CPU Name:      {}", self.display_model_string());
-        println!("CPU Codename:  {}", self.arch.code_name);
-        if self.arch.technology.is_some() {
-            println!("CPU Technology: {}", self.arch.technology.as_ref().unwrap());
+        println!("Model:     {}", self.display_model_string());
+        println!("Codename:  {}", self.arch.code_name);
+        if let Some(tech) = &self.arch.technology {
+            println!("Node:      {}", tech.as_str());
         }
         println!(
-            "CPU Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
+            "Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
         );
         println!(

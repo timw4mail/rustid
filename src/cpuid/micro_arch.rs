@@ -332,8 +332,12 @@ impl CpuArch {
     }
 
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
-        let arch = |ma: MicroArch, code_name: &'static str, brand_name: &str| -> Self {
-            CpuArch::new(model, ma, code_name, brand_name, vendor_string, None)
+        let arch = |ma: MicroArch,
+                    code_name: &'static str,
+                    brand_name: &str,
+                    tech: Option<&str>|
+         -> Self {
+            CpuArch::new(model, ma, code_name, brand_name, vendor_string, tech)
         };
 
         // Brand for Centaur CPUs is by signature, not vendor string
@@ -342,8 +346,8 @@ impl CpuArch {
         }
 
         let brand = CpuBrand::from(vendor_string);
-        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            arch(ma, code_name, brand.to_brand_name())
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
+            arch(ma, code_name, brand.to_brand_name(), tech)
         };
 
         match brand {
@@ -356,8 +360,8 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3"),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+                (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
             CpuBrand::Cyrix => match (
                 s.extended_family,
@@ -366,11 +370,11 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86"),
-                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1"),
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm"),
-                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2"),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+                (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86", None),
+                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1", None),
+                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm", Some("350nm")),
+                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2", None),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
             CpuBrand::Rise => match (
                 s.extended_family,
@@ -379,10 +383,10 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin"),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "Lynx"),
-                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP6Shrink, UNK),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
+                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6Shrink, "Lynx", Some("180nm")),
+                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP6Shrink, UNK, None),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
             CpuBrand::Umc | CpuBrand::Transmeta => match (
                 s.extended_family,
@@ -392,14 +396,14 @@ impl CpuArch {
                 s.stepping,
             ) {
                 // UMC
-                (0, 4, 0, 1, _) => brand_arch(MicroArch::U5D, "U5D"),
-                (0, 4, 0, 2, _) => brand_arch(MicroArch::U5S, "U5S"),
+                (0, 4, 0, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
+                (0, 4, 0, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
 
                 // Transmeta
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::Crusoe, "Crusoe"),
-                (0, 15, 0, 2 | 3, _) => brand_arch(MicroArch::Efficeon, "Efficeon"),
+                (0, 5, 0, 4, _) => brand_arch(MicroArch::Crusoe, "Crusoe", Some("130nm")),
+                (0, 15, 0, 2 | 3, _) => brand_arch(MicroArch::Efficeon, "Efficeon", None),
 
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
             CpuBrand::Hygon
             | CpuBrand::IDT
@@ -408,7 +412,7 @@ impl CpuArch {
             | CpuBrand::SiS
             | CpuBrand::Unknown
             | CpuBrand::Via
-            | CpuBrand::Zhaoxin => brand_arch(MicroArch::Unknown, UNK),
+            | CpuBrand::Zhaoxin => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 
@@ -433,20 +437,20 @@ impl CpuArch {
             (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB", None),
 
             // K5
-            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5", None),
-            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", None),
+            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5", Some("350nm")),
+            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", Some("350nm")),
 
             // K6
-            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", None),
-            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", None),
+            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", Some("300nm")),
+            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some("250nm")),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", None),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", None),
-            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", None),
+            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")),
             (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", None),
 
             // K7
-            (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", None),
-            (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto", None),
+            (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", Some("250nm")),
+            (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto", Some("180nm")),
             (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire", None),
             (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", None),
             (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", None),
@@ -457,21 +461,21 @@ impl CpuArch {
             // K8
 
             // K10
-            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", None),
+            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
 
             // Bulldozer/Piledriver/Steamroller
-            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", None),
-            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", None),
-            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", None),
+            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", Some("32nm")),
+            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", Some("32nm")),
+            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", Some("28nm")),
             (6, 15, 6 | 7, 0 | 5, _) => {
-                brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", None)
+                brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm"))
             }
 
             // Zen
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge", Some("14nm")),
-            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", None),
-            (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", None),
-            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", None),
+            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", Some("7nm")),
+            (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some("5nm")),
+            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some("4nm")),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
@@ -483,14 +487,14 @@ impl CpuArch {
             _ => CpuBrand::Zhaoxin,
         };
 
-        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
             Self::new(
                 model,
                 ma,
                 code_name,
                 brand.to_brand_name(),
                 vendor_string,
-                None,
+                tech,
             )
         };
 
@@ -502,35 +506,37 @@ impl CpuArch {
             s.stepping,
         ) {
             // IDT
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6"),
-            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "Winchip 2 (C2)"),
-            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "Winchip 2A (W2A)"),
-            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "Winchip 2B (W2B)"),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "Winchip 3 (C3)"),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6", Some("350nm")),
+            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "Winchip 2 (C2)", Some("350nm")),
+            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "Winchip 2A (W2A)", Some("250nm")),
+            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "Winchip 2B (W2B)", Some("250nm")),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "Winchip 3 (C3)", Some("250nm")),
 
             // VIA
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "Samuel (C5A)"),
-            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "Samuel 2 (C5B)"),
-            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "Ezra (C5C)"),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::EzraT, "Ezra-T (C5N)"),
-            (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "Nehemiah (C5XL)"),
-            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "Nehemiah+ (C5P)"),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "Esther (C5J)"),
-            (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "Isaiah (CNS)"),
-            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "Isaiah (CN)"),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "Samuel (C5A)", Some("180nm")),
+            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "Samuel 2 (C5B)", Some("150nm")),
+            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "Ezra (C5C)", Some("130nm")),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::EzraT, "Ezra-T (C5N)", Some("130nm")),
+            (0, 6, 0, 9, 0..=7) => {
+                brand_arch(MicroArch::Nehemiah, "Nehemiah (C5XL)", Some("130nm"))
+            }
+            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "Nehemiah+ (C5P)", None),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "Esther (C5J)", Some("90nm")),
+            (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "Isaiah (CNS)", None),
+            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "Isaiah (CN)", Some("65nm")),
 
             // Zhaoxin
-            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou"),
-            (0, 7, 3, 11, 0) => brand_arch(MicroArch::Lujiazui, "LuJiaZui"),
+            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some("28nm")),
+            (0, 7, 3, 11, 0) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some("16nm")),
 
             // Anything else
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, ""),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 
     fn find_intel(model: &str, s: CpuSignature) -> Self {
-        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL, None)
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
+            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL, tech)
         };
 
         match (
@@ -541,47 +547,49 @@ impl CpuArch {
             s.stepping,
         ) {
             // 486
-            (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX"),
-            (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50"),
-            (0, 4, 0, 2, _) => brand_arch(MicroArch::I486, "i80486SX"),
-            (0, 4, 0, 3, _) => brand_arch(MicroArch::I486, "i80486DX2"),
-            (0, 4, 0, 4, _) => brand_arch(MicroArch::I486, "i80486SL"),
-            (0, 4, 0, 5, _) => brand_arch(MicroArch::I486, "i80486SX2"),
-            (0, 4, 0, 7, _) => brand_arch(MicroArch::I486, "i80486DX2WB"),
-            (0, 4, 0, 8, _) => brand_arch(MicroArch::I486, "i80486DX4"),
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB"),
+            (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX", None),
+            (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50", None),
+            (0, 4, 0, 2, _) => brand_arch(MicroArch::I486, "i80486SX", None),
+            (0, 4, 0, 3, _) => brand_arch(MicroArch::I486, "i80486DX2", None),
+            (0, 4, 0, 4, _) => brand_arch(MicroArch::I486, "i80486SL", None),
+            (0, 4, 0, 5, _) => brand_arch(MicroArch::I486, "i80486SX2", None),
+            (0, 4, 0, 7, _) => brand_arch(MicroArch::I486, "i80486DX2WB", None),
+            (0, 4, 0, 8, _) => brand_arch(MicroArch::I486, "i80486DX4", None),
+            (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB", None),
 
             // Pentium
-            (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5"),
-            (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C"),
-            (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T"),
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5MMX, "P55C"),
-            (0, 5, 0, 7, _) => brand_arch(MicroArch::P5MMX, "P54C"),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5MMX, "P55C (250nm)"),
-            (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont"),
+            (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5", Some("800nm")),
+            (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C", None),
+            (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T", Some("600nm")),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5MMX, "P55C", Some("350nm")),
+            (0, 5, 0, 7, _) => brand_arch(MicroArch::P5MMX, "P54C", Some("350nm")),
+            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5MMX, "P55C", Some("250nm")),
+            (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont", Some("32nm")),
 
             // Pentium Pro
-            (0, 6, 0, 1, 1 | 2 | 6..10) => brand_arch(MicroArch::P6Pro, "P6"),
-            (0, 6, 0, 3, 2) => brand_arch(MicroArch::P6PentiumII, "P6T"), // Pentium II Overdrive
+            (0, 6, 0, 1, 1) => brand_arch(MicroArch::P6Pro, "P6", None),
+            (0, 6, 0, 1, 2) => brand_arch(MicroArch::P6Pro, "P6", Some("600nm")),
+            (0, 6, 0, 1, 6..10) => brand_arch(MicroArch::P6Pro, "P6", Some("350nm")),
+            (0, 6, 0, 3, 2) => brand_arch(MicroArch::P6PentiumII, "P6T (Deschutes)", Some("250nm")), // Pentium II Overdrive
 
             // Pentium 2
-            (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::P6PentiumII, UNK),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::P6PentiumII, "Klamath"),
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumII, UNK),
-            (0, 6, 0, 5, 1) => brand_arch(MicroArch::P6PentiumII, "Deschutes"),
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::P6PentiumII, "Dixon / Mendocino"),
+            (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::P6PentiumII, UNK, None),
+            (0, 6, 0, 3, _) => brand_arch(MicroArch::P6PentiumII, "Klamath", Some("350nm")),
+            (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumII, UNK, None),
+            (0, 6, 0, 5, 1) => brand_arch(MicroArch::P6PentiumII, "Deschutes", Some("250nm")),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::P6PentiumII, "Dixon / Mendocino", None),
 
             // Pentium 3
-            (0, 6, 0, 7, _) => brand_arch(MicroArch::P6PentiumIII, "Katmai"),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine"),
-            (0, 6, 0, 9, 5) => brand_arch(MicroArch::P6PentiumIII, "Banias"),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine T"),
-            (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin"),
+            (0, 6, 0, 7, _) => brand_arch(MicroArch::P6PentiumIII, "Katmai", Some("250nm")),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine", Some("180nm")),
+            (0, 6, 0, 9, 5) => brand_arch(MicroArch::P6PentiumIII, "Banias", Some("130nm")),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine T", Some("180nm")),
+            (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin", Some("130nm")),
 
             // Core i-series
-            (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield"),
-            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge"),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+            (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
+            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge", Some("32nm")),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 }
