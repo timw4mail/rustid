@@ -8,6 +8,9 @@ use crate::println;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
+use core::str::FromStr;
+use ufmt::derive::uDebug;
+
 #[derive(Debug)]
 pub struct CpuFeatures {
     list: Vec<&'static str, 64>,
@@ -97,7 +100,7 @@ impl CpuFeatures {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, uDebug)]
 pub struct CpuSignature {
     pub extended_family: u32,
     pub family: u32,
@@ -106,23 +109,6 @@ pub struct CpuSignature {
     pub stepping: u32,
     pub display_family: u32,
     pub display_model: u32,
-}
-
-impl ufmt::uDebug for CpuSignature {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.debug_struct("CpuSignature")?
-            .field("extended_family", &self.extended_family)?
-            .field("family", &self.family)?
-            .field("extended_model", &self.extended_model)?
-            .field("model", &self.model)?
-            .field("stepping", &self.stepping)?
-            .field("display_family", &self.display_family)?
-            .field("display_model", &self.display_model)?
-            .finish()
-    }
 }
 
 impl CpuSignature {
@@ -313,8 +299,7 @@ impl Cpu {
 
         let trimmed = out.trim();
         if !trimmed.is_empty() {
-            let mut final_out: String<64> = String::new();
-            let _ = final_out.push_str(trimmed);
+            let final_out: String<64> = String::from_str(trimmed).unwrap();
             Some(final_out)
         } else {
             None
@@ -341,6 +326,9 @@ impl Cpu {
         );
         println!("CPU Name:      {}", self.display_model_string());
         println!("CPU Codename:  {}", self.arch.code_name);
+        if self.arch.technology.is_some() {
+            println!("CPU Technology: {}", self.arch.technology.as_ref().unwrap());
+        }
         println!(
             "CPU Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
             self.signature.display_family, self.signature.display_model, self.signature.stepping
@@ -362,41 +350,15 @@ impl Cpu {
             println!("Easter Egg: {}", easter_egg.as_str());
         }
 
-        println!("Features:");
-        let mut features: String<512> = String::new();
-        self.features.list.iter().for_each(|feature| {
-            let _ = features.push_str(" ");
-            let _ = features.push_str(feature);
-        });
-        println!("   {}", &features);
-
-        // if self.signature.display_family < 5 {
-        //     println!("  FPU:      {}", self.features.fpu);
-        // }
-        //
-        // if self.signature.display_family > 4 && self.signature.display_family <= 6 {
-        //     println!("  CMPXCHG8B:{}", self.features.cx8);
-        //     println!("  3DNow!:   {}", self.features.three_d_now);
-        //     println!("  MMX:      {}", self.features.mmx);
-        //     println!("  CMOV:     {}", self.features.cmov);
-        //     println!("  SSE:      {}", self.features.sse);
-        //     println!("  SSE2:     {}", self.features.sse2);
-        //     println!("  AMD64:    {}", self.features.amd64);
-        // }
-        //
-        // if self.features.amd64 {
-        //     println!("  SSE3:     {}", self.features.sse3);
-        //     println!("  SSSE3:    {}", self.features.ssse3);
-        //     println!("  SSE4.1:   {}", self.features.sse41);
-        //     println!("  SSE4.2:   {}", self.features.sse42);
-        //     println!("  AVX:      {}", self.features.avx);
-        //     println!("  AVX2:     {}", self.features.avx2);
-        //     println!("  AVX-512F: {}", self.features.avx512f);
-        //     println!("  FMA:      {}", self.features.fma);
-        //     println!("  BMI1:     {}", self.features.bmi1);
-        //     println!("  BMI2:     {}", self.features.bmi2);
-        //     println!("  RDRAND:   {}", self.features.rdrand);
-        // }
+        if !self.features.list.is_empty() {
+            println!("Features:");
+            let mut features: String<512> = String::new();
+            self.features.list.iter().for_each(|feature| {
+                let _ = features.push_str(" ");
+                let _ = features.push_str(feature);
+            });
+            println!("   {}", features.as_str());
+        }
 
         println!();
     }
@@ -405,10 +367,6 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(target_os = "none")]
-    use crate::println;
-    #[cfg(not(target_os = "none"))]
     use std::println;
 
     #[test]
@@ -416,5 +374,134 @@ mod tests {
         let model = Cpu::model_string();
         println!("Model: {}", model);
         assert!(!model.is_empty());
+    }
+
+    #[test]
+    fn test_cpu_features_detect() {
+        let features = CpuFeatures::detect();
+        println!("Detected CPU Features: {:?}", features);
+        // Assert that at least some features are detected (this might vary by CPU)
+        assert!(!features.list.is_empty());
+    }
+
+    #[test]
+    fn test_cpu_signature_detect() {
+        let signature = CpuSignature::detect();
+        println!("Detected CPU Signature: {:?}", signature);
+        // Basic assertions to ensure fields are populated, not necessarily specific values
+        assert!(signature.family > 0 || signature.extended_family > 0 || signature.model > 0);
+    }
+
+    #[test]
+    fn test_cpu_new() {
+        let cpu = Cpu::new();
+        println!("New CPU instance: {:?}", cpu);
+        // Ensure that new() doesn't panic and populates some fields
+        assert!(!cpu.arch.vendor_string.is_empty());
+        assert!(!cpu.features.list.is_empty());
+    }
+
+    #[test]
+    fn test_display_model_string() {
+        // Test case for MicroArch::Am486
+        let mut arch_am486 = CpuArch::default();
+        arch_am486.micro_arch = MicroArch::Am486;
+
+        arch_am486.code_name = "Am486DX2";
+        let cpu_am486_dx2 = Cpu {
+            arch: arch_am486.clone(),
+            easter_egg: None,
+            threads: 1,
+            signature: CpuSignature::detect(), // Signature doesn't affect this path
+            features: CpuFeatures::detect(),
+        };
+        assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
+
+        arch_am486.code_name = "Am486X2WB";
+        let cpu_am486_x2wb = Cpu {
+            arch: arch_am486.clone(),
+            easter_egg: None,
+            threads: 1,
+            signature: CpuSignature::detect(),
+            features: CpuFeatures::detect(),
+        };
+        assert_eq!(
+            cpu_am486_x2wb.display_model_string(),
+            "AMD 486 DX2 with Write-Back Cache"
+        );
+
+        // Test case for MicroArch::I486
+        let mut arch_i486 = CpuArch::default();
+        arch_i486.micro_arch = MicroArch::I486;
+
+        arch_i486.code_name = "i80486DX";
+        let cpu_i486_dx = Cpu {
+            arch: arch_i486.clone(),
+            easter_egg: None,
+            threads: 1,
+            signature: CpuSignature::detect(),
+            features: CpuFeatures::detect(),
+        };
+        assert_eq!(cpu_i486_dx.display_model_string(), "Intel or AMD 486 DX");
+
+        // Test case for "No CPUID"
+        let cpu_no_cpuid = Cpu {
+            arch: CpuArch::default(),
+            easter_egg: None,
+            threads: 1,
+            signature: CpuSignature {
+                extended_family: 0,
+                family: 0,
+                extended_model: 0,
+                model: 0,
+                stepping: 0,
+                display_family: 0,
+                display_model: 0,
+            },
+            features: CpuFeatures::detect(),
+        };
+        assert_eq!(
+            cpu_no_cpuid.display_model_string(),
+            "No CPUID, 486 or earlier CPU"
+        );
+
+        // Test case for "Unknown"
+        let cpu_unknown = Cpu {
+            arch: CpuArch::default(),
+            easter_egg: None,
+            threads: 1,
+            signature: CpuSignature {
+                extended_family: 1, // Make it not all zeros
+                family: 1,
+                extended_model: 1,
+                model: 1,
+                stepping: 1,
+                display_family: 1,
+                display_model: 1,
+            },
+            features: CpuFeatures::detect(),
+        };
+        assert_eq!(cpu_unknown.display_model_string(), "Unknown");
+    }
+
+    #[test]
+    fn test_easter_egg() {
+        let easter_egg = Cpu::easter_egg();
+        println!("Easter Egg: {:?}", easter_egg);
+        // We cannot assert a specific value, just ensure it runs
+    }
+
+    #[test]
+    fn test_cpu_debug() {
+        let cpu = Cpu::new();
+        cpu.debug();
+        // This primarily prints, so we just ensure it doesn't panic
+    }
+
+    #[test]
+    fn test_cpu_display_table() {
+        let cpu = Cpu::new();
+        cpu.display_table();
+        // This primarily prints, so we just ensure it doesn't panic
     }
 }

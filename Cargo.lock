@@ -25,6 +25,8 @@ checksum = "2af2455f757db2b292a9b1768c4b70186d443bcb3b316252d6b540aec1cd89ed"
 dependencies = [
  "hash32",
  "stable_deref_trait",
+ "ufmt",
+ "ufmt-write",
 ]
 
 [[package]]
@@ -47,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "rustid"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "heapless",
  "ufmt",

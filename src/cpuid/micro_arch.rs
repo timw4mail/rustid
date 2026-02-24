@@ -1,10 +1,12 @@
 use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
+use core::str::FromStr;
 use heapless::String;
+use ufmt::derive::uDebug;
 
 const UNK: &str = "Unknown";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub enum MicroArch {
     Unknown,
 
@@ -254,31 +256,14 @@ impl From<MicroArch> for String<64> {
     }
 }
 
-impl ufmt::uDebug for MicroArch {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        let s = match self {
-            MicroArch::Zen => "Zen",
-            MicroArch::Unknown => UNK,
-            MicroArch::Am486 => "Am486",
-            MicroArch::Zen4 => "Zen4",
-            MicroArch::I486 => "I486",
-            MicroArch::P5 => "P5",
-            _ => "OtherArch",
-        };
-        f.write_str(s)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CpuArch {
     pub model: String<64>,
     pub micro_arch: MicroArch,
     pub code_name: &'static str,
     pub brand_name: String<64>,
     pub vendor_string: String<64>,
+    pub technology: Option<String<32>>,
 }
 
 impl ufmt::uDebug for CpuArch {
@@ -300,6 +285,19 @@ impl ufmt::uDebug for CpuArch {
     }
 }
 
+impl Default for CpuArch {
+    fn default() -> Self {
+        Self::new(
+            "Unknown",
+            MicroArch::Unknown,
+            UNK,
+            "Unknown",
+            "Unknown",
+            None,
+        )
+    }
+}
+
 impl CpuArch {
     pub fn new(
         model: &str,
@@ -307,6 +305,7 @@ impl CpuArch {
         code_name: &'static str,
         brand_name: &str,
         vendor_string: &str,
+        technology: Option<&str>,
     ) -> Self {
         let mut model_s: String<64> = String::new();
         let _ = model_s.push_str(model);
@@ -317,18 +316,24 @@ impl CpuArch {
         let mut vendor_s: String<64> = String::new();
         let _ = vendor_s.push_str(vendor_string);
 
+        let technology = match technology {
+            Some(s) => Some(String::from_str(s).unwrap()),
+            None => None,
+        };
+
         CpuArch {
             model: model_s,
             micro_arch,
             code_name,
             brand_name: brand_s,
             vendor_string: vendor_s,
+            technology,
         }
     }
 
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
         let arch = |ma: MicroArch, code_name: &'static str, brand_name: &str| -> Self {
-            CpuArch::new(model, ma, code_name, brand_name, vendor_string)
+            CpuArch::new(model, ma, code_name, brand_name, vendor_string, None)
         };
 
         // Brand for Centaur CPUs is by signature, not vendor string
@@ -408,8 +413,8 @@ impl CpuArch {
     }
 
     fn find_amd(model: &str, s: CpuSignature) -> Self {
-        let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            Self::new(model, ma, code_name, "AMD", VENDOR_AMD)
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
+            Self::new(model, ma, code_name, "AMD", VENDOR_AMD, tech)
         };
 
         match (
@@ -420,52 +425,54 @@ impl CpuArch {
             s.stepping,
         ) {
             // 486
-            (0, 4, 0, 3, _) => brand_arch(MicroArch::Am486, "Am486DX2"),
-            (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB"),
-            (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4"),
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB"),
-            (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86"),
-            (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB"),
+            (0, 4, 0, 3, _) => brand_arch(MicroArch::Am486, "Am486DX2", None),
+            (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB", None),
+            (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4", None),
+            (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB", None),
+            (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86", None),
+            (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB", None),
 
             // K5
-            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5"),
-            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86"),
+            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5", None),
+            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", None),
 
             // K6
-            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6"),
-            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot"),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)"),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)"),
-            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)"),
-            (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)"),
+            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", None),
+            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", None),
+            (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", None),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", None),
+            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", None),
+            (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", None),
 
             // K7
-            (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon"),
-            (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto"),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire"),
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird"),
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino"),
-            (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan"),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred"),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton"),
+            (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", None),
+            (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto", None),
+            (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire", None),
+            (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", None),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", None),
+            (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan", None),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred", None),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", None),
 
             // K8
 
             // K10
-            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate"),
+            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", None),
 
             // Bulldozer/Piledriver/Steamroller
-            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi"),
-            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera"),
-            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari"),
-            (6, 15, 6 | 7, 0 | 5, _) => brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo"),
+            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", None),
+            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", None),
+            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", None),
+            (6, 15, 6 | 7, 0 | 5, _) => {
+                brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", None)
+            }
 
             // Zen
-            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge"),
-            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer"),
-            (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael"),
-            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix"),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
+            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge", Some("14nm")),
+            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", None),
+            (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", None),
+            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", None),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 
@@ -477,7 +484,14 @@ impl CpuArch {
         };
 
         let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            Self::new(model, ma, code_name, brand.to_brand_name(), vendor_string)
+            Self::new(
+                model,
+                ma,
+                code_name,
+                brand.to_brand_name(),
+                vendor_string,
+                None,
+            )
         };
 
         match (
@@ -516,7 +530,7 @@ impl CpuArch {
 
     fn find_intel(model: &str, s: CpuSignature) -> Self {
         let brand_arch = |ma: MicroArch, code_name: &'static str| -> Self {
-            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL)
+            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL, None)
         };
 
         match (
@@ -569,5 +583,274 @@ impl CpuArch {
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge"),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cpuid::brand::{
+        VENDOR_CYRIX, VENDOR_DMP, VENDOR_RISE, VENDOR_TRANSMETA, VENDOR_UMC,
+    };
+
+    #[test]
+    fn test_micro_arch_from_string() {
+        assert_eq!(String::<64>::from(MicroArch::Am486).as_str(), "Am486");
+        assert_eq!(String::<64>::from(MicroArch::ZenPlus).as_str(), "Zen+");
+        assert_eq!(String::<64>::from(MicroArch::Winchip).as_str(), "Winchip");
+        assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "Lujiazui");
+        assert_eq!(String::<64>::from(MicroArch::FiveX86).as_str(), "5x86");
+        assert_eq!(
+            String::<64>::from(MicroArch::VortexDX3).as_str(),
+            "VortexDX3"
+        );
+        assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "I486");
+        assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
+        assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
+        assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), "Unknown");
+    }
+
+    #[test]
+    fn test_micro_arch_udebug() {
+        use ufmt::uwrite;
+        let mut s = heapless::String::<64>::new();
+
+        uwrite!(&mut s, "{:?}", MicroArch::Zen).unwrap();
+        assert_eq!(s.as_str(), "Zen");
+        s.clear();
+
+        uwrite!(&mut s, "{:?}", MicroArch::Unknown).unwrap();
+        assert_eq!(s.as_str(), "Unknown");
+        s.clear();
+
+        uwrite!(&mut s, "{:?}", MicroArch::Am486).unwrap();
+        assert_eq!(s.as_str(), "Am486");
+        s.clear();
+
+        // Test a non-specific case
+        uwrite!(&mut s, "{:?}", MicroArch::K5).unwrap();
+        assert_eq!(s.as_str(), "K5");
+    }
+
+    #[test]
+    fn test_cpu_arch_new() {
+        let arch = CpuArch::new(
+            "Test Model",
+            MicroArch::Zen,
+            "Test Codename",
+            "Test Brand",
+            "Test Vendor",
+            None,
+        );
+        assert_eq!(arch.model.as_str(), "Test Model");
+        assert_eq!(arch.micro_arch, MicroArch::Zen);
+        assert_eq!(arch.code_name, "Test Codename");
+        assert_eq!(arch.brand_name.as_str(), "Test Brand");
+        assert_eq!(arch.vendor_string.as_str(), "Test Vendor");
+        assert!(arch.technology.is_none());
+    }
+
+    // Helper to create a dummy CpuSignature
+    fn dummy_signature(
+        family: u32,
+        model: u32,
+        ext_family: u32,
+        ext_model: u32,
+        stepping: u32,
+    ) -> CpuSignature {
+        CpuSignature {
+            extended_family: ext_family,
+            family,
+            extended_model: ext_model,
+            model,
+            stepping,
+            display_family: family, // Simplified for tests
+            display_model: model,   // Simplified for tests
+        }
+    }
+
+    #[test]
+    fn test_cpu_arch_find_amd() {
+        let model = "AMD Processor";
+
+        // Am486
+        let sig_am486 = dummy_signature(4, 3, 0, 0, 0);
+        let arch = CpuArch::find_amd(model, sig_am486);
+        assert_eq!(arch.micro_arch, MicroArch::Am486);
+        assert_eq!(arch.code_name, "Am486DX2");
+
+        // K5
+        let sig_k5 = dummy_signature(5, 1, 0, 0, 0);
+        let arch = CpuArch::find_amd(model, sig_k5);
+        assert_eq!(arch.micro_arch, MicroArch::K5);
+        assert_eq!(arch.code_name, "5k86");
+
+        // Zen4
+        let sig_zen4 = dummy_signature(15, 1, 10, 6, 2);
+        let arch = CpuArch::find_amd(model, sig_zen4);
+        assert_eq!(arch.micro_arch, MicroArch::Zen4);
+        assert_eq!(arch.code_name, "Raphael");
+
+        // Unknown AMD
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find_amd(model, sig_unknown);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_intel() {
+        let model = "Intel Processor";
+
+        // I486
+        let sig_i486 = dummy_signature(4, 0, 0, 0, 0);
+        let arch = CpuArch::find_intel(model, sig_i486);
+        assert_eq!(arch.micro_arch, MicroArch::I486);
+        assert_eq!(arch.code_name, "i80486DX");
+
+        // P5 (Pentium)
+        let sig_p5 = dummy_signature(5, 2, 0, 0, 0);
+        let arch = CpuArch::find_intel(model, sig_p5);
+        assert_eq!(arch.micro_arch, MicroArch::P5);
+        assert_eq!(arch.code_name, "P54C");
+
+        // Nehalem
+        let sig_nehalem = dummy_signature(6, 14, 0, 1, 5);
+        let arch = CpuArch::find_intel(model, sig_nehalem);
+        assert_eq!(arch.micro_arch, MicroArch::Nehalem);
+        assert_eq!(arch.code_name, "Lynnfield");
+
+        // Unknown Intel
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find_intel(model, sig_unknown);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_centaur() {
+        let model = "Centaur Processor";
+        let vendor_str = VENDOR_CENTAUR;
+
+        // IDT Winchip
+        let sig_winchip = dummy_signature(5, 4, 0, 0, 0);
+        let arch = CpuArch::find_centaur(model, sig_winchip, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Winchip);
+        assert_eq!(arch.code_name, "C6");
+
+        // VIA Ezra
+        let sig_ezra = dummy_signature(6, 7, 0, 0, 8);
+        let arch = CpuArch::find_centaur(model, sig_ezra, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Ezra);
+        assert_eq!(arch.code_name, "Ezra (C5C)");
+
+        // Zhaoxin Lujiazui
+        let sig_lujiazui = dummy_signature(7, 11, 0, 3, 0);
+        let arch = CpuArch::find_centaur(model, sig_lujiazui, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Lujiazui);
+        assert_eq!(arch.code_name, "LuJiaZui");
+
+        // Unknown Centaur
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find_centaur(model, sig_unknown, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, ""); // Centaur unknown code_name is empty
+    }
+
+    #[test]
+    fn test_cpu_arch_find_dmp() {
+        let model = "DMP Processor";
+        let vendor_str = VENDOR_DMP;
+
+        // VortexDX3
+        let sig_vortex = dummy_signature(6, 1, 0, 0, 1);
+        let arch = CpuArch::find(model, sig_vortex, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::VortexDX3);
+        assert_eq!(arch.code_name, "Vortex86DX3");
+
+        // Unknown DMP
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_unknown, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_cyrix() {
+        let model = "Cyrix Processor";
+        let vendor_str = VENDOR_CYRIX;
+
+        // FiveX86
+        let sig_fivex86 = dummy_signature(4, 9, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_fivex86, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::FiveX86);
+        assert_eq!(arch.code_name, "5x86");
+
+        // M2
+        let sig_m2 = dummy_signature(6, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_m2, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::M2);
+        assert_eq!(arch.code_name, "M2");
+
+        // Unknown Cyrix
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_unknown, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_rise() {
+        let model = "Rise Processor";
+        let vendor_str = VENDOR_RISE;
+
+        // MP6
+        let sig_mp6 = dummy_signature(5, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_mp6, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::MP6);
+        assert_eq!(arch.code_name, "Kirin");
+
+        // Unknown Rise
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_unknown, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_umc_transmeta() {
+        let model = "Processor";
+
+        // UMC U5D
+        let umc_vendor_str = VENDOR_UMC;
+        let sig_u5d = dummy_signature(4, 1, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_u5d, umc_vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::U5D);
+        assert_eq!(arch.code_name, "U5D");
+
+        // Transmeta Crusoe
+        let transmeta_vendor_str = VENDOR_TRANSMETA;
+        let sig_crusoe = dummy_signature(5, 4, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_crusoe, transmeta_vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Crusoe);
+        assert_eq!(arch.code_name, "Crusoe");
+
+        // Unknown Umc/Transmeta
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = CpuArch::find(model, sig_unknown, umc_vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+    }
+
+    #[test]
+    fn test_cpu_arch_find_unknown_brand() {
+        let model = "Unknown Processor";
+        let vendor_str = "UnknownVendor"; // Not in our defined VENDOR_*
+        let sig = dummy_signature(1, 1, 1, 1, 1);
+
+        let arch = CpuArch::find(model, sig, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
+        assert_eq!(arch.brand_name.as_str(), "Unknown");
     }
 }

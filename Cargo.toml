@@ -1,10 +1,10 @@
 [package]
 name = "rustid"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2024"
 
 [dependencies]
-heapless = "0.9.2"
+heapless = { version = "0.9.2", features = ["ufmt"] }
 ufmt = "0.2"
 
 [profile.release]

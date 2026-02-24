@@ -8,6 +8,7 @@ use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
+use ufmt::derive::uDebug;
 
 pub mod brand;
 pub mod cpu;
@@ -17,7 +18,7 @@ pub mod micro_arch;
 pub use cpu::*;
 
 /// Represents the result of a CPUID instruction call.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub struct CpuInfo {
     /// EAX register value
     pub eax: u32,
@@ -27,20 +28,6 @@ pub struct CpuInfo {
     pub ecx: u32,
     /// EDX register value
     pub edx: u32,
-}
-
-impl ufmt::uDebug for CpuInfo {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.debug_struct("CpuInfo")?
-            .field("eax", &self.eax)?
-            .field("ebx", &self.ebx)?
-            .field("ecx", &self.ecx)?
-            .field("edx", &self.edx)?
-            .finish()
-    }
 }
 
 impl From<CpuidResult> for CpuInfo {
@@ -100,4 +87,64 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
         return CpuInfo::default();
     }
     unsafe { __cpuid_count(leaf, sub_leaf).into() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::println;
+    use ufmt::uwrite;
+
+    #[test]
+    fn test_cpu_info_udebug() {
+        let info = CpuInfo {
+            eax: 1,
+            ebx: 2,
+            ecx: 3,
+            edx: 4,
+        };
+        let mut s = heapless::String::<64>::new();
+        uwrite!(&mut s, "{:?}", info).unwrap();
+        assert_eq!(s.as_str(), "CpuInfo { eax: 1, ebx: 2, ecx: 3, edx: 4 }");
+    }
+
+    #[test]
+    fn test_from_cpuid_result_for_cpu_info() {
+        let cpuid_result = CpuidResult {
+            eax: 10,
+            ebx: 20,
+            ecx: 30,
+            edx: 40,
+        };
+        let cpu_info: CpuInfo = cpuid_result.into();
+        assert_eq!(cpu_info.eax, 10);
+        assert_eq!(cpu_info.ebx, 20);
+        assert_eq!(cpu_info.ecx, 30);
+        assert_eq!(cpu_info.edx, 40);
+    }
+
+    #[test]
+    fn test_init() {
+        // Ensure init does not panic. Output is console dependent.
+        init();
+    }
+
+    #[test]
+    fn test_x86_cpuid_leaf_0() {
+        let cpu_info = x86_cpuid(0);
+        // Cannot assert specific values, but can ensure it doesn't panic
+        // and that some fields might be non-zero for vendor ID.
+        println!("CPUID Leaf 0: {:?}", cpu_info);
+        assert!(cpu_info.eax > 0); // EAX for leaf 0 is max_leaf, should be > 0
+    }
+
+    #[test]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    fn test_x86_cpuid_count_leaf_1_subleaf_0() {
+        let cpu_info = x86_cpuid_count(1, 0);
+        // Cannot assert specific values, but can ensure it doesn't panic.
+        println!("CPUID Leaf 1, Subleaf 0: {:?}", cpu_info);
+        // EAX for leaf 1 contains processor signature, should be non-zero for most CPUs
+        assert!(cpu_info.eax > 0);
+    }
 }

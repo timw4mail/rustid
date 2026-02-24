@@ -1,5 +1,6 @@
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
+use ufmt::derive::uDebug;
 
 pub const VENDOR_AMD: &str = "AuthenticAMD";
 pub const VENDOR_CENTAUR: &str = "CentaurHauls";
@@ -14,7 +15,7 @@ pub const VENDOR_SIS: &str = "SiS SiS SiS ";
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub enum CpuBrand {
     AMD,
     Cyrix,
@@ -31,15 +32,6 @@ pub enum CpuBrand {
     Unknown,
     Via,
     Zhaoxin,
-}
-
-impl ufmt::uDebug for CpuBrand {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.write_str(self.to_brand_name())
-    }
 }
 
 impl CpuBrand {
@@ -140,10 +132,7 @@ impl From<String<12>> for CpuBrand {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(target_os = "none")]
-    use crate::println;
-    #[cfg(not(target_os = "none"))]
+    use core::str::FromStr;
     use std::println;
 
     #[test]
@@ -151,5 +140,79 @@ mod tests {
         let vendor = CpuBrand::vendor_str();
         println!("Vendor: {}", vendor);
         assert!(!vendor.is_empty());
+    }
+
+    #[test]
+    fn test_detect_cpu_brand() {
+        let brand = CpuBrand::detect();
+        // We cannot assert a specific brand as it depends on the CPU running the test.
+        // Just ensure it doesn't panic.
+        println!("Detected CPU Brand: {:?}", brand);
+    }
+
+    #[test]
+    fn test_to_vendor_str() {
+        assert_eq!(CpuBrand::AMD.to_vendor_str(), VENDOR_AMD);
+        assert_eq!(CpuBrand::Cyrix.to_vendor_str(), VENDOR_CYRIX);
+        assert_eq!(CpuBrand::DMP.to_vendor_str(), VENDOR_DMP);
+        assert_eq!(CpuBrand::Hygon.to_vendor_str(), VENDOR_HYGON);
+        assert_eq!(CpuBrand::IDT.to_vendor_str(), VENDOR_CENTAUR);
+        assert_eq!(CpuBrand::Intel.to_vendor_str(), VENDOR_INTEL);
+        assert_eq!(CpuBrand::NationalSemiconductor.to_vendor_str(), VENDOR_NSC);
+        assert_eq!(CpuBrand::NexGen.to_vendor_str(), VENDOR_NEXGEN);
+        assert_eq!(CpuBrand::Rise.to_vendor_str(), VENDOR_RISE);
+        assert_eq!(CpuBrand::SiS.to_vendor_str(), VENDOR_SIS);
+        assert_eq!(CpuBrand::Transmeta.to_vendor_str(), VENDOR_TRANSMETA);
+        assert_eq!(CpuBrand::Umc.to_vendor_str(), VENDOR_UMC);
+        assert_eq!(CpuBrand::Via.to_vendor_str(), VENDOR_CENTAUR);
+        assert_eq!(CpuBrand::Zhaoxin.to_vendor_str(), VENDOR_CENTAUR);
+        assert_eq!(CpuBrand::Unknown.to_vendor_str(), "Unknown");
+    }
+
+    #[test]
+    fn test_to_brand_name() {
+        assert_eq!(CpuBrand::AMD.to_brand_name(), "AMD");
+        assert_eq!(CpuBrand::Cyrix.to_brand_name(), "Cyrix/IBM/ST/TI");
+        assert_eq!(CpuBrand::DMP.to_brand_name(), "DM&P");
+        assert_eq!(CpuBrand::Hygon.to_brand_name(), "Hygon");
+        assert_eq!(CpuBrand::IDT.to_brand_name(), "IDT");
+        assert_eq!(CpuBrand::Intel.to_brand_name(), "Intel");
+        assert_eq!(
+            CpuBrand::NationalSemiconductor.to_brand_name(),
+            "National Semiconductor"
+        );
+        assert_eq!(CpuBrand::NexGen.to_brand_name(), "NexGen");
+        assert_eq!(CpuBrand::Rise.to_brand_name(), "Rise");
+        assert_eq!(CpuBrand::SiS.to_brand_name(), "SiS");
+        assert_eq!(CpuBrand::Transmeta.to_brand_name(), "Transmeta");
+        assert_eq!(CpuBrand::Umc.to_brand_name(), "UMC");
+        assert_eq!(CpuBrand::Via.to_brand_name(), "Via");
+        assert_eq!(CpuBrand::Zhaoxin.to_brand_name(), "Zhaoxin");
+        assert_eq!(CpuBrand::Unknown.to_brand_name(), "Unknown");
+    }
+
+    #[test]
+    fn test_from_str_for_cpu_brand() {
+        assert_eq!(CpuBrand::from(VENDOR_AMD), CpuBrand::AMD);
+        assert_eq!(CpuBrand::from(VENDOR_CYRIX), CpuBrand::Cyrix);
+        assert_eq!(CpuBrand::from(VENDOR_DMP), CpuBrand::DMP);
+        assert_eq!(CpuBrand::from(VENDOR_HYGON), CpuBrand::Hygon);
+        assert_eq!(CpuBrand::from(VENDOR_INTEL), CpuBrand::Intel);
+        assert_eq!(CpuBrand::from(VENDOR_NEXGEN), CpuBrand::NexGen);
+        assert_eq!(CpuBrand::from(VENDOR_NSC), CpuBrand::NationalSemiconductor);
+        assert_eq!(CpuBrand::from(VENDOR_RISE), CpuBrand::Rise);
+        assert_eq!(CpuBrand::from(VENDOR_SIS), CpuBrand::SiS);
+        assert_eq!(CpuBrand::from(VENDOR_TRANSMETA), CpuBrand::Transmeta);
+        assert_eq!(CpuBrand::from(VENDOR_UMC), CpuBrand::Umc);
+        assert_eq!(CpuBrand::from("SomeOtherVendor"), CpuBrand::Unknown);
+    }
+
+    #[test]
+    fn test_from_heapless_string_for_cpu_brand() {
+        let amd_string: String<12> = String::from_str(VENDOR_AMD).unwrap();
+        assert_eq!(CpuBrand::from(amd_string), CpuBrand::AMD);
+
+        let unknown_string: String<12> = String::from_str("UNKNOWN_VEN").unwrap();
+        assert_eq!(CpuBrand::from(unknown_string), CpuBrand::Unknown);
     }
 }
