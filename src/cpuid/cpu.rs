@@ -69,7 +69,7 @@ impl CpuFeatures {
             let _ = out.push("SSE");
         };
         if fns::has_sse2() {
-            let _ = out.push("SSSE2");
+            let _ = out.push("SSE2");
         };
         if fns::has_sse3() {
             let _ = out.push("SSE3");
