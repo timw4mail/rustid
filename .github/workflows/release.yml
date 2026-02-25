@@ -1,0 +1,24 @@
+name: Release Binaries
+uses: skx/github-action-publish-binaries@release-2.0
+on:
+    push:
+        tags:
+            - "v*"
+jobs:
+    generate:
+        name: Create release artifacts
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+            - name: Install just
+              run: |
+                  curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+            - name: Build dos
+              run: just build-dos
+            - name: Upload binaries to release
+              uses: skx/github-action-publish-binaries@release-2.0
+              env:
+                  - GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  args: rustid.com
