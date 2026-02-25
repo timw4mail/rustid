@@ -68,6 +68,8 @@ Features:
 - [sandpile.org](https://sandpile.org/x86/cpuid.htm) - One of the best known x86 references
 - [cpufetch](https://github.com/Dr-Noob/cpufetch) (a similar tool that might work better for you)
 - [Paradice CPUID Guide](https://www.paradicesoftware.com/specs/cpuid/) - helpful for Cyrix workarounds
+- [x86-cpuid-db](https://gitlab.com/x86-cpuid.org/x86-cpuid-db) - good reference of various cpuid information leaves
+- [cpuid visualizer](https://cpuid.apps.poly.nomial.co.uk/) - helpful for mapping cpu signatures from other sources
 - [CPU-World](https://www.cpu-world.com/index.html)
 - [My own hardware collection](https://timshome.page/collection/cpu)
 
