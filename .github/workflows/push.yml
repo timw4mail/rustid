@@ -16,11 +16,5 @@ jobs:
 
         steps:
             - uses: actions/checkout@v4
-            - name: Install Just
-              run: cargo install just
-            - name: Build
-              run: just build
-            - name: Build DOS
-              run: just build-dos
             - name: Run tests
               run: cargo test --verbose
