@@ -8,6 +8,7 @@ use core::arch::asm;
 
 pub const LEAF_0: u32 = 0;
 pub const LEAF_1: u32 = 1;
+pub const LEAF_2: u32 = 2;
 pub const LEAF_7: u32 = 7;
 
 pub const EXT_LEAF_0: u32 = 0x8000_0000;
@@ -83,6 +84,54 @@ pub fn is_cyrix() -> bool {
     false
 }
 
+/// Returns true if the CPU is a 386-class processor.
+///
+/// This is determined by checking if the AC (Alignment Check) flag in EFLAGS
+/// can be toggled. 386 CPUs do not support this, while 486 and newer do.
+pub fn is_386() -> bool {
+    !is_ac_flag_supported()
+}
+
+/// Returns true if the CPU is a 486-class processor.
+///
+/// A 486 is identified by its support for the AC flag but lack of CPUID support.
+pub fn is_486() -> bool {
+    is_ac_flag_supported() && !has_cpuid()
+}
+
+/// Helper to check for AC flag support in EFLAGS register.
+fn is_ac_flag_supported() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    return true; // 64-bit CPUs are much newer than 486
+
+    #[cfg(target_arch = "x86")]
+    {
+        let supported: u32;
+        unsafe {
+            asm!(
+                "pushfd",
+                "pop eax",
+                "mov ecx, eax",
+                "xor eax, 0x40000", // Toggle AC flag (bit 18)
+                "push eax",
+                "popfd",
+                "pushfd",
+                "pop eax",
+                "push ecx",
+                "popfd",
+                "xor eax, ecx",
+                "and eax, 0x40000",
+                out("eax") supported,
+                out("ecx") _,
+            );
+        }
+        supported != 0
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    false
+}
+
 pub fn max_leaf() -> u32 {
     x86_cpuid(LEAF_0).eax
 }
@@ -121,6 +170,49 @@ fn has_feature(leaf: u32, register: char, bit: u32) -> bool {
         'c' => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
         _ => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
     }
+}
+
+/// Returns true if the CPU has an L1 cache.
+///
+/// This is determined by checking for L1 cache descriptors in CPUID leaf 2.
+pub fn has_l1_cache() -> bool {
+    if max_leaf() < LEAF_2 {
+        return false;
+    }
+
+    let result = x86_cpuid(LEAF_2);
+
+    // List of known L1 cache descriptors
+    let l1_descriptors = [
+        0x06, // L1 I-cache: 8KB, 4-way, 32B line
+        0x08, // L1 I-cache: 16KB, 4-way, 32B line
+        0x0A, // L1 D-cache: 8KB, 2-way, 32B line
+        0x0C, // L1 D-cache: 16KB, 4-way, 32B line
+        0x2C, // L1 D-cache: 32KB, 8-way, 64B line
+        0x30, // L1 I-cache: 32KB, 8-way, 64B line
+        0x60, // L1 D-cache: 16KB, 8-way, 64B line, sectored
+        0x66, // L1 D-cache: 8KB, 4-way, 64B line, sectored
+        0x67, // L1 D-cache: 16KB, 4-way, 64B line, sectored
+        0x68, // L1 D-cache: 32KB, 4-way, 64B line, sectored
+    ];
+
+    // Combine all registers into a single byte array to iterate through
+    let all_bytes: [u8; 16] =
+        unsafe { core::mem::transmute([result.eax, result.ebx, result.ecx, result.edx]) };
+
+    // Start from index 1 to skip the first byte of EAX, which is the call count.
+    for &byte in &all_bytes[1..] {
+        // A null byte indicates end of descriptors
+        if byte == 0 {
+            continue;
+        }
+        // Check if the byte is in our list of L1 descriptors
+        if l1_descriptors.contains(&byte) {
+            return true;
+        }
+    }
+
+    false
 }
 
 // ------------------------------------------------------------------------

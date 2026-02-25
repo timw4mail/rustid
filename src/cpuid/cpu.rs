@@ -8,6 +8,7 @@ use crate::println;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
+use crate::cpuid::fns::{has_cpuid, is_386, is_486};
 use core::str::FromStr;
 use ufmt::derive::uDebug;
 
@@ -273,13 +274,14 @@ impl Cpu {
             MicroArch::M2 => "6x86MX (MII)",
 
             _ => {
-                if self.signature.family == 0
-                    && self.signature.model == 0
-                    && self.signature.extended_family == 0
-                    && self.signature.extended_model == 0
-                    && self.signature.stepping == 0
-                {
-                    "No CPUID, 486 or earlier CPU"
+                if !has_cpuid() {
+                    if is_386() {
+                        "No CPUID, seems to be a 386"
+                    } else if is_486() {
+                        "No CPUID, seems to be a 486"
+                    } else {
+                        "Unknown"
+                    }
                 } else {
                     "Unknown"
                 }
@@ -332,6 +334,15 @@ impl Cpu {
         let ma: String<64> = self.arch.micro_arch.into();
         let ma = ma.as_str();
 
+        // Don't even try to display other stuff without cpuid
+        if !has_cpuid() {
+            println!();
+            println!("Model:     {}", self.display_model_string());
+            println!();
+
+            return;
+        }
+
         println!();
         println!(
             "Vendor:    {} ({})",
@@ -347,9 +358,9 @@ impl Cpu {
             println!("Node:      {}", tech.as_str());
         }
 
-        if self.threads > 1 {
-            println!("Logical Cores: {}", self.threads);
-        }
+        // if self.threads > 1 {
+        //     println!("Logical Cores: {}", self.threads);
+        // }
 
         if let Some(easter_egg) = &self.easter_egg {
             println!("Easter Egg: {}", easter_egg.as_str());

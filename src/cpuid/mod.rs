@@ -51,15 +51,12 @@ pub fn init() {
         #[cfg(not(target_os = "none"))]
         use std::println;
 
-        if !fns::has_cpuid() {
-            if fns::is_cyrix() {
-                println!("This CPU might have CPUID support, but it is disabled.");
-                println!("For DOS, you can download a utility from ");
-                println!("  https://www.deinmeister.de/cypower.com");
-                println!("If run before rustid, CPUID should be enabled");
-            } else {
-                println!("The CPU does not appear to have CPUID");
-            }
+        if !fns::has_cpuid() && fns::is_cyrix() {
+            println!("This CPU might have CPUID support, but it is disabled.");
+            println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
+            println!("For DOS, you can download a utility from ");
+            println!("  https://www.deinmeister.de/cypower.com");
+            println!("If run before rustid, CPUID should be enabled");
         }
     }
 
