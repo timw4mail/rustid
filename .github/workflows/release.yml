@@ -19,6 +19,6 @@ jobs:
             - name: Upload binaries to release
               uses: skx/github-action-publish-binaries@release-2.0
               env:
-                  - GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   args: rustid.com
