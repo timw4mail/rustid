@@ -8,7 +8,7 @@ use crate::println;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
-use crate::cpuid::fns::{has_cpuid, is_386, is_486};
+use crate::cpuid::fns::is_386;
 use core::str::FromStr;
 use ufmt::derive::uDebug;
 
@@ -113,7 +113,7 @@ impl CpuFeatures {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, uDebug)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, uDebug)]
 pub struct CpuSignature {
     pub extended_family: u32,
     pub family: u32,
@@ -248,6 +248,7 @@ impl Cpu {
             //Intel
             MicroArch::I486 => match self.arch.code_name {
                 "i80486DX" => "Intel or AMD 486 DX",
+                "RapidCAD" => "Intel RapidCAD",
                 "i80486DX-50" => "Intel or AMD 486 DX-50",
                 "i80486SX" => "Intel or AMD 486 SX",
                 "i80486DX2" => "Intel 486 DX2",
@@ -258,6 +259,7 @@ impl Cpu {
                 "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
                 _ => "486 Class CPU",
             },
+            MicroArch::P5MMX => "Intel Pentium with MMX",
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::P6PentiumII => "Intel Pentium II",
             MicroArch::P6PentiumIII => "Intel Pentium !!!",
@@ -274,13 +276,11 @@ impl Cpu {
             MicroArch::M2 => "6x86MX (MII)",
 
             _ => {
-                if !has_cpuid() {
+                if self.signature == CpuSignature::default() || !fns::has_cpuid() {
                     if is_386() {
-                        "No CPUID, seems to be a 386"
-                    } else if is_486() {
-                        "No CPUID, seems to be a 486"
+                        "386 Class CPU"
                     } else {
-                        "Unknown"
+                        "486 Class CPU"
                     }
                 } else {
                     "Unknown"
@@ -335,7 +335,7 @@ impl Cpu {
         let ma = ma.as_str();
 
         // Don't even try to display other stuff without cpuid
-        if !has_cpuid() {
+        if self.signature == CpuSignature::default() {
             println!();
             println!("Model:     {}", self.display_model_string());
             println!();
@@ -490,7 +490,7 @@ mod tests {
         };
         assert_eq!(
             cpu_no_cpuid.display_model_string(),
-            "No CPUID, 486 or earlier CPU"
+            "486 Class CPU"
         );
 
         // Test case for "Unknown"
