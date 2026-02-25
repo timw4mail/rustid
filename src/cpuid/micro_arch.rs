@@ -369,7 +369,7 @@ impl CpuArch {
             ) {
                 (0, 4, 0, 9, _) => brand_arch(MicroArch::FiveX86, "5x86", None),
                 (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1", None),
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "MediaGX GXm", Some("350nm")),
+                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "GXm", Some("350nm")),
                 (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2", None),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
@@ -451,20 +451,22 @@ impl CpuArch {
             // K6
             (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", Some("300nm")),
             (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some("250nm")),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", None),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", None),
+            (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", Some("250nm")),
             (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")),
-            (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", None),
+            (0, 5, 0, 13, _) => {
+                brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm"))
+            }
 
             // K7
             (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", Some("250nm")),
             (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto", Some("180nm")),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire", None),
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", None),
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", None),
-            (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan", None),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred", None),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", None),
+            (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire", Some("180nm")),
+            (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", Some("180nm")),
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", Some("180nm")),
+            (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan", Some("180nm")),
+            (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred", Some("130nm")),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", Some("130nm")),
 
             // K8
             (0, 15, 0, 13, 0) => brand_arch(MicroArch::K8, "NewCastle", Some("130nm")),
@@ -478,6 +480,12 @@ impl CpuArch {
             (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
 
             // K10
+            (1, 15, 0, 2, 3) => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
+            (1, 15, 0, 4, 3) => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
+            (1, 15, 0, 5, 3) => brand_arch(MicroArch::K10, "Propus", Some("45nm")),
+            (1, 15, 0, 6, 2) => brand_arch(MicroArch::K10, "Sargas", Some("45nm")),
+            (1, 15, 0, 6, 3) => brand_arch(MicroArch::K10, "Regor", Some("45nm")),
+            (1, 15, 0, 10, 0) => brand_arch(MicroArch::K10, "Thuban", Some("45nm")),
             (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
 
             // Bulldozer/Piledriver/Steamroller
@@ -489,7 +497,7 @@ impl CpuArch {
             }
 
             // Zen
-            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "RavenRidge", Some("14nm")),
+            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "Raven Ridge", Some("14nm")),
             (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", Some("7nm")),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some("5nm")),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some("4nm")),

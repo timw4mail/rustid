@@ -49,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "rustid"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "heapless",
  "ufmt",
