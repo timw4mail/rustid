@@ -8,7 +8,7 @@ jobs:
         name: Create release artifacts
         runs-on: ubuntu-latest
         steps:
-            - uses: actions-rust-lang/toolchain@v1
+            - uses: actions-rust-lang/setup-rust-toolchain@v1
 
             - name: Checkout code
               uses: actions/checkout@master

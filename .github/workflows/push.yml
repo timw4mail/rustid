@@ -16,6 +16,6 @@ jobs:
 
         steps:
             - uses: actions/checkout@v4
-            - uses: actions-rust-lang/toolchain@v1
+            - uses: actions-rust-lang/setup-rust-toolchain@v1
             - name: Run tests
               run: cargo test --verbose
