@@ -330,6 +330,7 @@ impl Cpu {
     // TODO: Show cpu speed
     pub fn display_table(&self) {
         let ma: String<64> = self.arch.micro_arch.into();
+        let ma = ma.as_str();
 
         println!();
         println!(
@@ -338,10 +339,20 @@ impl Cpu {
             self.arch.brand_name.as_str()
         );
         println!("Model:     {}", self.display_model_string());
-        println!("MicroArch: {}", ma.as_str());
+        if ma != self.arch.code_name {
+            println!("MicroArch: {}", ma);
+        }
         println!("Codename:  {}", self.arch.code_name);
         if let Some(tech) = &self.arch.technology {
             println!("Node:      {}", tech.as_str());
+        }
+
+        if self.threads > 1 {
+            println!("Logical Cores: {}", self.threads);
+        }
+
+        if let Some(easter_egg) = &self.easter_egg {
+            println!("Easter Egg: {}", easter_egg.as_str());
         }
         println!(
             "Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
@@ -355,14 +366,6 @@ impl Cpu {
             self.signature.model,
             self.signature.stepping
         );
-
-        if self.threads > 1 {
-            println!("Logical Cores: {}", self.threads);
-        }
-
-        if let Some(easter_egg) = &self.easter_egg {
-            println!("Easter Egg: {}", easter_egg.as_str());
-        }
 
         if !self.features.list.is_empty() {
             println!("Features:");

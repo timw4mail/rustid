@@ -177,8 +177,8 @@ impl From<MicroArch> for String<64> {
             MicroArch::Isaiah => "Isaiah",
 
             // Centaur (Zhaoxin)
-            MicroArch::Wudaokou => "Wudaokou",
-            MicroArch::Lujiazui => "Lujiazui",
+            MicroArch::Wudaokou => "WuDaoKou",
+            MicroArch::Lujiazui => "LuJiaZui",
 
             // Cyrix
             MicroArch::FiveX86 => "5x86",
@@ -207,8 +207,8 @@ impl From<MicroArch> for String<64> {
             MicroArch::Bonnel => "Bonnel",
             MicroArch::Saltwell => "Saltwell",
             MicroArch::Silvermont => "Silvermont",
-            MicroArch::SandyBridge => "SandyBridge",
-            MicroArch::IvyBridge => "IvyBridge",
+            MicroArch::SandyBridge => "Sandy Bridge",
+            MicroArch::IvyBridge => "Ivy Bridge",
             MicroArch::Haswell => "Haswell",
             MicroArch::Broadwell => "Broadwell",
             MicroArch::Airmont => "Airmont",
@@ -316,10 +316,7 @@ impl CpuArch {
         let mut vendor_s: String<64> = String::new();
         let _ = vendor_s.push_str(vendor_string);
 
-        let technology = match technology {
-            Some(s) => Some(String::from_str(s).unwrap()),
-            None => None,
-        };
+        let technology = technology.map(|s| String::from_str(s).unwrap());
 
         CpuArch {
             model: model_s,
@@ -459,6 +456,15 @@ impl CpuArch {
             (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", None),
 
             // K8
+            (0, 15, 0, 13, 0) => brand_arch(MicroArch::K8, "NewCastle", Some("130nm")),
+            (0, 15, 2, 3, 2) => brand_arch(MicroArch::K8, "Toledo", Some("90nm")),
+            (0, 15, 2, 15, 2) => brand_arch(MicroArch::K8, "Venice", Some("90nm")),
+            (0, 15, 3, 7, 2) => brand_arch(MicroArch::K8, "San Diego", Some("90nm")),
+            (0, 15, 4, 15, 2) => brand_arch(MicroArch::K8, "Manilla", Some("90nm")),
+            (0, 15, 4, 12, 2) => brand_arch(MicroArch::K8, "Windsor", Some("90nm")),
+            (0, 15, 5, 15, 2) => brand_arch(MicroArch::K8, "Orleans", Some("90nm")),
+            (0, 15, 6, 12, 2) => brand_arch(MicroArch::K8, "Brisbane", Some("65nm")),
+            (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
 
             // K10
             (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
@@ -588,7 +594,7 @@ impl CpuArch {
 
             // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
-            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "SandyBridge", Some("32nm")),
+            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
@@ -606,7 +612,7 @@ mod tests {
         assert_eq!(String::<64>::from(MicroArch::Am486).as_str(), "Am486");
         assert_eq!(String::<64>::from(MicroArch::ZenPlus).as_str(), "Zen+");
         assert_eq!(String::<64>::from(MicroArch::Winchip).as_str(), "Winchip");
-        assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "Lujiazui");
+        assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "LuJiaZui");
         assert_eq!(String::<64>::from(MicroArch::FiveX86).as_str(), "5x86");
         assert_eq!(
             String::<64>::from(MicroArch::VortexDX3).as_str(),
@@ -762,7 +768,7 @@ mod tests {
         let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
         let arch = CpuArch::find_centaur(model, sig_unknown, vendor_str);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, ""); // Centaur unknown code_name is empty
+        assert_eq!(arch.code_name, UNK); // Centaur unknown code_name is empty
     }
 
     #[test]
