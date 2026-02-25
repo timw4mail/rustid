@@ -21,11 +21,11 @@ jobs:
               with:
                   name: rustid
                   path: ./rustid.com
-            - name: Upload binaries to release
-              uses: actions/download-artifact@v5
-              with:
-                  name: rustid
-                  path: ./rustid.com
+            #- name: Upload binaries to release
+            #  uses: actions/download-artifact@v5
+            #  with:
+            #      name: rustid
+            #      path: ./rustid.com
             - name: Publish binaries
               run: |
                   gh release create --generate-notes ${{ github.ref.name }} './rustid.com#DOS binary'
