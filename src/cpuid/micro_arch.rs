@@ -373,6 +373,18 @@ impl CpuArch {
                 (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2", None),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
+            CpuBrand::NationalSemiconductor => match (
+                s.extended_family,
+                s.family,
+                s.extended_model,
+                s.model,
+                s.stepping,
+            ) {
+                (0, 5, 0, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some("180nm")),
+                (0, 5, 0, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some("180nm")),
+                (0, 5, 0, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            },
             CpuBrand::Rise => match (
                 s.extended_family,
                 s.family,
@@ -404,7 +416,6 @@ impl CpuArch {
             },
             CpuBrand::Hygon
             | CpuBrand::IDT
-            | CpuBrand::NationalSemiconductor
             | CpuBrand::NexGen
             | CpuBrand::SiS
             | CpuBrand::Unknown
