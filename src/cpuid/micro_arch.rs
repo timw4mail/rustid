@@ -153,7 +153,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::ZenPlus => "Zen+",
             MicroArch::Zen2 => "Zen 2",
             MicroArch::Zen3 => "Zen 3",
-            MicroArch::Zen3Plus => "Zen 3P+",
+            MicroArch::Zen3Plus => "Zen 3+",
             MicroArch::Zen4 => "Zen 4",
             MicroArch::Zen4C => "Zen 4C",
             MicroArch::Zen5 => "Zen 5",
@@ -238,7 +238,7 @@ impl From<MicroArch> for String<64> {
 
             // Rise
             MicroArch::MP6 => "MP6",
-            MicroArch::MP6Shrink => "MP6 (die shrink)",
+            MicroArch::MP6Shrink => "MP6",
 
             // Transmeta
             MicroArch::Crusoe => "Crusoe",

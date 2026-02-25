@@ -47,15 +47,20 @@ cargo run
 
 Example Output:
 ```text
-CPU Vendor:    AuthenticAMD (AMD)
-CPU Name:      AMD Ryzen 9 5950X 16-Core Processor
-CPU Codename:  Vermeer
-CPU Signature: Family 25, Model 33, Stepping 2
-               (10, 15, 2, 1, 2)
-Logical Cores: 32
+---------------------
+Rustid version 0.3.9
+---------------------
+
+Vendor:    AuthenticAMD (AMD)
+Model:     AMD Ryzen 7 PRO 2700U w/ Radeon Vega Mobile Gfx
+MicroArch: Zen
+Codename:  Raven Ridge
+Node:      14nm
+Logical Cores: 8
+Signature: Family 17h, Model 11h, Stepping 0h
+               (8, 15, 1, 1, 0)
 Features:
-  FPU:      true
-  ...
+    FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX AVX2 FMA BMI1 BMI2 RDRAND
 ```
 
 ## Information References
