@@ -23,5 +23,5 @@ jobs:
                   path: ./rustid.com
             - name: Publish binaries
               run: |
-                  gh release create --generate-notes ${{ GITHUB_REF_NAME }} './rustid.com#DOS binary'
+                  gh release create --generate-notes ${{ github.ref.name }} './rustid.com#DOS binary'
 
