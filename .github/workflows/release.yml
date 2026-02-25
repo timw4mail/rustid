@@ -16,6 +16,11 @@ jobs:
                   curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
             - name: Build dos
               run: just build-dos
+            - name: Upload artifact
+              uses: actions/upload-artifact@v5
+              with:
+                  name: rustid
+                  path: ./rustid.com
             - name: Upload binaries to release
               uses: actions/download-artifact@v5
               with:
