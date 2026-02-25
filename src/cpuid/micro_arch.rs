@@ -449,6 +449,7 @@ impl CpuArch {
             (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", Some("350nm")),
 
             // K6
+            // NexGenerationAMD
             (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", Some("300nm")),
             (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some("250nm")),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
@@ -469,6 +470,7 @@ impl CpuArch {
             (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", Some("130nm")),
 
             // K8
+            // IT'S HAMMER TIME
             (0, 15, 0, 13, 0) => brand_arch(MicroArch::K8, "NewCastle", Some("130nm")),
             (0, 15, 2, 3, 2) => brand_arch(MicroArch::K8, "Toledo", Some("90nm")),
             (0, 15, 2, 15, 2) => brand_arch(MicroArch::K8, "Venice", Some("90nm")),
@@ -486,7 +488,7 @@ impl CpuArch {
             (1, 15, 0, 6, 2) => brand_arch(MicroArch::K10, "Sargas", Some("45nm")),
             (1, 15, 0, 6, 3) => brand_arch(MicroArch::K10, "Regor", Some("45nm")),
             (1, 15, 0, 10, 0) => brand_arch(MicroArch::K10, "Thuban", Some("45nm")),
-            (5, 15, _, _, _) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
+            (5, 15, 0, 2, 0) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
 
             // Bulldozer/Piledriver/Steamroller
             (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", Some("32nm")),
@@ -495,6 +497,9 @@ impl CpuArch {
             (6, 15, 6 | 7, 0 | 5, _) => {
                 brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm"))
             }
+
+            // HELLO KITTY! ^-^
+            (7, 15, 0, 0, 1) => brand_arch(MicroArch::Jaguar, "Kabini", Some("28nm")),
 
             // Zen
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "Raven Ridge", Some("14nm")),
