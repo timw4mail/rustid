@@ -10,11 +10,12 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    build:
+    test:
 
-        runs-on: rust-latest
+        runs-on: ubuntu-latest
 
         steps:
             - uses: actions/checkout@v4
+            - uses: actions-rust-lang/toolchain@v1
             - name: Run tests
               run: cargo test --verbose
