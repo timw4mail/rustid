@@ -1,5 +1,4 @@
 name: Release Binaries
-uses: skx/github-action-publish-binaries@release-2.0
 on:
     push:
         tags:
