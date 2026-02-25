@@ -778,7 +778,7 @@ mod tests {
         let sig_ezra = dummy_signature(6, 7, 0, 0, 8);
         let arch = CpuArch::find_centaur(model, sig_ezra, vendor_str);
         assert_eq!(arch.micro_arch, MicroArch::Ezra);
-        assert_eq!(arch.code_name, "Ezra (C5C)");
+        assert_eq!(arch.code_name, "C5C");
 
         // Zhaoxin Lujiazui
         let sig_lujiazui = dummy_signature(7, 11, 0, 3, 0);

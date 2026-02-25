@@ -6,6 +6,13 @@ use crate::cpuid::brand::CpuBrand;
 #[allow(unused_imports)]
 use core::arch::asm;
 
+pub const LEAF_0: u32 = 0;
+pub const LEAF_1: u32 = 1;
+pub const LEAF_7: u32 = 7;
+
+pub const EXT_LEAF_0: u32 = 0x8000_0000;
+pub const EXT_LEAF_1: u32 = 0x8000_0001;
+
 /// Returns true if the CPUID instruction is supported.
 ///
 /// Verified on real hardware
@@ -77,11 +84,11 @@ pub fn is_cyrix() -> bool {
 }
 
 pub fn max_leaf() -> u32 {
-    x86_cpuid(0).eax
+    x86_cpuid(LEAF_0).eax
 }
 
 pub fn max_extended_leaf() -> u32 {
-    x86_cpuid(0x8000_0000).eax
+    x86_cpuid(EXT_LEAF_0).eax
 }
 
 /// Returns the number of logical cores.
@@ -99,25 +106,21 @@ pub fn logical_cores() -> u32 {
 // ! CPU Feature Lookups
 // ------------------------------------------------------------------------
 
-fn has_edx_feature(leaf: u32, bit: u32) -> bool {
-    if max_leaf() < leaf {
-        return false;
+fn has_feature(leaf: u32, register: char, bit: u32) -> bool {
+    if leaf >= EXT_LEAF_0 && max_extended_leaf() < leaf {
+        return false
     }
-    (x86_cpuid(leaf).edx & (1 << bit)) != 0
-}
 
-fn has_ecx_feature(leaf: u32, bit: u32) -> bool {
     if max_leaf() < leaf {
         return false;
     }
-    (x86_cpuid(leaf).ecx & (1 << bit)) != 0
-}
 
-fn has_ebx_feature(leaf: u32, bit: u32) -> bool {
-    if max_leaf() < leaf {
-        return false;
+    match register {
+        'b' => (x86_cpuid(leaf).ebx & (1 << bit)) != 0,
+        'd' => (x86_cpuid(leaf).edx & (1 << bit)) != 0,
+        'c' => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
+        _ => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
     }
-    (x86_cpuid(leaf).ebx & (1 << bit)) != 0
 }
 
 // ------------------------------------------------------------------------
@@ -125,19 +128,19 @@ fn has_ebx_feature(leaf: u32, bit: u32) -> bool {
 // ------------------------------------------------------------------------
 
 pub fn has_fpu() -> bool {
-    has_edx_feature(1, 0)
+    has_feature(LEAF_1, 'd', 0)
 }
 
 pub fn has_tsc() -> bool {
-    has_edx_feature(1, 4)
+    has_feature(LEAF_1, 'd', 4)
 }
 
 pub fn has_mmx() -> bool {
-    has_edx_feature(1, 23)
+    has_feature(LEAF_1, 'd', 23)
 }
 
 pub fn has_cmov() -> bool {
-    has_edx_feature(1, 15)
+    has_feature(LEAF_1, 'd', 15)
 }
 
 pub fn has_fcmov() -> bool {
@@ -145,63 +148,63 @@ pub fn has_fcmov() -> bool {
 }
 
 pub fn has_cx8() -> bool {
-    has_edx_feature(1, 8)
+    has_feature(LEAF_1, 'd', 8)
 }
 
 pub fn has_sse() -> bool {
-    has_edx_feature(1, 25)
+    has_feature(LEAF_1, 'd', 25)
 }
 
 pub fn has_sse2() -> bool {
-    has_edx_feature(1, 26)
+    has_feature(LEAF_1, 'd', 26)
 }
 
 pub fn has_ht() -> bool {
-    has_edx_feature(1, 28)
+    has_feature(LEAF_1, 'd', 28)
 }
 
 pub fn has_sse3() -> bool {
-    has_ecx_feature(1, 0)
+    has_feature(LEAF_1, 'c', 0)
 }
 
 pub fn has_pclmulqdq() -> bool {
-    has_ecx_feature(1, 1)
+    has_feature(LEAF_1, 'c', 1)
 }
 
 pub fn has_ssse3() -> bool {
-    has_ecx_feature(1, 9)
+    has_feature(LEAF_1, 'c', 9)
 }
 
 pub fn has_fma() -> bool {
-    has_ecx_feature(1, 12)
+    has_feature(LEAF_1, 'c', 12)
 }
 
 pub fn has_cx16() -> bool {
-    has_ecx_feature(1, 13)
+    has_feature(LEAF_1, 'c', 13)
 }
 
 pub fn has_sse41() -> bool {
-    has_ecx_feature(1, 19)
+    has_feature(LEAF_1, 'c', 19)
 }
 
 pub fn has_sse42() -> bool {
-    has_ecx_feature(1, 20)
+    has_feature(LEAF_1, 'c', 20)
 }
 
 pub fn has_popcnt() -> bool {
-    has_ecx_feature(1, 23)
+    has_feature(LEAF_1, 'c', 23)
 }
 
 pub fn has_avx() -> bool {
-    has_ecx_feature(1, 28)
+    has_feature(LEAF_1, 'c', 28)
 }
 
 pub fn has_f16c() -> bool {
-    has_ecx_feature(1, 29)
+    has_feature(LEAF_1, 'c', 29)
 }
 
 pub fn has_rdrand() -> bool {
-    has_ecx_feature(1, 30)
+    has_feature(LEAF_1, 'c', 30)
 }
 
 // ----------------------------------------------------------------------------
@@ -209,48 +212,37 @@ pub fn has_rdrand() -> bool {
 // ----------------------------------------------------------------------------
 
 pub fn has_avx2() -> bool {
-    has_ebx_feature(7, 5)
+    has_feature(LEAF_7, 'b', 5)
 }
 
 pub fn has_avx512f() -> bool {
-    has_ebx_feature(7, 16)
+    has_feature(LEAF_7, 'b', 16)
 }
 
 pub fn has_bmi1() -> bool {
-    has_ebx_feature(7, 3)
+    has_feature(LEAF_7, 'b', 3)
 }
 
 pub fn has_bmi2() -> bool {
-    has_ebx_feature(7, 8)
+    has_feature(LEAF_7, 'b', 8)
 }
 
 // ----------------------------------------------------------------------------
 // ! Leaf 8000_0001h
 // ----------------------------------------------------------------------------
 pub fn has_sse4a() -> bool {
-    if max_extended_leaf() < 0x8000_0001 || CpuBrand::detect() != CpuBrand::AMD {
+    if CpuBrand::detect() != CpuBrand::AMD {
         return false;
     }
 
-    (x86_cpuid(0x8000_0001).ecx & (1 << 6)) != 0
+    has_feature(EXT_LEAF_1, 'c', 6)
 }
 pub fn has_amd64() -> bool {
-    if max_extended_leaf() < 0x8000_0001 {
-        return false;
-    }
-    (x86_cpuid(0x8000_0001).edx & (1 << 29)) != 0
+    has_feature(EXT_LEAF_1, 'd', 29)
 }
 pub fn has_3dnow_plus() -> bool {
-    if max_extended_leaf() < 0x8000_0001 {
-        return false;
-    }
-
-    (x86_cpuid(0x8000_0001).edx & (1 << 30)) != 0
+    has_feature(EXT_LEAF_1, 'd', 30)
 }
 pub fn has_3dnow() -> bool {
-    if max_extended_leaf() < 0x8000_0001 {
-        return false;
-    }
-
-    (x86_cpuid(0x8000_0001).edx & (1 << 31)) != 0
+    has_feature(EXT_LEAF_1, 'd', 31)
 }
