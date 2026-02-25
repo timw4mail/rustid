@@ -10,16 +10,18 @@ jobs:
         needs: [create_release]
         steps:
             - name: Checkout code
-              uses: actions/checkout@v2
+              uses: actions/checkout@master
             - name: Install just
               run: |
                   curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
             - name: Build dos
               run: just build-dos
             - name: Upload binaries to release
-              uses: skx/github-action-publish-binaries@release-2.0
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              uses: actions/dowload-artifact@v5
               with:
-                  releaseId: ${{ needs.create_release.outputs.id }}
-                  args: rustid.com
+                  name: rustid
+                  path: ./rustid.com
+            - name: Publish binaries
+              run: |
+                  gh release create --generate-notes ${{ GITHUB_REF_NAME }} './rustid.com#DOS binary'
+
