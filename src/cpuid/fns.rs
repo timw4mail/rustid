@@ -108,7 +108,7 @@ pub fn logical_cores() -> u32 {
 
 fn has_feature(leaf: u32, register: char, bit: u32) -> bool {
     if leaf >= EXT_LEAF_0 && max_extended_leaf() < leaf {
-        return false
+        return false;
     }
 
     if max_leaf() < leaf {
