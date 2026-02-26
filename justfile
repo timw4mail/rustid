@@ -27,7 +27,7 @@ fmt:
 build:
 	cargo build
 
-# Do an optimized, release build
+# Do an optimized, release build for the current platform
 build-release:
 	cargo build --release
 
@@ -43,6 +43,22 @@ build-dos:
 	cargo +nightly build -Zjson-target-spec --target i486-dos.json -Z build-std=core,alloc --release
 	# Convert to proper DOS com binary
 	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
+
+# Build for modern windows (cli),  requires visual studio to be installed
+[windows]
+build-windows:
+	rustup target add x86_64-pc-windows-msvc
+	cargo build --target x86_64-pc-windows-msvc --release
+
+# Build for x86_64 Haiku
+build-haiku:
+	rustup target add x86_64-unknown-haiku
+	cargo build --target x86_64-unknown-haiku --release
+
+# Build for x86 macs, Must be built on a mac
+build-mac:
+	rustup target add x86_64-apple-darwin
+	cargo build --target x86_64-apple-darwin --release
 
 # Build for 32-bit Linux
 build-486:
