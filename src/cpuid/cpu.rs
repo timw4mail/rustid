@@ -268,6 +268,7 @@ impl Cpu {
                 "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
                 _ => "486 Class CPU",
             },
+            MicroArch::P5 => "Intel Pentium",
             MicroArch::P5MMX => "Intel Pentium with MMX",
             MicroArch::P6Pro => "Intel Pentium Pro",
             MicroArch::P6PentiumII => "Intel Pentium II",

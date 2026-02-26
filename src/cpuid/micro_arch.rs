@@ -83,6 +83,7 @@ pub enum MicroArch {
     Nehalem,
     Westmere,
     Bonnel,
+    Core,
     Saltwell,
     Silvermont,
     SandyBridge,
@@ -193,7 +194,7 @@ impl From<MicroArch> for String<64> {
             // Intel
             MicroArch::I486 => "I486",
             MicroArch::P5 => "P5",
-            MicroArch::P5MMX => "P5 MMX",
+            MicroArch::P5MMX => "P5",
             MicroArch::Lakemont => "Lakemont",
             MicroArch::P6Pro => "P6",
             MicroArch::P6PentiumII => "P6",
@@ -205,6 +206,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::Nehalem => "Nehalem",
             MicroArch::Westmere => "Westmere",
             MicroArch::Bonnel => "Bonnel",
+            MicroArch::Core => "Core",
             MicroArch::Saltwell => "Saltwell",
             MicroArch::Silvermont => "Silvermont",
             MicroArch::SandyBridge => "Sandy Bridge",
@@ -502,8 +504,11 @@ impl CpuArch {
             (7, 15, 0, 0, 1) => brand_arch(MicroArch::Jaguar, "Kabini", Some("28nm")),
 
             // Zen
+            (8, 15, 0, 1, 1) => brand_arch(MicroArch::Zen, "Summit Ridge", Some("14nm")),
             (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "Raven Ridge", Some("14nm")),
+            (8, 15, 7, 1, 0) => brand_arch(MicroArch::Zen2, "Matisse", Some("7nm")),
             (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", Some("7nm")),
+            (10, 15, 5, 0, 0) => brand_arch(MicroArch::Zen3, "Cezanne", Some("7nm")),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some("5nm")),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some("4nm")),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
@@ -603,7 +608,7 @@ impl CpuArch {
             // Pentium 2
             (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::P6PentiumII, UNK, None),
             (0, 6, 0, 3, _) => brand_arch(MicroArch::P6PentiumII, "Klamath", Some("350nm")),
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumII, UNK, None),
+            (0, 6, 0, 4, _) => brand_arch(MicroArch::P6PentiumIII, UNK, None),
             (0, 6, 0, 5, 1) => brand_arch(MicroArch::P6PentiumII, "Deschutes", Some("250nm")),
             (0, 6, 0, 6, _) => brand_arch(MicroArch::P6PentiumII, "Dixon / Mendocino", None),
 
@@ -613,6 +618,9 @@ impl CpuArch {
             (0, 6, 0, 9, 5) => brand_arch(MicroArch::P6PentiumIII, "Banias", Some("130nm")),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine T", Some("180nm")),
             (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin", Some("130nm")),
+
+            // Core/Core 2
+            (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
 
             // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
