@@ -57,6 +57,11 @@ build-windows: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
 
+# Build for arm64
+build-arm64: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
+	cargo cross build --target aarch64-unknown-linux-gnu
+
 # Build for powerpc
 build-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi

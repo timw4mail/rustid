@@ -16,6 +16,11 @@ pub mod ppc;
 #[cfg(target_arch = "powerpc")]
 use crate::ppc::cpu::Cpu;
 
+#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+pub mod arm;
+#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+use crate::arm::cpu::Cpu;
+
 #[cfg(target_os = "none")]
 pub mod dos;
 
