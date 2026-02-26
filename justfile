@@ -3,6 +3,8 @@ default:
 	echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
 	@just --list
 
+base_run := if arch() == "powerpc" { "cargo +nightly run -Z build-std" } else { "cargo run" }
+
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
 
@@ -78,7 +80,7 @@ clean:
 
 # Build and run the app
 run arg="":
-	cargo run {{arg}}
+	{{base_run}} {{arg}}
 
 # Run the dos build in DOSBox-X
 [windows]
