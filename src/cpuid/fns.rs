@@ -88,13 +88,15 @@ pub fn is_cyrix() -> bool {
 ///
 /// This is determined by checking if the AC (Alignment Check) flag in EFLAGS
 /// can be toggled. 386 CPUs do not support this, while 486 and newer do.
+///
+/// Verified on real hardware
 pub fn is_386() -> bool {
     !is_ac_flag_supported()
 }
 
-/// Returns true if the CPU is a 486-class processor.
+/// Returns true if the CPU is a 486-class processor, without CPUID support
 ///
-/// A 486 is identified by its support for the AC flag but lack of CPUID support.
+/// Verified on real hardware
 pub fn is_486() -> bool {
     is_ac_flag_supported() && !has_cpuid()
 }
@@ -157,10 +159,10 @@ pub fn logical_cores() -> u32 {
 
 #[allow(unused)]
 enum Reg {
-    EAX,
-    EBX,
-    ECX,
-    EDX,
+    Eax,
+    Ebx,
+    Ecx,
+    Edx,
 }
 
 fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
@@ -173,10 +175,10 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
     }
 
     match register {
-        Reg::EAX => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
-        Reg::EBX => (x86_cpuid(leaf).ebx & (1 << bit)) != 0,
-        Reg::ECX => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
-        Reg::EDX => (x86_cpuid(leaf).edx & (1 << bit)) != 0,
+        Reg::Eax => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
+        Reg::Ebx => (x86_cpuid(leaf).ebx & (1 << bit)) != 0,
+        Reg::Ecx => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
+        Reg::Edx => (x86_cpuid(leaf).edx & (1 << bit)) != 0,
     }
 }
 
@@ -185,75 +187,75 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 // ------------------------------------------------------------------------
 
 pub fn has_fpu() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 0)
+    has_feature(LEAF_1, Reg::Edx, 0)
 }
 
 pub fn has_tsc() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 4)
+    has_feature(LEAF_1, Reg::Edx, 4)
 }
 
 pub fn has_mmx() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 23)
+    has_feature(LEAF_1, Reg::Edx, 23)
 }
 
 pub fn has_cmov() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 15)
+    has_feature(LEAF_1, Reg::Edx, 15)
 }
 
 pub fn has_cx8() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 8)
+    has_feature(LEAF_1, Reg::Edx, 8)
 }
 
 pub fn has_sse() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 25)
+    has_feature(LEAF_1, Reg::Edx, 25)
 }
 
 pub fn has_sse2() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 26)
+    has_feature(LEAF_1, Reg::Edx, 26)
 }
 
 pub fn has_ht() -> bool {
-    has_feature(LEAF_1, Reg::EDX, 28)
+    has_feature(LEAF_1, Reg::Edx, 28)
 }
 
 pub fn has_sse3() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 0)
+    has_feature(LEAF_1, Reg::Ecx, 0)
 }
 
 pub fn has_ssse3() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 9)
+    has_feature(LEAF_1, Reg::Ecx, 9)
 }
 
 pub fn has_fma() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 12)
+    has_feature(LEAF_1, Reg::Ecx, 12)
 }
 
 pub fn has_cx16() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 13)
+    has_feature(LEAF_1, Reg::Ecx, 13)
 }
 
 pub fn has_sse41() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 19)
+    has_feature(LEAF_1, Reg::Ecx, 19)
 }
 
 pub fn has_sse42() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 20)
+    has_feature(LEAF_1, Reg::Ecx, 20)
 }
 
 pub fn has_popcnt() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 23)
+    has_feature(LEAF_1, Reg::Ecx, 23)
 }
 
 pub fn has_avx() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 28)
+    has_feature(LEAF_1, Reg::Ecx, 28)
 }
 
 pub fn has_f16c() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 29)
+    has_feature(LEAF_1, Reg::Ecx, 29)
 }
 
 pub fn has_rdrand() -> bool {
-    has_feature(LEAF_1, Reg::ECX, 30)
+    has_feature(LEAF_1, Reg::Ecx, 30)
 }
 
 // ----------------------------------------------------------------------------
@@ -261,19 +263,19 @@ pub fn has_rdrand() -> bool {
 // ----------------------------------------------------------------------------
 
 pub fn has_avx2() -> bool {
-    has_feature(LEAF_7, Reg::EBX, 5)
+    has_feature(LEAF_7, Reg::Ebx, 5)
 }
 
 pub fn has_avx512f() -> bool {
-    has_feature(LEAF_7, Reg::EBX, 16)
+    has_feature(LEAF_7, Reg::Ebx, 16)
 }
 
 pub fn has_bmi1() -> bool {
-    has_feature(LEAF_7, Reg::EBX, 3)
+    has_feature(LEAF_7, Reg::Ebx, 3)
 }
 
 pub fn has_bmi2() -> bool {
-    has_feature(LEAF_7, Reg::EBX, 8)
+    has_feature(LEAF_7, Reg::Ebx, 8)
 }
 
 // ----------------------------------------------------------------------------
@@ -284,14 +286,14 @@ pub fn has_sse4a() -> bool {
         return false;
     }
 
-    has_feature(EXT_LEAF_1, Reg::ECX, 6)
+    has_feature(EXT_LEAF_1, Reg::Ecx, 6)
 }
 pub fn has_amd64() -> bool {
-    has_feature(EXT_LEAF_1, Reg::EDX, 29)
+    has_feature(EXT_LEAF_1, Reg::Edx, 29)
 }
 pub fn has_3dnow_plus() -> bool {
-    has_feature(EXT_LEAF_1, Reg::EDX, 30)
+    has_feature(EXT_LEAF_1, Reg::Edx, 30)
 }
 pub fn has_3dnow() -> bool {
-    has_feature(EXT_LEAF_1, Reg::EDX, 31)
+    has_feature(EXT_LEAF_1, Reg::Edx, 31)
 }

@@ -4,7 +4,7 @@ use core::str::FromStr;
 use heapless::String;
 use ufmt::derive::uDebug;
 
-const UNK: &str = "Unknown";
+use crate::cpuid::UNK;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub enum MicroArch {
@@ -289,14 +289,7 @@ impl ufmt::uDebug for CpuArch {
 
 impl Default for CpuArch {
     fn default() -> Self {
-        Self::new(
-            "Unknown",
-            MicroArch::Unknown,
-            UNK,
-            "Unknown",
-            "Unknown",
-            None,
-        )
+        Self::new(UNK, MicroArch::Unknown, UNK, UNK, UNK, None)
     }
 }
 
@@ -651,7 +644,7 @@ mod tests {
         assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "I486");
         assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
         assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
-        assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), "Unknown");
+        assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), UNK);
     }
 
     #[test]
@@ -664,7 +657,7 @@ mod tests {
         s.clear();
 
         uwrite!(&mut s, "{:?}", MicroArch::Unknown).unwrap();
-        assert_eq!(s.as_str(), "Unknown");
+        assert_eq!(s.as_str(), UNK);
         s.clear();
 
         uwrite!(&mut s, "{:?}", MicroArch::Am486).unwrap();
@@ -895,6 +888,6 @@ mod tests {
         let arch = CpuArch::find(model, sig, vendor_str);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
         assert_eq!(arch.code_name, UNK);
-        assert_eq!(arch.brand_name.as_str(), "Unknown");
+        assert_eq!(arch.brand_name.as_str(), UNK);
     }
 }

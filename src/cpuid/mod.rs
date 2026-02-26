@@ -18,6 +18,8 @@ pub mod topology;
 
 pub use cpu::*;
 
+pub const UNK: &str = "Unknown";
+
 /// Represents the result of a CPUID instruction call.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub struct CpuInfo {

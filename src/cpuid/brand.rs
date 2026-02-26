@@ -1,3 +1,4 @@
+use crate::cpuid::UNK;
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
 use ufmt::derive::uDebug;
@@ -14,6 +15,7 @@ pub const VENDOR_RISE: &str = "RiseRiseRise";
 pub const VENDOR_SIS: &str = "SiS SiS SiS ";
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
+pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
 pub enum CpuBrand {
@@ -48,6 +50,12 @@ impl CpuBrand {
 
     /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
     pub fn vendor_str() -> String<12> {
+        let mut s = String::new();
+        if !fns::has_cpuid() && fns::is_cyrix() {
+            let _ = s.push_str(VENDOR_CYRIX);
+            return s;
+        }
+
         let res = x86_cpuid(0);
         let mut bytes = [0u8; 12];
 
@@ -55,7 +63,6 @@ impl CpuBrand {
         bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
         bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
 
-        let mut s = String::new();
         for &b in &bytes {
             if b != 0 {
                 let _ = s.push(b as char);
@@ -79,7 +86,7 @@ impl CpuBrand {
             CpuBrand::SiS => VENDOR_SIS,
             CpuBrand::Transmeta => VENDOR_TRANSMETA,
             CpuBrand::Umc => VENDOR_UMC,
-            CpuBrand::Unknown => "Unknown",
+            CpuBrand::Unknown => UNK,
         }
     }
 
@@ -99,7 +106,7 @@ impl CpuBrand {
             CpuBrand::Umc => "UMC",
             CpuBrand::Via => "Via",
             CpuBrand::Zhaoxin => "Zhaoxin",
-            CpuBrand::Unknown => "Unknown",
+            CpuBrand::Unknown => UNK,
         }
     }
 }
@@ -166,7 +173,7 @@ mod tests {
         assert_eq!(CpuBrand::Umc.to_vendor_str(), VENDOR_UMC);
         assert_eq!(CpuBrand::Via.to_vendor_str(), VENDOR_CENTAUR);
         assert_eq!(CpuBrand::Zhaoxin.to_vendor_str(), VENDOR_CENTAUR);
-        assert_eq!(CpuBrand::Unknown.to_vendor_str(), "Unknown");
+        assert_eq!(CpuBrand::Unknown.to_vendor_str(), UNK);
     }
 
     #[test]
@@ -188,7 +195,7 @@ mod tests {
         assert_eq!(CpuBrand::Umc.to_brand_name(), "UMC");
         assert_eq!(CpuBrand::Via.to_brand_name(), "Via");
         assert_eq!(CpuBrand::Zhaoxin.to_brand_name(), "Zhaoxin");
-        assert_eq!(CpuBrand::Unknown.to_brand_name(), "Unknown");
+        assert_eq!(CpuBrand::Unknown.to_brand_name(), UNK);
     }
 
     #[test]

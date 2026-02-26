@@ -1,6 +1,6 @@
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{fns, x86_cpuid};
+use crate::cpuid::{UNK, fns, x86_cpuid};
 use heapless::{String, Vec};
 
 #[cfg(target_os = "none")]
@@ -8,7 +8,6 @@ use crate::println;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
-use crate::cpuid::fns::is_386;
 use core::str::FromStr;
 use ufmt::derive::uDebug;
 
@@ -291,7 +290,7 @@ impl Cpu {
 
             _ => {
                 if self.signature == CpuSignature::default() || !fns::has_cpuid() {
-                    if is_386() {
+                    if fns::is_386() {
                         "386 Class CPU"
                     } else {
                         "486 Class CPU"
@@ -348,26 +347,28 @@ impl Cpu {
         let ma: String<64> = self.arch.micro_arch.into();
         let ma = ma.as_str();
 
-        // Don't even try to display other stuff without cpuid
-        if self.signature == CpuSignature::default() {
-            println!();
-            println!("Model:     {}", self.display_model_string());
-            println!();
+        println!();
 
-            return;
+        // Vendor_string (brand_name)
+        if self.arch.vendor_string.is_empty() && self.arch.brand_name == UNK {
+            println!("Vendor:    Unknown");
+        } else {
+            println!(
+                "Vendor:    {} ({})",
+                self.arch.vendor_string.as_str(),
+                self.arch.brand_name.as_str()
+            );
         }
 
-        println!();
-        println!(
-            "Vendor:    {} ({})",
-            self.arch.vendor_string.as_str(),
-            self.arch.brand_name.as_str()
-        );
         println!("Model:     {}", self.display_model_string());
+
         if ma != self.arch.code_name {
             println!("MicroArch: {}", ma);
         }
+
         println!("Codename:  {}", self.arch.code_name);
+
+        // Process node
         if let Some(tech) = &self.arch.technology {
             println!("Node:      {}", tech.as_str());
         }
@@ -376,22 +377,30 @@ impl Cpu {
         //     println!("Logical Cores: {}", self.threads);
         // }
 
+        // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
             println!("Easter Egg: {}", easter_egg.as_str());
         }
-        println!(
-            "Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
-            self.signature.display_family, self.signature.display_model, self.signature.stepping
-        );
-        println!(
-            "               ({}, {}, {}, {}, {})",
-            self.signature.extended_family,
-            self.signature.family,
-            self.signature.extended_model,
-            self.signature.model,
-            self.signature.stepping
-        );
 
+        // CPU Signature
+        if self.signature != CpuSignature::default() {
+            println!(
+                "Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
+                self.signature.display_family,
+                self.signature.display_model,
+                self.signature.stepping
+            );
+            println!(
+                "               ({}, {}, {}, {}, {})",
+                self.signature.extended_family,
+                self.signature.family,
+                self.signature.extended_model,
+                self.signature.model,
+                self.signature.stepping
+            );
+        }
+
+        // CPU Features
         if !self.features.list.is_empty() {
             println!("Features:");
             let mut features: String<512> = String::new();
