@@ -138,8 +138,8 @@ impl From<String<12>> for CpuBrand {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::println;
     use core::str::FromStr;
-    use std::println;
 
     #[test]
     fn test_vendor_id() {

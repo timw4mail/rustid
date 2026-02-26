@@ -2,6 +2,8 @@
 //!
 //! This crate provides a high-level interface to query CPU vendor, brand string,
 //! supported features (like SSE, AVX), and other hardware details.
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
@@ -47,10 +49,7 @@ impl From<CpuidResult> for CpuInfo {
 pub fn init() {
     #[cfg(target_arch = "x86")]
     {
-        #[cfg(target_os = "none")]
         use crate::println;
-        #[cfg(not(target_os = "none"))]
-        use std::println;
 
         if !fns::has_cpuid() && fns::is_cyrix() {
             println!("This CPU might have CPUID support, but it is disabled.");
@@ -91,7 +90,7 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::println;
+    use crate::println;
 
     #[test]
     fn test_from_cpuid_result_for_cpu_info() {

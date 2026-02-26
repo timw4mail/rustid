@@ -1,12 +1,8 @@
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{UNK, fns, x86_cpuid};
-use heapless::{String, Vec};
-
-#[cfg(target_os = "none")]
 use crate::println;
-#[cfg(not(target_os = "none"))]
-use std::println;
+use heapless::{String, Vec};
 
 use core::str::FromStr;
 
@@ -399,7 +395,7 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::println;
+    use crate::println;
 
     #[test]
     fn test_model_string() {
