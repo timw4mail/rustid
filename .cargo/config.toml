@@ -15,3 +15,6 @@ rustflags = [
 rustflags = [
 	"-C", "target-cpu=i486"
 ]
+
+[target.powerpc-unknown-linux-gnu]
+linker = "powerpc-linux-gnu-gcc"

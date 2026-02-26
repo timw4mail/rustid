@@ -1,7 +1,6 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::ppc::fns;
-use std::println;
 
 #[derive(Debug)]
 pub struct Cpu {
