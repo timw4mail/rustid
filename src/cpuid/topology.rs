@@ -1,6 +1,4 @@
-use ufmt::derive::uDebug;
-
-#[derive(Debug, Copy, Clone, uDebug)]
+#[derive(Debug, Copy, Clone)]
 pub enum AMDCpuFamily {
     Athlon,
     AthlonXP,
@@ -16,7 +14,7 @@ pub enum AMDCpuFamily {
     Epyc,
 }
 
-#[derive(Debug, uDebug)]
+#[derive(Debug)]
 pub struct Topology {}
 
 impl Topology {}

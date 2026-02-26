@@ -1,5 +1,5 @@
 use core::arch::asm;
-use ufmt::uWrite;
+use core::fmt::Write;
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
@@ -23,9 +23,8 @@ macro_rules! print {
     };
     ($($arg:tt)*) => {
         {
-            #[allow(unused)]
-            use ufmt::uWrite;
-            let _ = ufmt::uwrite!(&mut $crate::dos::DosWriter {}, $($arg)*);
+            use core::fmt::Write;
+            let _ = write!(&mut $crate::dos::DosWriter {}, $($arg)*);
         }
     };
 }
@@ -57,9 +56,8 @@ pub fn _print_str(s: &str) {
 
 pub struct DosWriter;
 
-impl uWrite for DosWriter {
-    type Error = ();
-    fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
+impl Write for DosWriter {
+    fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
         for &b in s.as_bytes() {
             printc(b);
         }

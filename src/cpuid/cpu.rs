@@ -9,29 +9,10 @@ use crate::println;
 use std::println;
 
 use core::str::FromStr;
-use ufmt::derive::uDebug;
 
 #[derive(Debug)]
 pub struct CpuFeatures {
     list: Vec<&'static str, 64>,
-}
-
-impl ufmt::uDebug for CpuFeatures {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.write_str("CpuFeatures { list: [")?;
-        for (i, feature) in self.list.iter().enumerate() {
-            if i > 0 {
-                f.write_str(", ")?;
-            }
-            f.write_str("\"")?;
-            f.write_str(feature)?;
-            f.write_str("\"")?;
-        }
-        f.write_str("] }")
-    }
 }
 
 impl CpuFeatures {
@@ -121,7 +102,7 @@ impl CpuFeatures {
     }
 }
 
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, uDebug)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct CpuSignature {
     pub extended_family: u32,
     pub family: u32,
@@ -172,23 +153,6 @@ pub struct Cpu {
     pub threads: u32,
     pub signature: CpuSignature,
     pub features: CpuFeatures,
-}
-
-impl ufmt::uDebug for Cpu {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        let mut none: String<64> = String::new();
-        let _ = none.push_str("_None_");
-
-        f.debug_struct("Cpu")?
-            .field("arch", &self.arch)?
-            .field("threads", &self.threads)?
-            .field("signature", &self.signature)?
-            .field("features", &self.features)?
-            .finish()
-    }
 }
 
 impl Default for Cpu {

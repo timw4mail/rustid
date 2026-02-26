@@ -1,7 +1,6 @@
 use crate::cpuid::UNK;
 use crate::cpuid::{fns, x86_cpuid};
 use heapless::String;
-use ufmt::derive::uDebug;
 
 pub const VENDOR_AMD: &str = "AuthenticAMD";
 pub const VENDOR_CENTAUR: &str = "CentaurHauls";
@@ -17,7 +16,7 @@ pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
 pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuBrand {
     AMD,
     Cyrix,

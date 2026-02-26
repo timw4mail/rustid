@@ -8,7 +8,6 @@ use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
-use ufmt::derive::uDebug;
 
 pub mod brand;
 pub mod cpu;
@@ -21,7 +20,7 @@ pub use cpu::*;
 pub const UNK: &str = "Unknown";
 
 /// Represents the result of a CPUID instruction call.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, uDebug)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CpuInfo {
     /// EAX register value
     pub eax: u32,
@@ -93,20 +92,6 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
 mod tests {
     use super::*;
     use std::println;
-    use ufmt::uwrite;
-
-    #[test]
-    fn test_cpu_info_udebug() {
-        let info = CpuInfo {
-            eax: 1,
-            ebx: 2,
-            ecx: 3,
-            edx: 4,
-        };
-        let mut s = heapless::String::<64>::new();
-        uwrite!(&mut s, "{:?}", info).unwrap();
-        assert_eq!(s.as_str(), "CpuInfo { eax: 1, ebx: 2, ecx: 3, edx: 4 }");
-    }
 
     #[test]
     fn test_from_cpuid_result_for_cpu_info() {

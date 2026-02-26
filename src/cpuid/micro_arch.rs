@@ -2,11 +2,10 @@ use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
 use core::str::FromStr;
 use heapless::String;
-use ufmt::derive::uDebug;
 
 use crate::cpuid::UNK;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uDebug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     Unknown,
 
@@ -266,25 +265,6 @@ pub struct CpuArch {
     pub brand_name: String<64>,
     pub vendor_string: String<64>,
     pub technology: Option<String<32>>,
-}
-
-impl ufmt::uDebug for CpuArch {
-    fn fmt<W: ufmt::uWrite + ?Sized>(
-        &self,
-        f: &mut ufmt::Formatter<'_, W>,
-    ) -> Result<(), W::Error> {
-        f.write_str("CpuArch { model: \"")?;
-        f.write_str(self.model.as_str())?;
-        f.write_str("\", micro_arch: ")?;
-        ufmt::uDebug::fmt(&self.micro_arch, f)?;
-        f.write_str(", code_name: \"")?;
-        f.write_str(self.code_name)?;
-        f.write_str("\", brand_name: \"")?;
-        f.write_str(self.brand_name.as_str())?;
-        f.write_str("\", vendor_string: \"")?;
-        f.write_str(self.vendor_string.as_str())?;
-        f.write_str("\" }")
-    }
 }
 
 impl Default for CpuArch {
@@ -645,28 +625,6 @@ mod tests {
         assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
         assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
         assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), UNK);
-    }
-
-    #[test]
-    fn test_micro_arch_udebug() {
-        use ufmt::uwrite;
-        let mut s = heapless::String::<64>::new();
-
-        uwrite!(&mut s, "{:?}", MicroArch::Zen).unwrap();
-        assert_eq!(s.as_str(), "Zen");
-        s.clear();
-
-        uwrite!(&mut s, "{:?}", MicroArch::Unknown).unwrap();
-        assert_eq!(s.as_str(), UNK);
-        s.clear();
-
-        uwrite!(&mut s, "{:?}", MicroArch::Am486).unwrap();
-        assert_eq!(s.as_str(), "Am486");
-        s.clear();
-
-        // Test a non-specific case
-        uwrite!(&mut s, "{:?}", MicroArch::K5).unwrap();
-        assert_eq!(s.as_str(), "K5");
     }
 
     #[test]
