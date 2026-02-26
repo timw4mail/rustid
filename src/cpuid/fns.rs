@@ -155,7 +155,15 @@ pub fn logical_cores() -> u32 {
 // ! CPU Feature Lookups
 // ------------------------------------------------------------------------
 
-fn has_feature(leaf: u32, register: char, bit: u32) -> bool {
+#[allow(unused)]
+enum Reg {
+    EAX,
+    EBX,
+    ECX,
+    EDX,
+}
+
+fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
     if leaf >= EXT_LEAF_0 && max_extended_leaf() < leaf {
         return false;
     }
@@ -165,54 +173,11 @@ fn has_feature(leaf: u32, register: char, bit: u32) -> bool {
     }
 
     match register {
-        'b' => (x86_cpuid(leaf).ebx & (1 << bit)) != 0,
-        'd' => (x86_cpuid(leaf).edx & (1 << bit)) != 0,
-        'c' => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
-        _ => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
+        Reg::EAX => (x86_cpuid(leaf).eax & (1 << bit)) != 0,
+        Reg::EBX => (x86_cpuid(leaf).ebx & (1 << bit)) != 0,
+        Reg::ECX => (x86_cpuid(leaf).ecx & (1 << bit)) != 0,
+        Reg::EDX => (x86_cpuid(leaf).edx & (1 << bit)) != 0,
     }
-}
-
-/// Returns true if the CPU has an L1 cache.
-///
-/// This is determined by checking for L1 cache descriptors in CPUID leaf 2.
-pub fn has_l1_cache() -> bool {
-    if max_leaf() < LEAF_2 {
-        return false;
-    }
-
-    let result = x86_cpuid(LEAF_2);
-
-    // List of known L1 cache descriptors
-    let l1_descriptors = [
-        0x06, // L1 I-cache: 8KB, 4-way, 32B line
-        0x08, // L1 I-cache: 16KB, 4-way, 32B line
-        0x0A, // L1 D-cache: 8KB, 2-way, 32B line
-        0x0C, // L1 D-cache: 16KB, 4-way, 32B line
-        0x2C, // L1 D-cache: 32KB, 8-way, 64B line
-        0x30, // L1 I-cache: 32KB, 8-way, 64B line
-        0x60, // L1 D-cache: 16KB, 8-way, 64B line, sectored
-        0x66, // L1 D-cache: 8KB, 4-way, 64B line, sectored
-        0x67, // L1 D-cache: 16KB, 4-way, 64B line, sectored
-        0x68, // L1 D-cache: 32KB, 4-way, 64B line, sectored
-    ];
-
-    // Combine all registers into a single byte array to iterate through
-    let all_bytes: [u8; 16] =
-        unsafe { core::mem::transmute([result.eax, result.ebx, result.ecx, result.edx]) };
-
-    // Start from index 1 to skip the first byte of EAX, which is the call count.
-    for &byte in &all_bytes[1..] {
-        // A null byte indicates end of descriptors
-        if byte == 0 {
-            continue;
-        }
-        // Check if the byte is in our list of L1 descriptors
-        if l1_descriptors.contains(&byte) {
-            return true;
-        }
-    }
-
-    false
 }
 
 // ------------------------------------------------------------------------
@@ -220,83 +185,75 @@ pub fn has_l1_cache() -> bool {
 // ------------------------------------------------------------------------
 
 pub fn has_fpu() -> bool {
-    has_feature(LEAF_1, 'd', 0)
+    has_feature(LEAF_1, Reg::EDX, 0)
 }
 
 pub fn has_tsc() -> bool {
-    has_feature(LEAF_1, 'd', 4)
+    has_feature(LEAF_1, Reg::EDX, 4)
 }
 
 pub fn has_mmx() -> bool {
-    has_feature(LEAF_1, 'd', 23)
+    has_feature(LEAF_1, Reg::EDX, 23)
 }
 
 pub fn has_cmov() -> bool {
-    has_feature(LEAF_1, 'd', 15)
-}
-
-pub fn has_fcmov() -> bool {
-    has_fpu() && has_cmov()
+    has_feature(LEAF_1, Reg::EDX, 15)
 }
 
 pub fn has_cx8() -> bool {
-    has_feature(LEAF_1, 'd', 8)
+    has_feature(LEAF_1, Reg::EDX, 8)
 }
 
 pub fn has_sse() -> bool {
-    has_feature(LEAF_1, 'd', 25)
+    has_feature(LEAF_1, Reg::EDX, 25)
 }
 
 pub fn has_sse2() -> bool {
-    has_feature(LEAF_1, 'd', 26)
+    has_feature(LEAF_1, Reg::EDX, 26)
 }
 
 pub fn has_ht() -> bool {
-    has_feature(LEAF_1, 'd', 28)
+    has_feature(LEAF_1, Reg::EDX, 28)
 }
 
 pub fn has_sse3() -> bool {
-    has_feature(LEAF_1, 'c', 0)
-}
-
-pub fn has_pclmulqdq() -> bool {
-    has_feature(LEAF_1, 'c', 1)
+    has_feature(LEAF_1, Reg::ECX, 0)
 }
 
 pub fn has_ssse3() -> bool {
-    has_feature(LEAF_1, 'c', 9)
+    has_feature(LEAF_1, Reg::ECX, 9)
 }
 
 pub fn has_fma() -> bool {
-    has_feature(LEAF_1, 'c', 12)
+    has_feature(LEAF_1, Reg::ECX, 12)
 }
 
 pub fn has_cx16() -> bool {
-    has_feature(LEAF_1, 'c', 13)
+    has_feature(LEAF_1, Reg::ECX, 13)
 }
 
 pub fn has_sse41() -> bool {
-    has_feature(LEAF_1, 'c', 19)
+    has_feature(LEAF_1, Reg::ECX, 19)
 }
 
 pub fn has_sse42() -> bool {
-    has_feature(LEAF_1, 'c', 20)
+    has_feature(LEAF_1, Reg::ECX, 20)
 }
 
 pub fn has_popcnt() -> bool {
-    has_feature(LEAF_1, 'c', 23)
+    has_feature(LEAF_1, Reg::ECX, 23)
 }
 
 pub fn has_avx() -> bool {
-    has_feature(LEAF_1, 'c', 28)
+    has_feature(LEAF_1, Reg::ECX, 28)
 }
 
 pub fn has_f16c() -> bool {
-    has_feature(LEAF_1, 'c', 29)
+    has_feature(LEAF_1, Reg::ECX, 29)
 }
 
 pub fn has_rdrand() -> bool {
-    has_feature(LEAF_1, 'c', 30)
+    has_feature(LEAF_1, Reg::ECX, 30)
 }
 
 // ----------------------------------------------------------------------------
@@ -304,19 +261,19 @@ pub fn has_rdrand() -> bool {
 // ----------------------------------------------------------------------------
 
 pub fn has_avx2() -> bool {
-    has_feature(LEAF_7, 'b', 5)
+    has_feature(LEAF_7, Reg::EBX, 5)
 }
 
 pub fn has_avx512f() -> bool {
-    has_feature(LEAF_7, 'b', 16)
+    has_feature(LEAF_7, Reg::EBX, 16)
 }
 
 pub fn has_bmi1() -> bool {
-    has_feature(LEAF_7, 'b', 3)
+    has_feature(LEAF_7, Reg::EBX, 3)
 }
 
 pub fn has_bmi2() -> bool {
-    has_feature(LEAF_7, 'b', 8)
+    has_feature(LEAF_7, Reg::EBX, 8)
 }
 
 // ----------------------------------------------------------------------------
@@ -327,14 +284,14 @@ pub fn has_sse4a() -> bool {
         return false;
     }
 
-    has_feature(EXT_LEAF_1, 'c', 6)
+    has_feature(EXT_LEAF_1, Reg::ECX, 6)
 }
 pub fn has_amd64() -> bool {
-    has_feature(EXT_LEAF_1, 'd', 29)
+    has_feature(EXT_LEAF_1, Reg::EDX, 29)
 }
 pub fn has_3dnow_plus() -> bool {
-    has_feature(EXT_LEAF_1, 'd', 30)
+    has_feature(EXT_LEAF_1, Reg::EDX, 30)
 }
 pub fn has_3dnow() -> bool {
-    has_feature(EXT_LEAF_1, 'd', 31)
+    has_feature(EXT_LEAF_1, Reg::EDX, 31)
 }

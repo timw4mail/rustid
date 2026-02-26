@@ -1,5 +1,5 @@
+use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL};
-use crate::cpuid::{CpuSignature, fns};
 use core::str::FromStr;
 use heapless::String;
 use ufmt::derive::uDebug;
@@ -576,13 +576,7 @@ impl CpuArch {
         ) {
             // 486
             (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX", None),
-            (0, 4, 0, 1, _) => {
-                if fns::has_l1_cache() {
-                    brand_arch(MicroArch::I486, "i80486DX-50", None)
-                } else {
-                    brand_arch(MicroArch::I486, "RapidCAD", None)
-                }
-            }
+            (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50", None),
             (0, 4, 0, 2, _) => brand_arch(MicroArch::I486, "i80486SX", None),
             (0, 4, 0, 3, _) => brand_arch(MicroArch::I486, "i80486DX2", None),
             (0, 4, 0, 4, _) => brand_arch(MicroArch::I486, "i80486SL", None),

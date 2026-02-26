@@ -60,9 +60,12 @@ impl CpuFeatures {
         if fns::has_3dnow() {
             let _ = out.push("3DNow!");
         };
+        if fns::has_3dnow_plus() {
+            let _ = out.push("3DNow+");
+        };
         if fns::has_ht() {
             let _ = out.push("HT");
-        }
+        };
         if fns::has_amd64() {
             let _ = out.push("AMD64");
         };
@@ -107,6 +110,12 @@ impl CpuFeatures {
         };
         if fns::has_rdrand() {
             let _ = out.push("RDRAND");
+        };
+        if fns::has_popcnt() {
+            let _ = out.push("POPCNT");
+        };
+        if fns::has_f16c() {
+            let _ = out.push("F16C");
         };
 
         Self { list: out }
@@ -274,6 +283,10 @@ impl Cpu {
                 }
             }
             MicroArch::M2 => "6x86MX (MII)",
+
+            // UMCs
+            MicroArch::U5S => "UMC Green CPU 486 U5-SX",
+            MicroArch::U5D => "UMC Green CPU 486 U5-DX",
 
             _ => {
                 if self.signature == CpuSignature::default() || !fns::has_cpuid() {
@@ -488,10 +501,7 @@ mod tests {
             },
             features: CpuFeatures::detect(),
         };
-        assert_eq!(
-            cpu_no_cpuid.display_model_string(),
-            "486 Class CPU"
-        );
+        assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
 
         // Test case for "Unknown"
         let cpu_unknown = Cpu {
