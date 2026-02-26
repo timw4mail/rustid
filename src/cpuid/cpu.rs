@@ -308,8 +308,18 @@ impl Cpu {
     // TODO: Show cpu cache size(s)
     // TODO: Show cpu speed
     pub fn display_table(&self) {
+        use heapless::format;
+
         let ma: String<64> = self.arch.micro_arch.into();
         let ma = ma.as_str();
+
+        let label: fn(&str) -> String<32> = |label| format!("{:>14}:{:1}", label, "").unwrap();
+
+        let simple_line = |l, v: &str| {
+            let l = label(l);
+            println!("{}{}", l, v);
+            println!();
+        };
 
         println!();
 
@@ -318,61 +328,68 @@ impl Cpu {
             println!("Vendor:    Unknown");
         } else {
             println!(
-                "Vendor:    {} ({})",
+                "{}{} ({})",
+                label("Vendor"),
                 self.arch.vendor_string.as_str(),
                 self.arch.brand_name.as_str()
             );
+            println!();
         }
 
-        println!("Model:     {}", self.display_model_string());
+        simple_line("Model", self.display_model_string());
 
         if ma != self.arch.code_name {
-            println!("MicroArch: {}", ma);
+            simple_line("MicroArch", ma);
         }
 
-        println!("Codename:  {}", self.arch.code_name);
+        simple_line("Codename", self.arch.code_name);
 
         // Process node
         if let Some(tech) = &self.arch.technology {
-            println!("Node:      {}", tech.as_str());
+            simple_line("Node", tech.as_str());
         }
-
-        // if self.threads > 1 {
-        //     println!("Logical Cores: {}", self.threads);
-        // }
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
-            println!("Easter Egg: {}", easter_egg.as_str());
+            simple_line("Easter Egg", easter_egg.as_str());
         }
+
+        // TODO: Cache Size(s)
+
+        // TODO: Clock Speed (Base/Boost)
+
+        // TODO: Cores/Threads
 
         // CPU Signature
         if self.signature != CpuSignature::default() {
             println!(
-                "Signature: Family {:X}h, Model {:X}h, Stepping {:X}h",
+                "{}Family {:X}h, Model {:X}h, Stepping {:X}h",
+                label("Signature"),
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping
             );
             println!(
-                "               ({}, {}, {}, {}, {})",
+                "{:>16}({}, {}, {}, {}, {})",
+                "",
                 self.signature.extended_family,
                 self.signature.family,
                 self.signature.extended_model,
                 self.signature.model,
                 self.signature.stepping
             );
+            println!();
         }
 
         // CPU Features
         if !self.features.list.is_empty() {
-            println!("Features:");
             let mut features: String<512> = String::new();
             self.features.list.iter().for_each(|feature| {
-                let _ = features.push_str(" ");
                 let _ = features.push_str(feature);
+                let _ = features.push_str(" ");
             });
-            println!("   {}", features.as_str());
+
+            simple_line("Features", features.as_str());
         }
 
         println!();
