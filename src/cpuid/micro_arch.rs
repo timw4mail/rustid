@@ -220,12 +220,12 @@ impl From<MicroArch> for String<64> {
             MicroArch::Goldmont => "Goldmont",
             MicroArch::PalmCove => "PalmCove",
             MicroArch::SunnyCove => "SunnyCove",
-            MicroArch::GoldmontPlus => "GoldmontPlus",
+            MicroArch::GoldmontPlus => "Goldmont Plus",
             MicroArch::IcyLake => "IcyLake",
             MicroArch::Tremont => "Tremont",
             MicroArch::TigerLake => "TigerLake",
             MicroArch::WhiskyLake => "WhiskyLake",
-            MicroArch::SapphireRapids => "SapphireRapids",
+            MicroArch::SapphireRapids => "Sapphire Rapids",
             MicroArch::AlderLake => "AlderLake",
             MicroArch::CoffeeLake => "CoffeeLake",
             MicroArch::CometLake => "CometLake",
@@ -593,6 +593,9 @@ impl CpuArch {
             (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin", Some("130nm")),
 
             // The dark ages
+
+            // Pentium M
+            (0, 6, 0, 13, 8) => brand_arch(MicroArch::Dothan, "Dothan", Some("90nm")),
 
             // Core/Core 2
             (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
