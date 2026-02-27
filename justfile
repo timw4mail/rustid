@@ -60,11 +60,6 @@ build-windows: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
 
-# Build for ARM64 Windows (GNU toolchain)
-build-windows-arm: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
-	cargo cross build --target aarch64-pc-windows-gnullvm
-
 # Build for arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
@@ -75,10 +70,15 @@ build-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
 	cargo cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std
 
-# Build for x86 macs, Must be built on a mac
+# Build for x86 macs
 build-mac: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-apple-darwin; then rustup target add x86_64-apple-darwin; fi
 	cargo cross build --target x86_64-apple-darwin --release
+
+# Build for arm Macs
+build-mac-arm: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-apple-darwin; then rustup target add aarch64-apple-darwin; fi
+	cargo cross build --target aarch64-apple-darwin --release
 
 # Build for 32-bit Linux
 build-486:

@@ -24,6 +24,20 @@ pub struct SYSTEM_INFO {
     pub wProcessorRevision: u16,
 }
 
+#[cfg(target_os = "macos")]
+mod macos_api_ffi {
+    #[link(name = "c")] // sysctl is in libc
+    unsafe extern "C" { // Changed to unsafe extern "C"
+        pub fn sysctlbyname(
+            name: *const libc::c_char,
+            oldp: *mut libc::c_void,
+            oldlenp: *mut libc::size_t,
+            newp: *mut libc::c_void,
+            newlen: libc::size_t,
+        ) -> libc::c_int;
+    }
+}
+
 pub fn get_features() -> Vec<&'static str> {
     let mut out: Vec<&'static str> = Vec::new();
 
@@ -54,10 +68,36 @@ pub fn get_midr() -> usize {
         return synthetic_midr;
     }
 
+    #[cfg(target_os = "macos")]
+    {
+        use crate::arm::fns::macos_api_ffi::*;
+        let mut synthetic_midr: usize = 0;
+
+        // Try to get hw.cpufamily
+        let mut cpufamily: u64 = 0; // It's often u64
+        let mut len = core::mem::size_of_val(&cpufamily);
+        let family_name = b"hw.cpufamily\0"; // C string
+
+        unsafe {
+            if sysctlbyname(
+                family_name.as_ptr() as *const libc::c_char,
+                &mut cpufamily as *mut _ as *mut libc::c_void,
+                &mut len as *mut libc::size_t,
+                core::ptr::null_mut(),
+                0,
+            ) == 0 {
+                // Map CPU family to Part Number (bits 4-15) and Implementer (bits 24-31)
+                // This is a rough mapping and not precise MIDR.
+                synthetic_midr |= ((cpufamily as usize) & 0xFF) << 24; // Implementer: lower 8 bits of family
+                synthetic_midr |= ((cpufamily as usize) & 0xFFF00) << 4; // PartNum: higher bits of family
+            }
+        }
+        return synthetic_midr;
+    }
+
     let mut midr: usize = 0;
     // ARMv7 and ARMv8 (AArch64) have MIDR at c0, so `mrs r0, MIDR` or `mrs x0, MIDR_EL1`
-    #[cfg(not(target_os = "windows"))]
-    // For non-Windows targets where direct access might be possible
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))] // For non-Windows/macOS targets
     {
         #[cfg(target_arch = "arm")]
         {
