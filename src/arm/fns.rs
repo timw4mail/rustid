@@ -25,7 +25,7 @@ pub struct SYSTEM_INFO {
 }
 
 pub fn get_features() -> Vec<&'static str> {
-    let mut out: Vec<_> = Vec::new();
+    let mut out: Vec<&'static str> = Vec::new();
 
     unimplemented!("ARM: get_features()");
 }

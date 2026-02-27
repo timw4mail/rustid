@@ -9,10 +9,11 @@ use core::fmt::Debug;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
-use arm::micro_arch::Midr;
+use crate::arm::micro_arch::Midr;
 
 #[derive(Debug)]
 pub struct Cpu {
+    pub raw_midr: usize,
     pub midr: Midr,
     pub implementer: u8,
     pub variant: u8,
@@ -30,6 +31,7 @@ impl Cpu {
     pub fn new() -> Self {
         let midr = fns::get_midr();
         Self {
+            raw_midr: midr,
             midr: Midr::new(midr),
             implementer: ((midr >> 24) & 0xFF) as u8,
             variant: ((midr >> 20) & 0xF) as u8,
@@ -44,7 +46,7 @@ impl Cpu {
 
     pub fn display_table(&self) {
         println!();
-        println!("Main ID Register (MIDR): 0x{:X}", self.midr);
+        println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr);
         println!("Implementer: 0x{:X}", self.implementer);
         println!("Variant: 0x{:X}", self.variant);
         println!("Part Number: 0x{:X}", self.part_number);
