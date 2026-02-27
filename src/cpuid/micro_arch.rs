@@ -592,12 +592,15 @@ impl CpuArch {
             (0, 6, 0, 10, _) => brand_arch(MicroArch::P6PentiumIII, "Coppermine T", Some("180nm")),
             (0, 6, 0, 11, _) => brand_arch(MicroArch::P6PentiumIII, "Tualatin", Some("130nm")),
 
+            // The dark ages
+
             // Core/Core 2
             (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
 
             // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
+            (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some("14nm")),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
