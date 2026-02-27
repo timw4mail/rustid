@@ -179,9 +179,13 @@ pub fn vendor_str() -> String<12> {
     s
 }
 
+pub fn is_overdrive() -> bool {
+    (x86_cpuid(EXT_LEAF_0).eax & (1 << 12)) != 0
+}
+
 /// Returns the number of logical cores.
 pub fn logical_cores() -> u32 {
-    if max_leaf() < 1 {
+    if max_leaf() < 1 || CpuBrand::detect() != CpuBrand::AMD {
         return 1;
     }
 
@@ -224,6 +228,11 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 // ------------------------------------------------------------------------
 // ! Leaf 0000_0001h
 // ------------------------------------------------------------------------
+
+pub fn get_brand_id() -> u32 {
+    let res = x86_cpuid(EXT_LEAF_1);
+    res.ebx >> 8
+}
 
 /// Returns true if the CPU has a Floating Point Unit (FPU).
 pub fn has_fpu() -> bool {

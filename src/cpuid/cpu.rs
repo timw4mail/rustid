@@ -1,6 +1,6 @@
 //! CPU detection and information for x86/x86_64 processors.
 
-use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::brand::{CpuBrand, VENDOR_INTEL};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{FeatureList, UNK, fns, x86_cpuid};
 use crate::println;
@@ -25,6 +25,7 @@ pub struct CpuSignature {
     pub display_family: u32,
     /// Display model (calculated from model and extended_model)
     pub display_model: u32,
+    pub is_overdrive: bool,
 }
 
 impl CpuSignature {
@@ -49,6 +50,8 @@ impl CpuSignature {
             model
         };
 
+        let is_overdrive = fns::is_overdrive();
+
         Self {
             extended_model,
             extended_family,
@@ -57,6 +60,7 @@ impl CpuSignature {
             stepping,
             display_family,
             display_model,
+            is_overdrive,
         }
     }
 }
@@ -68,6 +72,7 @@ pub struct Cpu {
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
     pub easter_egg: Option<String<64>>,
+    pub brand_id: u32,
     /// Number of logical processors/threads
     pub threads: u32,
     /// CPU signature (family, model, stepping)
@@ -91,6 +96,7 @@ impl Cpu {
                 &fns::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
+            brand_id: fns::get_brand_id(),
             threads: fns::logical_cores(),
             signature: CpuSignature::detect(),
             features: fns::get_feature_list(),
@@ -122,9 +128,61 @@ impl Cpu {
         out
     }
 
+    fn intel_brand_index(&self) -> Option<&'static str> {
+        let brand_id = fns::get_brand_id();
+
+        const CELERON: &str = "Intel® Celeron® processor";
+        const XEON: &str = "Intel® Xeon® processor";
+        const XEON_MP: &str = "Intel® Xeon® processor MP";
+
+        let (family, model, stepping) = (
+            self.signature.family,
+            self.signature.model,
+            self.signature.stepping,
+        );
+
+        // If the family and model are greater than (0xF, 0x3),
+        // this table does not apply
+        if family > 0xF || (family == 0xF && model >= 0x3) {
+            return None;
+        }
+
+        match brand_id {
+            0x01 | 0x0A | 0x14 => Some(CELERON),
+            0x02 | 0x04 => Some("Intel® Pentium® III processor"),
+            0x03 => match (family, model, stepping) {
+                (0x6, 0xB, 0x1) => Some(CELERON),
+                _ => Some("Intel® Pentium® III Xeon"),
+            },
+            0x06 => Some("Mobile Intel® Pentium® III processor-M"),
+            0x07 | 0x0F | 0x13 | 0x17 => Some("Mobile Intel® Celeron® processor"),
+            0x08 | 0x09 => Some("Intel® Pentium® 4 processor"),
+            0x0B => match (family, model, stepping) {
+                (0xF, 0x1, 0x3) => Some(XEON_MP),
+                _ => Some(XEON),
+            },
+            0x0C => Some(XEON_MP),
+            0x0E => match (family, model, stepping) {
+                (0xF, 0x1, 0x3) => Some(XEON),
+                _ => Some("Mobile Intel® Pentium® 4 processor-M"),
+            },
+            0x11 | 0x15 => Some("Mobile Genuine Intel® processor"),
+            0x12 => Some("Intel® Celeron® M processor"),
+            0x16 => Some("Intel® Pentium® M processor"),
+            _ => None,
+        }
+    }
+
     fn display_model_string(&self) -> &str {
         if &self.arch.model != "Unknown" {
             return &self.arch.model;
+        }
+
+        // First, let's see if there's something in Intel's brand mapping table
+        if self.arch.vendor_string == VENDOR_INTEL
+            && let Some(model_name) = self.intel_brand_index()
+        {
+            return model_name;
         }
 
         match self.arch.micro_arch {
@@ -140,13 +198,13 @@ impl Cpu {
 
             //Intel
             MicroArch::I486 => match self.arch.code_name {
-                "i80486DX" => "Intel or AMD 486 DX",
+                "i80486DX" => "Intel 486 DX",
                 "RapidCAD" => "Intel RapidCAD",
-                "i80486DX-50" => "Intel or AMD 486 DX-50",
-                "i80486SX" => "Intel or AMD 486 SX",
+                "i80486DX-50" => "Intel 486 DX-50",
+                "i80486SX" => "Intel 486 SX",
                 "i80486DX2" => "Intel 486 DX2",
                 "i80486SL" => "Intel 486 SL",
-                "i80486SX2" => "Intel or AMD 486 SX2",
+                "i80486SX2" => "Intel 486 SX2",
                 "i80486DX2WB" => "Intel 486 DX2 with Write-Back Cache",
                 "i80486DX4" => "Intel 486 DX4",
                 "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
@@ -253,7 +311,7 @@ impl Cpu {
 
         // Vendor_string (brand_name)
         if self.arch.vendor_string.is_empty() && self.arch.brand_name == UNK {
-            println!("Vendor:    Unknown");
+            simple_line("Vendor", "Unknown");
         } else {
             println!(
                 "{}{} ({})",
@@ -266,11 +324,16 @@ impl Cpu {
 
         simple_line("Model", self.display_model_string());
 
-        if ma != self.arch.code_name {
+        if ma != UNK {
             simple_line("MicroArch", ma);
         }
 
-        simple_line("Codename", self.arch.code_name);
+        if !(self.arch.code_name == "Unknown"
+            || self.arch.code_name == ma
+            || self.arch.micro_arch == MicroArch::I486)
+        {
+            simple_line("Codename", self.arch.code_name);
+        }
 
         // Process node
         if let Some(tech) = &self.arch.technology {
@@ -370,6 +433,7 @@ mod tests {
         arch_am486.code_name = "Am486DX2";
         let cpu_am486_dx2 = Cpu {
             arch: arch_am486.clone(),
+            brand_id: 0,
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
@@ -380,6 +444,7 @@ mod tests {
         arch_am486.code_name = "Am486X2WB";
         let cpu_am486_x2wb = Cpu {
             arch: arch_am486.clone(),
+            brand_id: 0,
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
@@ -397,16 +462,18 @@ mod tests {
         arch_i486.code_name = "i80486DX";
         let cpu_i486_dx = Cpu {
             arch: arch_i486.clone(),
+            brand_id: 0,
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
             features: fns::get_feature_list(),
         };
-        assert_eq!(cpu_i486_dx.display_model_string(), "Intel or AMD 486 DX");
+        assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
 
         // Test case for "No CPUID"
         let cpu_no_cpuid = Cpu {
             arch: CpuArch::default(),
+            brand_id: 0,
             easter_egg: None,
             threads: 1,
             signature: CpuSignature {
@@ -417,6 +484,7 @@ mod tests {
                 stepping: 0,
                 display_family: 0,
                 display_model: 0,
+                is_overdrive: false,
             },
             features: fns::get_feature_list(),
         };
@@ -425,6 +493,7 @@ mod tests {
         // Test case for "Unknown"
         let cpu_unknown = Cpu {
             arch: CpuArch::default(),
+            brand_id: 0,
             easter_egg: None,
             threads: 1,
             signature: CpuSignature {
@@ -435,6 +504,7 @@ mod tests {
                 stepping: 1,
                 display_family: 1,
                 display_model: 1,
+                is_overdrive: false,
             },
             features: fns::get_feature_list(),
         };

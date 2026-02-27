@@ -199,7 +199,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::VortexDX3 => "VortexDX3",
 
             // Intel
-            MicroArch::I486 => "I486",
+            MicroArch::I486 => "i486",
             MicroArch::P5 => "P5",
             MicroArch::Lakemont => "Lakemont",
             MicroArch::PentiumPro | MicroArch::PentiumII | MicroArch::PentiumIII => "P6",
@@ -565,7 +565,7 @@ impl CpuArch {
             (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5", Some("800nm")),
             (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C", None),
             (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T", Some("600nm")),
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5, "P55C", Some("350nm")),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5, "P55C", Some("350nm")), // With MMX
             (0, 5, 0, 7, _) => brand_arch(MicroArch::P5, "P54C", Some("350nm")),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::P5, "P55C", Some("250nm")),
             (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont", Some("32nm")),
@@ -625,7 +625,7 @@ mod tests {
             String::<64>::from(MicroArch::VortexDX3).as_str(),
             "VortexDX3"
         );
-        assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "I486");
+        assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "i486");
         assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
         assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
         assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), UNK);
@@ -665,6 +665,7 @@ mod tests {
             stepping,
             display_family: family, // Simplified for tests
             display_model: model,   // Simplified for tests
+            is_overdrive: false,
         }
     }
 
