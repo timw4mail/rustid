@@ -7,10 +7,10 @@
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::{CpuidResult, __cpuid, __cpuid_count};
+use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
-use core::arch::x86::{CpuidResult, __cpuid, __cpuid_count};
+use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
 pub mod brand;
 pub mod cpu;
@@ -21,6 +21,7 @@ pub mod topology;
 pub use cpu::*;
 
 pub const UNK: &str = "Unknown";
+pub type FeatureList = heapless::Vec<&'static str, 64>;
 
 /// Represents the result of a CPUID instruction call.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]

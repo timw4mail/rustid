@@ -1,115 +1,34 @@
+//! CPU detection and information for x86/x86_64 processors.
+
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{UNK, fns, x86_cpuid};
+use crate::cpuid::{FeatureList, UNK, fns, x86_cpuid};
 use crate::println;
-use heapless::{String, Vec};
+use heapless::String;
 
 use core::str::FromStr;
 
-#[derive(Debug)]
-pub struct CpuFeatures {
-    list: Vec<&'static str, 64>,
-}
-
-impl CpuFeatures {
-    pub fn detect() -> Self {
-        let mut out: Vec<_, _> = Vec::new();
-
-        if fns::has_fpu() {
-            let _ = out.push("FPU");
-        };
-        if fns::has_tsc() {
-            let _ = out.push("TSC");
-        }
-        if fns::has_cx8() {
-            let _ = out.push("CMPXCHG8B");
-        };
-        if fns::has_cx16() {
-            let _ = out.push("CMPXCHG16B");
-        }
-        if fns::has_cmov() {
-            let _ = out.push("CMOV");
-        };
-        if fns::has_mmx() {
-            let _ = out.push("MMX");
-        };
-        if fns::has_3dnow() {
-            let _ = out.push("3DNow!");
-        };
-        if fns::has_3dnow_plus() {
-            let _ = out.push("3DNow+");
-        };
-        if fns::has_ht() {
-            let _ = out.push("HT");
-        };
-        if fns::has_amd64() {
-            let _ = out.push("AMD64");
-        };
-        if fns::has_sse() {
-            let _ = out.push("SSE");
-        };
-        if fns::has_sse2() {
-            let _ = out.push("SSE2");
-        };
-        if fns::has_sse3() {
-            let _ = out.push("SSE3");
-        };
-        if fns::has_sse4a() {
-            let _ = out.push("SSE4A");
-        };
-        if fns::has_sse41() {
-            let _ = out.push("SSE4.1");
-        };
-        if fns::has_sse42() {
-            let _ = out.push("SSE4.2");
-        };
-        if fns::has_ssse3() {
-            let _ = out.push("SSSE3");
-        };
-        if fns::has_avx() {
-            let _ = out.push("AVX");
-        };
-        if fns::has_avx2() {
-            let _ = out.push("AVX2");
-        };
-        if fns::has_avx512f() {
-            let _ = out.push("AVX512F");
-        };
-        if fns::has_fma() {
-            let _ = out.push("FMA");
-        };
-        if fns::has_bmi1() {
-            let _ = out.push("BMI1");
-        };
-        if fns::has_bmi2() {
-            let _ = out.push("BMI2");
-        };
-        if fns::has_rdrand() {
-            let _ = out.push("RDRAND");
-        };
-        if fns::has_popcnt() {
-            let _ = out.push("POPCNT");
-        };
-        if fns::has_f16c() {
-            let _ = out.push("F16C");
-        };
-
-        Self { list: out }
-    }
-}
-
+/// CPU signature containing family, model, and stepping information.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct CpuSignature {
+    /// Extended family value from CPUID
     pub extended_family: u32,
+    /// Family value from CPUID
     pub family: u32,
+    /// Extended model value from CPUID
     pub extended_model: u32,
+    /// Model value from CPUID
     pub model: u32,
+    /// Stepping value from CPUID
     pub stepping: u32,
+    /// Display family (calculated from family and extended_family)
     pub display_family: u32,
+    /// Display model (calculated from model and extended_model)
     pub display_model: u32,
 }
 
 impl CpuSignature {
+    /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
         let res = x86_cpuid(1);
         let stepping = res.eax & 0xF;
@@ -142,13 +61,19 @@ impl CpuSignature {
     }
 }
 
+/// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug)]
 pub struct Cpu {
+    /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
+    /// Easter egg string (hidden CPU info for some AMD/Rise processors)
     pub easter_egg: Option<String<64>>,
+    /// Number of logical processors/threads
     pub threads: u32,
+    /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
-    pub features: CpuFeatures,
+    /// Detected CPU features
+    pub features: FeatureList,
 }
 
 impl Default for Cpu {
@@ -168,7 +93,7 @@ impl Cpu {
             easter_egg: Self::easter_egg(),
             threads: fns::logical_cores(),
             signature: CpuSignature::detect(),
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         }
     }
 
@@ -385,9 +310,9 @@ impl Cpu {
         }
 
         // CPU Features
-        if !self.features.list.is_empty() {
+        if !self.features.is_empty() {
             let mut features: String<512> = String::new();
-            self.features.list.iter().for_each(|feature| {
+            self.features.iter().for_each(|feature| {
                 let _ = features.push_str(feature);
                 let _ = features.push_str(" ");
             });
@@ -413,10 +338,10 @@ mod tests {
 
     #[test]
     fn test_cpu_features_detect() {
-        let features = CpuFeatures::detect();
+        let features = fns::get_feature_list();
         println!("Detected CPU Features: {:?}", features);
         // Assert that at least some features are detected (this might vary by CPU)
-        assert!(!features.list.is_empty());
+        assert!(!features.is_empty());
     }
 
     #[test]
@@ -433,7 +358,7 @@ mod tests {
         println!("New CPU instance: {:?}", cpu);
         // Ensure that new() doesn't panic and populates some fields
         assert!(!cpu.arch.vendor_string.is_empty());
-        assert!(!cpu.features.list.is_empty());
+        assert!(!cpu.features.is_empty());
     }
 
     #[test]
@@ -448,7 +373,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
 
@@ -458,7 +383,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         };
         assert_eq!(
             cpu_am486_x2wb.display_model_string(),
@@ -475,7 +400,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel or AMD 486 DX");
 
@@ -493,7 +418,7 @@ mod tests {
                 display_family: 0,
                 display_model: 0,
             },
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
 
@@ -511,7 +436,7 @@ mod tests {
                 display_family: 1,
                 display_model: 1,
             },
-            features: CpuFeatures::detect(),
+            features: fns::get_feature_list(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
     }

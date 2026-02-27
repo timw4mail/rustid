@@ -3,8 +3,8 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL, VENDOR_ZHAOXIN};
 use crate::cpuid::CpuSignature;
+use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL, VENDOR_ZHAOXIN};
 use core::str::FromStr;
 use heapless::String;
 
@@ -428,7 +428,9 @@ impl CpuArch {
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", Some("250nm")),
             (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")),
-            (0, 5, 0, 13, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm")),
+            (0, 5, 0, 13, _) => {
+                brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm"))
+            }
 
             // K7
             (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", Some("250nm")),
@@ -465,8 +467,9 @@ impl CpuArch {
             (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", Some("32nm")),
             (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", Some("32nm")),
             (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", Some("28nm")),
-            (6, 15, 6 | 7, 0 | 5, _) => brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm")),
-
+            (6, 15, 6 | 7, 0 | 5, _) => {
+                brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm"))
+            }
 
             // HELLO KITTY! ^-^
             (7, 15, 0, 0, 1) => brand_arch(MicroArch::Jaguar, "Kabini", Some("28nm")),
