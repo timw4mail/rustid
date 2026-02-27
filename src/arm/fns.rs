@@ -1,12 +1,5 @@
 //! ARM-specific functions.
 
-/// Gets the Main ID Register (MIDR).
-///
-/// The MIDR contains information about the CPU implementer, part number, and revision.
-///
-/// Note: Accessing system registers like MIDR requires privileged mode (e.g., kernel mode)
-/// or specific architectural features. This function assumes an environment where it's
-/// safe and permitted to read MIDR (e.g., Linux user space if exposed, or bare-metal).
 #[cfg(target_os = "windows")]
 mod windows_api_ffi {
     #[link(name = "kernel32")]
@@ -31,12 +24,19 @@ pub struct SYSTEM_INFO {
     pub wProcessorRevision: u16,
 }
 
-pub fn get_features() -> Vec<&'static str, 64> {
-    let mut out: Vec<_, 64> = Vec::new();
+pub fn get_features() -> Vec<&'static str> {
+    let mut out: Vec<_> = Vec::new();
 
     unimplemented!("ARM: get_features()");
 }
 
+/// Gets the Main ID Register (MIDR).
+///
+/// The MIDR contains information about the CPU implementer, part number, and revision.
+///
+/// Note: Accessing system registers like MIDR requires privileged mode (e.g., kernel mode)
+/// or specific architectural features. This function assumes an environment where it's
+/// safe and permitted to read MIDR (e.g., Linux user space if exposed, or bare-metal).
 pub fn get_midr() -> usize {
     #[cfg(target_os = "windows")]
     {

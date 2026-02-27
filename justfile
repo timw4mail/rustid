@@ -1,9 +1,11 @@
+set unstable
+
 # Lists the available actions
 default:
 	echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
 	@just --list
 
-base_run := if arch() == "powerpc" { "cargo +nightly run -Z build-std" } else { "cargo run" }
+base_run := if arch() == "powerpc" || "powerpc64" || "arm" || "aarch64" { "cargo +nightly run -Z build-std" } else { "cargo run" }
 
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
