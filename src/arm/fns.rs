@@ -31,6 +31,12 @@ pub struct SYSTEM_INFO {
     pub wProcessorRevision: u16,
 }
 
+pub fn get_features() -> Vec<&'static str, 64> {
+    let mut out: Vec<_, 64> = Vec::new();
+
+    unimplemented!("ARM: get_features()");
+}
+
 pub fn get_midr() -> usize {
     #[cfg(target_os = "windows")]
     {

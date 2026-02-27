@@ -41,7 +41,7 @@ build-dos:
 	# Cleanup old binary
 	rm -f rustid.com
 	# Build initial binary
-	cargo +nightly build -Zjson-target-spec --target i486-dos.json -Z build-std=core,alloc --release
+	cargo +nightly build -Zjson-target-spec --target i486-dos.json --release
 	# Convert to proper DOS com binary
 	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
 
@@ -57,10 +57,15 @@ build-windows: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
 
+# Build for ARM64 Windows (GNU toolchain)
+build-windows-arm: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
+	cargo cross build --target aarch64-pc-windows-gnullvm
+
 # Build for arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross build --target aarch64-unknown-linux-gnu
+	cargo cross +nightly build --target aarch64-unknown-linux-gnu -Z build-std
 
 # Build for powerpc
 build-ppc: _cargo_cross

@@ -9,9 +9,11 @@ use core::fmt::Debug;
 #[cfg(not(target_os = "none"))]
 use std::println;
 
+use arm::micro_arch::Midr;
+
 #[derive(Debug)]
 pub struct Cpu {
-    pub midr: usize,
+    pub midr: Midr,
     pub implementer: u8,
     pub variant: u8,
     pub part_number: u16,
@@ -28,7 +30,7 @@ impl Cpu {
     pub fn new() -> Self {
         let midr = fns::get_midr();
         Self {
-            midr,
+            midr: Midr::new(midr),
             implementer: ((midr >> 24) & 0xFF) as u8,
             variant: ((midr >> 20) & 0xF) as u8,
             part_number: ((midr >> 4) & 0xFFF) as u16,
