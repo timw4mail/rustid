@@ -5,14 +5,15 @@ default:
 	echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
 	@just --list
 
-base_run := if arch() == "powerpc" || "powerpc64" || "arm" || "aarch64" { "cargo +nightly run -Z build-std" } else { "cargo run" }
+base_run := if arch() == "powerpc" || "powerpc64" { "cargo +nightly run -Z build-std" } else { "cargo run" }
+base_check := if arch() == "powerpc" || "powerpc64" { "cargo +nightly check -Z build-std --all-targets" } else { "cargo check --all-targets" }
 
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
 
 # Check code validity and style
 check:
-	cargo check --all-targets
+	{{ base_check }}
 
 # More in-depth code style checking
 lint:
@@ -67,7 +68,7 @@ build-windows-arm: _cargo_cross
 # Build for arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross +nightly build --target aarch64-unknown-linux-gnu -Z build-std
+	cargo cross build --target aarch64-unknown-linux-gnu
 
 # Build for powerpc
 build-ppc: _cargo_cross

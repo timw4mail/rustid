@@ -1,10 +1,5 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(target_arch = "powerpc", feature(asm_experimental_arch))]
-#![cfg_attr(target_arch = "powerpc", feature(stdarch_powerpc_feature_detection))]
-#![cfg_attr(
-    any(target_arch = "arm", target_arch = "aarch64"),
-    feature(stdarch_arm_feature_detection)
-)]
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
