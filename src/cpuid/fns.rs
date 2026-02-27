@@ -8,6 +8,7 @@ use super::x86_cpuid;
 use crate::cpuid::brand::CpuBrand;
 #[allow(unused_imports)]
 use core::arch::asm;
+use heapless::String;
 
 /// CPUID leaf 0x00000000 - Maximum basic leaf
 pub const LEAF_0: u32 = 0;
@@ -151,6 +152,31 @@ pub fn max_leaf() -> u32 {
 /// Returns the maximum extended CPUID leaf supported.
 pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
+}
+
+/// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
+/// Returns a 12-character vendor string from CPUID leaf 0.
+pub fn vendor_str() -> String<12> {
+    let mut s = String::new();
+    if !has_cpuid() && is_cyrix() {
+        let _ = s.push_str(crate::cpuid::brand::VENDOR_CYRIX);
+        return s;
+    }
+
+    let res = x86_cpuid(0);
+    let mut bytes = [0u8; 12];
+
+    bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
+    bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
+    bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
+
+    for &b in &bytes {
+        if b != 0 {
+            let _ = s.push(b as char);
+        }
+    }
+
+    s
 }
 
 /// Returns the number of logical cores.
@@ -427,4 +453,16 @@ pub fn get_feature_list() -> FeatureList {
     };
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vendor_str() {
+        let vendor = vendor_str();
+        println!("Vendor: {}", vendor);
+        assert!(!vendor.is_empty());
+    }
 }

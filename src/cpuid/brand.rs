@@ -4,7 +4,7 @@
 //! using the CPUID instruction.
 
 use crate::cpuid::UNK;
-use crate::cpuid::{fns, x86_cpuid};
+use crate::cpuid::fns;
 use heapless::String;
 
 /// CPU vendor string for AMD processors.
@@ -57,7 +57,7 @@ pub enum CpuBrand {
 impl CpuBrand {
     /// Detects the CPU brand/vendor from CPUID information.
     pub fn detect() -> Self {
-        let vendor_str = Self::vendor_str();
+        let vendor_str = fns::vendor_str();
         let vendor_str = if vendor_str.is_empty() && fns::is_cyrix() {
             VENDOR_CYRIX
         } else {
@@ -65,31 +65,6 @@ impl CpuBrand {
         };
 
         Self::from(vendor_str)
-    }
-
-    /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
-    /// Returns a 12-character vendor string from CPUID leaf 0.
-    pub fn vendor_str() -> String<12> {
-        let mut s = String::new();
-        if !fns::has_cpuid() && fns::is_cyrix() {
-            let _ = s.push_str(VENDOR_CYRIX);
-            return s;
-        }
-
-        let res = x86_cpuid(0);
-        let mut bytes = [0u8; 12];
-
-        bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
-        bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
-        bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
-
-        for &b in &bytes {
-            if b != 0 {
-                let _ = s.push(b as char);
-            }
-        }
-
-        s
     }
 
     /// Converts the CPU brand to its vendor ID string (e.g., "AuthenticAMD").
@@ -163,13 +138,6 @@ mod tests {
     use super::*;
     use crate::println;
     use core::str::FromStr;
-
-    #[test]
-    fn test_vendor_id() {
-        let vendor = CpuBrand::vendor_str();
-        println!("Vendor: {}", vendor);
-        assert!(!vendor.is_empty());
-    }
 
     #[test]
     fn test_detect_cpu_brand() {

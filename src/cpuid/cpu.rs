@@ -88,7 +88,7 @@ impl Cpu {
             arch: CpuArch::find(
                 Self::model_string().as_str(),
                 CpuSignature::detect(),
-                &CpuBrand::vendor_str(),
+                &fns::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
             threads: fns::logical_cores(),
