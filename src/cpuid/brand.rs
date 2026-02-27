@@ -71,6 +71,7 @@ impl CpuBrand {
         s
     }
 
+    /// Converts the CPU brand to its vendor ID string (e.g., "AuthenticAMD").
     pub fn to_vendor_str(&self) -> &str {
         match self {
             CpuBrand::AMD => VENDOR_AMD,
@@ -89,6 +90,7 @@ impl CpuBrand {
         }
     }
 
+    /// Converts the CPU brand to a human-readable name (e.g., "AMD", "Intel").
     pub fn to_brand_name(&self) -> &str {
         match self {
             CpuBrand::AMD => "AMD",

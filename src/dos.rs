@@ -1,11 +1,20 @@
+//! DOS/16-bit environment support for rustid.
+//!
+//! This module provides DOS-specific implementations including console output
+//! via DOS INT 21h interrupts and a custom panic handler for bare-metal environments.
+
 use core::arch::asm;
 use core::fmt::Write;
+/// Custom panic handler for no-std environments.
+/// Loops indefinitely on panic to prevent undefined behavior.
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+/// Entry point for DOS executables.
+/// Called by the DOS loader and invokes the main CLI function.
 #[cfg(not(test))]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
@@ -16,6 +25,8 @@ pub extern "C" fn _start() -> ! {
 
     exit();
 }
+/// Prints a formatted string to the DOS console.
+/// Supports both literal strings and format strings.
 #[macro_export]
 macro_rules! print {
     ($s:literal) => {
@@ -29,6 +40,7 @@ macro_rules! print {
     };
 }
 
+/// Prints a formatted string followed by a newline to the DOS console.
 #[macro_export]
 macro_rules! println {
     () => {
@@ -48,12 +60,14 @@ macro_rules! println {
     };
 }
 
+/// Writes a string to the DOS console character by character.
 pub fn _print_str(s: &str) {
     for &b in s.as_bytes() {
         printc(b);
     }
 }
 
+/// A writer implementation for DOS console output via the fmt::Write trait.
 pub struct DosWriter;
 
 impl Write for DosWriter {
@@ -65,6 +79,7 @@ impl Write for DosWriter {
     }
 }
 
+/// Outputs a single character to the DOS console using INT 21h.
 fn printc(ch: u8) {
     unsafe {
         asm!(
@@ -76,6 +91,7 @@ fn printc(ch: u8) {
     }
 }
 
+/// Exits the program and returns control to DOS using INT 21h, AH=4Ch.
 pub fn exit() -> ! {
     // Exit to DOS via INT 21h, AH=4Ch
     unsafe {

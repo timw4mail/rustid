@@ -2,14 +2,15 @@
 //!
 //! This crate provides a high-level interface to query CPU vendor, brand string,
 //! supported features (like SSE, AVX), and other hardware details.
+/// Compile-time check to ensure this crate is only used on x86/x86_64.
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86_64::{CpuidResult, __cpuid, __cpuid_count};
 
 #[cfg(target_arch = "x86")]
-use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86::{CpuidResult, __cpuid, __cpuid_count};
 
 pub mod brand;
 pub mod cpu;

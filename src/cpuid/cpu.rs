@@ -227,14 +227,19 @@ impl Cpu {
                 "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
                 _ => "486 Class CPU",
             },
-            MicroArch::P5 => "Intel Pentium",
-            MicroArch::P5MMX => "Intel Pentium with MMX",
-            MicroArch::P6Pro => "Intel Pentium Pro",
-            MicroArch::P6PentiumII => "Intel Pentium II",
-            MicroArch::P6PentiumIII => "Intel Pentium !!!",
+            MicroArch::P5 => {
+                if fns::has_mmx() {
+                    "Intel Pentium with MMX"
+                } else {
+                    "Intel Pentium"
+                }
+            }
+            MicroArch::PentiumPro => "Intel Pentium Pro",
+            MicroArch::PentiumII => "Intel Pentium II",
+            MicroArch::PentiumIII => "Intel Pentium III",
 
             // Cyrix
-            MicroArch::FiveX86 => "5x86",
+            MicroArch::Cy5x86 => "5x86",
             MicroArch::M1 => {
                 if fns::has_cx8() {
                     "6x86L"
@@ -250,7 +255,9 @@ impl Cpu {
 
             _ => {
                 if self.signature == CpuSignature::default() || !fns::has_cpuid() {
-                    if fns::is_386() {
+                    if fns::is_cyrix() && fns::is_486() {
+                        "Cyrix/IBM 486"
+                    } else if fns::is_386() {
                         "386 Class CPU"
                     } else {
                         "486 Class CPU"
