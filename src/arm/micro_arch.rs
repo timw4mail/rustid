@@ -10,7 +10,7 @@ pub const ARCHITECTURE_OFFSET: usize = 16;
 pub const PART_OFFSET: usize = 4;
 pub const REVISION_OFFSET: usize = 0;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Midr {
     pub implementer: usize,
     pub variant: usize,
@@ -22,31 +22,11 @@ pub struct Midr {
 impl Midr {
     pub fn new(midr: usize) -> Midr {
         Midr {
-            implementer: midr_get_implementer(midr),
-            variant: midr_get_variant(midr),
-            architecture: midr_get_architecture(midr),
-            part: midr_get_part(midr),
-            revision: midr_get_revision(midr),
+            implementer: (midr & IMPLEMENTER_MASK) >> IMPLEMENTER_OFFSET,
+            variant: (midr & VARIANT_MASK) >> VARIANT_OFFSET,
+            architecture: (midr & ARCHITECTURE_MASK) >> ARCHITECTURE_OFFSET,
+            part: (midr & PART_MASK) >> PART_OFFSET,
+            revision: midr & REVISION_MASK,
         }
     }
-}
-
-pub const fn midr_get_part(midr: usize) -> usize {
-    (midr & PART_MASK) >> PART_OFFSET
-}
-
-pub const fn midr_get_architecture(midr: usize) -> usize {
-    (midr & ARCHITECTURE_MASK) >> ARCHITECTURE_OFFSET
-}
-
-pub const fn midr_get_revision(midr: usize) -> usize {
-    midr & REVISION_MASK
-}
-
-pub const fn midr_get_variant(midr: usize) -> usize {
-    (midr & VARIANT_MASK) >> VARIANT_OFFSET
-}
-
-pub const fn midr_get_implementer(midr: usize) -> usize {
-    (midr & IMPLEMENTER_MASK) >> IMPLEMENTER_OFFSET
 }

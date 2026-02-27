@@ -27,7 +27,8 @@ pub struct SYSTEM_INFO {
 #[cfg(target_os = "macos")]
 mod macos_api_ffi {
     #[link(name = "c")] // sysctl is in libc
-    unsafe extern "C" { // Changed to unsafe extern "C"
+    unsafe extern "C" {
+        // Changed to unsafe extern "C"
         pub fn sysctlbyname(
             name: *const libc::c_char,
             oldp: *mut libc::c_void,
@@ -36,12 +37,6 @@ mod macos_api_ffi {
             newlen: libc::size_t,
         ) -> libc::c_int;
     }
-}
-
-pub fn get_features() -> Vec<&'static str> {
-    let mut out: Vec<&'static str> = Vec::new();
-
-    unimplemented!("ARM: get_features()");
 }
 
 /// Gets the Main ID Register (MIDR).
@@ -85,14 +80,16 @@ pub fn get_midr() -> usize {
                 &mut len as *mut libc::size_t,
                 core::ptr::null_mut(),
                 0,
-            ) == 0 {
+            ) == 0
+            {
                 // Map CPU family to Part Number (bits 4-15) and Implementer (bits 24-31)
                 // This is a rough mapping and not precise MIDR.
                 synthetic_midr |= ((cpufamily as usize) & 0xFF) << 24; // Implementer: lower 8 bits of family
                 synthetic_midr |= ((cpufamily as usize) & 0xFFF00) << 4; // PartNum: higher bits of family
+
+                return synthetic_midr;
             }
         }
-        return synthetic_midr;
     }
 
     let mut midr: usize = 0;
