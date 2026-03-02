@@ -214,7 +214,10 @@ impl Cpu {
                 if fns::has_mmx() {
                     "Intel Pentium with MMX"
                 } else {
-                    "Intel Pentium"
+                    match self.arch.code_name {
+                        "P24T" => "Intel Pentium Overdrive",
+                        _ => "Intel Pentium",
+                    }
                 }
             }
             MicroArch::PentiumPro => "Intel Pentium Pro",
@@ -320,6 +323,10 @@ impl Cpu {
                 self.arch.brand_name.as_str()
             );
             println!();
+        }
+
+        if self.signature.is_overdrive {
+            simple_line("Overdrive", "Yes");
         }
 
         simple_line("Model", self.display_model_string());

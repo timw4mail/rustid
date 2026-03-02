@@ -179,8 +179,11 @@ pub fn vendor_str() -> String<12> {
     s
 }
 
+/// Returns true if the CPU is an Intel Overdrive processor.
+///
+/// Checks the Overdrive bit (EAX bit 12) in CPUID leaf 1.
 pub fn is_overdrive() -> bool {
-    (x86_cpuid(EXT_LEAF_0).eax & (1 << 12)) != 0
+    (x86_cpuid(LEAF_1).eax & (1 << 12)) != 0
 }
 
 /// Returns the number of logical cores.
