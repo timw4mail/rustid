@@ -3,12 +3,14 @@ use crate::cpuid::{fns, x86_cpuid};
 
 #[derive(Debug, Default)]
 #[cfg(not(target_os = "none"))]
+#[allow(unused)]
 pub struct CacheLevel {
     size: u32,
 }
 
 #[derive(Debug, Default)]
 #[cfg(not(target_os = "none"))]
+#[allow(unused)]
 pub struct Cache {
     l1i: CacheLevel,
     l1d: CacheLevel,
