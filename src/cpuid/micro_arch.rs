@@ -605,6 +605,7 @@ impl CpuArch {
 
             // Core/Core 2
             (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
+            (0, 6, 1, 7, 10) => brand_arch(MicroArch::Core, "Penryn", Some("45nm")),
 
             // Core i-series
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
