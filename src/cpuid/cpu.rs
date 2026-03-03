@@ -7,6 +7,7 @@ use crate::println;
 use heapless::String;
 
 use crate::cpuid::fns::EXT_LEAF_1;
+use crate::cpuid::topology::Topology;
 use core::str::FromStr;
 
 #[allow(non_camel_case_types)]
@@ -118,6 +119,7 @@ pub struct Cpu {
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: FeatureList,
+    pub topology: Topology,
 }
 
 impl Default for Cpu {
@@ -130,7 +132,7 @@ impl Cpu {
     pub fn new() -> Self {
         Self {
             arch: CpuArch::find(
-                Self::model_string().as_str(),
+                Self::raw_model_string().as_str(),
                 CpuSignature::detect(),
                 &fns::vendor_str(),
             ),
@@ -144,11 +146,12 @@ impl Cpu {
                 None
             },
             features: fns::get_feature_list(),
+            topology: Topology::detect(),
         }
     }
 
     /// Gets the CPU model string.
-    fn model_string() -> String<64> {
+    fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
         if fns::max_extended_leaf() < 0x8000_0004 {
             let _ = model.push_str("Unknown");
@@ -445,7 +448,7 @@ mod tests {
 
     #[test]
     fn test_model_string() {
-        let model = Cpu::model_string();
+        let model = Cpu::raw_model_string();
         println!("Model: {}", model);
         assert!(!model.is_empty());
     }
@@ -490,6 +493,7 @@ mod tests {
             signature: CpuSignature::detect(), // Signature doesn't affect this path
             ext_signature: None,
             features: fns::get_feature_list(),
+            topology: Topology::default(),
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
 
@@ -502,6 +506,7 @@ mod tests {
             signature: CpuSignature::detect(),
             ext_signature: None,
             features: fns::get_feature_list(),
+            topology: Topology::default(),
         };
         assert_eq!(
             cpu_am486_x2wb.display_model_string(),
@@ -521,6 +526,7 @@ mod tests {
             signature: CpuSignature::detect(),
             ext_signature: None,
             features: fns::get_feature_list(),
+            topology: Topology::default(),
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
 
@@ -542,6 +548,7 @@ mod tests {
             },
             ext_signature: None,
             features: fns::get_feature_list(),
+            topology: Topology::default(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
 
@@ -563,6 +570,7 @@ mod tests {
             },
             ext_signature: None,
             features: fns::get_feature_list(),
+            topology: Topology::default(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
     }

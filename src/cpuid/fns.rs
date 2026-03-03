@@ -18,6 +18,8 @@ pub const LEAF_1: u32 = 1;
 pub const LEAF_2: u32 = 2;
 /// CPUID leaf 0x00000007 - Extended feature flags
 pub const LEAF_7: u32 = 7;
+/// CPUID leaf 0x00000016 - Intel Processor Frequency
+pub const LEAF_16: u32 = 16;
 
 /// Extended CPUID leaf 0x80000000 - Maximum extended leaf
 pub const EXT_LEAF_0: u32 = 0x8000_0000;
