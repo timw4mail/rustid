@@ -21,7 +21,7 @@
 //!
 //! # CLI Usage
 //!
-//! When compiled as a standalone binary:
+//! When compiled as a standalone binary (non-dos build):
 //! - `rustid` - Display basic CPU information
 //! - `rustid debug` - Display detailed debug information
 //! - `rustid version` - Display version info
@@ -40,9 +40,9 @@ pub mod cpuid;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use crate::cpuid::{Cpu, init};
 
-#[cfg(target_arch = "powerpc")]
+#[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 pub mod ppc;
-#[cfg(target_arch = "powerpc")]
+#[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 use crate::ppc::cpu::Cpu;
 
 #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]

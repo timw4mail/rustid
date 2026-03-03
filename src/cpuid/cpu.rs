@@ -341,8 +341,6 @@ impl Cpu {
         println!("{:?}", self);
     }
 
-    // TODO: Show cpu cache size(s)
-    // TODO: Show cpu speed
     pub fn display_table(&self) {
         use heapless::format;
 
@@ -378,6 +376,23 @@ impl Cpu {
 
         simple_line("Model", self.display_model_string());
 
+        // TODO: Clock Speed (Base/Boost)
+        #[cfg(not(target_os = "none"))]
+        if self.topology.speed.base > 100 {
+            let mhz = self.topology.speed.base as f32;
+            let ghz = mhz / 1000f32;
+            if mhz > 1000f32 {
+                println!("{}{:.2} GHz", label("Speed"), ghz);
+            } else {
+                println!("{}{:.2} MHz", label("Speed"), mhz);
+            }
+            println!();
+        }
+
+        // TODO: Cache Size(s)
+
+        // TODO: Cores/Threads
+
         if ma != UNK {
             simple_line("MicroArch", ma);
         }
@@ -398,12 +413,6 @@ impl Cpu {
         if let Some(easter_egg) = &self.easter_egg {
             simple_line("Easter Egg", easter_egg.as_str());
         }
-
-        // TODO: Cache Size(s)
-
-        // TODO: Clock Speed (Base/Boost)
-
-        // TODO: Cores/Threads
 
         // CPU Signature
         if self.signature != CpuSignature::default() {
