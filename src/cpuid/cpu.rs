@@ -1,12 +1,25 @@
 //! CPU detection and information for x86/x86_64 processors.
 
-use crate::cpuid::brand::{CpuBrand, VENDOR_INTEL};
+use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{FeatureList, UNK, fns, x86_cpuid};
 use crate::println;
 use heapless::String;
 
+use crate::cpuid::fns::EXT_LEAF_1;
 use core::str::FromStr;
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FeatureClass {
+    i386,
+    i486,
+    i586,
+    i686,
+    x86_64_v1,
+    x86_64_v2,
+    x86_64_v3,
+}
 
 /// CPU signature containing family, model, and stepping information.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
@@ -65,6 +78,29 @@ impl CpuSignature {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct ExtendedSignature {
+    pub base_brand_id: u32,
+    pub brand_id: u32,
+    pub pkg_type: u32,
+}
+
+impl ExtendedSignature {
+    /// Detects the CPU signature from CPUID leaf 1.
+    pub fn detect() -> Self {
+        let res = x86_cpuid(EXT_LEAF_1);
+
+        let brand_id = res.ebx & 0xFFFF;
+        let pkg_type = (res.ebx >> 28) & 0xF;
+
+        Self {
+            base_brand_id: fns::get_brand_id(),
+            brand_id,
+            pkg_type,
+        }
+    }
+}
+
 /// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug)]
 pub struct Cpu {
@@ -72,11 +108,14 @@ pub struct Cpu {
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
     pub easter_egg: Option<String<64>>,
+    /// Model brand id
     pub brand_id: u32,
     /// Number of logical processors/threads
     pub threads: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
+    /// AMD extended cpu signature
+    pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: FeatureList,
 }
@@ -99,6 +138,11 @@ impl Cpu {
             brand_id: fns::get_brand_id(),
             threads: fns::logical_cores(),
             signature: CpuSignature::detect(),
+            ext_signature: if fns::vendor_str() == VENDOR_AMD {
+                Some(ExtendedSignature::detect())
+            } else {
+                None
+            },
             features: fns::get_feature_list(),
         }
     }
@@ -444,6 +488,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
+            ext_signature: None,
             features: fns::get_feature_list(),
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
@@ -455,6 +500,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
+            ext_signature: None,
             features: fns::get_feature_list(),
         };
         assert_eq!(
@@ -473,6 +519,7 @@ mod tests {
             easter_egg: None,
             threads: 1,
             signature: CpuSignature::detect(),
+            ext_signature: None,
             features: fns::get_feature_list(),
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
@@ -493,6 +540,7 @@ mod tests {
                 display_model: 0,
                 is_overdrive: false,
             },
+            ext_signature: None,
             features: fns::get_feature_list(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
@@ -513,6 +561,7 @@ mod tests {
                 display_model: 1,
                 is_overdrive: false,
             },
+            ext_signature: None,
             features: fns::get_feature_list(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");

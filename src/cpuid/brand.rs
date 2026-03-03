@@ -122,6 +122,7 @@ impl From<&str> for CpuBrand {
             VENDOR_SIS => CpuBrand::SiS,
             VENDOR_TRANSMETA => CpuBrand::Transmeta,
             VENDOR_UMC => CpuBrand::Umc,
+            VENDOR_ZHAOXIN => CpuBrand::Zhaoxin,
             _ => CpuBrand::Unknown,
         }
     }
