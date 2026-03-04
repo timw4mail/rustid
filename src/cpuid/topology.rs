@@ -174,7 +174,8 @@ impl Topology {
         let threads = cpuid::logical_cores();
         let cores = 1;
         let speed = Speed::detect();
-        let cache = Cache::detect();
+        let cache = None;
+        // let cache = Cache::detect();
 
         Topology::new(cores, threads, speed, cache)
     }
