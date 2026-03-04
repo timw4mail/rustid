@@ -60,6 +60,7 @@ pub enum MicroArch {
     Isaiah,
 
     // Centaur (Zhaoxin)
+    ZhangJiang,
     Wudaokou,
     Lujiazui,
 
@@ -427,7 +428,7 @@ impl CpuArch {
             (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some("250nm")),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", Some("250nm")),
-            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")),
+            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")), // Per instlatx64
             (0, 5, 0, 13, _) => {
                 brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm"))
             }
@@ -494,10 +495,14 @@ impl CpuArch {
     }
 
     fn find_centaur(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
-        let brand = match s.family {
-            5 => CpuBrand::IDT,
-            6 => CpuBrand::Via,
-            _ => CpuBrand::Zhaoxin,
+        let brand = if vendor_string == VENDOR_ZHAOXIN {
+            CpuBrand::Zhaoxin
+        } else {
+            match s.family {
+                5 => CpuBrand::IDT,
+                6 => CpuBrand::Via,
+                _ => CpuBrand::Zhaoxin,
+            }
         };
 
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
@@ -533,12 +538,21 @@ impl CpuArch {
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some("130nm")),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", None),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
-            (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "CNS", None),
+
+            // From instlatx64
+            (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
+            (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB", None),
+            (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNC", None),
+            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNQ", None),
+            (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
+
+            // (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "CNS", None),
             (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some("65nm")),
 
             // Zhaoxin
+            (0, 6, 1, 9, _) => brand_arch(MicroArch::ZhangJiang, "ZhangJiang", Some("28nm")),
             (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some("28nm")),
-            (0, 7, 3, 11, 0) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some("16nm")),
+            (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some("16nm")),
 
             // Anything else
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
