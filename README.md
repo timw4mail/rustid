@@ -2,19 +2,13 @@
 
 A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets.
 
-**AI Disclaimer**: This application is developed using some AI, mostly to help with the build environment for dos, and the original code commit.
+**AI Disclaimer**: This application is developed using some AI, mostly to help with the build environment for DOS, and the original code commit.
 
 ## Features
 
-- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, and more.
+- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, and more.
 - **Feature Flag Reporting:** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
-- **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (like DOSBox-X).
-
-## Project Structure
-
-- `src/cpuid/`: Core logic for CPUID instruction wrappers and data parsing.
-- `src/dos.rs`: DOS-specific I/O and entry points.
-- `src/main.rs`: CLI application entry point.
+- **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 
 ## Getting Started
 
@@ -22,7 +16,7 @@ A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` quer
 
 - Rust (`rustup` and `cargo` need to be installed)
 - `just` - Required to run build scripts. Can be installed with `cargo install just`.
-- Dosbox-X (optional) - Helpful for development and testing of the DOS version
+- DOSBox-X (optional) - Helpful for development and testing of the DOS version
 
 ### Building
 
@@ -48,23 +42,23 @@ cargo run
 Example Output:
 ```text
 ---------------------
-Rustid version 0.3.10
+Rustid version 0.4.2
 ---------------------
 
-        Vendor: AuthenticAMD (AMD)
+        Vendor:  AuthenticAMD (AMD)
 
-         Model: AMD Ryzen 7 PRO 2700U w/ Radeon Vega Mobile Gfx
+         Model:  AMD Ryzen 7 PRO 2700U w/ Radeon Vega Mobile Gfx
 
-     MicroArch: Zen
+      MicroArch: Zen
 
-      Codename: Raven Ridge
+       Codename: Raven Ridge
 
-          Node: 14nm
+          Node:  14nm
 
-     Signature: Family 17h, Model 11h, Stepping 0h
-                (8, 15, 1, 1, 0)
+     Signature:  Family 17h, Model 11h, Stepping 0h
+                 (8, 15, 1, 1, 0)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT SSE SSE2 SSE3 SSE4.1 SSE4.2 SSSE3 AVX AVX2 FMA BMI1 BMI2 RDRAND POPCNT F16C 
+      Features:  FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT SSE SSE2 SSE3 SSE4.1 SSE4.2 SSSE3 AVX AVX2 FMA BMI1 BMI2 RDRAND POPCNT F16C
 ```
 
 ## Information References

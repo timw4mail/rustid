@@ -39,6 +39,7 @@ pub struct CpuSignature {
     pub display_family: u32,
     /// Display model (calculated from model and extended_model)
     pub display_model: u32,
+    /// Is this an Intel Overdrive CPU?
     pub is_overdrive: bool,
 }
 
