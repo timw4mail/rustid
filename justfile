@@ -54,18 +54,17 @@ build-windows:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-msvc; then rustup target add x86_64-pc-windows-msvc; fi
 	cargo build --target x86_64-pc-windows-msvc --release
 
-# Build for modern windows (cli)
-[linux, unix]
-build-windows: _cargo_cross
+# Build for modern windows (cli), can be easier than msvc build
+build-windows-gnu: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
 
-# Build for arm64
+# Build for linux arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
 	cargo cross build --target aarch64-unknown-linux-gnu
 
-# Build for powerpc
+# Build for linux powerpc
 build-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
 	cargo cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std
@@ -80,7 +79,7 @@ build-mac-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-apple-darwin; then rustup target add aarch64-apple-darwin; fi
 	cargo cross build --target aarch64-apple-darwin --release
 
-# Build for 32-bit Linux
+# Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup target list --installed | grep -q i586-unknown-linux-gnu; then rustup target add i586-unknown-linux-gnu; fi
 	cargo build --target i586-unknown-linux-gnu --release
@@ -94,6 +93,12 @@ clean:
 # Build and run the app
 run arg="":
 	{{base_run}} {{arg}}
+
+# Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
+[windows]
+run-x86-emu arg="":
+	@if ! rustup target list --installed | grep -q arm64ec-pc-windows-msvc; then rustup target add arm64ec-pc-windows-msvc; fi
+	cargo --target arm64ec-pc-windows-msvc run {{arg}}
 
 # Run the dos build in DOSBox-X
 [windows]

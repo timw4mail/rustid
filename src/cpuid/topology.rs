@@ -1,5 +1,6 @@
-use crate::cpuid::fns::LEAF_16;
-use crate::cpuid::{fns, x86_cpuid};
+use crate::cpuid;
+use crate::cpuid::LEAF_16;
+use crate::cpuid::x86_cpuid;
 
 #[derive(Debug, Default)]
 #[cfg(not(target_os = "none"))]
@@ -41,7 +42,7 @@ pub struct Speed {
 #[cfg(not(target_os = "none"))]
 impl Speed {
     pub fn detect() -> Self {
-        if fns::max_leaf() < LEAF_16 {
+        if cpuid::max_leaf() < LEAF_16 {
             return Speed::measure();
         }
 
@@ -61,7 +62,7 @@ impl Speed {
         }
     }
     fn measure() -> Self {
-        if !fns::has_tsc() {
+        if !cpuid::has_tsc() {
             return Speed::default();
         }
 
@@ -82,7 +83,7 @@ impl Speed {
 fn measure_tsc_frequency() -> u32 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::_rdtsc as rdtsc;
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
     use core::arch::x86_64::_rdtsc as rdtsc;
 
     const MHZ_DIVISOR: u64 = 1_000_000;
@@ -135,7 +136,7 @@ pub struct Topology {
 #[cfg(not(target_os = "none"))]
 impl Topology {
     pub fn detect() -> Self {
-        let threads = fns::logical_cores();
+        let threads = cpuid::logical_cores();
         let cores = 1;
         let speed = Speed::detect();
 

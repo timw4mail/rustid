@@ -35,9 +35,9 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(not(target_os = "none"))]
 extern crate std;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
 pub mod cpuid;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
 use crate::cpuid::{Cpu, init};
 
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
@@ -66,7 +66,7 @@ fn version() {
 }
 
 pub fn cli_main() {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
     init();
 
     let cpu = Cpu::new();

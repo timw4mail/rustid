@@ -3,8 +3,8 @@
 //! This module provides CPU vendor detection for x86/x86_64 processors
 //! using the CPUID instruction.
 
+use crate::cpuid;
 use crate::cpuid::UNK;
-use crate::cpuid::fns;
 use heapless::String;
 
 /// CPU vendor string for AMD processors.
@@ -57,8 +57,8 @@ pub enum CpuBrand {
 impl CpuBrand {
     /// Detects the CPU brand/vendor from CPUID information.
     pub fn detect() -> Self {
-        let vendor_str = fns::vendor_str();
-        let vendor_str = if vendor_str.is_empty() && fns::is_cyrix() {
+        let vendor_str = cpuid::vendor_str();
+        let vendor_str = if vendor_str.is_empty() && cpuid::is_cyrix() {
             VENDOR_CYRIX
         } else {
             vendor_str.as_str()

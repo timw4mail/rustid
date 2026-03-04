@@ -1,12 +1,13 @@
 //! CPU detection and information for x86/x86_64 processors.
 
+use crate::cpuid;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{FeatureList, UNK, fns, x86_cpuid};
+use crate::cpuid::{FeatureList, UNK, x86_cpuid};
 use crate::println;
 use heapless::String;
 
-use crate::cpuid::fns::EXT_LEAF_1;
+use crate::cpuid::EXT_LEAF_1;
 use crate::cpuid::topology::Topology;
 use core::str::FromStr;
 
@@ -65,7 +66,7 @@ impl CpuSignature {
             model
         };
 
-        let is_overdrive = fns::is_overdrive();
+        let is_overdrive = cpuid::is_overdrive();
 
         Self {
             extended_model,
@@ -96,7 +97,7 @@ impl ExtendedSignature {
         let pkg_type = (res.ebx >> 28) & 0xF;
 
         Self {
-            base_brand_id: fns::get_brand_id(),
+            base_brand_id: cpuid::get_brand_id(),
             brand_id,
             pkg_type,
         }
@@ -135,18 +136,18 @@ impl Cpu {
             arch: CpuArch::find(
                 Self::raw_model_string().as_str(),
                 CpuSignature::detect(),
-                &fns::vendor_str(),
+                &cpuid::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
-            brand_id: fns::get_brand_id(),
-            threads: fns::logical_cores(),
+            brand_id: cpuid::get_brand_id(),
+            threads: cpuid::logical_cores(),
             signature: CpuSignature::detect(),
-            ext_signature: if fns::vendor_str() == VENDOR_AMD {
+            ext_signature: if cpuid::vendor_str() == VENDOR_AMD {
                 Some(ExtendedSignature::detect())
             } else {
                 None
             },
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::detect(),
         }
     }
@@ -154,7 +155,7 @@ impl Cpu {
     /// Gets the CPU model string.
     fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
-        if fns::max_extended_leaf() < 0x8000_0004 {
+        if cpuid::max_extended_leaf() < 0x8000_0004 {
             let _ = model.push_str("Unknown");
             return model;
         }
@@ -177,7 +178,7 @@ impl Cpu {
     }
 
     fn intel_brand_index(&self) -> Option<&'static str> {
-        let brand_id = fns::get_brand_id();
+        let brand_id = cpuid::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
         const XEON: &str = "Intel® Xeon® processor";
@@ -259,7 +260,7 @@ impl Cpu {
                 _ => "486 Class CPU",
             },
             MicroArch::P5 => {
-                if fns::has_mmx() {
+                if cpuid::has_mmx() {
                     "Intel Pentium with MMX"
                 } else {
                     match self.arch.code_name {
@@ -275,7 +276,7 @@ impl Cpu {
             // Cyrix
             MicroArch::Cy5x86 => "5x86",
             MicroArch::M1 => {
-                if fns::has_cx8() {
+                if cpuid::has_cx8() {
                     "6x86L"
                 } else {
                     "6x86"
@@ -287,17 +288,17 @@ impl Cpu {
             MicroArch::MP6 => match self.arch.code_name {
                 "Lynx" => "Rise mP6/iDragon",
                 _ => "Rise mP6",
-            }
+            },
 
             // UMCs
             MicroArch::U5S => "UMC Green CPU 486 U5-SX",
             MicroArch::U5D => "UMC Green CPU 486 U5-DX",
 
             _ => {
-                if self.signature == CpuSignature::default() || !fns::has_cpuid() {
-                    if fns::is_cyrix() && fns::is_486() {
+                if self.signature == CpuSignature::default() || !cpuid::has_cpuid() {
+                    if cpuid::is_cyrix() && cpuid::is_486() {
                         "Cyrix/IBM 486"
-                    } else if fns::is_386() {
+                    } else if cpuid::is_386() {
                         "386 Class CPU"
                     } else {
                         "486 Class CPU"
@@ -477,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_cpu_features_detect() {
-        let features = fns::get_feature_list();
+        let features = cpuid::get_feature_list();
         println!("Detected CPU Features: {:?}", features);
         // Assert that at least some features are detected (this might vary by CPU)
         assert!(!features.is_empty());
@@ -514,7 +515,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
             ext_signature: None,
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
@@ -527,7 +528,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(
@@ -547,7 +548,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
@@ -569,7 +570,7 @@ mod tests {
                 is_overdrive: false,
             },
             ext_signature: None,
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
@@ -591,7 +592,7 @@ mod tests {
                 is_overdrive: false,
             },
             ext_signature: None,
-            features: fns::get_feature_list(),
+            features: cpuid::get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
