@@ -378,7 +378,7 @@ impl Cpu {
 
         // TODO: Clock Speed (Base/Boost)
         #[cfg(not(target_os = "none"))]
-        if self.topology.speed.base > 100 {
+        if self.topology.speed.base > 10 {
             let mhz = self.topology.speed.base as f32;
             let ghz = mhz / 1000f32;
             if mhz > 1000f32 {

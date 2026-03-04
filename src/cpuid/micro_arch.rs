@@ -441,6 +441,7 @@ impl CpuArch {
             (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", Some("180nm")),
             (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", Some("180nm")),
             (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan", Some("180nm")), // Duron, per sandpile.org
+            (0, 6, 0, 8, 1) => brand_arch(MicroArch::K7, "Thoroughbred", Some("130nm")), // My Geode NX matches this signature
             (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred", Some("130nm")),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", Some("130nm")),
 
