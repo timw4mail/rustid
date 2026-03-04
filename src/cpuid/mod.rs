@@ -6,7 +6,7 @@
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
-#[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
+#[cfg(any(target_arch = "x86_64"))]
 use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
@@ -18,6 +18,7 @@ pub mod micro_arch;
 pub mod topology;
 
 use crate::cpuid::brand::CpuBrand;
+
 pub use cpu::*;
 
 pub const UNK: &str = "Unknown";
@@ -25,17 +26,25 @@ pub type FeatureList = heapless::Vec<&'static str, 64>;
 
 /// CPUID leaf 0x00000000 - Maximum basic leaf
 pub const LEAF_0: u32 = 0;
+
 /// CPUID leaf 0x00000001 - Processor info and feature flags
 pub const LEAF_1: u32 = 1;
+
 /// CPUID leaf 0x00000002 - Cache descriptors
 pub const LEAF_2: u32 = 2;
+
+/// Intel deterministic cache parameters
+pub const LEAF_4: u32 = 4;
+
 /// CPUID leaf 0x00000007 - Extended feature flags
 pub const LEAF_7: u32 = 7;
+
 /// CPUID leaf 0x00000016 - Intel Processor Frequency
 pub const LEAF_16: u32 = 16;
 
 /// Extended CPUID leaf 0x80000000 - Maximum extended leaf
 pub const EXT_LEAF_0: u32 = 0x8000_0000;
+
 /// Extended CPUID leaf 0x80000001 - Extended processor info
 pub const EXT_LEAF_1: u32 = 0x8000_0001;
 
@@ -80,6 +89,7 @@ pub fn init() {
 }
 
 /// Calls CPUID with the given leaf (EAX).
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
 pub fn x86_cpuid(leaf: u32) -> CpuInfo {
     if !has_cpuid() {
@@ -89,7 +99,7 @@ pub fn x86_cpuid(leaf: u32) -> CpuInfo {
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
     if !has_cpuid() {
@@ -102,11 +112,14 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
 ///
 /// Verified on real hardware
 pub fn has_cpuid() -> bool {
-    #[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
+    #[cfg(any(target_arch = "x86_64"))]
     return true;
 
     #[cfg(target_arch = "x86")]
     {
+        #[cfg(target_os = "none")]
+        use core::arch::asm;
+
         let supported: u32;
         unsafe {
             asm!(
@@ -145,6 +158,9 @@ pub fn is_cyrix() -> bool {
 
     #[cfg(target_arch = "x86")]
     {
+        #[cfg(target_os = "none")]
+        use core::arch::asm;
+
         let flags: u8;
         unsafe {
             asm!(
@@ -187,11 +203,14 @@ pub fn is_486() -> bool {
 
 /// Helper to check for AC flag support in EFLAGS register.
 fn is_ac_flag_supported() -> bool {
-    #[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
+    #[cfg(target_arch = "x86_64")]
     return true; // 64-bit CPUs are much newer than 486
 
     #[cfg(target_arch = "x86")]
     {
+        #[cfg(target_os = "none")]
+        use core::arch::asm;
+
         let supported: u32;
         unsafe {
             asm!(
@@ -233,7 +252,7 @@ pub fn max_extended_leaf() -> u32 {
 pub fn vendor_str() -> heapless::String<12> {
     let mut s = heapless::String::new();
     if !has_cpuid() && is_cyrix() {
-        let _ = s.push_str(crate::cpuid::brand::VENDOR_CYRIX);
+        let _ = s.push_str(brand::VENDOR_CYRIX);
         return s;
     }
 
@@ -585,7 +604,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     fn test_x86_cpuid_count_leaf_1_subleaf_0() {
         let cpu_info = x86_cpuid_count(1, 0);
         // Cannot assert specific values, but can ensure it doesn't panic.
