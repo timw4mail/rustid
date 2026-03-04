@@ -3,7 +3,7 @@
 use crate::cpuid;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{FeatureList, UNK, x86_cpuid};
+use crate::cpuid::{EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
 use crate::println;
 use heapless::String;
 
@@ -155,12 +155,12 @@ impl Cpu {
     /// Gets the CPU model string.
     fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
-        if cpuid::max_extended_leaf() < 0x8000_0004 {
+        if cpuid::max_extended_leaf() < EXT_LEAF_4 {
             let _ = model.push_str("Unknown");
             return model;
         }
 
-        for leaf in 0x8000_0002..=0x8000_0004 {
+        for leaf in EXT_LEAF_2..=EXT_LEAF_4 {
             let res = x86_cpuid(leaf);
             for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
                 for &b in &reg.to_le_bytes() {
@@ -323,12 +323,12 @@ impl Cpu {
         if addr != 1 {
             let res = x86_cpuid(addr);
 
-            let reg_order = match brand {
+            let reg_list = match brand {
                 CpuBrand::Rise => [res.ebx, res.edx, res.ecx, res.eax],
                 _ => [res.eax, res.ebx, res.ecx, res.edx],
             };
 
-            for &reg in &reg_order {
+            for &reg in &reg_list {
                 let bytes = reg.to_le_bytes();
                 for &b in &bytes {
                     if b != 0 {

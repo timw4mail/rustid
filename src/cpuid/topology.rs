@@ -1,12 +1,14 @@
 use crate::cpuid;
-use crate::cpuid::LEAF_16;
-use crate::cpuid::x86_cpuid;
+use crate::cpuid::{max_leaf, x86_cpuid};
+use crate::cpuid::{LEAF_4, LEAF_16};
+use crate::cpuid::brand::CpuBrand;
 
 #[derive(Debug, Default)]
 #[cfg(not(target_os = "none"))]
 #[allow(unused)]
 pub struct CacheLevel {
     size: u32,
+    exists: bool,
 }
 
 #[derive(Debug, Default)]
@@ -20,6 +22,7 @@ pub struct Cache {
 }
 
 #[cfg(not(target_os = "none"))]
+#[allow(unused)]
 impl Cache {
     pub fn new(
         l1i: CacheLevel,
@@ -28,6 +31,38 @@ impl Cache {
         l3: Option<CacheLevel>,
     ) -> Cache {
         Cache { l1i, l1d, l2, l3 }
+    }
+
+    pub fn detect() -> Option<Self> {
+        let mut level = LEAF_4;
+        // Check for support for the Intel method
+        match CpuBrand::detect() {
+            CpuBrand::Intel => {
+                return if level < max_leaf() {
+                    Cache::detect_intel()
+                } else {
+                    None
+                };
+            }
+            CpuBrand::AMD => {
+                unimplemented!();
+            }
+            _ => {
+                unimplemented!();
+            }
+        }
+    }
+
+    fn detect_intel() -> Option<Self> {
+        unimplemented!();
+    }
+
+    fn detect_amd() -> Option<Self> {
+        unimplemented!();
+    }
+
+    fn detect_amd_fallback() -> Option<Self> {
+        unimplemented!();
     }
 }
 
@@ -42,7 +77,7 @@ pub struct Speed {
 #[cfg(not(target_os = "none"))]
 impl Speed {
     pub fn detect() -> Self {
-        if cpuid::max_leaf() < LEAF_16 {
+        if max_leaf() < LEAF_16 {
             return Speed::measure();
         }
 
@@ -83,7 +118,7 @@ impl Speed {
 fn measure_tsc_frequency() -> u32 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::_rdtsc as rdtsc;
-    #[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
+    #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::_rdtsc as rdtsc;
 
     const MHZ_DIVISOR: u64 = 1_000_000;
@@ -139,15 +174,16 @@ impl Topology {
         let threads = cpuid::logical_cores();
         let cores = 1;
         let speed = Speed::detect();
+        let cache = Cache::detect();
 
-        Topology::new(cores, threads, speed)
+        Topology::new(cores, threads, speed, cache)
     }
-    pub fn new(cores: u32, threads: u32, speed: Speed) -> Topology {
+    pub fn new(cores: u32, threads: u32, speed: Speed, cache: Option<Cache>) -> Topology {
         Topology {
             cores,
             threads,
             speed,
-            cache: None,
+            cache,
         }
     }
 }

@@ -3,7 +3,7 @@
 //! This crate provides a high-level interface to query CPU vendor, brand string,
 //! supported features (like SSE, AVX), and other hardware details.
 /// Compile-time check to ensure this crate is only used on x86/x86_64.
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec")))]
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(any(target_arch = "x86_64"))]
@@ -48,9 +48,21 @@ pub const EXT_LEAF_0: u32 = 0x8000_0000;
 /// Extended CPUID leaf 0x80000001 - Extended processor info
 pub const EXT_LEAF_1: u32 = 0x8000_0001;
 
+/// Cpu model string start
+pub const EXT_LEAF_2: u32 = 0x8000_0002;
+
+/// Cpu model string end
+pub const EXT_LEAF_4: u32 = 0x8000_0004;
+
+/// AMD L2/L3 cache parameters
+pub const EXT_LEAF_6: u32 = 0x8000_0006;
+
+/// AMD deterministic cache parameters
+pub const EXT_LEAF_1D: u32 = 0x8000_001D;
+
 /// Represents the result of a CPUID instruction call.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CpuInfo {
+pub struct Cpuid {
     /// EAX register value
     pub eax: u32,
     /// EBX register value
@@ -61,7 +73,7 @@ pub struct CpuInfo {
     pub edx: u32,
 }
 
-impl From<CpuidResult> for CpuInfo {
+impl From<CpuidResult> for Cpuid {
     fn from(res: CpuidResult) -> Self {
         Self {
             eax: res.eax,
@@ -72,28 +84,26 @@ impl From<CpuidResult> for CpuInfo {
     }
 }
 
-/// Check for CPUID
-pub fn init() {
-    #[cfg(target_arch = "x86")]
-    {
-        use crate::println;
+/// Check for Cyrix CPUID support
+#[cfg(target_arch = "x86")]
+pub fn cyrix_cpuid_check() {
+    use crate::println;
 
-        if !has_cpuid() && is_cyrix() {
-            println!("This CPU might have CPUID support, but it is disabled.");
-            println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
-            println!("For DOS, you can download a utility from ");
-            println!("  https://www.deinmeister.de/cypower.com");
-            println!("If run before rustid, CPUID should be enabled");
-        }
+    if !has_cpuid() && is_cyrix() {
+        println!("This CPU might have CPUID support, but it is disabled.");
+        println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
+        println!("For DOS, you can download a utility from ");
+        println!("  https://www.deinmeister.de/cypower.com");
+        println!("If run before rustid, CPUID should be enabled");
     }
 }
 
 /// Calls CPUID with the given leaf (EAX).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
-pub fn x86_cpuid(leaf: u32) -> CpuInfo {
+pub fn x86_cpuid(leaf: u32) -> Cpuid {
     if !has_cpuid() {
-        return CpuInfo::default();
+        return Cpuid::default();
     }
     unsafe { __cpuid(leaf).into() }
 }
@@ -101,9 +111,9 @@ pub fn x86_cpuid(leaf: u32) -> CpuInfo {
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
-pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> CpuInfo {
+pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
-        return CpuInfo::default();
+        return Cpuid::default();
     }
     unsafe { __cpuid_count(leaf, sub_leaf).into() }
 }
@@ -153,7 +163,7 @@ pub fn has_cpuid() -> bool {
 ///
 /// Verified on real hardware
 pub fn is_cyrix() -> bool {
-    #[cfg(any(target_arch = "x86_64", target_arch = "arm64ec"))]
+    #[cfg(target_arch = "x86_64")]
     return false;
 
     #[cfg(target_arch = "x86")]
@@ -574,7 +584,7 @@ mod tests {
             ecx: 30,
             edx: 40,
         };
-        let cpu_info: CpuInfo = cpuid_result.into();
+        let cpu_info: Cpuid = cpuid_result.into();
         assert_eq!(cpu_info.eax, 10);
         assert_eq!(cpu_info.ebx, 20);
         assert_eq!(cpu_info.ecx, 30);
@@ -582,9 +592,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_arch = "x86")]
     fn test_init() {
         // Ensure init does not panic. Output is console dependent.
-        init();
+        cyrix_cpuid_check();
     }
 
     #[test]

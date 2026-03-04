@@ -35,19 +35,19 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(not(target_os = "none"))]
 extern crate std;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod cpuid;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
-use crate::cpuid::{Cpu, init};
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use crate::cpuid::Cpu;
 
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 pub mod ppc;
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 use crate::ppc::cpu::Cpu;
 
-#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+#[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 pub mod arm;
-#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+#[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 use crate::arm::cpu::Cpu;
 
 #[cfg(target_os = "none")]
@@ -66,8 +66,8 @@ fn version() {
 }
 
 pub fn cli_main() {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "arm64ec"))]
-    init();
+    #[cfg(any(target_arch = "x86"))]
+    crate::cpuid::cyrix_cpuid_check();
 
     let cpu = Cpu::new();
 
