@@ -186,6 +186,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::Isaiah => "Isaiah",
 
             // Centaur (Zhaoxin)
+            MicroArch::ZhangJiang => "ZhangJiang",
             MicroArch::Wudaokou => "WuDaoKou",
             MicroArch::Lujiazui => "LuJiaZui",
 
