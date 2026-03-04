@@ -98,7 +98,7 @@ run arg="":
 [windows]
 run-x86-emu arg="":
 	@if ! rustup target list --installed | grep -q arm64ec-pc-windows-msvc; then rustup target add arm64ec-pc-windows-msvc; fi
-	cargo --target arm64ec-pc-windows-msvc run {{arg}}
+	cargo run --target arm64ec-pc-windows-msvc {{arg}}
 
 # Run the dos build in DOSBox-X
 [windows]
