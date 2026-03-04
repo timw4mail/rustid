@@ -282,6 +282,12 @@ impl Cpu {
             }
             MicroArch::M2 => "6x86MX (MII)",
 
+            // Rise
+            MicroArch::MP6 => match self.arch.code_name {
+                "Lynx" => "Rise mP6/iDragon",
+                _ => "Rise mP6",
+            }
+
             // UMCs
             MicroArch::U5S => "UMC Green CPU 486 U5-SX",
             MicroArch::U5D => "UMC Green CPU 486 U5-DX",
