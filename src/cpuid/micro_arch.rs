@@ -543,7 +543,7 @@ impl CpuArch {
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
 
             // From instlatx64
-            (0, 6, 0, 15, 1|2) => brand_arch(MicroArch::Isaiah, "CN", None),
+            (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
             (0, 6, 0, 15, 3) => brand_arch(MicroArch::Isaiah, "CNA", Some("65nm")),
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNC", None),

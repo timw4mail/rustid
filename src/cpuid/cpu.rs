@@ -304,8 +304,9 @@ impl Cpu {
 
     fn easter_egg() -> Option<String<64>> {
         let mut out: String<64> = String::new();
+        let brand = CpuBrand::detect();
 
-        let addr = match CpuBrand::detect() {
+        let addr = match brand {
             CpuBrand::AMD => 0x8FFF_FFFF,
             CpuBrand::Rise => 0x0000_5A4E,
             _ => 1,
@@ -314,7 +315,12 @@ impl Cpu {
         if addr != 1 {
             let res = x86_cpuid(addr);
 
-            for &reg in &[res.eax, res.ebx, res.ecx, res.edx] {
+            let reg_order = match brand {
+                CpuBrand::Rise => [res.ebx, res.edx, res.ecx, res.eax],
+                _ => [res.eax, res.ebx, res.ecx, res.edx],
+            };
+
+            for &reg in &reg_order {
                 let bytes = reg.to_le_bytes();
                 for &b in &bytes {
                     if b != 0 {
