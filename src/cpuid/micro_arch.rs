@@ -470,6 +470,7 @@ impl CpuArch {
             // Family 15h (Bulldozer/Piledriver/Steamroller/Excavator)
             (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", Some("32nm")),
             (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", Some("32nm")),
+            (6, 15, 1, 0, 1) => brand_arch(MicroArch::Piledriver, "Trinity", Some("32nm")),
             (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", Some("28nm")),
             (6, 15, 6 | 7, 0 | 5, _) => {
                 brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm"))
@@ -541,7 +542,7 @@ impl CpuArch {
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
 
             // From instlatx64
-            (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
+            (0, 6, 0, 15, 1..8) => brand_arch(MicroArch::Isaiah, "CN", None),
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNC", None),
             (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNQ", None),
