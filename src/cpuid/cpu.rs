@@ -274,25 +274,28 @@ impl Cpu {
             MicroArch::PentiumIII => "Intel Pentium III",
 
             // Cyrix
-            MicroArch::Cy5x86 => "5x86",
+            MicroArch::Cy5x86 => "Cyrix 5x86",
             MicroArch::M1 => {
                 if cpuid::has_cx8() {
-                    "6x86L"
+                    "Cyrix 6x86L"
                 } else {
-                    "6x86"
+                    "Cyrix 6x86"
                 }
             }
-            MicroArch::M2 => "6x86MX (MII)",
+            MicroArch::M2 => "Cyrix 6x86MX (MII)",
+
+            // IDT
+            MicroArch::Winchip => "IDT Winchip",
 
             // Rise
             MicroArch::MP6 => match self.arch.code_name {
-                "Lynx" => "Rise mP6/iDragon",
+                "Lynx" => "Rise iDragon",
                 _ => "Rise mP6",
             },
 
             // UMCs
-            MicroArch::U5S => "UMC Green CPU 486 U5-SX",
-            MicroArch::U5D => "UMC Green CPU 486 U5-DX",
+            MicroArch::U5S => "UMC Green CPU U5S (486 SX)",
+            MicroArch::U5D => "UMC Green CPU U5D (486 DX)",
 
             _ => {
                 if self.signature == CpuSignature::default() || !cpuid::has_cpuid() {
@@ -324,6 +327,7 @@ impl Cpu {
             let res = x86_cpuid(addr);
 
             let reg_list = match brand {
+                // Surely there had to be a reason for this silly ordering?
                 CpuBrand::Rise => [res.ebx, res.edx, res.ecx, res.eax],
                 _ => [res.eax, res.ebx, res.ecx, res.edx],
             };
