@@ -8,7 +8,7 @@ use crate::println;
 use heapless::String;
 
 use crate::cpuid::EXT_LEAF_1;
-use crate::cpuid::topology::Topology;
+use crate::cpuid::topology::{Level1Cache, Topology};
 use core::str::FromStr;
 
 #[allow(non_camel_case_types)]
@@ -403,7 +403,36 @@ impl Cpu {
             println!();
         }
 
-        // TODO: Cache Size(s)
+        if let Some(cache) = self.topology.cache {
+            println!("{}", label("Cache"));
+
+            match cache.l1 {
+                Level1Cache::Unified(cache) => {
+                    let size = cache.size;
+                    println!("{:>16}L1: Unified {} KB", "", size / 1024);
+                }
+                Level1Cache::Split { data, instruction } => {
+                    println!("{:>16}L1d: {} KB", "", data.size / 1024);
+                    println!("{:>16}L1i: {} KB", "", instruction.size / 1024);
+                }
+            }
+
+            if let Some(cache) = cache.l2 {
+                println!("{:>16}L2: {} KB", "", cache.size / 1024);
+            }
+
+            if let Some(cache) = cache.l3 {
+                let unit = if cache.size > 1024 { "MB" } else { "KB" };
+                let mut num = cache.size / 1024;
+                if num > 1024 {
+                    num /= 1024
+                }
+
+                println!("{:>16}L3: {} {}", "", num, unit);
+            }
+
+            println!();
+        }
 
         // TODO: Cores/Threads
 

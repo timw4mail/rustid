@@ -66,7 +66,7 @@ fn version() {
 }
 
 pub fn cli_main() {
-    #[cfg(any(target_arch = "x86"))]
+    #[cfg(target_arch = "x86")]
     crate::cpuid::cyrix_cpuid_check();
 
     let cpu = Cpu::new();
@@ -79,25 +79,14 @@ pub fn cli_main() {
 
     #[cfg(not(target_os = "none"))]
     {
-        fn cli_help() {
-            println!("Usage: rustid [debug] [help]");
-        }
-
-        use std::env;
-
-        let argument = env::args().nth(1);
-
-        match argument {
+        match std::env::args().nth(1) {
             Some(arg) => match arg.as_str() {
-                "version" => version(),
                 "debug" => {
                     version();
                     cpu.debug();
                 }
-                "help" => cli_help(),
-                "everything" => {
+                "e" | "everything" => {
                     version();
-                    cli_help();
                     cpu.display_table();
                     println!("---");
                     cpu.debug();

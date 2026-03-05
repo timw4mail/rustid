@@ -6,7 +6,7 @@
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
-#[cfg(any(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
@@ -53,6 +53,9 @@ pub const EXT_LEAF_2: u32 = 0x8000_0002;
 
 /// Cpu model string end
 pub const EXT_LEAF_4: u32 = 0x8000_0004;
+
+/// AMD/Transmeta L1 cache and TLB
+pub const EXT_LEAF_5: u32 = 0x8000_0005;
 
 /// AMD L2/L3 cache parameters
 pub const EXT_LEAF_6: u32 = 0x8000_0006;
@@ -122,7 +125,7 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 ///
 /// Verified on real hardware
 pub fn has_cpuid() -> bool {
-    #[cfg(any(target_arch = "x86_64"))]
+    #[cfg(target_arch = "x86_64")]
     return true;
 
     #[cfg(target_arch = "x86")]

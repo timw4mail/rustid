@@ -1,35 +1,47 @@
 use crate::cpuid;
 use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::{EXT_LEAF_1D, max_leaf, x86_cpuid, x86_cpuid_count};
+use crate::cpuid::{EXT_LEAF_5, EXT_LEAF_6, max_leaf, x86_cpuid, x86_cpuid_count};
 use crate::cpuid::{LEAF_4, LEAF_16};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[cfg(not(target_os = "none"))]
-#[allow(unused)]
+const DATA_CACHE: u32 = 1;
+const INSTRUCTION_CACHE: u32 = 2;
+const UNIFIED_CACHE: u32 = 3;
+
+const L1: u32 = 1;
+const L2: u32 = 2;
+const L3: u32 = 3;
+
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum CacheType {
     Unified,
     Data,
     Instruction,
+    #[default]
     Invalid,
 }
 
-#[cfg(not(target_os = "none"))]
-impl Default for CacheType {
-    fn default() -> Self {
-        CacheType::Invalid
-    }
-}
-
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-#[cfg(not(target_os = "none"))]
-#[allow(unused)]
 pub struct CacheLevel {
-    size: u32,
+    assoc: u32,
+    pub(crate) size: u32,
     kind: CacheType,
 }
 
+impl CacheLevel {
+    pub fn new(size: u32, kind: CacheType) -> Self {
+        CacheLevel {
+            size,
+            kind,
+            assoc: 0,
+        }
+    }
+
+    pub fn new_unified(size: u32) -> Self {
+        Self::new(size, CacheType::Unified)
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[cfg(not(target_os = "none"))]
 pub enum Level1Cache {
     Unified(CacheLevel),
     Split {
@@ -38,13 +50,9 @@ pub enum Level1Cache {
     },
 }
 
-#[cfg(not(target_os = "none"))]
 impl Level1Cache {
     pub fn new_unified(size: u32) -> Self {
-        Level1Cache::Unified(CacheLevel {
-            size,
-            kind: CacheType::Unified,
-        })
+        Level1Cache::Unified(CacheLevel::new_unified(size))
     }
 
     pub fn is_unified(&self) -> bool {
@@ -54,28 +62,28 @@ impl Level1Cache {
         }
     }
 
+    pub fn is_split(&self) -> bool {
+        !self.is_unified()
+    }
+
     pub fn set_data(&mut self, size: u32) {
         if let Level1Cache::Split { data, .. } = self {
             data.size = size;
+            data.kind = CacheType::Data;
         }
     }
 
     pub fn set_instruction(&mut self, size: u32) {
         if let Level1Cache::Split { instruction, .. } = self {
             instruction.size = size;
+            instruction.kind = CacheType::Instruction;
         }
     }
 
     pub fn default_split() -> Self {
         Level1Cache::Split {
-            data: CacheLevel {
-                size: 0,
-                kind: CacheType::Data,
-            },
-            instruction: CacheLevel {
-                size: 0,
-                kind: CacheType::Instruction,
-            },
+            data: CacheLevel::default(),
+            instruction: CacheLevel::default(),
         }
     }
     pub fn size(&self) -> u32 {
@@ -86,7 +94,6 @@ impl Level1Cache {
     }
 }
 
-#[cfg(not(target_os = "none"))]
 impl Default for Level1Cache {
     fn default() -> Self {
         Level1Cache::Unified(CacheLevel::default())
@@ -94,16 +101,12 @@ impl Default for Level1Cache {
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-#[cfg(not(target_os = "none"))]
-#[allow(unused)]
 pub struct Cache {
-    l1: Level1Cache,
-    l2: Option<CacheLevel>,
-    l3: Option<CacheLevel>,
+    pub l1: Level1Cache,
+    pub l2: Option<CacheLevel>,
+    pub l3: Option<CacheLevel>,
 }
 
-#[cfg(not(target_os = "none"))]
-#[allow(unused)]
 impl Cache {
     pub fn new(l1: Level1Cache, l2: Option<CacheLevel>, l3: Option<CacheLevel>) -> Cache {
         Cache { l1, l2, l3 }
@@ -114,22 +117,46 @@ impl Cache {
         match CpuBrand::detect() {
             CpuBrand::Intel => Self::detect_intel(),
             CpuBrand::AMD => Self::detect_amd(),
-            _ => {
-                unimplemented!();
-            }
+            _ => Self::detect_intel(),
         }
     }
 
     fn detect_amd() -> Option<Self> {
-        if EXT_LEAF_1D < max_leaf() {
-            Cache::detect_general(EXT_LEAF_1D)
-        } else {
-            Cache::detect_amd_fallback()
-        }
+        // TODO: figure out physical/logical cores and use that to do the "modern" AMD cache detection
+
+        Cache::detect_amd_fallback()
+
+        // if max_extended_leaf() <= EXT_LEAF_1D {
+        //     Cache::detect_general(EXT_LEAF_1D)
+        // } else {
+        //     Cache::detect_amd_fallback()
+        // }
     }
 
     fn detect_amd_fallback() -> Option<Self> {
-        unimplemented!();
+        let res5 = x86_cpuid(EXT_LEAF_5);
+        let res6 = x86_cpuid(EXT_LEAF_6);
+
+        let mut c = Cache {
+            l1: Level1Cache::default_split(),
+            ..Cache::default()
+        };
+
+        c.l1.set_data((res5.ecx >> 24) * 1024);
+        c.l1.set_instruction((res5.edx >> 24) * 1024);
+
+        let l2size = (res6.ecx >> 16) * 1024;
+        let l3size = (res6.edx >> 18) * 512 * 1024;
+
+        if l2size != 0 {
+            c.l2 = Some(CacheLevel::new_unified(l2size));
+        }
+
+        if l3size != 0 {
+            c.l3 = Some(CacheLevel::new_unified(l3size));
+        }
+
+        Some(c)
     }
 
     fn detect_intel() -> Option<Self> {
@@ -144,7 +171,7 @@ impl Cache {
         let mut c = Cache::default();
 
         for level in 0u32..5 {
-            let res = x86_cpuid_count(LEAF_4, level);
+            let res = x86_cpuid_count(leaf, level);
             let cache_type = res.eax & 0xF;
 
             // If cache_type is 0, the cache type is invalid
@@ -162,8 +189,7 @@ impl Cache {
                 cache_sets * cache_partitions * cache_ways_of_associativity * cache_line_size;
 
             match cache_type {
-                // Data cache
-                1 => {
+                DATA_CACHE => {
                     if cache_level == 1 {
                         if c.l1.is_unified() {
                             c.l1 = Level1Cache::default_split();
@@ -172,8 +198,7 @@ impl Cache {
                         c.l1.set_data(cache_size);
                     }
                 }
-                // Instruction cache
-                2 => {
+                INSTRUCTION_CACHE => {
                     if cache_level == 1 {
                         if c.l1.is_unified() {
                             c.l1 = Level1Cache::default_split();
@@ -182,22 +207,15 @@ impl Cache {
                         c.l1.set_instruction(cache_size);
                     }
                 }
-                // Unified cache
-                3 => match cache_level {
-                    1 => {
+                UNIFIED_CACHE => match cache_level {
+                    L1 => {
                         c.l1 = Level1Cache::new_unified(cache_size);
                     }
-                    2 => {
-                        c.l2 = Some(CacheLevel {
-                            size: cache_size,
-                            kind: CacheType::Unified,
-                        });
+                    L2 => {
+                        c.l2 = Some(CacheLevel::new(cache_size, CacheType::Unified));
                     }
-                    3 => {
-                        c.l3 = Some(CacheLevel {
-                            size: cache_size,
-                            kind: CacheType::Unified,
-                        });
+                    L3 => {
+                        c.l3 = Some(CacheLevel::new(cache_size, CacheType::Unified));
                     }
                     _ => {}
                 },
@@ -291,43 +309,38 @@ fn measure_tsc_frequency() -> u32 {
     (freq_mhz / 1000) as u32
 }
 
-#[cfg(target_os = "none")]
-#[derive(Debug, Default)]
-pub struct Topology;
-
-#[cfg(target_os = "none")]
-impl Topology {
-    pub fn detect() -> Self {
-        Topology::default()
-    }
-}
-
-#[cfg(not(target_os = "none"))]
 #[derive(Debug, Default)]
 pub struct Topology {
     pub cores: u32,
     pub threads: u32,
+
+    #[cfg(not(target_os = "none"))]
     pub speed: Speed,
+
     pub cache: Option<Cache>,
 }
 
-#[cfg(not(target_os = "none"))]
 impl Topology {
+    #[cfg(not(target_os = "none"))]
     pub fn detect() -> Self {
         let threads = cpuid::logical_cores();
         let cores = 1;
         let speed = Speed::detect();
-        let cache = None;
-        // let cache = Cache::detect();
+        let cache = Cache::detect();
 
-        Topology::new(cores, threads, speed, cache)
-    }
-    pub fn new(cores: u32, threads: u32, speed: Speed, cache: Option<Cache>) -> Topology {
         Topology {
             cores,
             threads,
             speed,
             cache,
         }
+    }
+
+    #[cfg(target_os = "none")]
+    pub fn detect() -> Self {
+        let mut t = Topology::default();
+        t.cache = Cache::detect();
+
+        return t;
     }
 }
