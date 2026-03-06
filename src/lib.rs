@@ -67,7 +67,17 @@ fn version() {
 
 pub fn cli_main() {
     #[cfg(target_arch = "x86")]
-    cpuid::cyrix_cpuid_check();
+    {
+        use crate::println;
+
+        if cpuid::cyrix::Cyrix::can_enable_cpuid() {
+            println!("This CPU has CPUID support, but it is disabled.");
+            println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
+            println!("For DOS, you can download a utility from ");
+            println!("  https://www.deinmeister.de/e_cy6x86cr.htm");
+            println!("If run before rustid, CPUID should be enabled");
+        }
+    }
 
     let cpu = Cpu::new();
 

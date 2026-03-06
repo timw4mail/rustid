@@ -14,6 +14,7 @@ use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
 pub mod brand;
 pub mod cpu;
+#[cfg(target_arch = "x86")]
 pub mod cyrix;
 pub mod micro_arch;
 pub mod topology;
@@ -88,22 +89,7 @@ impl From<CpuidResult> for Cpuid {
     }
 }
 
-/// Check for Cyrix CPUID support
-#[cfg(target_arch = "x86")]
-pub fn cyrix_cpuid_check() {
-    use crate::println;
-
-    if !has_cpuid() && is_cyrix() {
-        println!("This CPU might have CPUID support, but it is disabled.");
-        println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
-        println!("For DOS, you can download a utility from ");
-        println!("  https://www.deinmeister.de/cypower.com");
-        println!("If run before rustid, CPUID should be enabled");
-    }
-}
-
 /// Calls CPUID with the given leaf (EAX).
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
 pub fn x86_cpuid(leaf: u32) -> Cpuid {
     if !has_cpuid() {
@@ -113,7 +99,6 @@ pub fn x86_cpuid(leaf: u32) -> Cpuid {
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
@@ -187,12 +172,9 @@ pub fn is_cyrix() -> bool {
         // Mask 0xD5 (11010101b) selects these flags.
         (flags & 0xD5) == 0
     }
-
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    false
 }
 
-/// Returns true if the CPU is a 386-class processor.
+/// Returns true if the CPU is at least a 386-class processor.
 ///
 /// This is determined by checking if the AC (Alignment Check) flag in EFLAGS
 /// can be toggled. 386 CPUs do not support this, while 486 and newer do.
@@ -202,18 +184,24 @@ pub fn is_386() -> bool {
     !is_ac_flag_supported()
 }
 
-/// Returns true if the CPU is a 486-class processor, without CPUID support
+/// Returns true if the CPU is at least a 486-class processor, without CPUID support
 ///
 /// Verified on real hardware
 pub fn is_486() -> bool {
     is_ac_flag_supported() && !has_cpuid()
 }
 
+/// Returns true if the CPU is at least a 486-class processor, with CPUID support
+///
+/// Verified on real hardware
 pub fn is_cpuid_486() -> bool {
     is_ac_flag_supported() && has_cpuid()
 }
 
-/// Helper to check for AC flag support in EFLAGS register.
+/// Helper to check for AC flag support in EFLAGS register, which is a shibboleth that can
+/// determine if the CPU is a 386 or 486.
+///
+/// Verified on real hardware
 fn is_ac_flag_supported() -> bool {
     #[cfg(target_arch = "x86_64")]
     return true; // 64-bit CPUs are much newer than 486
@@ -259,11 +247,15 @@ pub fn max_extended_leaf() -> u32 {
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
 /// Returns a 12-character vendor string from CPUID leaf 0.
 pub fn vendor_str() -> heapless::String<12> {
-    let mut s = heapless::String::new();
+    #[cfg(target_arch = "x86")]
+    // This is important for later Cyrix checks.
     if !has_cpuid() && is_cyrix() {
-        let _ = s.push_str(brand::VENDOR_CYRIX);
-        return s;
+        use core::str::FromStr;
+
+        return heapless::String::from_str(brand::VENDOR_CYRIX).unwrap();
     }
+
+    let mut s = heapless::String::new();
 
     let res = x86_cpuid(0);
     let mut bytes = [0u8; 12];
@@ -592,13 +584,6 @@ mod tests {
         assert_eq!(cpu_info.ebx, 20);
         assert_eq!(cpu_info.ecx, 30);
         assert_eq!(cpu_info.edx, 40);
-    }
-
-    #[test]
-    #[cfg(target_arch = "x86")]
-    fn test_init() {
-        // Ensure init does not panic. Output is console dependent.
-        cyrix_cpuid_check();
     }
 
     #[test]

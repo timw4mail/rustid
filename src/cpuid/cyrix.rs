@@ -71,6 +71,25 @@ impl Cyrix {
         (dir0, dir1)
     }
 
+    /// Check if the Cyrix model likely has CPUID support
+    /// that can be enabled, if cpuid support is currently disabled
+    pub fn can_enable_cpuid() -> bool {
+        // If this isn't a Cyrix CPU, we'll just assume CPUID can't be enabled
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
+            return false;
+        }
+
+        // If CPUID is already enabled, we don't need to enable it again
+        if super::has_cpuid() {
+            return false;
+        }
+
+        let (dir0, _) = Self::get_device_ids();
+
+        // 5x86/6x86/6x86L/6x86MX/MediaGX can toggle cpuid, earlier models can not
+        dir0 >= 0x28
+    }
+
     /// Get Cyrix processor model via registers
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
@@ -110,9 +129,9 @@ impl Cyrix {
             // 6x86 (M1)
             0x30 | 0x31 | 0x34 | 0x35 => {
                 if has_cx8() {
-                    "6x86L (x1 mul)"
+                    "6x86L"
                 } else {
-                    "6x86 (x1 mul)"
+                    "6x86"
                 }
             }
 
@@ -131,6 +150,8 @@ impl Cyrix {
     }
 
     /// Get bus multiplier for the current cpu
+    ///
+    /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     fn multiplier() -> String<4> {
         if super::vendor_str().as_str() != VENDOR_CYRIX {
             return String::from_str("0").unwrap();

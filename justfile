@@ -27,6 +27,9 @@ fix:
 fmt:
 	cargo fmt
 
+# Run all the code quality stuff
+quality: fmt check lint
+
 # Build the app
 build:
 	cargo build

@@ -2,7 +2,13 @@
 
 A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets.
 
-**AI Disclaimer**: This application is developed using some AI, mostly to help with the build environment for DOS, and the original code commit.
+### AI Disclaimer:
+
+This application is developed using *some* AI, mostly related to:
+
+* Project scaffolding
+* DOS Build
+* Assembly code
 
 ## Features
 

@@ -176,7 +176,6 @@ pub struct Cpu {
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
     /// AMD extended cpu signature
-    #[cfg(target_arch = "x86_64")]
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: FeatureList,
@@ -201,7 +200,6 @@ impl Cpu {
             brand_id: super::get_brand_id(),
             threads: super::logical_cores(),
             signature: CpuSignature::detect(),
-            #[cfg(target_arch = "x86_64")]
             ext_signature: if super::vendor_str() == VENDOR_AMD {
                 Some(ExtendedSignature::detect())
             } else {
