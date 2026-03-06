@@ -438,6 +438,8 @@ impl Cpu {
 
         println!();
 
+        simple_line("Architecture", FeatureClass::detect().to_str());
+
         // Vendor_string (brand_name)
         if self.arch.vendor_string.is_empty() && self.arch.brand_name == UNK {
             simple_line("Vendor", "Unknown");
@@ -456,8 +458,6 @@ impl Cpu {
         }
 
         simple_line("Model", self.display_model_string().as_str());
-
-        simple_line("Architecture", FeatureClass::detect().to_str());
 
         // TODO: Cores/Threads
 
@@ -480,16 +480,6 @@ impl Cpu {
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
             simple_line("Easter Egg", easter_egg.as_str());
-        }
-
-        #[cfg(target_arch = "x86")]
-        if self.arch.vendor_string == VENDOR_CYRIX {
-            let cyrix = super::cyrix::Cyrix::detect();
-
-            println!("{}{}{}", label("Cyrix"), "Model number: ", cyrix.dir0);
-            println!("{:>16} Multiplier: {}x", "", cyrix.multiplier);
-            println!("{:>16} Revision: {:X}h", "", cyrix.revision);
-            println!("{:>16} Stepping: {:X}h", "", cyrix.stepping);
         }
 
         // TODO: Clock Speed (Base/Boost)
@@ -576,6 +566,17 @@ impl Cpu {
             });
 
             simple_line("Features", features.as_str());
+        }
+
+        #[cfg(target_arch = "x86")]
+        if self.arch.vendor_string == VENDOR_CYRIX {
+            let cyrix = super::cyrix::Cyrix::detect();
+
+            println!("{} Model number: {:X}h", label("Cyrix"), cyrix.dir0);
+            println!("{:>16} Multiplier: {}x", "", cyrix.multiplier);
+            println!("{:>16} Revision: {:X}h", "", cyrix.revision);
+            println!("{:>16} Stepping: {:X}h", "", cyrix.stepping);
+            println!();
         }
 
         println!();
