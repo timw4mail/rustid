@@ -6,7 +6,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::{Level1Cache, Topology};
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
 
-use crate::println;
+use crate::{TCpu, println};
 
 use core::str::FromStr;
 use heapless::String;
@@ -411,8 +411,10 @@ impl Cpu {
             None
         }
     }
+}
 
-    pub fn debug(&self) {
+impl TCpu for Cpu {
+    fn debug(&self) {
         #[cfg(not(target_os = "none"))]
         println!("{:#?}", self);
 
@@ -420,7 +422,7 @@ impl Cpu {
         println!("{:?}", self);
     }
 
-    pub fn display_table(&self) {
+    fn display_table(&self) {
         use heapless::format;
 
         let ma: String<64> = self.arch.micro_arch.into();

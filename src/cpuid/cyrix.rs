@@ -1,4 +1,4 @@
-use super::{UNK, has_cx8};
+use super::{FeatureClass, UNK, has_cx8};
 
 use crate::cpuid::brand::VENDOR_CYRIX;
 use core::str::FromStr;
@@ -17,7 +17,7 @@ pub struct Cyrix {
 
 impl Cyrix {
     pub fn detect() -> Cyrix {
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return Cyrix::default();
         }
 
@@ -40,7 +40,7 @@ impl Cyrix {
     }
 
     fn get_device_ids() -> (u8, u8) {
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return (0, 0);
         }
 
@@ -71,11 +71,34 @@ impl Cyrix {
         (dir0, dir1)
     }
 
+    fn is_cyrix() -> bool {
+        super::vendor_str().as_str() == VENDOR_CYRIX
+    }
+
+    pub fn get_feature_class() -> FeatureClass {
+        let (dir0, _) = Self::get_device_ids();
+
+        match dir0 {
+            // 5x86 and earlier
+            0x00..=0x2F => FeatureClass::i486,
+
+            // 6x86/6x86L
+            0x30..=0x3F => FeatureClass::i586,
+
+            // MediaGX
+            0x40..=0x4F => FeatureClass::i586,
+
+            // 6x86MX/MII
+            0x50..=0x5F => FeatureClass::i686,
+            _ => FeatureClass::i386,
+        }
+    }
+
     /// Check if the Cyrix model likely has CPUID support
     /// that can be enabled, if cpuid support is currently disabled
     pub fn can_enable_cpuid() -> bool {
         // If this isn't a Cyrix CPU, we'll just assume CPUID can't be enabled
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return false;
         }
 
@@ -94,7 +117,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn model_string() -> String<64> {
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return String::from_str(UNK).unwrap();
         }
 
@@ -135,11 +158,11 @@ impl Cyrix {
                 }
             }
 
-            // 6x86MX (M2)
-            0x50..=0x5F => "6x86MX/MII",
-
             // MediaGX (GXm)
             0x40..=0x46 => "MediaGX GXm",
+
+            // 6x86MX (M2)
+            0x50..=0x5F => "6x86MX/MII",
 
             _ => UNK,
         };
@@ -153,7 +176,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     fn multiplier() -> String<4> {
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return String::from_str("0").unwrap();
         }
 
@@ -181,7 +204,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn codename() -> &'static str {
-        if super::vendor_str().as_str() != VENDOR_CYRIX {
+        if !Self::is_cyrix() {
             return UNK;
         }
 

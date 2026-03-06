@@ -59,6 +59,14 @@ pub use dos::*;
 #[cfg(not(target_os = "none"))]
 pub use std::println;
 
+pub trait TCpu {
+    /// Display the Rust debug output of the CPU object
+    fn debug(&self);
+
+    /// Display the CPU information in a table format
+    fn display_table(&self);
+}
+
 fn version() {
     println!("---------------------");
     println!("Rustid version {}", VERSION);
