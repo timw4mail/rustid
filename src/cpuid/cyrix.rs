@@ -1,5 +1,6 @@
 use super::{UNK, has_cx8};
 
+use crate::cpuid::brand::VENDOR_CYRIX;
 use core::str::FromStr;
 use heapless::{String, format};
 
@@ -16,7 +17,7 @@ pub struct Cyrix {
 
 impl Cyrix {
     pub fn detect() -> Cyrix {
-        if !super::is_cyrix() {
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
             return Cyrix::default();
         }
 
@@ -39,6 +40,10 @@ impl Cyrix {
     }
 
     fn get_device_ids() -> (u8, u8) {
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
+            return (0, 0);
+        }
+
         const CYRIX_CCR_PORT: u16 = 0x22;
         const CYRIX_DATA_PORT: u16 = 0x23;
 
@@ -70,6 +75,10 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn model_string() -> String<64> {
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
+            return String::from_str(UNK).unwrap();
+        }
+
         let (dir0, _) = Self::get_device_ids();
 
         let dev_id = dir0;
@@ -123,6 +132,10 @@ impl Cyrix {
 
     /// Get bus multiplier for the current cpu
     fn multiplier() -> String<4> {
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
+            return String::from_str("0").unwrap();
+        }
+
         let (dir0, _) = Self::get_device_ids();
 
         let s = match dir0 {
@@ -137,7 +150,7 @@ impl Cyrix {
             0x41 | 0x43 => "6",
             0x44 | 0x46 => "7",
             0x45 => "8",
-            _ => "0"
+            _ => "0",
         };
 
         String::from_str(s).unwrap()
@@ -147,6 +160,10 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn codename() -> &'static str {
+        if super::vendor_str().as_str() != VENDOR_CYRIX {
+            return UNK;
+        }
+
         let (dir0, _) = Cyrix::get_device_ids();
 
         match dir0 {

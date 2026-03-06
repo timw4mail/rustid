@@ -1,6 +1,7 @@
 //! CPU detection and information for x86/x86_64 processors.
 
-use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
+#[allow(unused_imports)]
+use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_CYRIX, VENDOR_INTEL};
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::{Level1Cache, Topology};
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
@@ -40,7 +41,8 @@ impl FeatureClass {
                 return FeatureClass::x86_64_v3;
             }
 
-            if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3() {
+            if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3()
+            {
                 return FeatureClass::x86_64_v2;
             }
 
@@ -290,6 +292,11 @@ impl Cpu {
             return self.arch.model.clone();
         }
 
+        #[cfg(target_arch = "x86")]
+        if self.arch.vendor_string == VENDOR_CYRIX {
+            return super::cyrix::Cyrix::model_string();
+        }
+
         if self.arch.vendor_string == VENDOR_INTEL
             && let Some(model_name) = self.intel_brand_index()
         {
@@ -476,13 +483,13 @@ impl Cpu {
         }
 
         #[cfg(target_arch = "x86")]
-        {
-            if self.arch.vendor_string == super::brand::VENDOR_CYRIX {
-                let cyrix = super::cyrix::Cyrix::detect();
-                println!("{:?}", cyrix);
+        if self.arch.vendor_string == VENDOR_CYRIX {
+            let cyrix = super::cyrix::Cyrix::detect();
 
-                println!("{}{}", label("Bus Multiplier"), cyrix.multiplier);
-            }
+            println!("{}{}{}", label("Cyrix"), "Model number: ", cyrix.dir0);
+            println!("{:>16} Multiplier: {}x", "", cyrix.multiplier);
+            println!("{:>16} Revision: {:X}h", "", cyrix.revision);
+            println!("{:>16} Stepping: {:X}h", "", cyrix.stepping);
         }
 
         // TODO: Clock Speed (Base/Boost)

@@ -3,7 +3,10 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL, VENDOR_ZHAOXIN};
+#[allow(unused_imports)]
+use crate::cpuid::brand::{
+    CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_CYRIX, VENDOR_INTEL, VENDOR_ZHAOXIN,
+};
 use crate::cpuid::{CpuSignature, UNK};
 use core::str::FromStr;
 use heapless::String;
@@ -314,9 +317,6 @@ impl CpuArch {
     }
 
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
-        #[cfg(target_arch = "x86")]
-        use super::cyrix::Cyrix;
-
         let arch = |ma: MicroArch,
                     code_name: &'static str,
                     brand_name: &str,
@@ -325,22 +325,22 @@ impl CpuArch {
             CpuArch::new(model, ma, code_name, brand_name, vendor_string, tech)
         };
 
-        // Brand for Centaur CPUs is by signature, not vendor string
-        if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
-            return Self::find_centaur(model, s, vendor_string);
-        }
-
         let brand = CpuBrand::from(vendor_string);
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
             arch(ma, code_name, brand.to_brand_name(), tech)
         };
 
-        match brand {
-            CpuBrand::AMD => Self::find_amd(model, s),
-            CpuBrand::Intel => Self::find_intel(model, s),
+        // Brand for Centaur CPUs is by signature, not vendor string
+        if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
+            return Self::find_centaur(model, s, vendor_string);
+        }
 
-            #[cfg(target_arch = "x86")]
-            CpuBrand::Cyrix => match (
+        // Cyrix does its own thing
+        #[cfg(target_arch = "x86")]
+        if vendor_string == VENDOR_CYRIX {
+            use super::cyrix::Cyrix;
+
+            return match (
                 s.extended_family,
                 s.family,
                 s.extended_model,
@@ -352,7 +352,12 @@ impl CpuArch {
                 (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
                 (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
-            },
+            };
+        }
+
+        match brand {
+            CpuBrand::AMD => Self::find_amd(model, s),
+            CpuBrand::Intel => Self::find_intel(model, s),
 
             #[cfg(target_arch = "x86")]
             CpuBrand::NationalSemiconductor => match (
@@ -411,13 +416,11 @@ impl CpuArch {
             },
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::IDT | CpuBrand::NexGen | CpuBrand::SiS => {
-                brand_arch(MicroArch::Unknown, UNK, None)
-            }
+            CpuBrand::NexGen | CpuBrand::SiS => brand_arch(MicroArch::Unknown, UNK, None),
 
-            CpuBrand::Hygon | CpuBrand::Unknown | CpuBrand::Via | CpuBrand::Zhaoxin => {
-                brand_arch(MicroArch::Unknown, UNK, None)
-            }
+            CpuBrand::Hygon => brand_arch(MicroArch::Unknown, UNK, None),
+
+            _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 
