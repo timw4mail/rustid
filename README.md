@@ -42,23 +42,27 @@ cargo run
 Example Output:
 ```text
 ---------------------
-Rustid version 0.4.2
+Rustid version 0.5.1
 ---------------------
 
-        Vendor:  AuthenticAMD (AMD)
+  Architecture: x86_64_v4
 
-         Model:  AMD Ryzen 7 PRO 2700U w/ Radeon Vega Mobile Gfx
+        Vendor: AuthenticAMD (AMD)
 
-      MicroArch: Zen
+         Model: AMD Ryzen 9 7950X3D 16-Core Processor
 
-       Codename: Raven Ridge
+     MicroArch: Zen 4
 
-          Node:  14nm
+      Codename: Raphael
 
-     Signature:  Family 17h, Model 11h, Stepping 0h
-                 (8, 15, 1, 1, 0)
+          Node: 5nm
 
-      Features:  FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT SSE SSE2 SSE3 SSE4.1 SSE4.2 SSSE3 AVX AVX2 FMA BMI1 BMI2 RDRAND POPCNT F16C
+         Speed: 4.19 GHz
+
+     Signature: Family 19h, Model 61h, Stepping 2h
+                (10, 15, 6, 1, 2)
+
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT SSE SSE2 SSE3 SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C
 ```
 
 ## Information References
