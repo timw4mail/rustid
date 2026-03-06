@@ -14,10 +14,11 @@ use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
 pub mod brand;
 pub mod cpu;
+pub mod cyrix;
 pub mod micro_arch;
 pub mod topology;
 
-use crate::cpuid::brand::CpuBrand;
+use brand::CpuBrand;
 
 pub use cpu::*;
 
@@ -130,26 +131,23 @@ pub fn has_cpuid() -> bool {
 
     #[cfg(target_arch = "x86")]
     {
-        #[cfg(target_os = "none")]
-        use core::arch::asm;
-
         let supported: u32;
         unsafe {
-            asm!(
-            "pushfd",
-            "pop eax",
-            "mov ecx, eax",
-            "xor eax, 0x200000",
-            "push eax",
-            "popfd",
-            "pushfd",
-            "pop eax",
-            "push ecx",
-            "popfd",
-            "xor eax, ecx",
-            "and eax, 0x200000",
-            out("eax") supported,
-            out("ecx") _,
+            core::arch::asm!(
+                "pushfd",
+                "pop eax",
+                "mov ecx, eax",
+                "xor eax, 0x200000",
+                "push eax",
+                "popfd",
+                "pushfd",
+                "pop eax",
+                "push ecx",
+                "popfd",
+                "xor eax, ecx",
+                "and eax, 0x200000",
+                out("eax") supported,
+                out("ecx") _,
             );
         }
         supported != 0
@@ -171,21 +169,18 @@ pub fn is_cyrix() -> bool {
 
     #[cfg(target_arch = "x86")]
     {
-        #[cfg(target_os = "none")]
-        use core::arch::asm;
-
         let flags: u8;
         unsafe {
-            asm!(
-            "xor ax, ax",
-            "sahf",         // Clear flags (SF, ZF, AF, PF, CF)
-            "mov ax, 5",
-            "mov bx, 2",
-            "div bl",       // Cyrix CPUs do not modify flags on 'div'
-            "lahf",         // Load flags into AH
-            out("ah") flags,
-            out("al") _,
-            out("bx") _,
+            core::arch::asm!(
+                "xor ax, ax",
+                "sahf",         // Clear flags (SF, ZF, AF, PF, CF)
+                "mov ax, 5",
+                "mov bx, 2",
+                "div bl",       // Cyrix CPUs do not modify flags on 'div'
+                "lahf",         // Load flags into AH
+                out("ah") flags,
+                out("al") _,
+                out("bx") _,
             );
         }
         // Cyrix: flags (SF, ZF, AF, PF, CF) remain unchanged (0).
@@ -214,6 +209,10 @@ pub fn is_486() -> bool {
     is_ac_flag_supported() && !has_cpuid()
 }
 
+pub fn is_cpuid_486() -> bool {
+    is_ac_flag_supported() && has_cpuid()
+}
+
 /// Helper to check for AC flag support in EFLAGS register.
 fn is_ac_flag_supported() -> bool {
     #[cfg(target_arch = "x86_64")]
@@ -221,26 +220,23 @@ fn is_ac_flag_supported() -> bool {
 
     #[cfg(target_arch = "x86")]
     {
-        #[cfg(target_os = "none")]
-        use core::arch::asm;
-
         let supported: u32;
         unsafe {
-            asm!(
-            "pushfd",
-            "pop eax",
-            "mov ecx, eax",
-            "xor eax, 0x40000", // Toggle AC flag (bit 18)
-            "push eax",
-            "popfd",
-            "pushfd",
-            "pop eax",
-            "push ecx",
-            "popfd",
-            "xor eax, ecx",
-            "and eax, 0x40000",
-            out("eax") supported,
-            out("ecx") _,
+            core::arch::asm!(
+                "pushfd",
+                "pop eax",
+                "mov ecx, eax",
+                "xor eax, 0x40000", // Toggle AC flag (bit 18)
+                "push eax",
+                "popfd",
+                "pushfd",
+                "pop eax",
+                "push ecx",
+                "popfd",
+                "xor eax, ecx",
+                "and eax, 0x40000",
+                out("eax") supported,
+                out("ecx") _,
             );
         }
         supported != 0
@@ -318,6 +314,10 @@ enum Reg {
 
 /// Checks if a specific feature bit is set in the given CPUID leaf.
 fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
+    if !has_cpuid() {
+        return false;
+    }
+
     if leaf >= EXT_LEAF_0 && max_extended_leaf() < leaf {
         return false;
     }

@@ -3,12 +3,10 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_INTEL, VENDOR_ZHAOXIN};
+use crate::cpuid::{CpuSignature, UNK};
 use core::str::FromStr;
 use heapless::String;
-
-use crate::cpuid::UNK;
 
 /// CPU Microarchitecture enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +70,8 @@ pub enum MicroArch {
     Geode, // Cyrix/NatSemi
 
     // DM&P
+    VortexDX,
+    VortexMX,
     VortexDX3,
 
     // Intel
@@ -126,6 +126,7 @@ pub enum MicroArch {
 
     // Rise
     MP6,
+    MP62,
 
     // Transmeta
     Crusoe,
@@ -198,7 +199,9 @@ impl From<MicroArch> for String<64> {
             MicroArch::Geode => "Geode",
 
             // DM& P
-            MicroArch::VortexDX3 => "VortexDX3",
+            MicroArch::VortexDX => "Vortex86DX",
+            MicroArch::VortexMX => "Vortex86MX",
+            MicroArch::VortexDX3 => "Vortex86DX3",
 
             // Intel
             MicroArch::I486 => "i486",
@@ -220,32 +223,33 @@ impl From<MicroArch> for String<64> {
             MicroArch::Haswell => "Haswell",
             MicroArch::Broadwell => "Broadwell",
             MicroArch::Airmont => "Airmont",
-            MicroArch::KabyLake => "KabyLake",
+            MicroArch::KabyLake => "Kaby Lake",
             MicroArch::Skylake => "Skylake",
-            MicroArch::CascadeLake => "CascadeLake",
-            MicroArch::KnightsLanding => "KnightsLanding",
+            MicroArch::CascadeLake => "Cascade Lake",
+            MicroArch::KnightsLanding => "Knights Landing",
             MicroArch::Goldmont => "Goldmont",
-            MicroArch::PalmCove => "PalmCove",
-            MicroArch::SunnyCove => "SunnyCove",
+            MicroArch::PalmCove => "Palm Cove",
+            MicroArch::SunnyCove => "Sunny Cove",
             MicroArch::GoldmontPlus => "Goldmont Plus",
-            MicroArch::IcyLake => "IcyLake",
+            MicroArch::IcyLake => "Icy Lake",
             MicroArch::Tremont => "Tremont",
-            MicroArch::TigerLake => "TigerLake",
-            MicroArch::WhiskyLake => "WhiskyLake",
+            MicroArch::TigerLake => "Tiger Lake",
+            MicroArch::WhiskyLake => "Whisky Lake",
             MicroArch::SapphireRapids => "Sapphire Rapids",
-            MicroArch::AlderLake => "AlderLake",
-            MicroArch::CoffeeLake => "CoffeeLake",
-            MicroArch::CometLake => "CometLake",
-            MicroArch::RaptorLake => "RaptorLake",
-            MicroArch::KnightsFerry => "KnightsFerry",
-            MicroArch::KnightsCorner => "KnightsCorner",
+            MicroArch::AlderLake => "Alder Lake",
+            MicroArch::CoffeeLake => "Coffee Lake",
+            MicroArch::CometLake => "Comet Lake",
+            MicroArch::RaptorLake => "Raptor Lake",
+            MicroArch::KnightsFerry => "Knights Ferry",
+            MicroArch::KnightsCorner => "Knights Corner",
             MicroArch::Willamette => "Willamette",
             MicroArch::Northwood => "Northwood",
             MicroArch::Prescott => "Prescott",
-            MicroArch::CedarMill => "CedarMill",
+            MicroArch::CedarMill => "Cedar Mill",
 
             // Rise
-            MicroArch::MP6 => "MP6",
+            MicroArch::MP6 => "mP6",
+            MicroArch::MP62 => "mP6-II",
 
             // Transmeta
             MicroArch::Crusoe => "Crusoe",
@@ -310,6 +314,9 @@ impl CpuArch {
     }
 
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
+        #[cfg(target_arch = "x86")]
+        use super::cyrix::Cyrix;
+
         let arch = |ma: MicroArch,
                     code_name: &'static str,
                     brand_name: &str,
@@ -331,6 +338,8 @@ impl CpuArch {
         match brand {
             CpuBrand::AMD => Self::find_amd(model, s),
             CpuBrand::Intel => Self::find_intel(model, s),
+
+            #[cfg(target_arch = "x86")]
             CpuBrand::Cyrix => match (
                 s.extended_family,
                 s.family,
@@ -338,12 +347,14 @@ impl CpuArch {
                 s.model,
                 s.stepping,
             ) {
-                (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, "5x86", None),
-                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, "M1", None),
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, "GXm", Some("350nm")),
-                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, "M2", None),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+                (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
+                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
+                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
+                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
+                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
             },
+
+            #[cfg(target_arch = "x86")]
             CpuBrand::NationalSemiconductor => match (
                 s.extended_family,
                 s.family,
@@ -356,6 +367,8 @@ impl CpuArch {
                 (0, 5, 0, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
+
+            #[cfg(target_arch = "x86")]
             CpuBrand::Rise => match (
                 s.extended_family,
                 s.family,
@@ -365,10 +378,15 @@ impl CpuArch {
             ) {
                 (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
                 (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some("180nm")),
-                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP6, UNK, None),
+
+                // These two come from instlatx64
+                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP62, UNK, Some("250nm")),
+                (0, 5, 0, 9, _) => brand_arch(MicroArch::MP62, UNK, Some("180nm")),
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
+
             // As long as the signature doesn't overlap, might as well match for multiple brands
+            #[cfg(target_arch = "x86")]
             CpuBrand::DMP | CpuBrand::Umc | CpuBrand::Transmeta => match (
                 s.extended_family,
                 s.family,
@@ -385,17 +403,21 @@ impl CpuArch {
                 (0, 15, 0, 2 | 3, _) => brand_arch(MicroArch::Efficeon, "Efficeon", None),
 
                 // DM&P
+                (0, 5, 0, 2, 2) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
+                (0, 5, 0, 8, 6) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
                 (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
 
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
-            CpuBrand::Hygon
-            | CpuBrand::IDT
-            | CpuBrand::NexGen
-            | CpuBrand::SiS
-            | CpuBrand::Unknown
-            | CpuBrand::Via
-            | CpuBrand::Zhaoxin => brand_arch(MicroArch::Unknown, UNK, None),
+
+            #[cfg(target_arch = "x86")]
+            CpuBrand::IDT | CpuBrand::NexGen | CpuBrand::SiS => {
+                brand_arch(MicroArch::Unknown, UNK, None)
+            }
+
+            CpuBrand::Hygon | CpuBrand::Unknown | CpuBrand::Via | CpuBrand::Zhaoxin => {
+                brand_arch(MicroArch::Unknown, UNK, None)
+            }
         }
     }
 
@@ -502,6 +524,7 @@ impl CpuArch {
             CpuBrand::Zhaoxin
         } else {
             match s.family {
+                #[cfg(target_arch = "x86")]
                 5 => CpuBrand::IDT,
                 6 => CpuBrand::Via,
                 _ => CpuBrand::Zhaoxin,
@@ -637,6 +660,8 @@ impl CpuArch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[allow(unused_imports)]
     use crate::cpuid::brand::{
         VENDOR_CYRIX, VENDOR_DMP, VENDOR_RISE, VENDOR_TRANSMETA, VENDOR_UMC,
     };
@@ -645,16 +670,28 @@ mod tests {
     fn test_micro_arch_from_string() {
         assert_eq!(String::<64>::from(MicroArch::Am486).as_str(), "Am486");
         assert_eq!(String::<64>::from(MicroArch::ZenPlus).as_str(), "Zen+");
+
+        #[cfg(target_arch = "x86")]
         assert_eq!(String::<64>::from(MicroArch::Winchip).as_str(), "Winchip");
+
         assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "LuJiaZui");
+
+        #[cfg(target_arch = "x86")]
         assert_eq!(String::<64>::from(MicroArch::Cy5x86).as_str(), "5x86");
+
+        #[cfg(target_arch = "x86")]
         assert_eq!(
             String::<64>::from(MicroArch::VortexDX3).as_str(),
             "VortexDX3"
         );
         assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "i486");
+
+        #[cfg(target_arch = "x86")]
         assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
+
+        #[cfg(target_arch = "x86")]
         assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
+
         assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), UNK);
     }
 
@@ -785,6 +822,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_dmp() {
         let model = "DMP Processor";
         let vendor_str = VENDOR_DMP;
@@ -803,6 +841,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_cyrix() {
         let model = "Cyrix Processor";
         let vendor_str = VENDOR_CYRIX;
@@ -827,6 +866,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_rise() {
         let model = "Rise Processor";
         let vendor_str = VENDOR_RISE;
@@ -845,6 +885,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_umc_transmeta() {
         let model = "Processor";
 

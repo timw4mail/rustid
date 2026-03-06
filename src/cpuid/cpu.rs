@@ -1,15 +1,14 @@
 //! CPU detection and information for x86/x86_64 processors.
 
-use crate::cpuid;
-use crate::cpuid::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
-use crate::println;
-use heapless::String;
+use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
+use super::micro_arch::{CpuArch, MicroArch};
+use super::topology::{Level1Cache, Topology};
+use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
 
-use crate::cpuid::EXT_LEAF_1;
-use crate::cpuid::topology::{Level1Cache, Topology};
+use crate::println;
+
 use core::str::FromStr;
+use heapless::String;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -21,6 +20,63 @@ pub enum FeatureClass {
     x86_64_v1,
     x86_64_v2,
     x86_64_v3,
+    x86_64_v4,
+}
+
+impl FeatureClass {
+    /// Rough detection of cpu feature class
+    ///
+    /// Roughly based on https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+    pub fn detect() -> FeatureClass {
+        use super::*;
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            if has_avx512f() {
+                return FeatureClass::x86_64_v4;
+            }
+
+            if has_avx() && has_avx2() && has_bmi1() && has_bmi2() && has_f16c() && has_fma() {
+                return FeatureClass::x86_64_v3;
+            }
+
+            if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3() {
+                return FeatureClass::x86_64_v2;
+            }
+
+            FeatureClass::x86_64_v1
+        }
+
+        #[cfg(target_arch = "x86")]
+        {
+            if has_cmov() {
+                return FeatureClass::i686;
+            }
+
+            if CpuSignature::detect().family >= 5 {
+                return FeatureClass::i586;
+            }
+
+            if is_486() || (is_cpuid_486() && CpuSignature::detect().family == 4) {
+                return FeatureClass::i486;
+            }
+
+            FeatureClass::i386
+        }
+    }
+
+    pub fn to_str(self) -> &'static str {
+        match self {
+            FeatureClass::i386 => "i386",
+            FeatureClass::i486 => "i486",
+            FeatureClass::i586 => "i586",
+            FeatureClass::i686 => "i686",
+            FeatureClass::x86_64_v1 => "x86_64_v1",
+            FeatureClass::x86_64_v2 => "x86_64_v2",
+            FeatureClass::x86_64_v3 => "x86_64_v3",
+            FeatureClass::x86_64_v4 => "x86_64_v4",
+        }
+    }
 }
 
 /// CPU signature containing family, model, and stepping information.
@@ -66,7 +122,7 @@ impl CpuSignature {
             model
         };
 
-        let is_overdrive = cpuid::is_overdrive();
+        let is_overdrive = super::is_overdrive();
 
         Self {
             extended_model,
@@ -97,7 +153,7 @@ impl ExtendedSignature {
         let pkg_type = (res.ebx >> 28) & 0xF;
 
         Self {
-            base_brand_id: cpuid::get_brand_id(),
+            base_brand_id: super::get_brand_id(),
             brand_id,
             pkg_type,
         }
@@ -118,6 +174,7 @@ pub struct Cpu {
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
     /// AMD extended cpu signature
+    #[cfg(target_arch = "x86_64")]
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: FeatureList,
@@ -136,18 +193,19 @@ impl Cpu {
             arch: CpuArch::find(
                 Self::raw_model_string().as_str(),
                 CpuSignature::detect(),
-                &cpuid::vendor_str(),
+                &super::vendor_str(),
             ),
             easter_egg: Self::easter_egg(),
-            brand_id: cpuid::get_brand_id(),
-            threads: cpuid::logical_cores(),
+            brand_id: super::get_brand_id(),
+            threads: super::logical_cores(),
             signature: CpuSignature::detect(),
-            ext_signature: if cpuid::vendor_str() == VENDOR_AMD {
+            #[cfg(target_arch = "x86_64")]
+            ext_signature: if super::vendor_str() == VENDOR_AMD {
                 Some(ExtendedSignature::detect())
             } else {
                 None
             },
-            features: cpuid::get_feature_list(),
+            features: super::get_feature_list(),
             topology: Topology::detect(),
         }
     }
@@ -155,7 +213,7 @@ impl Cpu {
     /// Gets the CPU model string.
     fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
-        if cpuid::max_extended_leaf() < EXT_LEAF_4 {
+        if super::max_extended_leaf() < EXT_LEAF_4 {
             let _ = model.push_str("Unknown");
             return model;
         }
@@ -177,8 +235,8 @@ impl Cpu {
         out
     }
 
-    fn intel_brand_index(&self) -> Option<&'static str> {
-        let brand_id = cpuid::get_brand_id();
+    fn intel_brand_index(&self) -> Option<String<64>> {
+        let brand_id = super::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
         const XEON: &str = "Intel® Xeon® processor";
@@ -196,45 +254,59 @@ impl Cpu {
             return None;
         }
 
-        match brand_id {
-            0x01 | 0x0A | 0x14 => Some(CELERON),
-            0x02 | 0x04 => Some("Intel® Pentium® III processor"),
+        let str = match brand_id {
+            0x01 | 0x0A | 0x14 => CELERON,
+            0x02 | 0x04 => "Intel® Pentium® III processor",
             0x03 => match (family, model, stepping) {
-                (0x6, 0xB, 0x1) => Some(CELERON),
-                _ => Some("Intel® Pentium® III Xeon"),
+                (0x6, 0xB, 0x1) => CELERON,
+                _ => "Intel® Pentium® III Xeon",
             },
-            0x06 => Some("Mobile Intel® Pentium® III processor-M"),
-            0x07 | 0x0F | 0x13 | 0x17 => Some("Mobile Intel® Celeron® processor"),
-            0x08 | 0x09 => Some("Intel® Pentium® 4 processor"),
+            0x06 => "Mobile Intel® Pentium® III processor-M",
+            0x07 | 0x0F | 0x13 | 0x17 => "Mobile Intel® Celeron® processor",
+            0x08 | 0x09 => "Intel® Pentium® 4 processor",
             0x0B => match (family, model, stepping) {
-                (0xF, 0x1, 0x3) => Some(XEON_MP),
-                _ => Some(XEON),
+                (0xF, 0x1, 0x3) => XEON_MP,
+                _ => XEON,
             },
-            0x0C => Some(XEON_MP),
+            0x0C => XEON_MP,
             0x0E => match (family, model, stepping) {
-                (0xF, 0x1, 0x3) => Some(XEON),
-                _ => Some("Mobile Intel® Pentium® 4 processor-M"),
+                (0xF, 0x1, 0x3) => XEON,
+                _ => "Mobile Intel® Pentium® 4 processor-M",
             },
-            0x11 | 0x15 => Some("Mobile Genuine Intel® processor"),
-            0x12 => Some("Intel® Celeron® M processor"),
-            0x16 => Some("Intel® Pentium® M processor"),
-            _ => None,
+            0x11 | 0x15 => "Mobile Genuine Intel® processor",
+            0x12 => "Intel® Celeron® M processor",
+            0x16 => "Intel® Pentium® M processor",
+            _ => UNK,
+        };
+
+        match str {
+            UNK => None,
+            _ => Some(String::from_str(str).unwrap()),
         }
     }
 
-    fn display_model_string(&self) -> &str {
+    fn display_model_string(&self) -> String<64> {
         if &self.arch.model != "Unknown" {
-            return &self.arch.model;
+            return self.arch.model.clone();
         }
 
-        // First, let's see if there's something in Intel's brand mapping table
         if self.arch.vendor_string == VENDOR_INTEL
             && let Some(model_name) = self.intel_brand_index()
         {
             return model_name;
         }
 
-        match self.arch.micro_arch {
+        if self.signature == CpuSignature::default() || !super::has_cpuid() {
+            let s = if super::is_386() {
+                "386 Class CPU"
+            } else {
+                "486 Class CPU"
+            };
+
+            return String::from_str(s).unwrap();
+        }
+
+        let s = match self.arch.micro_arch {
             // AMD
             MicroArch::Am486 => match self.arch.code_name {
                 "Am486DX2" => "AMD 486 DX2",
@@ -260,7 +332,7 @@ impl Cpu {
                 _ => "486 Class CPU",
             },
             MicroArch::P5 => {
-                if cpuid::has_mmx() {
+                if super::has_mmx() {
                     "Intel Pentium with MMX"
                 } else {
                     match self.arch.code_name {
@@ -272,17 +344,6 @@ impl Cpu {
             MicroArch::PentiumPro => "Intel Pentium Pro",
             MicroArch::PentiumII => "Intel Pentium II",
             MicroArch::PentiumIII => "Intel Pentium III",
-
-            // Cyrix
-            MicroArch::Cy5x86 => "Cyrix 5x86",
-            MicroArch::M1 => {
-                if cpuid::has_cx8() {
-                    "Cyrix 6x86L"
-                } else {
-                    "Cyrix 6x86"
-                }
-            }
-            MicroArch::M2 => "Cyrix 6x86MX (MII)",
 
             // IDT
             MicroArch::Winchip => "IDT Winchip",
@@ -297,20 +358,10 @@ impl Cpu {
             MicroArch::U5S => "UMC Green CPU U5S (486 SX)",
             MicroArch::U5D => "UMC Green CPU U5D (486 DX)",
 
-            _ => {
-                if self.signature == CpuSignature::default() || !cpuid::has_cpuid() {
-                    if cpuid::is_cyrix() && cpuid::is_486() {
-                        "Cyrix/IBM 486"
-                    } else if cpuid::is_386() {
-                        "386 Class CPU"
-                    } else {
-                        "486 Class CPU"
-                    }
-                } else {
-                    "Unknown"
-                }
-            }
-        }
+            _ => UNK,
+        };
+
+        String::from_str(s).unwrap()
     }
 
     fn easter_egg() -> Option<String<64>> {
@@ -319,7 +370,10 @@ impl Cpu {
 
         let addr = match brand {
             CpuBrand::AMD => 0x8FFF_FFFF,
+
+            #[cfg(target_arch = "x86")]
             CpuBrand::Rise => 0x0000_5A4E,
+
             _ => 1,
         };
 
@@ -328,7 +382,9 @@ impl Cpu {
 
             let reg_list = match brand {
                 // Surely there had to be a reason for this silly ordering?
+                #[cfg(target_arch = "x86")]
                 CpuBrand::Rise => [res.ebx, res.edx, res.ecx, res.eax],
+
                 _ => [res.eax, res.ebx, res.ecx, res.edx],
             };
 
@@ -392,51 +448,9 @@ impl Cpu {
             simple_line("Overdrive", "Yes");
         }
 
-        simple_line("Model", self.display_model_string());
+        simple_line("Model", self.display_model_string().as_str());
 
-        // TODO: Clock Speed (Base/Boost)
-        #[cfg(not(target_os = "none"))]
-        if self.topology.speed.base > 10 {
-            let mhz = self.topology.speed.base as f32;
-            let ghz = mhz / 1000f32;
-            if mhz > 1000f32 {
-                println!("{}{:.2} GHz", label("Speed"), ghz);
-            } else {
-                println!("{}{:.2} MHz", label("Speed"), mhz);
-            }
-            println!();
-        }
-
-        if let Some(cache) = self.topology.cache {
-            println!("{}", label("Cache"));
-
-            match cache.l1 {
-                Level1Cache::Unified(cache) => {
-                    let size = cache.size;
-                    println!("{:>16}L1: Unified {} KB", "", size / 1024);
-                }
-                Level1Cache::Split { data, instruction } => {
-                    println!("{:>16}L1d: {} KB", "", data.size / 1024);
-                    println!("{:>16}L1i: {} KB", "", instruction.size / 1024);
-                }
-            }
-
-            if let Some(cache) = cache.l2 {
-                println!("{:>16}L2: {} KB", "", cache.size / 1024);
-            }
-
-            if let Some(cache) = cache.l3 {
-                let unit = if cache.size > 1024 { "MB" } else { "KB" };
-                let mut num = cache.size / 1024;
-                if num > 1024 {
-                    num /= 1024
-                }
-
-                println!("{:>16}L3: {} {}", "", num, unit);
-            }
-
-            println!();
-        }
+        simple_line("Architecture", FeatureClass::detect().to_str());
 
         // TODO: Cores/Threads
 
@@ -459,6 +473,65 @@ impl Cpu {
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
             simple_line("Easter Egg", easter_egg.as_str());
+        }
+
+        #[cfg(target_arch = "x86")]
+        {
+            if self.arch.vendor_string == super::brand::VENDOR_CYRIX {
+                let cyrix = super::cyrix::Cyrix::detect();
+                println!("{:?}", cyrix);
+
+                println!("{}{}", label("Bus Multiplier"), cyrix.multiplier);
+            }
+        }
+
+        // TODO: Clock Speed (Base/Boost)
+        #[cfg(not(target_os = "none"))]
+        if self.topology.speed.base > 10 {
+            let mhz = self.topology.speed.base as f32;
+            let ghz = mhz / 1000f32;
+            if mhz > 1000f32 {
+                println!("{}{:.2} GHz", label("Speed"), ghz);
+            } else {
+                println!("{}{:.2} MHz", label("Speed"), mhz);
+            }
+            println!();
+        }
+
+        if let Some(cache) = self.topology.cache {
+            match cache.l1 {
+                Level1Cache::Unified(cache) => {
+                    let size = cache.size;
+                    println!("{}L1: Unified {} KB", label("Cache"), size / 1024);
+                }
+                Level1Cache::Split { data, instruction } => {
+                    println!("{}L1d: {} KB", label("Cache"), data.size / 1024);
+                    println!("{:>16}L1i: {} KB", "", instruction.size / 1024);
+                }
+            }
+
+            if let Some(cache) = cache.l2 {
+                let unit = if cache.size >= 1024 { "MB" } else { "GB" };
+                let mut num = cache.size / 1024;
+
+                if num >= 1024 {
+                    num /= 1024;
+                }
+
+                println!("{:>16}L2: {} {}", "", num, unit);
+            }
+
+            if let Some(cache) = cache.l3 {
+                let unit = if cache.size >= 1024 { "MB" } else { "KB" };
+                let mut num = cache.size / 1024;
+                if num >= 1024 {
+                    num /= 1024
+                }
+
+                println!("{:>16}L3: {} {}", "", num, unit);
+            }
+
+            println!();
         }
 
         // CPU Signature
@@ -484,7 +557,12 @@ impl Cpu {
 
         // CPU Features
         if !self.features.is_empty() {
+            #[cfg(target_arch = "x86")]
+            let mut features: String<32> = String::new();
+
+            #[cfg(target_arch = "x86_64")]
             let mut features: String<512> = String::new();
+
             self.features.iter().for_each(|feature| {
                 let _ = features.push_str(feature);
                 let _ = features.push_str(" ");
@@ -500,6 +578,7 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cpuid::get_feature_list;
     use crate::println;
 
     #[test]
@@ -511,7 +590,7 @@ mod tests {
 
     #[test]
     fn test_cpu_features_detect() {
-        let features = cpuid::get_feature_list();
+        let features = get_feature_list();
         println!("Detected CPU Features: {:?}", features);
         // Assert that at least some features are detected (this might vary by CPU)
         assert!(!features.is_empty());
@@ -548,7 +627,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
             ext_signature: None,
-            features: cpuid::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
@@ -561,7 +640,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
-            features: cpuid::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(
@@ -581,7 +660,7 @@ mod tests {
             threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
-            features: cpuid::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
@@ -603,7 +682,7 @@ mod tests {
                 is_overdrive: false,
             },
             ext_signature: None,
-            features: cpuid::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
@@ -625,7 +704,7 @@ mod tests {
                 is_overdrive: false,
             },
             ext_signature: None,
-            features: cpuid::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");

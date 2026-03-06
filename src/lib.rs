@@ -38,17 +38,17 @@ extern crate std;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod cpuid;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use crate::cpuid::Cpu;
+use cpuid::Cpu;
 
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 pub mod ppc;
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
-use crate::ppc::cpu::Cpu;
+use ppc::cpu::Cpu;
 
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 pub mod arm;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
-use crate::arm::cpu::Cpu;
+use arm::cpu::Cpu;
 
 #[cfg(target_os = "none")]
 pub mod dos;
@@ -67,7 +67,7 @@ fn version() {
 
 pub fn cli_main() {
     #[cfg(target_arch = "x86")]
-    crate::cpuid::cyrix_cpuid_check();
+    cpuid::cyrix_cpuid_check();
 
     let cpu = Cpu::new();
 

@@ -11,6 +11,9 @@ license = "MIT"
 
 [profile.release]
 opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
 
 # We only need heapless for x86 builds
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]

@@ -1,7 +1,7 @@
-use crate::cpuid;
-use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::{EXT_LEAF_5, EXT_LEAF_6, max_leaf, x86_cpuid, x86_cpuid_count};
-use crate::cpuid::{LEAF_4, LEAF_16};
+use super::brand::CpuBrand;
+
+#[allow(unused_imports)]
+use super::{EXT_LEAF_5, EXT_LEAF_6, LEAF_4, LEAF_16, max_leaf, x86_cpuid, x86_cpuid_count};
 
 const DATA_CACHE: u32 = 1;
 const INSTRUCTION_CACHE: u32 = 2;
@@ -258,7 +258,7 @@ impl Speed {
         }
     }
     fn measure() -> Self {
-        if !cpuid::has_tsc() {
+        if !super::has_tsc() {
             return Speed::default();
         }
 
@@ -323,7 +323,7 @@ pub struct Topology {
 impl Topology {
     #[cfg(not(target_os = "none"))]
     pub fn detect() -> Self {
-        let threads = cpuid::logical_cores();
+        let threads = super::logical_cores();
         let cores = 1;
         let speed = Speed::detect();
         let cache = Cache::detect();
