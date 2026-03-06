@@ -570,10 +570,10 @@ impl Cpu {
         if self.arch.vendor_string == VENDOR_CYRIX {
             let cyrix = super::cyrix::Cyrix::detect();
 
-            println!("{} Model number: {:X}h", label("Cyrix"), cyrix.dir0);
-            println!("{:>16} Multiplier: {}x", "", cyrix.multiplier);
-            println!("{:>16} Revision: {:X}h", "", cyrix.revision);
-            println!("{:>16} Stepping: {:X}h", "", cyrix.stepping);
+            println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
+            println!("{:>16}Multiplier: {}x", "", cyrix.multiplier);
+            println!("{:>16}Revision: {:X}h", "", cyrix.revision);
+            println!("{:>16}Stepping: {:X}h", "", cyrix.stepping);
             println!();
         }
 
