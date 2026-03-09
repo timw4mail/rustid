@@ -482,6 +482,17 @@ impl TCpu for Cpu {
             simple_line("Easter Egg", easter_egg.as_str());
         }
 
+        // Cores/threads
+        if self.topology.cores > 1 {
+            println!(
+                "{} {}/{}",
+                label("Cores/Threads"),
+                self.topology.cores,
+                self.topology.threads
+            );
+            println!();
+        }
+
         // TODO: Clock Speed (Base/Boost)
         #[cfg(not(target_os = "none"))]
         if self.topology.speed.base > 10 {
@@ -509,13 +520,13 @@ impl TCpu for Cpu {
                 }
                 Level1Cache::Split { data, instruction } => {
                     println!(
-                        "{}L1d:{}{:>4} KB",
+                        "{}L1d: {}{} KB",
                         label("Cache"),
                         &core_mult,
                         data.size / 1024
                     );
                     println!(
-                        "{:>16}L1i:{}{:>4} KB",
+                        "{:>16}L1i: {}{} KB",
                         "",
                         &core_mult,
                         instruction.size / 1024
@@ -531,7 +542,7 @@ impl TCpu for Cpu {
                     num /= 1024;
                 }
 
-                println!("{:>16}L2: {}{:>4} {}", "", &core_mult, num, unit);
+                println!("{:>16}L2:  {}{} {}", "", &core_mult, num, unit);
             }
 
             if let Some(cache) = cache.l3 {
@@ -542,7 +553,7 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{:>16}L3: {:>4} {}", "", num, unit);
+                println!("{:>16}L3:  {} {}", "", num, unit);
             }
 
             println!();

@@ -280,9 +280,18 @@ pub fn is_overdrive() -> bool {
     (x86_cpuid(LEAF_1).eax & (1 << 12)) != 0
 }
 
+pub fn get_ht() -> u32 {
+    if !has_ht() {
+        return 0;
+    }
+
+    let res = x86_cpuid(LEAF_1);
+    (res.edx >> 28) & 0xFF
+}
+
 /// Returns the number of logical cores.
 pub fn logical_cores() -> u32 {
-    if max_leaf() < 1 || CpuBrand::detect() != CpuBrand::AMD {
+    if max_leaf() < 1 {
         return 1;
     }
 

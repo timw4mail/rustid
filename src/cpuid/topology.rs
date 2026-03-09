@@ -1,5 +1,5 @@
-use super::brand::{CpuBrand, VENDOR_INTEL};
-use crate::cpuid::{EXT_LEAF_1D, max_extended_leaf, vendor_str};
+use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
+use crate::cpuid::{EXT_LEAF_1D, get_ht, max_extended_leaf, vendor_str};
 
 #[allow(unused_imports)]
 use super::{EXT_LEAF_5, EXT_LEAF_6, LEAF_4, LEAF_16, max_leaf, x86_cpuid, x86_cpuid_count};
@@ -333,7 +333,14 @@ impl Topology {
 
                 let res = x86_cpuid(LEAF_4);
 
-                res.ebx >> 26
+                (res.ebx >> 26) + 1
+            }
+            VENDOR_AMD => {
+                if get_ht() != 0 {
+                    return super::logical_cores() / (get_ht() + 1);
+                };
+
+                1
             }
             _ => 1,
         }
