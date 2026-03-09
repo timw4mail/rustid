@@ -496,13 +496,30 @@ impl TCpu for Cpu {
         }
 
         if let Some(cache) = self.topology.cache {
+            let core_mult: String<4> = if self.topology.cores > 1 {
+                format!("{}x ", self.topology.cores)
+            } else {
+                format!("")
+            }
+            .unwrap();
+
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
                     println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    println!("{}L1d: {} KB", label("Cache"), data.size / 1024);
-                    println!("{:>16}L1i: {} KB", "", instruction.size / 1024);
+                    println!(
+                        "{}L1d: {}{} KB",
+                        label("Cache"),
+                        &core_mult,
+                        data.size / 1024
+                    );
+                    println!(
+                        "{:>16}L1i: {}{} KB",
+                        "",
+                        &core_mult,
+                        instruction.size / 1024
+                    );
                 }
             }
 
@@ -514,7 +531,7 @@ impl TCpu for Cpu {
                     num /= 1024;
                 }
 
-                println!("{:>16}L2: {} {}", "", num, unit);
+                println!("{:>16}L2: {}{} {}", "", &core_mult, num, unit);
             }
 
             if let Some(cache) = cache.l3 {

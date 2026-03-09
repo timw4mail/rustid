@@ -1,5 +1,5 @@
-use super::brand::CpuBrand;
-use crate::cpuid::{EXT_LEAF_1D, max_extended_leaf};
+use super::brand::{CpuBrand, VENDOR_INTEL};
+use crate::cpuid::{EXT_LEAF_1D, max_extended_leaf, vendor_str};
 
 #[allow(unused_imports)]
 use super::{EXT_LEAF_5, EXT_LEAF_6, LEAF_4, LEAF_16, max_leaf, x86_cpuid, x86_cpuid_count};
@@ -235,25 +235,31 @@ pub struct Speed {
 #[cfg(not(target_os = "none"))]
 impl Speed {
     pub fn detect() -> Self {
-        if max_leaf() < LEAF_16 {
-            return Speed::measure();
-        }
+        match vendor_str().as_str() {
+            VENDOR_INTEL => {
+                if max_leaf() < LEAF_16 {
+                    return Speed::measure();
+                }
 
-        let res = x86_cpuid(LEAF_16);
+                let res = x86_cpuid(LEAF_16);
 
-        let base = res.eax;
-        let boost = res.ebx;
+                let base = res.eax;
+                let boost = res.ebx;
 
-        if base == 0 {
-            return Speed::measure();
-        }
+                if base == 0 {
+                    return Speed::measure();
+                }
 
-        Speed {
-            base,
-            boost,
-            measured: false,
+                Speed {
+                    base,
+                    boost,
+                    measured: false,
+                }
+            }
+            _ => Speed::measure(),
         }
     }
+
     fn measure() -> Self {
         if !super::has_tsc() {
             return Speed::default();
@@ -318,10 +324,25 @@ pub struct Topology {
 }
 
 impl Topology {
+    pub fn detect_core_count() -> u32 {
+        match vendor_str().as_str() {
+            VENDOR_INTEL => {
+                if max_leaf() < LEAF_4 {
+                    return 1;
+                }
+
+                let res = x86_cpuid(LEAF_4);
+
+                res.ebx >> 26
+            }
+            _ => 1,
+        }
+    }
+
     #[cfg(not(target_os = "none"))]
     pub fn detect() -> Self {
         let threads = super::logical_cores();
-        let cores = 1;
+        let cores = Self::detect_core_count();
         let speed = Speed::detect();
         let cache = Cache::detect();
 
