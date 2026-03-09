@@ -23,22 +23,18 @@ pub enum CacheType {
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct CacheLevel {
-    assoc: u32,
+    pub(crate) assoc: u32,
     pub(crate) size: u32,
-    kind: CacheType,
+    pub(crate) kind: CacheType,
 }
 
 impl CacheLevel {
-    pub fn new(size: u32, kind: CacheType) -> Self {
-        CacheLevel {
-            size,
-            kind,
-            assoc: 0,
-        }
+    pub fn new(size: u32, kind: CacheType, assoc: u32) -> Self {
+        CacheLevel { size, kind, assoc }
     }
 
-    pub fn new_unified(size: u32) -> Self {
-        Self::new(size, CacheType::Unified)
+    pub fn new_unified(size: u32, assoc: u32) -> Self {
+        Self::new(size, CacheType::Unified, assoc)
     }
 }
 
@@ -52,8 +48,8 @@ pub enum Level1Cache {
 }
 
 impl Level1Cache {
-    pub fn new_unified(size: u32) -> Self {
-        Level1Cache::Unified(CacheLevel::new_unified(size))
+    pub fn new_unified(size: u32, assoc: u32) -> Self {
+        Level1Cache::Unified(CacheLevel::new_unified(size, assoc))
     }
 
     pub fn is_unified(&self) -> bool {
@@ -67,17 +63,19 @@ impl Level1Cache {
         !self.is_unified()
     }
 
-    pub fn set_data(&mut self, size: u32) {
+    pub fn set_data(&mut self, size: u32, assoc: u32) {
         if let Level1Cache::Split { data, .. } = self {
             data.size = size;
             data.kind = CacheType::Data;
+            data.assoc = assoc;
         }
     }
 
-    pub fn set_instruction(&mut self, size: u32) {
+    pub fn set_instruction(&mut self, size: u32, assoc: u32) {
         if let Level1Cache::Split { instruction, .. } = self {
             instruction.size = size;
             instruction.kind = CacheType::Instruction;
+            instruction.assoc = assoc;
         }
     }
 
@@ -139,18 +137,22 @@ impl Cache {
             ..Cache::default()
         };
 
-        c.l1.set_data((res5.ecx >> 24) * 1024);
-        c.l1.set_instruction((res5.edx >> 24) * 1024);
+        let l1dassoc = (res5.ecx >> 16) + 1;
+        let l1iassoc = (res5.edx >> 16) + 1;
+        c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
+        c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
+        let l2assoc = (res6.ecx >> 12) + 1;
         let l2size = (res6.ecx >> 16) * 1024;
+        let l3assoc = (res6.edx >> 12) + 1;
         let l3size = (res6.edx >> 18) * 512 * 1024;
 
         if l2size != 0 {
-            c.l2 = Some(CacheLevel::new_unified(l2size));
+            c.l2 = Some(CacheLevel::new_unified(l2size, l2assoc));
         }
 
         if l3size != 0 {
-            c.l3 = Some(CacheLevel::new_unified(l3size));
+            c.l3 = Some(CacheLevel::new_unified(l3size, l3assoc));
         }
 
         Some(c)
@@ -192,7 +194,7 @@ impl Cache {
                             c.l1 = Level1Cache::default_split();
                         }
 
-                        c.l1.set_data(cache_size);
+                        c.l1.set_data(cache_size, cache_ways_of_associativity);
                     }
                 }
                 INSTRUCTION_CACHE => {
@@ -201,18 +203,26 @@ impl Cache {
                             c.l1 = Level1Cache::default_split();
                         }
 
-                        c.l1.set_instruction(cache_size);
+                        c.l1.set_instruction(cache_size, cache_ways_of_associativity);
                     }
                 }
                 UNIFIED_CACHE => match cache_level {
                     L1 => {
-                        c.l1 = Level1Cache::new_unified(cache_size);
+                        c.l1 = Level1Cache::new_unified(cache_size, cache_ways_of_associativity);
                     }
                     L2 => {
-                        c.l2 = Some(CacheLevel::new(cache_size, CacheType::Unified));
+                        c.l2 = Some(CacheLevel::new(
+                            cache_size,
+                            CacheType::Unified,
+                            cache_ways_of_associativity,
+                        ));
                     }
                     L3 => {
-                        c.l3 = Some(CacheLevel::new(cache_size, CacheType::Unified));
+                        c.l3 = Some(CacheLevel::new(
+                            cache_size,
+                            CacheType::Unified,
+                            cache_ways_of_associativity,
+                        ));
                     }
                     _ => {}
                 },

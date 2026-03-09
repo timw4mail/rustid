@@ -459,8 +459,6 @@ impl TCpu for Cpu {
 
         simple_line("Model", self.display_model_string().as_str());
 
-        // TODO: Cores/Threads
-
         if ma != UNK {
             simple_line("MicroArch", ma);
         }
@@ -474,7 +472,7 @@ impl TCpu for Cpu {
 
         // Process node
         if let Some(tech) = &self.arch.technology {
-            simple_line("Node", tech.as_str());
+            simple_line("Process Node", tech.as_str());
         }
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
@@ -484,25 +482,17 @@ impl TCpu for Cpu {
 
         // Cores/threads
         if self.topology.cores > 1 {
-            println!(
-                "{} {}/{}",
-                label("Cores/Threads"),
-                self.topology.cores,
-                self.topology.threads
-            );
-            println!();
-        }
-
-        // TODO: Clock Speed (Base/Boost)
-        #[cfg(not(target_os = "none"))]
-        if self.topology.speed.base > 10 {
-            let mhz = self.topology.speed.base as f32;
-            let ghz = mhz / 1000f32;
-            if mhz > 1000f32 {
-                println!("{}{:.2} GHz", label("Speed"), ghz);
+            if self.topology.cores != self.topology.threads {
+                println!(
+                    "{}{} cores ({} threads)",
+                    label("Cores"),
+                    self.topology.cores,
+                    self.topology.threads
+                );
             } else {
-                println!("{}{:.2} MHz", label("Speed"), mhz);
+                println!("{}{} cores", label("Cores"), self.topology.cores);
             }
+
             println!();
         }
 
@@ -520,16 +510,18 @@ impl TCpu for Cpu {
                 }
                 Level1Cache::Split { data, instruction } => {
                     println!(
-                        "{}L1d: {}{} KB",
+                        "{}L1d: {}{} KB, {}-way",
                         label("Cache"),
                         &core_mult,
-                        data.size / 1024
+                        data.size / 1024,
+                        data.assoc
                     );
                     println!(
-                        "{:>16}L1i: {}{} KB",
+                        "{:>16}L1i: {}{} KB, {}-way",
                         "",
                         &core_mult,
-                        instruction.size / 1024
+                        instruction.size / 1024,
+                        instruction.assoc
                     );
                 }
             }
@@ -542,7 +534,10 @@ impl TCpu for Cpu {
                     num /= 1024;
                 }
 
-                println!("{:>16}L2:  {}{} {}", "", &core_mult, num, unit);
+                println!(
+                    "{:>16}L2:  {}{} {}, {}-way",
+                    "", &core_mult, num, unit, cache.assoc
+                );
             }
 
             if let Some(cache) = cache.l3 {
@@ -553,9 +548,24 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{:>16}L3:  {} {}", "", num, unit);
+                println!("{:>16}L3:  {} {}, {}-way", "", num, unit, cache.assoc);
             }
 
+            println!();
+        }
+
+        // TODO: Clock Speed (Base/Boost)
+        // Not implemented for DOS as float formatting takes up too
+        // much space in the binary
+        #[cfg(not(target_os = "none"))]
+        if self.topology.speed.base > 10 {
+            let mhz = self.topology.speed.base as f32;
+            let ghz = mhz / 1000f32;
+            if mhz > 1000f32 {
+                println!("{}{:.2} GHz", label("Speed"), ghz);
+            } else {
+                println!("{}{:.2} MHz", label("Speed"), mhz);
+            }
             println!();
         }
 
