@@ -1,4 +1,5 @@
 use super::brand::CpuBrand;
+use crate::cpuid::{EXT_LEAF_1D, max_extended_leaf};
 
 #[allow(unused_imports)]
 use super::{EXT_LEAF_5, EXT_LEAF_6, LEAF_4, LEAF_16, max_leaf, x86_cpuid, x86_cpuid_count};
@@ -122,15 +123,11 @@ impl Cache {
     }
 
     fn detect_amd() -> Option<Self> {
-        // TODO: figure out physical/logical cores and use that to do the "modern" AMD cache detection
-
-        Cache::detect_amd_fallback()
-
-        // if max_extended_leaf() <= EXT_LEAF_1D {
-        //     Cache::detect_general(EXT_LEAF_1D)
-        // } else {
-        //     Cache::detect_amd_fallback()
-        // }
+        if max_extended_leaf() >= EXT_LEAF_1D {
+            Cache::detect_general(EXT_LEAF_1D)
+        } else {
+            Cache::detect_amd_fallback()
+        }
     }
 
     fn detect_amd_fallback() -> Option<Self> {
@@ -170,7 +167,7 @@ impl Cache {
     fn detect_general(leaf: u32) -> Option<Self> {
         let mut c = Cache::default();
 
-        for level in 0u32..10 {
+        for level in 0u32..32 {
             let res = x86_cpuid_count(leaf, level);
             let cache_type = res.eax & 0xF;
 
@@ -183,7 +180,7 @@ impl Cache {
             let cache_sets = res.ecx + 1;
             let cache_line_size = (res.ebx & 0xFFF) + 1;
             let cache_partitions = ((res.ebx >> 12) & 0x3FF) + 1;
-            let cache_ways_of_associativity = ((res.ebx >> 10) & 0x3FF) + 1;
+            let cache_ways_of_associativity = ((res.ebx >> 22) & 0x3FF) + 1;
 
             let cache_size =
                 cache_sets * cache_partitions * cache_ways_of_associativity * cache_line_size;
