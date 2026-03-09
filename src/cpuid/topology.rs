@@ -176,15 +176,15 @@ impl Cache {
 
         let mut c = Cache::default();
 
-        if LEAF_2 >= max_leaf() {
+        if max_leaf() < LEAF_2 {
             return None;
         }
 
-        let res = x86_cpuid_count(LEAF_2, 0);
+        let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
         let mut desc_list: Vec<u32, 32> = Vec::new();
 
-        for i in 0..iteration_count {
+        for i in 0..=iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);
             let valid_eax = (res.eax >> 31) == 0;
             if !valid_eax {
