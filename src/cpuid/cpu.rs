@@ -508,8 +508,8 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l2 {
-                let unit = if cache.size >= 1024 { "MB" } else { "GB" };
                 let mut num = cache.size / 1024;
+                let unit = if num >= 1024 { "MB" } else { "KB" };
 
                 if num >= 1024 {
                     num /= 1024;
@@ -519,8 +519,9 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l3 {
-                let unit = if cache.size >= 1024 { "MB" } else { "KB" };
                 let mut num = cache.size / 1024;
+                let unit = if num >= 1024 { "MB" } else { "KB" };
+
                 if num >= 1024 {
                     num /= 1024
                 }
