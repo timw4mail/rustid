@@ -1,8 +1,9 @@
 use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
-use crate::cpuid::{EXT_LEAF_1D, LEAF_2, get_ht, has_ht, max_extended_leaf, vendor_str};
-
 #[allow(unused_imports)]
-use super::{EXT_LEAF_5, EXT_LEAF_6, LEAF_4, LEAF_16, max_leaf, x86_cpuid, x86_cpuid_count};
+use super::{
+    EXT_LEAF_1D, EXT_LEAF_5, EXT_LEAF_6, LEAF_2, LEAF_4, LEAF_16, get_ht, has_ht,
+    max_extended_leaf, max_leaf, vendor_str, x86_cpuid, x86_cpuid_count,
+};
 
 const DATA_CACHE: u32 = 1;
 const INSTRUCTION_CACHE: u32 = 2;
@@ -537,6 +538,14 @@ impl Cache {
                 }
                 // code and data L2 cache, 512 KB, 8 ways, 64 byte lines
                 0x80 => {
+                    #[cfg(target_arch = "x86")]
+                    if super::cyrix::Cyrix::is_cyrix() {
+                        // code and data L1 cache, 16 KB, 4 ways, 16 byte lines
+                        c.l1 =
+                            Level1Cache::Unified(CacheLevel::new(16 * 1024, CacheType::Unified, 4));
+                        continue;
+                    }
+
                     c.l2 = Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8));
                 }
                 // code and data L2 cache, 128 KB, 8 ways, 32 byte lines

@@ -71,7 +71,7 @@ impl Cyrix {
         (dir0, dir1)
     }
 
-    fn is_cyrix() -> bool {
+    pub(crate) fn is_cyrix() -> bool {
         super::vendor_str().as_str() == VENDOR_CYRIX
     }
 
