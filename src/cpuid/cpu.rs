@@ -505,17 +505,17 @@ impl TCpu for Cpu {
 
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
-                    println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
+                    println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
                     println!(
-                        "{}L1d: {}{} KB",
+                        "{}L1d:{}{:>4} KB",
                         label("Cache"),
                         &core_mult,
                         data.size / 1024
                     );
                     println!(
-                        "{:>16}L1i: {}{} KB",
+                        "{:>16}L1i:{}{:>4} KB",
                         "",
                         &core_mult,
                         instruction.size / 1024
@@ -531,7 +531,7 @@ impl TCpu for Cpu {
                     num /= 1024;
                 }
 
-                println!("{:>16}L2: {}{} {}", "", &core_mult, num, unit);
+                println!("{:>16}L2: {}{:>4} {}", "", &core_mult, num, unit);
             }
 
             if let Some(cache) = cache.l3 {
@@ -542,7 +542,7 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{:>16}L3: {} {}", "", num, unit);
+                println!("{:>16}L3: {:>4} {}", "", num, unit);
             }
 
             println!();
