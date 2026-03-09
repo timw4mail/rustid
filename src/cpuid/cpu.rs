@@ -498,8 +498,7 @@ impl TCpu for Cpu {
         if let Some(cache) = self.topology.cache {
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
-                    let size = cache.size;
-                    println!("{}L1: Unified {} KB", label("Cache"), size / 1024);
+                    println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
                     println!("{}L1d: {} KB", label("Cache"), data.size / 1024);
@@ -574,9 +573,9 @@ impl TCpu for Cpu {
             let cyrix = super::cyrix::Cyrix::detect();
 
             println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
-            println!("{:>16}Multiplier: {}x", "", cyrix.multiplier);
             println!("{:>16}Revision: {:X}h", "", cyrix.revision);
             println!("{:>16}Stepping: {:X}h", "", cyrix.stepping);
+            println!("{:>16}Multiplier: {}x", "", cyrix.multiplier);
             println!();
         }
 

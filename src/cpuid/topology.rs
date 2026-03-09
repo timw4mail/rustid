@@ -170,7 +170,7 @@ impl Cache {
     fn detect_general(leaf: u32) -> Option<Self> {
         let mut c = Cache::default();
 
-        for level in 0u32..5 {
+        for level in 0u32..10 {
             let res = x86_cpuid_count(leaf, level);
             let cache_type = res.eax & 0xF;
 

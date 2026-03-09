@@ -126,6 +126,7 @@ pub enum MicroArch {
     Northwood,
     Prescott,
     CedarMill,
+    AmberLake,
 
     // Rise
     MP6,
@@ -249,6 +250,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::Northwood => "Northwood",
             MicroArch::Prescott => "Prescott",
             MicroArch::CedarMill => "Cedar Mill",
+            MicroArch::AmberLake => "Amber Lake",
 
             // Rise
             MicroArch::MP6 => "mP6",
@@ -655,6 +657,7 @@ impl CpuArch {
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
             (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some("14nm")),
+            (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some("14nm")),
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
