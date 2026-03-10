@@ -1,8 +1,8 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::cache::Cache;
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_4, LEAF_16, get_ht, has_ht, max_extended_leaf, max_leaf,
-    vendor_str, x86_cpuid, x86_cpuid_count,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_16, max_extended_leaf, max_leaf, vendor_str, x86_cpuid,
+    x86_cpuid_count,
 };
 
 use heapless::Vec;
@@ -96,12 +96,10 @@ fn measure_tsc_frequency() -> u32 {
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
-struct TopologyDomain {
+pub struct TopologyDomain {
     level: u32,
     kind: TopologyType,
     count: u32,
-    x2apc_id: u32,
-    x2apc_id_shift: u32,
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
@@ -126,45 +124,33 @@ pub struct Topology {
     pub speed: Speed,
 
     pub cache: Option<Cache>,
+
+    #[allow(unused)]
     domains: Vec<TopologyDomain, 64>,
 }
 
 impl Topology {
-    pub fn detect_core_count() -> u32 {
-        match vendor_str().as_str() {
-            VENDOR_INTEL => {
-                if max_leaf() < LEAF_4 {
-                    return 1;
-                }
-
-                let res = x86_cpuid(LEAF_4);
-
-                (res.ebx >> 26) + 1
-            }
-            VENDOR_AMD => {
-                if get_ht() != 0 {
-                    return super::logical_cores() / (get_ht() + 1);
-                };
-
-                1
-            }
-            _ => {
-                if has_ht() {
-                    return super::logical_cores() / (get_ht() + 1);
-                };
-
-                1
-            }
-        }
-    }
-
     #[cfg(not(target_os = "none"))]
     pub fn detect() -> Self {
-        let threads = super::logical_cores();
-        let cores = Self::detect_core_count();
         let speed = Speed::detect();
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
+
+        let cores = domains
+            .iter()
+            .find(|d| d.kind == TopologyType::Core)
+            .map(|d| d.count)
+            .unwrap_or(1);
+        let raw_threads = domains
+            .iter()
+            .find(|d| d.kind == TopologyType::Thread)
+            .map(|d| d.count)
+            .unwrap_or(1);
+        let threads = if raw_threads < cores {
+            raw_threads * cores
+        } else {
+            raw_threads
+        };
 
         Topology {
             cores,
@@ -192,9 +178,7 @@ impl Topology {
 
         for subleaf in 0..64 {
             let res = x86_cpuid_count(LEAF_1F, subleaf);
-            let next_shift = res.eax;
             let domain_lcpus = res.ebx;
-            let apc_id = res.edx;
             let level = res.ecx & 0x7;
             let domain_type = res.ecx >> 8;
 
@@ -214,8 +198,6 @@ impl Topology {
                     _ => TopologyType::Invalid,
                 },
                 count: domain_lcpus,
-                x2apc_id: apc_id,
-                x2apc_id_shift: apc_id >> next_shift,
             });
         }
 
@@ -231,9 +213,7 @@ impl Topology {
 
         for subleaf in 0..64 {
             let res = x86_cpuid_count(EXT_LEAF_26, subleaf);
-            let next_shift = res.eax;
             let domain_lcpus = res.ebx;
-            let apc_id = res.edx;
             let level = res.ecx & 0x7;
             let domain_type = res.ecx >> 8;
 
@@ -244,15 +224,13 @@ impl Topology {
             let _ = d.push(TopologyDomain {
                 level,
                 kind: match domain_type {
-                    1 => TopologyType::Core,
-                    2 => TopologyType::Tile,
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
                     3 => TopologyType::Die,
                     4 => TopologyType::Socket,
                     _ => TopologyType::Invalid,
                 },
                 count: domain_lcpus,
-                x2apc_id: apc_id,
-                x2apc_id_shift: apc_id >> next_shift,
             });
         }
 
@@ -268,9 +246,7 @@ impl Topology {
 
         for subleaf in 0..64 {
             let res = x86_cpuid_count(LEAF_0B, subleaf);
-            let next_shift = res.eax;
             let domain_lcpus = res.ebx;
-            let apc_id = res.edx;
             let level = res.ecx & 0x7;
             let domain_type = res.ecx >> 8;
 
@@ -281,13 +257,11 @@ impl Topology {
             let _ = d.push(TopologyDomain {
                 level,
                 kind: match domain_type {
-                    1 => TopologyType::Core,
-                    2 => TopologyType::Thread,
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
                     _ => TopologyType::Invalid,
                 },
                 count: domain_lcpus,
-                x2apc_id: apc_id,
-                x2apc_id_shift: apc_id >> next_shift,
             });
         }
 
