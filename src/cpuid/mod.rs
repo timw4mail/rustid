@@ -27,22 +27,28 @@ pub const UNK: &str = "Unknown";
 pub type FeatureList = heapless::Vec<&'static str, 64>;
 
 /// CPUID leaf 0x00000000 - Maximum basic leaf
-pub const LEAF_0: u32 = 0;
+pub const LEAF_0: u32 = 0x0;
 
 /// CPUID leaf 0x00000001 - Processor info and feature flags
-pub const LEAF_1: u32 = 1;
+pub const LEAF_1: u32 = 0x1;
 
 /// CPUID leaf 0x00000002 - Cache descriptors
-pub const LEAF_2: u32 = 2;
+pub const LEAF_2: u32 = 0x2;
 
 /// Intel deterministic cache parameters
-pub const LEAF_4: u32 = 4;
+pub const LEAF_4: u32 = 0x4;
 
 /// CPUID leaf 0x00000007 - Extended feature flags
-pub const LEAF_7: u32 = 7;
+pub const LEAF_7: u32 = 0x7;
+
+/// CPU extended topology v1
+pub const LEAF_0B: u32 = 0xB;
 
 /// CPUID leaf 0x00000016 - Intel Processor Frequency
-pub const LEAF_16: u32 = 16;
+pub const LEAF_16: u32 = 0x16;
+
+/// Intel extended topology v2
+pub const LEAF_1F: u32 = 0x1F;
 
 /// Extended CPUID leaf 0x80000000 - Maximum extended leaf
 pub const EXT_LEAF_0: u32 = 0x8000_0000;
@@ -64,6 +70,9 @@ pub const EXT_LEAF_6: u32 = 0x8000_0006;
 
 /// AMD deterministic cache parameters
 pub const EXT_LEAF_1D: u32 = 0x8000_001D;
+
+/// AMD extended CPU topology
+pub const EXT_LEAF_26: u32 = 0x8000_0026;
 
 /// Represents the result of a CPUID instruction call.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
