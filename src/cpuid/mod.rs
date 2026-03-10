@@ -20,7 +20,7 @@ pub mod cyrix;
 pub mod micro_arch;
 pub mod topology;
 
-use brand::CpuBrand;
+use brand::{CpuBrand, VENDOR_AMD};
 
 pub use cpu::*;
 
@@ -302,6 +302,10 @@ pub fn get_ht() -> u32 {
 /// Returns the number of logical cores.
 pub fn logical_cores() -> u32 {
     if max_leaf() < 1 {
+        return 1;
+    }
+
+    if vendor_str().as_str() != VENDOR_AMD {
         return 1;
     }
 

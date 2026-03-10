@@ -429,6 +429,17 @@ impl TCpu for Cpu {
         let ma: String<64> = self.arch.micro_arch.into();
         let ma = ma.as_str();
 
+        let multi_core = self.topology.cores > 1;
+
+        let cache_count = |share_count| {
+            if !multi_core || share_count == 0 {
+                format!("")
+            } else {
+                format!("{}x ", self.topology.threads / share_count)
+            }
+            .unwrap()
+        };
+
         let label: fn(&str) -> String<32> = |label| format!("{:>14}:{:1}", label, "").unwrap();
         let sublabel: fn(&str) -> String<32> =
             |label| format!("{:>16}{}:{:1}", "", label, "").unwrap();
@@ -485,7 +496,7 @@ impl TCpu for Cpu {
 
         // Cores/threads
         // TODO: sockets
-        if self.topology.cores > 1 {
+        if multi_core {
             if self.topology.cores != self.topology.threads {
                 println!(
                     "{}{} cores ({} threads)",
@@ -501,29 +512,25 @@ impl TCpu for Cpu {
         }
 
         if let Some(cache) = self.topology.cache {
-            let core_mult: String<4> = if self.topology.cores > 1 {
-                format!("{}x ", self.topology.cores)
-            } else {
-                format!("")
-            }
-            .unwrap();
-
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
                     println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
+                    let data_count: String<4> = cache_count(data.share_count);
+                    let instruction_count = cache_count(instruction.share_count);
+
                     println!(
                         "{}L1d: {}{} KB, {}-way",
                         label("Cache"),
-                        &core_mult,
+                        &data_count,
                         data.size / 1024,
                         data.assoc
                     );
                     println!(
                         "{}{}{} KB, {}-way",
                         sublabel("L1i"),
-                        &core_mult,
+                        &instruction_count,
                         instruction.size / 1024,
                         instruction.assoc
                     );
@@ -531,6 +538,8 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l2 {
+                let count = cache_count(cache.share_count);
+
                 let mut num = cache.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
 
@@ -541,7 +550,7 @@ impl TCpu for Cpu {
                 println!(
                     "{} {}{} {}, {}-way",
                     sublabel("L2"),
-                    &core_mult,
+                    &count,
                     num,
                     unit,
                     cache.assoc
