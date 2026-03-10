@@ -136,7 +136,7 @@ impl Topology {
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
 
-        let cores = domains
+        let raw_cores = domains
             .iter()
             .find(|d| d.kind == TopologyType::Core)
             .map(|d| d.count)
@@ -146,10 +146,18 @@ impl Topology {
             .find(|d| d.kind == TopologyType::Thread)
             .map(|d| d.count)
             .unwrap_or(1);
-        let threads = if raw_threads < cores {
-            raw_threads * cores
+
+        let threads = if vendor_str().as_str() == VENDOR_AMD && raw_threads < raw_cores {
+            raw_threads * raw_cores
         } else {
-            raw_threads
+            // In the case of Intel/Centaur, the 'Core' count is Cores * Threads,
+            raw_cores
+        };
+
+        let cores = if raw_cores == threads {
+            raw_cores / raw_threads
+        } else {
+            raw_cores
         };
 
         Topology {
@@ -189,8 +197,8 @@ impl Topology {
             let _ = d.push(TopologyDomain {
                 level,
                 kind: match domain_type {
-                    1 => TopologyType::Core,
-                    2 => TopologyType::Thread,
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
                     3 => TopologyType::Module,
                     4 => TopologyType::Tile,
                     5 => TopologyType::Die,
@@ -257,8 +265,8 @@ impl Topology {
             let _ = d.push(TopologyDomain {
                 level,
                 kind: match domain_type {
-                    1 => TopologyType::Core,
-                    2 => TopologyType::Thread,
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
                     _ => TopologyType::Invalid,
                 },
                 count: domain_lcpus,
