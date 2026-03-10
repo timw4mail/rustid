@@ -48,7 +48,7 @@ cargo run
 Example Output:
 ```text
 ---------------------
-Rustid version 0.5.1
+Rustid version 0.6.2
 ---------------------
 
   Architecture: x86_64_v4
@@ -61,7 +61,14 @@ Rustid version 0.5.1
 
       Codename: Raphael
 
-          Node: 5nm
+  Process Node: 5nm
+
+         Cores: 16 cores (32 threads)
+
+         Cache: L1d: 16x 32 KB, 8-way
+                L1i: 16x 32 KB, 8-way
+                L2:  16x 1 MB, 8-way
+                L3:  96 MB, 16-way
 
          Speed: 4.19 GHz
 
