@@ -430,6 +430,8 @@ impl TCpu for Cpu {
         let ma = ma.as_str();
 
         let label: fn(&str) -> String<32> = |label| format!("{:>14}:{:1}", label, "").unwrap();
+        let sublabel: fn(&str) -> String<32> =
+            |label| format!("{:>16}{}:{:1}", "", label, "").unwrap();
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -482,6 +484,7 @@ impl TCpu for Cpu {
         }
 
         // Cores/threads
+        // TODO: sockets
         if self.topology.cores > 1 {
             if self.topology.cores != self.topology.threads {
                 println!(
@@ -518,8 +521,8 @@ impl TCpu for Cpu {
                         data.assoc
                     );
                     println!(
-                        "{:>16}L1i: {}{} KB, {}-way",
-                        "",
+                        "{}{}{} KB, {}-way",
+                        sublabel("L1i"),
                         &core_mult,
                         instruction.size / 1024,
                         instruction.assoc
@@ -536,8 +539,12 @@ impl TCpu for Cpu {
                 }
 
                 println!(
-                    "{:>16}L2:  {}{} {}, {}-way",
-                    "", &core_mult, num, unit, cache.assoc
+                    "{} {}{} {}, {}-way",
+                    sublabel("L2"),
+                    &core_mult,
+                    num,
+                    unit,
+                    cache.assoc
                 );
             }
 
@@ -549,7 +556,7 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{:>16}L3:  {} {}, {}-way", "", num, unit, cache.assoc);
+                println!("{} {} {}, {}-way", sublabel("L3"), num, unit, cache.assoc);
             }
 
             println!();
@@ -562,22 +569,22 @@ impl TCpu for Cpu {
         if self.topology.speed.base > 10 {
             let base = self.topology.speed.base;
             let boost = self.topology.speed.boost;
-
-            let mhz = base as f32;
-            let ghz = (base as f32) / 1000f32;
-            let freq = if base > 1000 { ghz } else { base as f32 };
             let unit = if base > 1000 { "GHz" } else { "MHz" };
+            let freq = if base > 1000 {
+                (base as f32) / 1000.0
+            } else {
+                base as f32
+            };
 
             if boost > base {
-                let boost_ghz = (boost as f32) / 1000f32;
                 let boost_freq = if boost > 1000 {
-                    boost_ghz
+                    (boost as f32) / 1000.0
                 } else {
                     boost as f32
                 };
 
                 println!("{}Base:  {:.2} {}", label("Frequency"), freq, unit);
-                println!("{:>16}Boost: {:.2} {}", "", boost_freq, unit);
+                println!("{}{:.2} {}", sublabel("Boost"), boost_freq, unit);
             } else {
                 println!("{}{:.2} {}", label("Frequency"), freq, unit);
             }
@@ -627,9 +634,9 @@ impl TCpu for Cpu {
             let cyrix = super::cyrix::Cyrix::detect();
 
             println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
-            println!("{:>16}Revision: {:X}h", "", cyrix.revision);
-            println!("{:>16}Stepping: {:X}h", "", cyrix.stepping);
-            println!("{:>16}Multiplier: {}x", "", cyrix.multiplier);
+            println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
+            println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
+            println!("{}{}x", sublabel("Multiplier"), cyrix.multiplier);
             println!();
         }
 
