@@ -1,6 +1,11 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::cache::Cache;
-use super::{LEAF_4, LEAF_16, get_ht, has_ht, max_leaf, vendor_str, x86_cpuid};
+use super::{
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_4, LEAF_16, get_ht, has_ht, max_extended_leaf, max_leaf,
+    vendor_str, x86_cpuid, x86_cpuid_count,
+};
+
+use heapless::Vec;
 
 #[derive(Debug, Default)]
 #[cfg(not(target_os = "none"))]
@@ -90,6 +95,28 @@ fn measure_tsc_frequency() -> u32 {
     (freq_mhz / 1000) as u32
 }
 
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
+struct TopologyDomain {
+    level: u32,
+    kind: TopologyType,
+    count: u32,
+    x2apc_id: u32,
+    x2apc_id_shift: u32,
+}
+
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
+pub enum TopologyType {
+    #[default]
+    Invalid,
+    Thread,
+    Core,
+    Die,
+    Socket,
+    Module,
+    Tile,
+    DieGroup,
+}
+
 #[derive(Debug, Default)]
 pub struct Topology {
     pub cores: u32,
@@ -99,6 +126,7 @@ pub struct Topology {
     pub speed: Speed,
 
     pub cache: Option<Cache>,
+    domains: Vec<TopologyDomain, 64>,
 }
 
 impl Topology {
@@ -136,13 +164,134 @@ impl Topology {
         let cores = Self::detect_core_count();
         let speed = Speed::detect();
         let cache = Cache::detect();
+        let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
 
         Topology {
             cores,
             threads,
             speed,
             cache,
+            domains,
         }
+    }
+
+    fn detect_domains() -> Vec<TopologyDomain, 64> {
+        match vendor_str().as_str() {
+            VENDOR_INTEL => Self::detect_domains_intel(),
+            VENDOR_AMD => Self::detect_domains_amd(),
+            _ => Self::detect_domains_fallback(),
+        }
+    }
+
+    fn detect_domains_intel() -> Vec<TopologyDomain, 64> {
+        if max_leaf() < LEAF_1F {
+            return Self::detect_domains_fallback();
+        }
+
+        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+
+        for subleaf in 0..64 {
+            let res = x86_cpuid_count(LEAF_1F, subleaf);
+            let next_shift = res.eax;
+            let domain_lcpus = res.ebx;
+            let apc_id = res.edx;
+            let level = res.ecx & 0x7;
+            let domain_type = res.ecx >> 8;
+
+            if domain_type == 0 {
+                break;
+            }
+
+            let _ = d.push(TopologyDomain {
+                level,
+                kind: match domain_type {
+                    1 => TopologyType::Core,
+                    2 => TopologyType::Thread,
+                    3 => TopologyType::Module,
+                    4 => TopologyType::Tile,
+                    5 => TopologyType::Die,
+                    6 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
+                count: domain_lcpus,
+                x2apc_id: apc_id,
+                x2apc_id_shift: apc_id >> next_shift,
+            });
+        }
+
+        d
+    }
+
+    fn detect_domains_amd() -> Vec<TopologyDomain, 64> {
+        if max_extended_leaf() < EXT_LEAF_26 {
+            return Self::detect_domains_fallback();
+        }
+
+        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+
+        for subleaf in 0..64 {
+            let res = x86_cpuid_count(EXT_LEAF_26, subleaf);
+            let next_shift = res.eax;
+            let domain_lcpus = res.ebx;
+            let apc_id = res.edx;
+            let level = res.ecx & 0x7;
+            let domain_type = res.ecx >> 8;
+
+            if domain_type == 0 {
+                break;
+            }
+
+            let _ = d.push(TopologyDomain {
+                level,
+                kind: match domain_type {
+                    1 => TopologyType::Core,
+                    2 => TopologyType::Tile,
+                    3 => TopologyType::Die,
+                    4 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
+                count: domain_lcpus,
+                x2apc_id: apc_id,
+                x2apc_id_shift: apc_id >> next_shift,
+            });
+        }
+
+        d
+    }
+
+    fn detect_domains_fallback() -> Vec<TopologyDomain, 64> {
+        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+
+        if max_leaf() < LEAF_0B {
+            return d;
+        }
+
+        for subleaf in 0..64 {
+            let res = x86_cpuid_count(LEAF_0B, subleaf);
+            let next_shift = res.eax;
+            let domain_lcpus = res.ebx;
+            let apc_id = res.edx;
+            let level = res.ecx & 0x7;
+            let domain_type = res.ecx >> 8;
+
+            if domain_type == 0 {
+                break;
+            }
+
+            let _ = d.push(TopologyDomain {
+                level,
+                kind: match domain_type {
+                    1 => TopologyType::Core,
+                    2 => TopologyType::Thread,
+                    _ => TopologyType::Invalid,
+                },
+                count: domain_lcpus,
+                x2apc_id: apc_id,
+                x2apc_id_shift: apc_id >> next_shift,
+            });
+        }
+
+        d
     }
 
     #[cfg(target_os = "none")]

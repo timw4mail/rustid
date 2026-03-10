@@ -1,7 +1,7 @@
-use super::brand::{CpuBrand, VENDOR_AMD};
+use super::brand::CpuBrand;
 use super::{
-    EXT_LEAF_1D, EXT_LEAF_5, EXT_LEAF_6, LEAF_2, LEAF_4, max_extended_leaf, max_leaf, vendor_str,
-    x86_cpuid, x86_cpuid_count,
+    EXT_LEAF_1D, EXT_LEAF_5, EXT_LEAF_6, LEAF_2, LEAF_4, max_extended_leaf, max_leaf, x86_cpuid,
+    x86_cpuid_count,
 };
 
 const DATA_CACHE: u32 = 1;
@@ -696,11 +696,7 @@ impl Cache {
             }
 
             let cache_level = (res.eax >> 5) & 0x7;
-            let share_count = if vendor_str().as_str() == VENDOR_AMD {
-                ((res.eax >> 14) & 0x7) + 1
-            } else {
-                (res.eax >> 14) & 0x7
-            };
+            let share_count = ((res.eax >> 14) & 0x7) + 1;
             let cache_sets = res.ecx + 1;
             let cache_line_size = (res.ebx & 0xFFF) + 1;
             let cache_partitions = ((res.ebx >> 12) & 0x3FF) + 1;
