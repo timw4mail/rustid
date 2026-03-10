@@ -560,13 +560,28 @@ impl TCpu for Cpu {
         // much space in the binary
         #[cfg(not(target_os = "none"))]
         if self.topology.speed.base > 10 {
-            let mhz = self.topology.speed.base as f32;
-            let ghz = mhz / 1000f32;
-            if mhz > 1000f32 {
-                println!("{}{:.2} GHz", label("Speed"), ghz);
+            let base = self.topology.speed.base;
+            let boost = self.topology.speed.boost;
+
+            let mhz = base as f32;
+            let ghz = (base as f32) / 1000f32;
+            let freq = if base > 1000 { ghz } else { base as f32 };
+            let unit = if base > 1000 { "GHz" } else { "MHz" };
+
+            if boost > base {
+                let boost_ghz = (boost as f32) / 1000f32;
+                let boost_freq = if boost > 1000 {
+                    boost_ghz
+                } else {
+                    boost as f32
+                };
+
+                println!("{}Base:  {:.2} {}", label("Frequency"), freq, unit);
+                println!("{:>16}Boost: {:.2} {}", "", boost_freq, unit);
             } else {
-                println!("{}{:.2} MHz", label("Speed"), mhz);
+                println!("{}{:.2} {}", label("Frequency"), freq, unit);
             }
+
             println!();
         }
 
