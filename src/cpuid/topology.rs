@@ -257,8 +257,8 @@ impl Topology {
             let _ = d.push(TopologyDomain {
                 level,
                 kind: match domain_type {
-                    1 => TopologyType::Thread,
-                    2 => TopologyType::Core,
+                    1 => TopologyType::Core,
+                    2 => TopologyType::Thread,
                     _ => TopologyType::Invalid,
                 },
                 count: domain_lcpus,
