@@ -2,15 +2,16 @@
 
 #[allow(unused_imports)]
 use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_CYRIX, VENDOR_INTEL};
+use super::cache::Level1Cache;
 use super::micro_arch::{CpuArch, MicroArch};
-use super::topology::{Level1Cache, Topology};
+use super::topology::Topology;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
 
 use crate::{TCpu, println};
 
 use core::str::FromStr;
 use heapless::String;
-
+#[allow(unused_imports)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FeatureClass {

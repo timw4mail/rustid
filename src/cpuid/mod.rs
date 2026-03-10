@@ -13,6 +13,7 @@ use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
 use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
 
 pub mod brand;
+pub mod cache;
 pub mod cpu;
 #[cfg(target_arch = "x86")]
 pub mod cyrix;
