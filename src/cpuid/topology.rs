@@ -1,8 +1,8 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::cache::Cache;
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_16, has_ht, logical_cores, max_extended_leaf, max_leaf,
-    vendor_str, x86_cpuid, x86_cpuid_count,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, has_ht, logical_cores, max_extended_leaf, max_leaf, vendor_str,
+    x86_cpuid_count,
 };
 
 use heapless::Vec;
@@ -18,6 +18,7 @@ pub struct Speed {
 #[cfg(not(target_os = "none"))]
 impl Speed {
     pub fn detect() -> Self {
+        use super::{LEAF_16, x86_cpuid};
         match vendor_str().as_str() {
             VENDOR_INTEL => {
                 if max_leaf() < LEAF_16 {
@@ -130,9 +131,10 @@ pub struct Topology {
 }
 
 impl Topology {
-    #[cfg(not(target_os = "none"))]
     pub fn detect() -> Self {
+        #[cfg(not(target_os = "none"))]
         let speed = Speed::detect();
+
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
 
@@ -176,6 +178,7 @@ impl Topology {
         Topology {
             cores,
             threads,
+            #[cfg(not(target_os = "none"))]
             speed,
             cache,
             domains,
@@ -287,13 +290,5 @@ impl Topology {
         }
 
         d
-    }
-
-    #[cfg(target_os = "none")]
-    pub fn detect() -> Self {
-        let mut t = Topology::default();
-        t.cache = Cache::detect();
-
-        return t;
     }
 }

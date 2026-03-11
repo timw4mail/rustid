@@ -35,6 +35,7 @@ SECTIONS {
         *(.comment)
         *(.note*)
         *(.eh_frame)
+        *(.eh_frame_hdr)
         *(.rel.plt)
     }
 }

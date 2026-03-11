@@ -6,6 +6,7 @@ build-std-features = ["compiler-builtins-mem"]
 linker = "rust-lld"
 rustflags = [
 	"-C", "link-arg=-Tlink.x",
+	"-C", "link-arg=--gc-sections",
 	"-C", "panic=abort",
 	"-C", "target-cpu=i486",
 	"-C", "opt-level=z"
