@@ -333,11 +333,11 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
         return false;
     }
 
-    if leaf >= EXT_LEAF_0 && max_extended_leaf() < leaf {
+    if leaf < EXT_LEAF_0 && leaf > max_leaf() {
         return false;
     }
 
-    if max_leaf() < leaf {
+    if leaf >= EXT_LEAF_0 && leaf > max_extended_leaf() {
         return false;
     }
 
