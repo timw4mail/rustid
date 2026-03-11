@@ -1,8 +1,8 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::cache::Cache;
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_16, max_extended_leaf, max_leaf, vendor_str, x86_cpuid,
-    x86_cpuid_count,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, LEAF_16, has_ht, logical_cores, max_extended_leaf, max_leaf,
+    vendor_str, x86_cpuid, x86_cpuid_count,
 };
 
 use heapless::Vec;
@@ -136,28 +136,41 @@ impl Topology {
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
 
-        let raw_cores = domains
-            .iter()
-            .find(|d| d.kind == TopologyType::Core)
-            .map(|d| d.count)
-            .unwrap_or(1);
-        let raw_threads = domains
-            .iter()
-            .find(|d| d.kind == TopologyType::Thread)
-            .map(|d| d.count)
-            .unwrap_or(1);
+        let (cores, threads) = if domains.is_empty() {
+            if vendor_str().as_str() == VENDOR_AMD {
+                let threads = logical_cores();
+                let cores = if has_ht() { threads / 2 } else { threads };
 
-        let threads = if vendor_str().as_str() == VENDOR_AMD && raw_threads < raw_cores {
-            raw_threads * raw_cores
+                (cores, threads)
+            } else {
+                (1, 1)
+            }
         } else {
-            // In the case of Intel/Centaur, the 'Core' count is Cores * Threads,
-            raw_cores
-        };
+            let raw_cores = domains
+                .iter()
+                .find(|d| d.kind == TopologyType::Core)
+                .map(|d| d.count)
+                .unwrap_or(1);
+            let raw_threads = domains
+                .iter()
+                .find(|d| d.kind == TopologyType::Thread)
+                .map(|d| d.count)
+                .unwrap_or(1);
 
-        let cores = if raw_cores == threads {
-            raw_cores / raw_threads
-        } else {
-            raw_cores
+            let threads = if vendor_str().as_str() == VENDOR_AMD && raw_threads < raw_cores {
+                raw_threads * raw_cores
+            } else {
+                // In the case of Intel/Centaur, the 'Core' count is Cores * Threads,
+                raw_cores
+            };
+
+            let cores = if raw_cores == threads {
+                raw_cores / raw_threads
+            } else {
+                raw_cores
+            };
+
+            (cores, threads)
         };
 
         Topology {
