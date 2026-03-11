@@ -1,5 +1,6 @@
 //! Contains the Cpu struct for ARM.
 
+use crate::TCpu;
 use crate::arm::brand::Vendor;
 use crate::arm::fns;
 use std::println;
@@ -29,12 +30,14 @@ impl Cpu {
             vendor: Vendor::from(midr.implementer).into(),
         }
     }
+}
 
-    pub fn debug(&self) {
+impl TCpu for Cpu {
+    fn debug(&self) {
         println!("{:#?}", self);
     }
 
-    pub fn display_table(&self) {
+    fn display_table(&self) {
         println!();
         println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr);
         println!("Implementer: 0x{:X}", self.midr.implementer);

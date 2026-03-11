@@ -1,5 +1,6 @@
 //! Contains the Cpu struct for PowerPC.
 
+use crate::TCpu;
 use crate::ppc::fns;
 
 #[derive(Debug)]
@@ -24,12 +25,14 @@ impl Cpu {
             revision: (pvr & 0xFFFF) as u16,
         }
     }
+}
 
-    pub fn debug(&self) {
+impl TCpu for Cpu {
+    fn debug(&self) {
         println!("{:#?}", self);
     }
 
-    pub fn display_table(&self) {
+    fn display_table(&self) {
         println!();
         println!("Processor Version Register (PVR): 0x{:X}", self.pvr);
         println!("CPU Version: 0x{:X}", self.version);
