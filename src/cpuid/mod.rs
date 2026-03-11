@@ -20,7 +20,7 @@ pub mod cyrix;
 pub mod micro_arch;
 pub mod topology;
 
-use brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
+use brand::CpuBrand;
 
 pub use cpu::*;
 
@@ -158,7 +158,7 @@ pub fn has_cpuid() -> bool {
 /// instruction, whereas other x86 processors do.
 ///
 /// Verified on real hardware
-pub fn is_cyrix() -> bool {
+pub fn cyrix_5_2_test() -> bool {
     #[cfg(target_arch = "x86_64")]
     return false;
 
@@ -259,7 +259,7 @@ pub fn max_extended_leaf() -> u32 {
 pub fn vendor_str() -> heapless::String<12> {
     #[cfg(target_arch = "x86")]
     // This is important for later Cyrix checks.
-    if !has_cpuid() && is_cyrix() {
+    if !has_cpuid() && cyrix_5_2_test() {
         use core::str::FromStr;
 
         return heapless::String::from_str(brand::VENDOR_CYRIX).unwrap();
@@ -281,6 +281,26 @@ pub fn vendor_str() -> heapless::String<12> {
     }
 
     s
+}
+
+pub fn is_amd() -> bool {
+    use brand::VENDOR_AMD;
+    vendor_str().as_str() == VENDOR_AMD
+}
+
+pub fn is_centaur() -> bool {
+    use brand::VENDOR_CENTAUR;
+    vendor_str().as_str() == VENDOR_CENTAUR
+}
+
+pub fn is_cyrix() -> bool {
+    use brand::VENDOR_CYRIX;
+    vendor_str().as_str() == VENDOR_CYRIX
+}
+
+pub fn is_intel() -> bool {
+    use brand::VENDOR_INTEL;
+    vendor_str().as_str() == VENDOR_INTEL
 }
 
 /// Returns true if the CPU is an Intel Overdrive processor.
@@ -305,7 +325,7 @@ pub fn logical_cores() -> u32 {
         return 1;
     }
 
-    if vendor_str().as_str() != VENDOR_AMD {
+    if !is_amd() {
         return 1;
     }
 
@@ -368,9 +388,9 @@ pub fn has_tsc() -> bool {
     has_feature(LEAF_1, Reg::Edx, 4)
 }
 
-/// Returns true if the CPU supports MMX instructions.
-pub fn has_mmx() -> bool {
-    has_feature(LEAF_1, Reg::Edx, 23)
+/// Returns true if the CPU supports CMPXCHG8B instruction.
+pub fn has_cx8() -> bool {
+    has_feature(LEAF_1, Reg::Edx, 8)
 }
 
 /// Returns true if the CPU supports CMOV instructions.
@@ -378,9 +398,9 @@ pub fn has_cmov() -> bool {
     has_feature(LEAF_1, Reg::Edx, 15)
 }
 
-/// Returns true if the CPU supports CMPXCHG8B instruction.
-pub fn has_cx8() -> bool {
-    has_feature(LEAF_1, Reg::Edx, 8)
+/// Returns true if the CPU supports MMX instructions.
+pub fn has_mmx() -> bool {
+    has_feature(LEAF_1, Reg::Edx, 23)
 }
 
 /// Returns true if the CPU supports SSE instructions.
@@ -487,6 +507,10 @@ pub fn has_sse4a() -> bool {
 
 /// Returns true if the CPU supports AMD64 (x86-64) instructions.
 pub fn has_amd64() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    return true;
+
+    #[cfg(target_arch = "x86")]
     has_feature(EXT_LEAF_1, Reg::Edx, 29)
 }
 
@@ -534,7 +558,7 @@ pub fn get_feature_list() -> FeatureList {
         let _ = out.push("HT");
     };
     if has_amd64() {
-        if vendor_str().as_str() == VENDOR_INTEL {
+        if is_intel() {
             let _ = out.push("EM64T");
         } else {
             let _ = out.push("AMD64");

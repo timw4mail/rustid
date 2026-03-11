@@ -560,7 +560,7 @@ impl Cache {
                 // code and data L2 cache, 512 KB, 8 ways, 64 byte lines
                 0x80 => {
                     #[cfg(target_arch = "x86")]
-                    if super::cyrix::Cyrix::is_cyrix() {
+                    if super::is_cyrix() {
                         // code and data L1 cache, 16 KB, 4 ways, 16 byte lines
                         c.l1 = Level1Cache::Unified(CacheLevel::no_count(
                             16 * 1024,

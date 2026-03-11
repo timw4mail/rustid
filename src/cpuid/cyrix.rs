@@ -1,13 +1,11 @@
 use super::{FeatureClass, UNK, has_cx8};
 
-use crate::cpuid::brand::VENDOR_CYRIX;
 use core::str::FromStr;
 use heapless::{String, format};
 
 #[derive(Debug, Default, Clone)]
 pub struct Cyrix {
     pub dir0: u8,
-    pub dir1: u8,
     pub revision: u8,
     pub stepping: u8,
     pub multiplier: String<4>,
@@ -17,7 +15,7 @@ pub struct Cyrix {
 
 impl Cyrix {
     pub fn detect() -> Cyrix {
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return Cyrix::default();
         }
 
@@ -30,7 +28,6 @@ impl Cyrix {
 
         Cyrix {
             dir0,
-            dir1,
             revision,
             stepping,
             multiplier,
@@ -40,7 +37,7 @@ impl Cyrix {
     }
 
     fn get_device_ids() -> (u8, u8) {
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return (0, 0);
         }
 
@@ -71,10 +68,6 @@ impl Cyrix {
         (dir0, dir1)
     }
 
-    pub(crate) fn is_cyrix() -> bool {
-        super::vendor_str().as_str() == VENDOR_CYRIX
-    }
-
     pub fn get_feature_class() -> FeatureClass {
         let (dir0, _) = Self::get_device_ids();
 
@@ -98,7 +91,7 @@ impl Cyrix {
     /// that can be enabled, if cpuid support is currently disabled
     pub fn can_enable_cpuid() -> bool {
         // If this isn't a Cyrix CPU, we'll just assume CPUID can't be enabled
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return false;
         }
 
@@ -117,7 +110,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn model_string() -> String<64> {
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return String::from_str(UNK).unwrap();
         }
 
@@ -176,7 +169,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     fn multiplier() -> String<4> {
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return String::from_str("0").unwrap();
         }
 
@@ -204,7 +197,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn codename() -> &'static str {
-        if !Self::is_cyrix() {
+        if !super::is_cyrix() {
             return UNK;
         }
 

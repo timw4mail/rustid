@@ -81,11 +81,6 @@ impl CpuBrand {
     /// Detects the CPU brand/vendor from CPUID information.
     pub fn detect() -> Self {
         let vendor_str = super::vendor_str();
-        let vendor_str = if vendor_str.is_empty() && super::is_cyrix() {
-            VENDOR_CYRIX
-        } else {
-            vendor_str.as_str()
-        };
 
         Self::from(vendor_str)
     }

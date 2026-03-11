@@ -32,7 +32,7 @@ impl FeatureClass {
     pub fn detect() -> FeatureClass {
         use super::*;
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
             if has_avx512f() {
                 return FeatureClass::x86_64_v4;
@@ -47,6 +47,12 @@ impl FeatureClass {
                 return FeatureClass::x86_64_v2;
             }
 
+            #[cfg(target_arch = "x86")]
+            if has_amd64() {
+                return FeatureClass::x86_64_v1;
+            }
+
+            #[cfg(target_arch = "x86_64")]
             FeatureClass::x86_64_v1
         }
 
@@ -624,10 +630,10 @@ impl TCpu for Cpu {
 
         // CPU Features
         if !self.features.is_empty() {
-            #[cfg(target_arch = "x86")]
-            let mut features: String<32> = String::new();
+            #[cfg(target_os = "none")]
+            let mut features: String<128> = String::new();
 
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(not(target_os = "none"))]
             let mut features: String<512> = String::new();
 
             self.features.iter().for_each(|feature| {
@@ -645,7 +651,7 @@ impl TCpu for Cpu {
             println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
             println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
             println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
-            println!("{}{}x", sublabel("Multiplier"), cyrix.multiplier);
+            println!("{}{}x", sublabel("Bus Multiplier"), cyrix.multiplier);
             println!();
         }
 

@@ -1,8 +1,8 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::cache::Cache;
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, has_ht, logical_cores, max_extended_leaf, max_leaf, vendor_str,
-    x86_cpuid_count,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, has_ht, is_amd, logical_cores, max_extended_leaf, max_leaf,
+    vendor_str, x86_cpuid_count,
 };
 
 use heapless::Vec;
@@ -139,7 +139,7 @@ impl Topology {
         let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
 
         let (cores, threads) = if domains.is_empty() {
-            if vendor_str().as_str() == VENDOR_AMD {
+            if is_amd() {
                 let threads = logical_cores();
                 let cores = if has_ht() { threads / 2 } else { threads };
 
@@ -159,7 +159,7 @@ impl Topology {
                 .map(|d| d.count)
                 .unwrap_or(1);
 
-            let threads = if vendor_str().as_str() == VENDOR_AMD && raw_threads < raw_cores {
+            let threads = if is_amd() && raw_threads < raw_cores {
                 raw_threads * raw_cores
             } else {
                 // In the case of Intel/Centaur, the 'Core' count is Cores * Threads,
