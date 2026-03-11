@@ -21,7 +21,7 @@ jobs:
               run: just build-dos
 
             - name: Upload artifact
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v6
               with:
                   name: rustid
                   path: ./rustid.com
