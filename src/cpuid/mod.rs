@@ -20,7 +20,7 @@ pub mod cyrix;
 pub mod micro_arch;
 pub mod topology;
 
-use brand::{CpuBrand, VENDOR_AMD};
+use brand::{CpuBrand, VENDOR_AMD, VENDOR_INTEL};
 
 pub use cpu::*;
 
@@ -534,7 +534,11 @@ pub fn get_feature_list() -> FeatureList {
         let _ = out.push("HT");
     };
     if has_amd64() {
-        let _ = out.push("AMD64");
+        if vendor_str().as_str() == VENDOR_INTEL {
+            let _ = out.push("EM64T");
+        } else {
+            let _ = out.push("AMD64");
+        }
     };
     if has_sse() {
         let _ = out.push("SSE");
