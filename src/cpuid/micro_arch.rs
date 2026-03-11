@@ -648,6 +648,7 @@ impl CpuArch {
             // Pentium M
             (0, 6, 0, 13, 8) => brand_arch(MicroArch::Dothan, "Dothan", Some("90nm")),
             (0, 6, 0, 14, _) => brand_arch(MicroArch::Yonah, "Yonah", Some("65nm")),
+            (0, 6, 0, 15, 6) => brand_arch(MicroArch::Core, "Merom", Some("65nm")),
 
             // Core/Core 2
             (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
