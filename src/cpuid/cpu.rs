@@ -177,14 +177,13 @@ pub struct Cpu {
     pub easter_egg: Option<String<64>>,
     /// Model brand id
     pub brand_id: u32,
-    /// Number of logical processors/threads
-    pub threads: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
     /// AMD extended cpu signature
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: FeatureList,
+    /// Speed, threads, cores, sockets
     pub topology: Topology,
 }
 
@@ -204,7 +203,6 @@ impl Cpu {
             ),
             easter_egg: Self::easter_egg(),
             brand_id: super::get_brand_id(),
-            threads: super::logical_cores(),
             signature: CpuSignature::detect(),
             ext_signature: match super::is_amd() {
                 true => Some(ExtendedSignature::detect()),
@@ -427,7 +425,7 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
 
         #[cfg(target_os = "none")]
-        println!("{:?}", self);
+        println!("{:?}", self.topology);
     }
 
     fn display_table(&self) {
@@ -709,7 +707,6 @@ mod tests {
             arch: arch_am486.clone(),
             brand_id: 0,
             easter_egg: None,
-            threads: 1,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
             ext_signature: None,
             features: get_feature_list(),
@@ -722,7 +719,6 @@ mod tests {
             arch: arch_am486.clone(),
             brand_id: 0,
             easter_egg: None,
-            threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
             features: get_feature_list(),
@@ -742,7 +738,6 @@ mod tests {
             arch: arch_i486.clone(),
             brand_id: 0,
             easter_egg: None,
-            threads: 1,
             signature: CpuSignature::detect(),
             ext_signature: None,
             features: get_feature_list(),
@@ -755,7 +750,6 @@ mod tests {
             arch: CpuArch::default(),
             brand_id: 0,
             easter_egg: None,
-            threads: 1,
             signature: CpuSignature {
                 extended_family: 0,
                 family: 0,
@@ -777,7 +771,6 @@ mod tests {
             arch: CpuArch::default(),
             brand_id: 0,
             easter_egg: None,
-            threads: 1,
             signature: CpuSignature {
                 extended_family: 1, // Make it not all zeros
                 family: 1,
