@@ -254,6 +254,17 @@ pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
 }
 
+pub fn is_valid_leaf(leaf: u32) -> bool {
+    if !has_cpuid() {
+        return false;
+    }
+
+    match leaf {
+        EXT_LEAF_0.. => leaf <= max_extended_leaf(),
+        0..EXT_LEAF_0 => leaf <= max_leaf(),
+    }
+}
+
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
 /// Returns a 12-character vendor string from CPUID leaf 0.
 pub fn vendor_str() -> heapless::String<12> {
@@ -349,15 +360,7 @@ enum Reg {
 
 /// Checks if a specific feature bit is set in the given CPUID leaf.
 fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
-    if !has_cpuid() {
-        return false;
-    }
-
-    if leaf < EXT_LEAF_0 && leaf > max_leaf() {
-        return false;
-    }
-
-    if leaf >= EXT_LEAF_0 && leaf > max_extended_leaf() {
+    if !is_valid_leaf(leaf) {
         return false;
     }
 

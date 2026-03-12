@@ -1,8 +1,4 @@
-use super::brand::CpuBrand;
-use super::{
-    EXT_LEAF_1D, EXT_LEAF_5, EXT_LEAF_6, LEAF_2, LEAF_4, max_extended_leaf, max_leaf, x86_cpuid,
-    x86_cpuid_count,
-};
+use super::*;
 
 const DATA_CACHE: u32 = 1;
 const INSTRUCTION_CACHE: u32 = 2;
@@ -134,19 +130,21 @@ impl Cache {
     }
 
     pub fn detect() -> Option<Self> {
-        // Check for support for the Intel method
-        match CpuBrand::detect() {
-            CpuBrand::Intel => Self::detect_intel(),
-            CpuBrand::AMD => Self::detect_amd(),
-            _ => Self::detect_intel(),
+        if is_amd() {
+            return match is_valid_leaf(EXT_LEAF_1D) {
+                true => Cache::detect_general(EXT_LEAF_1D),
+                false => Cache::detect_amd_fallback(),
+            };
         }
-    }
 
-    fn detect_amd() -> Option<Self> {
-        if max_extended_leaf() >= EXT_LEAF_1D {
-            Cache::detect_general(EXT_LEAF_1D)
-        } else {
-            Cache::detect_amd_fallback()
+        // The 1-bit cache descriptors are on LEAF 0x2, but
+        // the extended cache topology is on LEAF 0x4.
+        // We want to use the extended cache topology if
+        // it exists.
+        match max_leaf() {
+            LEAF_2..LEAF_4 => Cache::detect_fallback(),
+            LEAF_4.. => Cache::detect_general(LEAF_4),
+            _ => None,
         }
     }
 
@@ -180,16 +178,6 @@ impl Cache {
         Some(c)
     }
 
-    fn detect_intel() -> Option<Self> {
-        if max_leaf() >= LEAF_4 {
-            Cache::detect_general(LEAF_4)
-        } else if max_leaf() >= LEAF_2 {
-            Cache::detect_fallback()
-        } else {
-            None
-        }
-    }
-
     /// Get cache information via 1-bit descriptors
     ///
     /// See https://sandpile.org/x86/cpuid.htm#level_0000_0002h
@@ -197,10 +185,6 @@ impl Cache {
         use heapless::Vec;
 
         let mut c = Cache::default();
-
-        if max_leaf() < LEAF_2 {
-            return None;
-        }
 
         let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
@@ -460,10 +444,18 @@ impl Cache {
                 // code and data L3 cache, 4096 KB, 16 ways, 64 byte lines (P4) or
                 // code and data L2 cache, 4096 KB, 16 ways, 64 byte lines (Core 2)
                 0x49 => {
-                    if c.l3.is_some() {
-                        c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
-                    } else {
-                        c.l2 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
+                    let sig = CpuSignature::detect();
+
+                    // Core/Core 2 has signatures like (0, 6, 0, 15, 6) and (0, 6, 1, 7, 0)
+                    match (sig.family, sig.extended_model, sig.model) {
+                        // Core 2
+                        (6, 0, 13..) | (6, 1, 7) => {
+                            c.l2 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
+                        }
+                        // P4
+                        _ => {
+                            c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
+                        }
                     }
                 }
                 // code and data L3 cache, 6144 KB, 12 ways, 64 byte lines

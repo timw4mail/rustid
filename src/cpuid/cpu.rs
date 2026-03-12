@@ -1,11 +1,10 @@
 //! CPU detection and information for x86/x86_64 processors.
 
-#[allow(unused_imports)]
-use super::brand::{CpuBrand, VENDOR_AMD, VENDOR_CYRIX, VENDOR_INTEL};
+use super::brand::CpuBrand;
 use super::cache::Level1Cache;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, x86_cpuid};
+use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, is_valid_leaf, x86_cpuid};
 
 use crate::{TCpu, println};
 
@@ -207,10 +206,9 @@ impl Cpu {
             brand_id: super::get_brand_id(),
             threads: super::logical_cores(),
             signature: CpuSignature::detect(),
-            ext_signature: if super::vendor_str() == VENDOR_AMD {
-                Some(ExtendedSignature::detect())
-            } else {
-                None
+            ext_signature: match super::is_amd() {
+                true => Some(ExtendedSignature::detect()),
+                false => None,
             },
             features: super::get_feature_list(),
             topology: Topology::detect(),
@@ -220,7 +218,7 @@ impl Cpu {
     /// Gets the CPU model string.
     fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
-        if super::max_extended_leaf() < EXT_LEAF_4 {
+        if !is_valid_leaf(EXT_LEAF_4) {
             let _ = model.push_str("Unknown");
             return model;
         }
@@ -243,6 +241,10 @@ impl Cpu {
     }
 
     fn intel_brand_index(&self) -> Option<String<64>> {
+        if !super::is_intel() {
+            return None;
+        }
+
         let brand_id = super::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
@@ -298,13 +300,12 @@ impl Cpu {
         }
 
         #[cfg(target_arch = "x86")]
-        if self.arch.vendor_string == VENDOR_CYRIX {
+        if super::is_cyrix() {
             return super::cyrix::Cyrix::model_string();
         }
 
-        if self.arch.vendor_string == VENDOR_INTEL
-            && let Some(model_name) = self.intel_brand_index()
-        {
+        // Check the Intel model lookup table
+        if let Some(model_name) = self.intel_brand_index() {
             return model_name;
         }
 
@@ -645,7 +646,7 @@ impl TCpu for Cpu {
         }
 
         #[cfg(target_arch = "x86")]
-        if self.arch.vendor_string == VENDOR_CYRIX {
+        if super::is_cyrix() {
             let cyrix = super::cyrix::Cyrix::detect();
 
             println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);

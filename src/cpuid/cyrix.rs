@@ -90,13 +90,8 @@ impl Cyrix {
     /// Check if the Cyrix model likely has CPUID support
     /// that can be enabled, if cpuid support is currently disabled
     pub fn can_enable_cpuid() -> bool {
-        // If this isn't a Cyrix CPU, we'll just assume CPUID can't be enabled
-        if !super::is_cyrix() {
-            return false;
-        }
-
-        // If CPUID is already enabled, we don't need to enable it again
-        if super::has_cpuid() {
+        // If it's not Cyrix, or cpuid is enabled, we don't care
+        if super::has_cpuid() || !super::is_cyrix() {
             return false;
         }
 
