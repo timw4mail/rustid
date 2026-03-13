@@ -14,6 +14,13 @@ impl MpTable {
     }
 }
 
+#[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
+impl MpTable {
+    pub fn detect() -> MpTable {
+        MpTable { sockets: 1 }
+    }
+}
+
 #[cfg(target_os = "windows")]
 impl MpTable {
     pub fn detect() -> MpTable {

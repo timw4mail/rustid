@@ -7,10 +7,10 @@
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
 #[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86_64::{__cpuid_count, CpuidResult};
 
 #[cfg(target_arch = "x86")]
-use core::arch::x86::{__cpuid, __cpuid_count, CpuidResult};
+use core::arch::x86::{__cpuid_count, CpuidResult};
 
 pub mod brand;
 pub mod cache;
@@ -18,7 +18,6 @@ pub mod cpu;
 #[cfg(target_arch = "x86")]
 pub mod cyrix;
 pub mod micro_arch;
-#[cfg(any(target_os = "none", target_os = "linux"))]
 pub mod mp;
 pub mod topology;
 
@@ -102,21 +101,16 @@ impl From<CpuidResult> for Cpuid {
 }
 
 /// Calls CPUID with the given leaf (EAX).
-#[allow(unused_unsafe)]
 pub fn x86_cpuid(leaf: u32) -> Cpuid {
-    if !has_cpuid() {
-        return Cpuid::default();
-    }
-    unsafe { __cpuid(leaf).into() }
+    x86_cpuid_count(leaf, 0)
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
-#[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
         return Cpuid::default();
     }
-    unsafe { __cpuid_count(leaf, sub_leaf).into() }
+    __cpuid_count(leaf, sub_leaf).into()
 }
 
 /// Returns true if the CPUID instruction is supported.
@@ -196,18 +190,11 @@ pub fn is_386() -> bool {
     !is_ac_flag_supported()
 }
 
-/// Returns true if the CPU is at least a 486-class processor, without CPUID support
+/// Returns true if the CPU is at least a 486-class processor
 ///
 /// Verified on real hardware
 pub fn is_486() -> bool {
-    is_ac_flag_supported() && !has_cpuid()
-}
-
-/// Returns true if the CPU is at least a 486-class processor, with CPUID support
-///
-/// Verified on real hardware
-pub fn is_cpuid_486() -> bool {
-    is_ac_flag_supported() && has_cpuid()
+    is_ac_flag_supported()
 }
 
 /// Helper to check for AC flag support in EFLAGS register, which is a shibboleth that can
@@ -296,24 +283,24 @@ pub fn vendor_str() -> heapless::String<12> {
     s
 }
 
+fn is_vendor(v: &str) -> bool {
+    vendor_str().as_str() == v
+}
+
 pub fn is_amd() -> bool {
-    use brand::VENDOR_AMD;
-    vendor_str().as_str() == VENDOR_AMD
+    is_vendor(brand::VENDOR_AMD)
 }
 
 pub fn is_centaur() -> bool {
-    use brand::VENDOR_CENTAUR;
-    vendor_str().as_str() == VENDOR_CENTAUR
+    is_vendor(brand::VENDOR_CENTAUR)
 }
 
 pub fn is_cyrix() -> bool {
-    use brand::VENDOR_CYRIX;
-    vendor_str().as_str() == VENDOR_CYRIX
+    is_vendor(brand::VENDOR_CYRIX)
 }
 
 pub fn is_intel() -> bool {
-    use brand::VENDOR_INTEL;
-    vendor_str().as_str() == VENDOR_INTEL
+    is_vendor(brand::VENDOR_INTEL)
 }
 
 /// Returns true if the CPU is an Intel Overdrive processor.

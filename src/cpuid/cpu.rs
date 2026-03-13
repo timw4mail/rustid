@@ -10,7 +10,7 @@ use crate::{TCpu, println};
 
 use core::str::FromStr;
 use heapless::String;
-#[allow(unused_imports)]
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FeatureClass {
@@ -65,7 +65,7 @@ impl FeatureClass {
                 return FeatureClass::i586;
             }
 
-            if is_486() || (is_cpuid_486() && CpuSignature::detect().family == 4) {
+            if is_486() || (has_cpuid() && CpuSignature::detect().family == 4) {
                 return FeatureClass::i486;
             }
 
@@ -499,12 +499,13 @@ impl TCpu for Cpu {
             simple_line("Easter Egg", easter_egg.as_str());
         }
 
-        // Cores/threads
+        // Sockets
         if self.topology.sockets > 1 {
-            println!("{}{} sockets", label("Sockets"), self.topology.sockets);
+            println!("{}{}", label("Sockets"), self.topology.sockets);
             println!();
         }
 
+        // Cores / Threads
         if multi_core {
             if self.topology.cores != self.topology.threads {
                 println!(
