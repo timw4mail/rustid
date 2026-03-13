@@ -119,6 +119,7 @@ pub enum TopologyType {
 pub struct Topology {
     pub cores: u32,
     pub threads: u32,
+    pub sockets: usize,
 
     #[cfg(not(target_os = "none"))]
     pub speed: Speed,
@@ -126,7 +127,7 @@ pub struct Topology {
     pub cache: Option<Cache>,
 
     #[allow(unused)]
-    domains: Vec<TopologyDomain, 64>,
+    domains: Vec<TopologyDomain, 16>,
 }
 
 impl Topology {
@@ -135,7 +136,7 @@ impl Topology {
         let speed = Speed::detect();
 
         let cache = Cache::detect();
-        let domains: Vec<TopologyDomain, 64> = Self::detect_domains();
+        let domains: Vec<TopologyDomain, 16> = Self::detect_domains();
 
         let (cores, threads) = if domains.is_empty() {
             if is_amd() {
@@ -168,9 +169,21 @@ impl Topology {
             }
         };
 
+        let sockets = {
+            #[cfg(target_os = "none")]
+            {
+                super::mp::MpTable::detect().socket_count()
+            }
+            #[cfg(not(target_os = "none"))]
+            {
+                0usize
+            }
+        };
+
         Topology {
             cores,
             threads,
+            sockets,
             #[cfg(not(target_os = "none"))]
             speed,
             cache,
@@ -178,7 +191,7 @@ impl Topology {
         }
     }
 
-    fn detect_domains() -> Vec<TopologyDomain, 64> {
+    fn detect_domains() -> Vec<TopologyDomain, 16> {
         match vendor_str().as_str() {
             VENDOR_INTEL => Self::detect_domains_intel(),
             VENDOR_AMD => Self::detect_domains_amd(),
@@ -186,14 +199,14 @@ impl Topology {
         }
     }
 
-    fn detect_domains_intel() -> Vec<TopologyDomain, 64> {
+    fn detect_domains_intel() -> Vec<TopologyDomain, 16> {
         if !is_valid_leaf(LEAF_1F) {
             return Self::detect_domains_fallback();
         }
 
-        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+        let mut d: Vec<TopologyDomain, 16> = Vec::new();
 
-        for subleaf in 0..64 {
+        for subleaf in 0..16 {
             let res = x86_cpuid_count(LEAF_1F, subleaf);
             let domain_lcpus = res.ebx;
             let level = res.ecx & 0x7;
@@ -221,14 +234,14 @@ impl Topology {
         d
     }
 
-    fn detect_domains_amd() -> Vec<TopologyDomain, 64> {
+    fn detect_domains_amd() -> Vec<TopologyDomain, 16> {
         if !is_valid_leaf(EXT_LEAF_26) {
             return Self::detect_domains_fallback();
         }
 
-        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+        let mut d: Vec<TopologyDomain, 16> = Vec::new();
 
-        for subleaf in 0..64 {
+        for subleaf in 0..16 {
             let res = x86_cpuid_count(EXT_LEAF_26, subleaf);
             let domain_lcpus = res.ebx;
             let level = res.ecx & 0x7;
@@ -254,14 +267,14 @@ impl Topology {
         d
     }
 
-    fn detect_domains_fallback() -> Vec<TopologyDomain, 64> {
-        let mut d: Vec<TopologyDomain, 64> = Vec::new();
+    fn detect_domains_fallback() -> Vec<TopologyDomain, 16> {
+        let mut d: Vec<TopologyDomain, 16> = Vec::new();
 
         if !is_valid_leaf(LEAF_0B) {
             return d;
         }
 
-        for subleaf in 0..64 {
+        for subleaf in 0..16 {
             let res = x86_cpuid_count(LEAF_0B, subleaf);
             let domain_lcpus = res.ebx;
             let level = res.ecx & 0x7;

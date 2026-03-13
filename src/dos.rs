@@ -5,6 +5,7 @@
 
 use core::arch::asm;
 use core::fmt::Write;
+
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.
 #[cfg(not(test))]
@@ -80,13 +81,17 @@ impl Write for DosWriter {
 }
 
 /// Outputs a single character to the DOS console using INT 21h.
+#[inline(always)]
 fn printc(ch: u8) {
     unsafe {
         asm!(
+            "push ds",
             "int 0x21",
+            "pop ds",
             in("ah") 0x02_u8,
             in("dl") ch,
             out("al") _,
+            options(preserves_flags, nostack)
         );
     }
 }
@@ -97,9 +102,47 @@ pub fn exit() -> ! {
     unsafe {
         asm!(
             "int 0x21",
-            in("ah") 0x4C_u8,
-            in("al") 0_u8,
+            in("ax") 0x4C00_u16,
             options(noreturn)
         );
     }
+}
+
+/// Reads a byte from a segmented memory address.
+#[inline(never)]
+pub fn peek_u8(seg: u16, off: u16) -> u8 {
+    let val: u16;
+    unsafe {
+        asm!(
+            "push es",
+            "mov es, {0:x}",
+            "mov al, es:[bx]",
+            "xor ah, ah",
+            "pop es",
+            in(reg) seg,
+            in("bx") off,
+            out("ax") val,
+            options(preserves_flags)
+        );
+    }
+    val as u8
+}
+
+/// Reads a 16-bit word from a segmented memory address.
+#[inline(never)]
+pub fn peek_u16(seg: u16, off: u16) -> u16 {
+    let val: u16;
+    unsafe {
+        asm!(
+            "push es",
+            "mov es, {0:x}",
+            "mov ax, es:[bx]",
+            "pop es",
+            in(reg) seg,
+            in("bx") off,
+            out("ax") val,
+            options(preserves_flags)
+        );
+    }
+    val
 }

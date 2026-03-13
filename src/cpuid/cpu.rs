@@ -500,7 +500,11 @@ impl TCpu for Cpu {
         }
 
         // Cores/threads
-        // TODO: sockets
+        if self.topology.sockets > 1 {
+            println!("{}{} sockets", label("Sockets"), self.topology.sockets);
+            println!();
+        }
+
         if multi_core {
             if self.topology.cores != self.topology.threads {
                 println!(
