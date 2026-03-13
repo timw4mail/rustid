@@ -24,13 +24,12 @@ impl MpTable {
 #[cfg(target_os = "windows")]
 impl MpTable {
     pub fn detect() -> MpTable {
-        use windows::Win32::Foundation::HANDLE;
         use windows::Win32::System::SystemInformation::{
             GetLogicalProcessorInformation, LOGICAL_PROCESSOR_RELATIONSHIP,
             SYSTEM_LOGICAL_PROCESSOR_INFORMATION,
         };
 
-        let mut buffer_len: usize = 0;
+        let mut buffer_len: u32 = 0;
         unsafe {
             let _ = GetLogicalProcessorInformation(None, &mut buffer_len);
         }
@@ -39,7 +38,7 @@ impl MpTable {
             return MpTable { sockets: 1 };
         }
 
-        let mut buffer = vec![0u8; buffer_len];
+        let mut buffer = vec![0u8; buffer_len as usize];
         let result = unsafe {
             GetLogicalProcessorInformation(Some(buffer.as_mut_ptr() as *mut _), &mut buffer_len)
         };
@@ -51,7 +50,7 @@ impl MpTable {
         let mut sockets = 0usize;
         let mut offset = 0;
 
-        while offset + core::mem::size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>() <= buffer_len {
+        while offset + size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>() <= buffer_len as usize {
             let info = unsafe {
                 &*(buffer.as_ptr().add(offset) as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION)
             };
@@ -60,7 +59,7 @@ impl MpTable {
                 sockets += 1;
             }
 
-            offset += core::mem::size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>();
+            offset += size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>();
         }
 
         MpTable {
