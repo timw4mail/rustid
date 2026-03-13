@@ -2,13 +2,14 @@
 //!
 //! This module implements scanning and parsing of the Intel MP specification
 //! tables to determine multi-processor topology (sockets, cores).
-//! It uses BIOS interrupts where possible to avoid unsafe memory scanning
-//! can hang in 16-bit real mode.
 
+#[cfg(target_os = "none")]
 use crate::dos::{peek_u8, peek_u16};
+#[cfg(target_os = "none")]
 use core::arch::asm;
 
 /// MP Floating Pointer Structure signature: "_MP_"
+#[cfg(target_os = "none")]
 const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
 #[repr(C, packed)]
@@ -24,6 +25,24 @@ pub struct MpFloatingPointer {
     pub mp_feature3: u8,
     pub mp_feature4: u8,
     pub mp_feature5: u8,
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+pub struct MpTableHeader {
+    pub signature: [u8; 4],
+    pub length: u16,
+    pub spec_rev: u8,
+    pub checksum: u8,
+    pub oem_id: [u8; 8],
+    pub product_id: [u8; 12],
+    pub oem_table_ptr: u32,
+    pub oem_table_size: u16,
+    pub entry_count: u16,
+    pub lapic_addr: u32,
+    pub extended_table_length: u16,
+    pub extended_table_checksum: u8,
+    pub reserved: u8,
 }
 
 #[derive(Debug, Default)]
@@ -42,12 +61,89 @@ impl MpTable {
         {
             Self::detect_linux()
         }
+
+        #[cfg(not(any(target_os = "none", target_os = "linux")))]
+        {
+            MpTable { sockets: 1 }
+        }
     }
 
+    #[cfg(target_os = "linux")]
     pub fn detect_linux() -> Self {
-        unimplemented!();
+        use std::fs::File;
+        use std::io::Read;
+
+        let mut table = MpTable { sockets: 1 };
+
+        // Try /sys/firmware/mptable first
+        if let Ok(mut f) = File::open("/sys/firmware/mptable") {
+            let mut buf = Vec::new();
+            if f.read_to_end(&mut buf).is_ok()
+                && let Some(count) = Self::parse_buffer(&buf)
+            {
+                table.sockets = count;
+                return table;
+            }
+        }
+
+        // Fallback: /proc/cpuinfo unique physical ids
+        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+            let mut ids = std::collections::HashSet::new();
+            for line in content.lines() {
+                if line.starts_with("physical id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    ids.insert(id.trim());
+                }
+            }
+            if !ids.is_empty() {
+                table.sockets = ids.len();
+                return table;
+            }
+        }
+
+        table
     }
 
+    #[cfg(target_os = "linux")]
+    fn parse_buffer(buf: &[u8]) -> Option<usize> {
+        if buf.len() < 44 {
+            return None;
+        }
+
+        if &buf[0..4] != b"PCMP" {
+            // Might be the whole memory dump, search for PCMP
+            // But usually /sys/firmware/mptable starts with PCMP
+            return None;
+        }
+
+        let entry_count = u16::from_le_bytes([buf[34], buf[35]]);
+        let mut sockets = 0;
+        let mut current_off = 44;
+
+        for _ in 0..entry_count {
+            if current_off + 20 > buf.len() {
+                break;
+            }
+            let entry_type = buf[current_off];
+            if entry_type == 0 {
+                // Processor Entry
+                let flags = buf[current_off + 3];
+                if (flags & 0x01) != 0 {
+                    sockets += 1;
+                }
+                current_off += 20;
+            } else if entry_type <= 4 {
+                current_off += 8;
+            } else {
+                break;
+            }
+        }
+
+        if sockets > 0 { Some(sockets) } else { None }
+    }
+
+    #[cfg(target_os = "none")]
     pub fn detect_dos() -> Self {
         let mut table = MpTable { sockets: 1 };
 
@@ -82,6 +178,7 @@ impl MpTable {
 
     /// Uses INT 15h, AX=D100h to get MP configuration pointers.
     /// This is supported by many MP-compliant BIOSes.
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn get_config_via_bios() -> Option<(u32, u32)> {
         let fp_ptr: u32;
@@ -117,6 +214,7 @@ impl MpTable {
         }
     }
 
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn check_sig(seg: u16, off: u16, sig: &[u8; 4]) -> bool {
         peek_u8(seg, off) == sig[0]
@@ -125,6 +223,7 @@ impl MpTable {
             && peek_u8(seg, off + 3) == sig[3]
     }
 
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn parse_config_table(config_ptr: u32) -> Option<usize> {
         if config_ptr == 0 || config_ptr > 0xFFF00 {
@@ -161,6 +260,7 @@ impl MpTable {
         if sockets > 0 { Some(sockets) } else { None }
     }
 
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn find_mpfp() -> Option<MpFloatingPointer> {
         if let Some(ebda_seg) = Self::get_ebda_seg() {
@@ -180,6 +280,7 @@ impl MpTable {
         None
     }
 
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn scan_range(seg: u16, start_off: u16, length: u16) -> Option<MpFloatingPointer> {
         for off in (start_off..(start_off.saturating_add(length))).step_by(16) {
@@ -213,6 +314,7 @@ impl MpTable {
         None
     }
 
+    #[cfg(target_os = "none")]
     #[inline(never)]
     fn get_ebda_seg() -> Option<u16> {
         let es_val: u16;

@@ -170,11 +170,11 @@ impl Topology {
         };
 
         let sockets = {
-            #[cfg(target_os = "none")]
+            #[cfg(any(target_os = "none", target_os = "linux"))]
             {
                 super::mp::MpTable::detect().socket_count()
             }
-            #[cfg(not(target_os = "none"))]
+            #[cfg(not(any(target_os = "none", target_os = "linux")))]
             {
                 0usize
             }

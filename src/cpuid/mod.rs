@@ -18,7 +18,7 @@ pub mod cpu;
 #[cfg(target_arch = "x86")]
 pub mod cyrix;
 pub mod micro_arch;
-#[cfg(target_os = "none")]
+#[cfg(any(target_os = "none", target_os = "linux"))]
 pub mod mp;
 pub mod topology;
 
