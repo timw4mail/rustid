@@ -161,22 +161,22 @@ impl Topology {
 
             // AMD has literal core count for 'Core' type domain
             // other have Cores * Threads
-            match super::vendor_str().as_str() {
+            match vendor_str().as_str() {
                 // AMD has literal core count
-                super::brand::VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
+                VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
                 // Others have 'Core' as Threads * Cores
                 _ => (raw_cores / raw_threads, raw_cores),
             }
         };
 
         let sockets = {
-            #[cfg(any(target_os = "none", target_os = "linux"))]
+            #[cfg(any(target_os = "none", target_os = "linux", target_os = "windows"))]
             {
                 super::mp::MpTable::detect().socket_count()
             }
-            #[cfg(not(any(target_os = "none", target_os = "linux")))]
+            #[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
             {
-                0usize
+                1usize
             }
         };
 
