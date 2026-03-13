@@ -97,8 +97,9 @@ impl Cyrix {
 
         let (dir0, _) = Self::get_device_ids();
 
-        // 5x86/6x86/6x86L/6x86MX/MediaGX can toggle cpuid, earlier models can not
-        dir0 >= 0x28
+        // 5x86/6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
+        // MediaGX always has cpuid enabled
+        dir0 >= 0x28 && dir0 < 0x40
     }
 
     /// Get Cyrix processor model via registers

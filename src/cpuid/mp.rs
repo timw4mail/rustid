@@ -390,3 +390,41 @@ impl MpTable {
         }
     }
 }
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_buffer_valid() {
+        let mut buf = vec![0u8; 64];
+        buf[0..4].copy_from_slice(b"PCMP"); // Signature
+        buf[34] = 2; // 2 entries
+        // Entry 1: Processor, enabled
+        buf[44] = 0; // Type: Processor
+        buf[47] = 1; // Flags: Enabled
+        // Entry 2: Bus
+        buf[44 + 8] = 1; // Type: Bus
+        assert_eq!(MpTable::parse_buffer(&buf), Some(1));
+    }
+
+    #[test]
+    fn test_parse_buffer_empty() {
+        let buf = vec![];
+        assert_eq!(MpTable::parse_buffer(&buf), None);
+    }
+
+    #[test]
+    fn test_parse_buffer_invalid_sig() {
+        let buf = vec![0u8; 44];
+        assert_eq!(MpTable::parse_buffer(&buf), None);
+    }
+
+    #[test]
+    fn test_parse_buffer_incomplete() {
+        let mut buf = vec![0u8; 44];
+        buf[0..4].copy_from_slice(b"PCMP");
+        buf[34] = 5; // 5 entries, but buffer is too small
+        assert_eq!(MpTable::parse_buffer(&buf), None);
+    }
+}

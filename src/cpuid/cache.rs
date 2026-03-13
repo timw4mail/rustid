@@ -747,3 +747,59 @@ impl Cache {
         if c == Cache::default() { None } else { Some(c) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cache_level() {
+        let cl = CacheLevel::new(1024, CacheType::Unified, 8, 1);
+        assert_eq!(cl.size, 1024);
+        assert_eq!(cl.kind, CacheType::Unified);
+        assert_eq!(cl.assoc, 8);
+        assert_eq!(cl.share_count, 1);
+    }
+
+    #[test]
+    fn test_l1_cache_unified() {
+        let l1 = Level1Cache::new_unified(2048, 4);
+        assert!(l1.is_unified());
+        assert!(!l1.is_split());
+        assert_eq!(l1.size(), 2048);
+    }
+
+    #[test]
+    fn test_l1_cache_split() {
+        let mut l1 = Level1Cache::default_split();
+        assert!(l1.is_split());
+        assert!(!l1.is_unified());
+        assert_eq!(l1.size(), 0);
+
+        l1.set_data(1024, 8);
+        l1.set_instruction(1024, 4);
+
+        assert_eq!(l1.size(), 2048);
+
+        if let Level1Cache::Split { data, instruction } = l1 {
+            assert_eq!(data.size, 1024);
+            assert_eq!(data.assoc, 8);
+            assert_eq!(instruction.size, 1024);
+            assert_eq!(instruction.assoc, 4);
+        } else {
+            panic!("Expected split cache");
+        }
+    }
+
+    #[test]
+    fn test_cache_new() {
+        let l1 = Level1Cache::new_unified(1, 1);
+        let l2 = Some(CacheLevel::new(2, CacheType::Unified, 2, 2));
+        let l3 = Some(CacheLevel::new(3, CacheType::Unified, 3, 3));
+        let cache = Cache::new(l1, l2, l3);
+
+        assert_eq!(cache.l1, l1);
+        assert_eq!(cache.l2, l2);
+        assert_eq!(cache.l3, l3);
+    }
+}
