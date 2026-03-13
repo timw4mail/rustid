@@ -106,11 +106,16 @@ pub fn x86_cpuid(leaf: u32) -> Cpuid {
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
+#[allow(unused_unsafe)]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
         return Cpuid::default();
     }
-    __cpuid_count(leaf, sub_leaf).into()
+
+    // I think the latest version of rust just made this a "safe" function.
+    // For now, so the very latest version isn't required, I'll wrap in the unsafe block
+
+    unsafe { __cpuid_count(leaf, sub_leaf).into() }
 }
 
 /// Returns true if the CPUID instruction is supported.
