@@ -117,9 +117,9 @@ pub enum TopologyType {
 
 #[derive(Debug, Default)]
 pub struct Topology {
+    pub sockets: usize,
     pub cores: u32,
     pub threads: u32,
-    pub sockets: usize,
 
     #[cfg(not(target_os = "none"))]
     pub speed: Speed,
@@ -181,9 +181,9 @@ impl Topology {
         };
 
         Topology {
+            sockets,
             cores,
             threads,
-            sockets,
             #[cfg(not(target_os = "none"))]
             speed,
             cache,
