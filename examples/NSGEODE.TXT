@@ -1,0 +1,25 @@
+---------------------
+Rustid version 0.7.5
+---------------------
+
+  Architecture: i686
+
+        Vendor: Geode by NSC (National Semiconductor)
+
+         Model: Geode(TM) Integrated Processor by National Semi
+
+     MicroArch: Geode
+
+      Codename: GX1
+
+  Process Node: 180nm
+
+         Cache: L1: Unified    0 KB
+                L2:  512 KB, 8-way
+
+     Signature: Family 5h, Model 4h, Stepping 0h
+                (0, 5, 0, 4, 0)
+
+      Features: FPU TSC CMPXCHG8B CMOV MMX 
+
+

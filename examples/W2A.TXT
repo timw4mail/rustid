@@ -1,0 +1,22 @@
+---------------------
+Rustid version 0.7.6
+---------------------
+
+  Architecture: i586
+
+        Vendor: CentaurHauls (IDT)
+
+         Model: IDT WinChip 2-3D
+
+     MicroArch: Winchip 2A
+
+      Codename: W2A
+
+  Process Node: 250nm
+
+     Signature: Family 5h, Model 8h, Stepping 7h
+                (0, 5, 0, 8, 7)
+
+      Features: FPU TSC MMX 3DNow! 
+
+

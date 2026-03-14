@@ -1,0 +1,23 @@
+---------------------
+Rustid version 0.7.5
+---------------------
+
+  Architecture: i586
+
+        Vendor: AuthenticAMD (AMD)
+
+         Model: AMD K5
+
+     MicroArch: SSA5
+
+  Process Node: 350nm
+
+         Cache: L1d: 0 KB, 1-way
+                L1i: 0 KB, 1-way
+
+     Signature: Family 5h, Model 0h, Stepping 0h
+                (0, 5, 0, 0, 0)
+
+      Features: FPU TSC CMPXCHG8B 
+
+

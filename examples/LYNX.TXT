@@ -1,0 +1,24 @@
+---------------------
+Rustid version 0.7.6
+---------------------
+
+  Architecture: i586
+
+        Vendor: RiseRiseRise (Rise)
+
+         Model: Rise iDragon
+
+     MicroArch: mP6
+
+      Codename: Lynx
+
+  Process Node: 180nm
+
+    Easter Egg: * Chris Norrie *
+
+     Signature: Family 5h, Model 2h, Stepping 1h
+                (0, 5, 0, 2, 1)
+
+      Features: FPU TSC MMX 
+
+

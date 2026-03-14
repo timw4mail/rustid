@@ -1,0 +1,29 @@
+---------------------
+Rustid version 0.7.5
+---------------------
+
+  Architecture: i686
+
+        Vendor: CyrixInstead (Cyrix/IBM/ST/TI)
+
+         Model: Cyrix MediaGXtm MMXtm Enhanced
+
+     MicroArch: MediaGX
+
+      Codename: Gx86/GXm
+
+  Process Node: 350nm
+
+         Cache: L1: Unified   16 KB
+
+     Signature: Family 5h, Model 4h, Stepping 0h
+                (0, 5, 0, 4, 0)
+
+      Features: FPU TSC CMPXCHG8B CMOV MMX 
+
+         Cyrix: Model number: 43h
+                Revision: 3h
+                Stepping: 3h
+                Bus Multiplier: 6x
+
+

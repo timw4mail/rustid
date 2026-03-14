@@ -1,0 +1,22 @@
+---------------------
+Rustid version 0.7.6
+---------------------
+
+  Architecture: i586
+
+        Vendor: CentaurHauls (IDT)
+
+         Model: IDT Winchip
+
+     MicroArch: Winchip
+
+      Codename: C6
+
+  Process Node: 350nm
+
+     Signature: Family 5h, Model 4h, Stepping 1h
+                (0, 5, 0, 4, 1)
+
+      Features: FPU TSC MMX 
+
+

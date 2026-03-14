@@ -1,0 +1,30 @@
+---------------------
+Rustid version 0.7.5
+---------------------
+
+  Architecture: x86_64_v2
+
+        Vendor: AuthenticAMD (AMD)
+
+         Model: AMD GX-209JA SOC with Radeon(tm) HD Graphics
+
+     MicroArch: Jaguar
+
+      Codename: Kabini
+
+  Process Node: 28nm
+
+    Easter Egg: HELLO KITTY! ^-^
+
+       Sockets: 2
+
+         Cache: L1d: 32 KB, 8-way
+                L1i: 32 KB, 2-way
+                L2:  1 MB, 16-way
+
+     Signature: Family 16h, Model 0h, Stepping 1h
+                (7, 15, 0, 0, 1)
+
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX BMI1 POPCNT F16C 
+
+

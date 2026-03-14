@@ -1,0 +1,24 @@
+---------------------
+Rustid version 0.7.6
+---------------------
+
+  Architecture: i686
+
+        Vendor: Vortex86 SoC (DM&P)
+
+         Model: Vortex86DX3
+
+     MicroArch: Vortex86DX3
+
+       Sockets: 2
+
+         Cache: L1d: 16 KB, 4-way
+                L1i: 16 KB, 4-way
+                L2:  256 KB, 4-way
+
+     Signature: Family 6h, Model 1h, Stepping 1h
+                (0, 6, 0, 1, 1)
+
+      Features: FPU TSC CMPXCHG8B CMOV MMX SSE 
+
+
