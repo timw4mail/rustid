@@ -48,7 +48,7 @@ cargo run
 Example Output:
 ```text
 ---------------------
-Rustid version 0.6.2
+Rustid version 0.7.6
 ---------------------
 
   Architecture: x86_64_v4
@@ -70,12 +70,12 @@ Rustid version 0.6.2
                 L2:  16x 1 MB, 8-way
                 L3:  96 MB, 16-way
 
-         Speed: 4.19 GHz
+     Frequency: 4.19 GHz
 
      Signature: Family 19h, Model 61h, Stepping 2h
                 (10, 15, 6, 1, 2)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT SSE SSE2 SSE3 SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C 
 ```
 
 ## Information References
