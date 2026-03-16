@@ -130,10 +130,10 @@ impl Cache {
     }
 
     pub fn detect() -> Option<Self> {
-        if is_amd() {
+        if is_amd() || is_centaur() {
             return match is_valid_leaf(EXT_LEAF_1D) {
                 true => Cache::detect_general(EXT_LEAF_1D),
-                false => Cache::detect_amd_fallback(),
+                false => Cache::detect_ext_5_6(),
             };
         }
 
@@ -148,7 +148,7 @@ impl Cache {
         }
     }
 
-    fn detect_amd_fallback() -> Option<Self> {
+    fn detect_ext_5_6() -> Option<Self> {
         let res5 = x86_cpuid(EXT_LEAF_5);
         let res6 = x86_cpuid(EXT_LEAF_6);
 
@@ -162,9 +162,17 @@ impl Cache {
         c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
         c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
-        let l2assoc = Self::amd_assoc_l2(res6.ecx);
+        let l2assoc = if is_amd() {
+            Self::amd_assoc_l2(res6.ecx)
+        } else {
+            res6.ecx
+        };
         let l2size = (res6.ecx >> 16) * 1024;
-        let l3assoc = Self::amd_assoc_l2(res6.edx);
+        let l3assoc = if is_amd() {
+            Self::amd_assoc_l2(res6.edx)
+        } else {
+            res6.edx
+        };
         let l3size = (res6.edx >> 18) * 512 * 1024;
 
         if l2size != 0 {
