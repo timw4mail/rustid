@@ -162,17 +162,9 @@ impl Cache {
         c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
         c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
-        let l2assoc = if is_amd() {
-            Self::amd_assoc_l2(res6.ecx)
-        } else {
-            res6.ecx
-        };
+        let l2assoc = Self::amd_assoc_l2(res6.ecx);
         let l2size = (res6.ecx >> 16) * 1024;
-        let l3assoc = if is_amd() {
-            Self::amd_assoc_l2(res6.edx)
-        } else {
-            res6.edx
-        };
+        let l3assoc = Self::amd_assoc_l2(res6.edx);
         let l3size = (res6.edx >> 18) * 512 * 1024;
 
         if l2size != 0 {
