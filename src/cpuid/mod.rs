@@ -76,6 +76,18 @@ pub const EXT_LEAF_1D: u32 = 0x8000_001D;
 /// AMD extended CPU topology
 pub const EXT_LEAF_26: u32 = 0x8000_0026;
 
+/// Centaur/Zhaoxin vendor leaf base
+pub const CENTAUR_LEAF_0: u32 = 0xC000_0000;
+
+/// Centaur/Zhaoxin extended CPU features
+pub const CENTAUR_LEAF_1: u32 = 0xC000_0001;
+
+/// Transmeta vendor leaf base
+pub const TRANSMETA_LEAF_0: u32 = 0x8086_0000;
+
+/// Transmeta extended CPU features
+pub const TRANSMETA_LEAF_1: u32 = 0x8086_0001;
+
 /// Represents the result of a CPUID instruction call.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cpuid {

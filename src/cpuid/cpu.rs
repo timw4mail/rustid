@@ -376,14 +376,18 @@ impl Cpu {
     }
 
     fn easter_egg() -> Option<String<64>> {
+        const AMD_EASTER_EGG_ADDR: u32 = 0x8FFF_FFFF;
+        #[cfg(target_arch = "x86")]
+        const RISE_EASTER_EGG_ADDR: u32 = 0x0000_5A4E;
+
         let mut out: String<64> = String::new();
         let brand = CpuBrand::detect();
 
         let addr = match brand {
-            CpuBrand::AMD => 0x8FFF_FFFF,
+            CpuBrand::AMD => AMD_EASTER_EGG_ADDR,
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Rise => 0x0000_5A4E,
+            CpuBrand::Rise => RISE_EASTER_EGG_ADDR,
 
             _ => 1,
         };
