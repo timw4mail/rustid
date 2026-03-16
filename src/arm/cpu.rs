@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for ARM.
 
-use crate::TCpu;
 use super::brand::Vendor;
+use crate::TCpu;
 use std::println;
 
 use crate::arm::micro_arch::Midr;

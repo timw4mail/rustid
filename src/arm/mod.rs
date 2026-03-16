@@ -117,4 +117,3 @@ pub fn get_midr() -> usize {
     }
     midr
 }
-

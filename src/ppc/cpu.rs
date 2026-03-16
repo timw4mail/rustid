@@ -1,7 +1,6 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::TCpu;
-use crate::ppc::fns;
 
 #[derive(Debug)]
 pub struct Cpu {
@@ -18,7 +17,7 @@ impl Default for Cpu {
 
 impl Cpu {
     pub fn new() -> Self {
-        let pvr = fns::get_pvr();
+        let pvr = super::get_pvr();
         Self {
             pvr,
             version: (pvr >> 16) as u16,
