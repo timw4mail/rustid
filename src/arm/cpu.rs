@@ -1,8 +1,7 @@
 //! Contains the Cpu struct for ARM.
 
 use crate::TCpu;
-use crate::arm::brand::Vendor;
-use crate::arm::fns;
+use super::brand::Vendor;
 use std::println;
 
 use crate::arm::micro_arch::Midr;
@@ -22,7 +21,7 @@ impl Default for Cpu {
 
 impl Cpu {
     pub fn new() -> Self {
-        let raw_midr = fns::get_midr();
+        let raw_midr = super::get_midr();
         let midr = Midr::new(raw_midr);
         Self {
             raw_midr,
