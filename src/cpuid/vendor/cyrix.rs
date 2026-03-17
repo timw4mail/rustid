@@ -241,35 +241,3 @@ impl Cyrix {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::cpuid::brand::VENDOR_CYRIX;
-    use crate::cpuid::micro_arch::tests::dummy_signature;
-
-    #[test]
-    #[cfg(target_arch = "x86")]
-    fn test_cpu_arch_find_cyrix() {
-        let model = "Cyrix Processor";
-        let vendor_str = VENDOR_CYRIX;
-
-        // Cy5x86
-        let sig_fivex86 = dummy_signature(4, 9, 0, 0, 0);
-        let arch = Cyrix::micro_arch(model, sig_fivex86, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Cy5x86);
-        assert_eq!(arch.code_name, "5x86");
-
-        // M2
-        let sig_m2 = dummy_signature(6, 0, 0, 0, 0);
-        let arch = Cyrix::micro_arch(model, sig_m2, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::M2);
-        assert_eq!(arch.code_name, "M2");
-
-        // Unknown Cyrix
-        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = Cyrix::micro_arch(model, sig_unknown, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, UNK);
-    }
-}

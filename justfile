@@ -117,3 +117,18 @@ run-dos: build-dos
 test:
 	cargo test
 
+# Run 64 and 32 bit tests (on 64bit platform)
+test-all: test test-x86
+
+# Run tests for 32-bit x86 (musl target - no system dependencies)
+[linux, unix]
+test-x86:
+	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
+	cargo test --target i686-unknown-linux-musl
+
+# Run tests for 32-bit x86
+[windows]
+test-x86:
+	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
+	cargo test --target i686-pc-windows-msvc
+

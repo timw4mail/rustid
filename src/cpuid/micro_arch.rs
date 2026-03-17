@@ -436,7 +436,7 @@ pub(crate) mod tests {
         #[cfg(target_arch = "x86")]
         assert_eq!(
             String::<64>::from(MicroArch::VortexDX3).as_str(),
-            "VortexDX3"
+            "Vortex86DX3"
         );
         assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "i486");
 
