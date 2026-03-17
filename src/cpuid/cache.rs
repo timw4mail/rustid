@@ -157,14 +157,14 @@ impl Cache {
             ..Cache::default()
         };
 
-        let l1dassoc = Self::amd_assoc((res5.ecx >> 16) & 0xF);
-        let l1iassoc = Self::amd_assoc((res5.edx >> 16) & 0xF);
+        let l1dassoc = Self::amd_assoc((res5.ecx >> 16) & 0x1F);
+        let l1iassoc = Self::amd_assoc((res5.edx >> 16) & 0x1F);
         c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
         c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
-        let l2assoc = Self::amd_assoc((res6.ecx >> 12) & 0xF);
+        let l2assoc = Self::amd_assoc((res6.ecx >> 12) & 0x1F);
         let l2size = (res6.ecx >> 16) * 1024;
-        let l3assoc = Self::amd_assoc((res6.edx >> 12) & 0xF);
+        let l3assoc = Self::amd_assoc((res6.edx >> 12) & 0x1F);
         let l3size = (res6.edx >> 18) * 512 * 1024;
 
         if l2size != 0 {
@@ -182,6 +182,8 @@ impl Cache {
         match reg {
             0xF => 0,
             0 => 0,
+            0xA => 10,
+            0xB => 12,
             n => 1 << n,
         }
     }
