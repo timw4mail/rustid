@@ -113,7 +113,7 @@ run-dos: build-dos
 run-dos: build-dos
 	dosbox-x rustid.com -fastlaunch
 
-# Run all the tests
+# Run all the (native) tests
 test:
 	cargo test
 

@@ -189,7 +189,7 @@ impl MpTable {
         let mut table = MpTable { sockets: 1 };
 
         // MP Table lookup is only applicable to Intel CPUs
-        if !is_intel() {
+        if !super::is_intel() {
             return table;
         }
 
