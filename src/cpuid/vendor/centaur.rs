@@ -1,11 +1,12 @@
-use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::brand::{CpuBrand, VENDOR_CENTAUR};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
+use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, UNK, is_zhaoxin};
 
 pub struct Centaur;
 
-impl Centaur {
-    pub fn micro_arch(model: &str, s: CpuSignature, vendor_string: &str) -> CpuArch {
+impl TMicroArch for Centaur {
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand = if is_zhaoxin() {
             CpuBrand::Zhaoxin
         } else {
@@ -23,7 +24,7 @@ impl Centaur {
                 ma,
                 code_name,
                 brand.to_brand_name(),
-                vendor_string,
+                VENDOR_CENTAUR,
                 tech,
             )
         };
@@ -76,35 +77,33 @@ impl Centaur {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::cpuid::brand::VENDOR_CENTAUR;
     use crate::cpuid::micro_arch::tests::dummy_signature;
 
     #[test]
     fn test_cpu_arch_find_centaur() {
         let model = "Centaur Processor";
-        let vendor_str = VENDOR_CENTAUR;
 
         // IDT Winchip
         let sig_winchip = dummy_signature(5, 4, 0, 0, 0);
-        let arch = Centaur::micro_arch(model, sig_winchip, vendor_str);
+        let arch = Centaur::micro_arch(model, sig_winchip);
         assert_eq!(arch.micro_arch, MicroArch::Winchip);
         assert_eq!(arch.code_name, "C6");
 
         // VIA Ezra
         let sig_ezra = dummy_signature(6, 7, 0, 0, 8);
-        let arch = Centaur::micro_arch(model, sig_ezra, vendor_str);
+        let arch = Centaur::micro_arch(model, sig_ezra);
         assert_eq!(arch.micro_arch, MicroArch::Ezra);
         assert_eq!(arch.code_name, "C5C");
 
         // Zhaoxin Lujiazui
         let sig_lujiazui = dummy_signature(7, 11, 0, 3, 0);
-        let arch = Centaur::micro_arch(model, sig_lujiazui, vendor_str);
+        let arch = Centaur::micro_arch(model, sig_lujiazui);
         assert_eq!(arch.micro_arch, MicroArch::Lujiazui);
         assert_eq!(arch.code_name, "LuJiaZui");
 
         // Unknown Centaur
         let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = Centaur::micro_arch(model, sig_unknown, vendor_str);
+        let arch = Centaur::micro_arch(model, sig_unknown);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
         assert_eq!(arch.code_name, UNK); // Centaur unknown code_name is empty
     }

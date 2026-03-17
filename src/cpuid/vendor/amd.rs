@@ -1,11 +1,12 @@
 use crate::cpuid::brand::VENDOR_AMD;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
+use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, UNK};
 
 pub struct Amd;
 
-impl Amd {
-    pub fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+impl TMicroArch for Amd {
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
             CpuArch::new(model, ma, code_name, "AMD", VENDOR_AMD, tech)
         };

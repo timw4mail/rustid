@@ -1,6 +1,7 @@
 use crate::cpuid::{CpuSignature, FeatureClass, UNK, has_cx8, vendor_str};
 
-use crate::cpuid::brand::CpuBrand;
+use super::TMicroArch;
+use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use core::str::FromStr;
 use heapless::{String, format};
@@ -35,34 +36,6 @@ impl Cyrix {
             multiplier,
             model,
             code_name,
-        }
-    }
-
-    pub fn micro_arch(model: &str, s: CpuSignature, vendor_string: &str) -> CpuArch {
-        let brand = CpuBrand::from(vendor_str());
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
-            CpuArch::new(
-                model,
-                ma,
-                code_name,
-                brand.to_brand_name(),
-                vendor_string,
-                tech,
-            )
-        };
-
-        match (
-            s.extended_family,
-            s.family,
-            s.extended_model,
-            s.model,
-            s.stepping,
-        ) {
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
-            (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
-            (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
         }
     }
 
@@ -238,6 +211,36 @@ impl Cyrix {
             0x40..=0x47 => "Gx86/GXm",
             0x50..=0x59 => "M2",
             _ => "Unknown",
+        }
+    }
+}
+
+impl TMicroArch for Cyrix {
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+        let brand = CpuBrand::from(vendor_str());
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
+            CpuArch::new(
+                model,
+                ma,
+                code_name,
+                brand.to_brand_name(),
+                VENDOR_CYRIX,
+                tech,
+            )
+        };
+
+        match (
+            s.extended_family,
+            s.family,
+            s.extended_model,
+            s.model,
+            s.stepping,
+        ) {
+            (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
+            (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
+            (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
         }
     }
 }

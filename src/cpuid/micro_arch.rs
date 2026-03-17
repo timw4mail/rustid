@@ -7,6 +7,9 @@
 use super::brand::{
     CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_CYRIX, VENDOR_INTEL, VENDOR_ZHAOXIN,
 };
+use super::vendor::{Amd, Centaur, Intel, TMicroArch};
+#[cfg(target_arch = "x86")]
+use super::vendor::{Cyrix, Transmeta};
 use super::{CpuSignature, UNK, is_centaur, is_zhaoxin};
 use core::str::FromStr;
 use heapless::String;
@@ -334,16 +337,16 @@ impl CpuArch {
 
         // Brand for Centaur CPUs is by signature, not vendor string
         if is_centaur() || is_zhaoxin() {
-            return super::vendor::Centaur::micro_arch(model, s, vendor_string);
+            return Centaur::micro_arch(model, s);
         }
 
         match brand {
-            CpuBrand::AMD => super::vendor::Amd::micro_arch(model, s),
+            CpuBrand::AMD => Amd::micro_arch(model, s),
+
+            CpuBrand::Intel => Intel::micro_arch(model, s),
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Cyrix => super::vendor::Cyrix::micro_arch(model, s, vendor_string),
-
-            CpuBrand::Intel => super::vendor::Intel::micro_arch(model, s),
+            CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
 
             #[cfg(target_arch = "x86")]
             CpuBrand::NationalSemiconductor => match (
@@ -376,9 +379,12 @@ impl CpuArch {
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
             },
 
+            #[cfg(target_arch = "x86")]
+            CpuBrand::Transmeta => Transmeta::micro_arch(model, s),
+
             // As long as the signature doesn't overlap, might as well match for multiple brands
             #[cfg(target_arch = "x86")]
-            CpuBrand::DMP | CpuBrand::Umc | CpuBrand::Transmeta => match (
+            CpuBrand::DMP | CpuBrand::Umc => match (
                 s.extended_family,
                 s.family,
                 s.extended_model,
@@ -388,10 +394,6 @@ impl CpuArch {
                 // UMC
                 (0, 4, 0, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
                 (0, 4, 0, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
-
-                // Transmeta
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::Crusoe, "Crusoe", Some("130nm")),
-                (0, 15, 0, 2 | 3, _) => brand_arch(MicroArch::Efficeon, "Efficeon", None),
 
                 // DM&P
                 (0, 5, 0, 2, 2) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
@@ -404,6 +406,7 @@ impl CpuArch {
             #[cfg(target_arch = "x86")]
             CpuBrand::NexGen | CpuBrand::SiS => brand_arch(MicroArch::Unknown, UNK, None),
 
+            #[cfg(target_arch = "x86_64")]
             CpuBrand::Hygon => brand_arch(MicroArch::Unknown, UNK, None),
 
             _ => brand_arch(MicroArch::Unknown, UNK, None),

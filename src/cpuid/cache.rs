@@ -157,14 +157,14 @@ impl Cache {
             ..Cache::default()
         };
 
-        let l1dassoc = Self::amd_assoc(res5.ecx);
-        let l1iassoc = Self::amd_assoc(res5.edx);
+        let l1dassoc = Self::amd_assoc((res5.ecx >> 16) & 0xF);
+        let l1iassoc = Self::amd_assoc((res5.edx >> 16) & 0xF);
         c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
         c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
-        let l2assoc = Self::amd_assoc_l2(res6.ecx);
+        let l2assoc = Self::amd_assoc((res6.ecx >> 12) & 0xF);
         let l2size = (res6.ecx >> 16) * 1024;
-        let l3assoc = Self::amd_assoc_l2(res6.edx);
+        let l3assoc = Self::amd_assoc((res6.edx >> 12) & 0xF);
         let l3size = (res6.edx >> 18) * 512 * 1024;
 
         if l2size != 0 {
@@ -179,15 +179,7 @@ impl Cache {
     }
 
     fn amd_assoc(reg: u32) -> u32 {
-        match (reg >> 16) & 0xF {
-            0xF => 0,
-            0 => 0,
-            n => 1 << n,
-        }
-    }
-
-    fn amd_assoc_l2(reg: u32) -> u32 {
-        match (reg >> 12) & 0xF {
+        match reg {
             0xF => 0,
             0 => 0,
             n => 1 << n,
@@ -826,24 +818,15 @@ mod tests {
 
     #[test]
     fn test_amd_assoc() {
-        assert_eq!(Cache::amd_assoc(0x00000000), 0);
-        assert_eq!(Cache::amd_assoc(0x00010000), 2);
-        assert_eq!(Cache::amd_assoc(0x00020000), 4);
-        assert_eq!(Cache::amd_assoc(0x00030000), 8);
-        assert_eq!(Cache::amd_assoc(0x000F0000), 0);
+        assert_eq!(Cache::amd_assoc((0x00000000 >> 16) & 0xF), 0);
+        assert_eq!(Cache::amd_assoc((0x00010000 >> 16) & 0xF), 2);
+        assert_eq!(Cache::amd_assoc((0x00020000 >> 16) & 0xF), 4);
+        assert_eq!(Cache::amd_assoc((0x00030000 >> 16) & 0xF), 8);
+        assert_eq!(Cache::amd_assoc((0x000F0000 >> 16) & 0xF), 0);
     }
 
     #[test]
     fn test_amd_assoc_k5() {
-        assert_eq!(Cache::amd_assoc(0x20020220), 4);
-    }
-
-    #[test]
-    fn test_amd_assoc_l2() {
-        assert_eq!(Cache::amd_assoc_l2(0x00000000), 0);
-        assert_eq!(Cache::amd_assoc_l2(0x00001000), 2);
-        assert_eq!(Cache::amd_assoc_l2(0x00002000), 4);
-        assert_eq!(Cache::amd_assoc_l2(0x00003000), 8);
-        assert_eq!(Cache::amd_assoc_l2(0x0000F000), 0);
+        assert_eq!(Cache::amd_assoc((0x20020220 >> 16) & 0xF), 4);
     }
 }
