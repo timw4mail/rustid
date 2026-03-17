@@ -1,5 +1,7 @@
-use crate::cpuid::{FeatureClass, UNK, has_cx8};
+use crate::cpuid::{CpuSignature, FeatureClass, UNK, has_cx8, vendor_str};
 
+use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use core::str::FromStr;
 use heapless::{String, format};
 
@@ -33,6 +35,34 @@ impl Cyrix {
             multiplier,
             model,
             code_name,
+        }
+    }
+
+    pub fn micro_arch(model: &str, s: CpuSignature, vendor_string: &str) -> CpuArch {
+        let brand = CpuBrand::from(vendor_str());
+        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
+            CpuArch::new(
+                model,
+                ma,
+                code_name,
+                brand.to_brand_name(),
+                vendor_string,
+                tech,
+            )
+        };
+
+        match (
+            s.extended_family,
+            s.family,
+            s.extended_model,
+            s.model,
+            s.stepping,
+        ) {
+            (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
+            (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
+            (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
+            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
         }
     }
 
@@ -209,5 +239,37 @@ impl Cyrix {
             0x50..=0x59 => "M2",
             _ => "Unknown",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cpuid::brand::VENDOR_CYRIX;
+    use crate::cpuid::micro_arch::tests::dummy_signature;
+
+    #[test]
+    #[cfg(target_arch = "x86")]
+    fn test_cpu_arch_find_cyrix() {
+        let model = "Cyrix Processor";
+        let vendor_str = VENDOR_CYRIX;
+
+        // Cy5x86
+        let sig_fivex86 = dummy_signature(4, 9, 0, 0, 0);
+        let arch = Cyrix::micro_arch(model, sig_fivex86, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Cy5x86);
+        assert_eq!(arch.code_name, "5x86");
+
+        // M2
+        let sig_m2 = dummy_signature(6, 0, 0, 0, 0);
+        let arch = Cyrix::micro_arch(model, sig_m2, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::M2);
+        assert_eq!(arch.code_name, "M2");
+
+        // Unknown Cyrix
+        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
+        let arch = Cyrix::micro_arch(model, sig_unknown, vendor_str);
+        assert_eq!(arch.micro_arch, MicroArch::Unknown);
+        assert_eq!(arch.code_name, UNK);
     }
 }

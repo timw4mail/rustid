@@ -334,32 +334,16 @@ impl CpuArch {
 
         // Brand for Centaur CPUs is by signature, not vendor string
         if is_centaur() || is_zhaoxin() {
-            return Self::find_centaur(model, s, vendor_string);
-        }
-
-        // Cyrix does its own thing
-        #[cfg(target_arch = "x86")]
-        if super::is_cyrix() {
-            use super::vendor::Cyrix;
-
-            return match (
-                s.extended_family,
-                s.family,
-                s.extended_model,
-                s.model,
-                s.stepping,
-            ) {
-                (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
-                (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
-                (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
-            };
+            return super::vendor::Centaur::micro_arch(model, s, vendor_string);
         }
 
         match brand {
-            CpuBrand::AMD => Self::find_amd(model, s),
-            CpuBrand::Intel => Self::find_intel(model, s),
+            CpuBrand::AMD => super::vendor::Amd::micro_arch(model, s),
+
+            #[cfg(target_arch = "x86")]
+            CpuBrand::Cyrix => super::vendor::Cyrix::micro_arch(model, s, vendor_string),
+
+            CpuBrand::Intel => super::vendor::Intel::micro_arch(model, s),
 
             #[cfg(target_arch = "x86")]
             CpuBrand::NationalSemiconductor => match (
@@ -425,248 +409,10 @@ impl CpuArch {
             _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
-
-    fn find_amd(model: &str, s: CpuSignature) -> Self {
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
-            Self::new(model, ma, code_name, "AMD", VENDOR_AMD, tech)
-        };
-
-        match (
-            s.extended_family,
-            s.family,
-            s.extended_model,
-            s.model,
-            s.stepping,
-        ) {
-            // 486
-            (0, 4, 0, 3, _) => brand_arch(MicroArch::Am486, "Am486DX2", None),
-            (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB", None),
-            (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4", None),
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB", None),
-            (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86", None),
-            (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB", None),
-
-            // K5
-            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5", Some("350nm")),
-            (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", Some("350nm")),
-
-            // K6 (K6, K6-2, K6-III, K6-2+/K6-III+)
-            // NexGenerationAMD
-            (0, 5, 0, 6, _) => brand_arch(MicroArch::K6, "K6", Some("300nm")),
-            (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some("250nm")),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", Some("250nm")),
-            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")), // Per instlatx64
-            (0, 5, 0, 13, _) => {
-                brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm"))
-            }
-
-            // K7 (Athlon/Duron/Sempron/Geode NX)
-            (0, 6, 0, 1, _) => brand_arch(MicroArch::K7, "Argon", Some("250nm")),
-            (0, 6, 0, 2, _) => brand_arch(MicroArch::K7, "Pluto", Some("180nm")),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::K7, "Spitfire", Some("180nm")), // Duron, per sandpile.org
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::K7, "Thunderbird", Some("180nm")),
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::K7, "Palomino", Some("180nm")),
-            (0, 6, 0, 7, _) => brand_arch(MicroArch::K7, "Morgan", Some("180nm")), // Duron, per sandpile.org
-            (0, 6, 0, 8, 1) => brand_arch(MicroArch::K7, "Thoroughbred", Some("130nm")), // My Geode NX matches this signature
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::K7, "Thoroughbred", Some("130nm")),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::K7, "Thorton/Barton", Some("130nm")),
-
-            // Family 08h (K8)
-            // IT'S HAMMER TIME
-            (0, 15, 0, 13, 0) => brand_arch(MicroArch::K8, "NewCastle", Some("130nm")),
-            (0, 15, 2, 3, 2) => brand_arch(MicroArch::K8, "Toledo", Some("90nm")),
-            (0, 15, 2, 15, 2) => brand_arch(MicroArch::K8, "Venice", Some("90nm")),
-            (0, 15, 3, 7, 2) => brand_arch(MicroArch::K8, "San Diego", Some("90nm")),
-            (0, 15, 4, 15, 2) => brand_arch(MicroArch::K8, "Manilla", Some("90nm")),
-            (0, 15, 4, 12, 2) => brand_arch(MicroArch::K8, "Windsor", Some("90nm")),
-            (0, 15, 5, 15, 2) => brand_arch(MicroArch::K8, "Orleans", Some("90nm")),
-            (0, 15, 6, 12, 2) => brand_arch(MicroArch::K8, "Brisbane", Some("65nm")),
-            (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
-
-            // Family 10h (K10)
-            (1, 15, 0, 2, 3) => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
-            (1, 15, 0, 4, 3) => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
-            (1, 15, 0, 5, 3) => brand_arch(MicroArch::K10, "Propus", Some("45nm")),
-            (1, 15, 0, 6, 2) => brand_arch(MicroArch::K10, "Sargas", Some("45nm")),
-            (1, 15, 0, 6, 3) => brand_arch(MicroArch::K10, "Regor", Some("45nm")),
-            (1, 15, 0, 10, 0) => brand_arch(MicroArch::K10, "Thuban", Some("45nm")),
-
-            // Family 14h
-            (5, 15, 0, 2, 0) => brand_arch(MicroArch::Bobcat, "Zacate", Some("40nm")),
-
-            // Family 15h (Bulldozer/Piledriver/Steamroller/Excavator)
-            (6, 15, 0, 0 | 1, _) => brand_arch(MicroArch::Bulldozer, "Zambezi", Some("32nm")),
-            (6, 15, 0 | 1, 2, _) => brand_arch(MicroArch::Piledriver, "Vishera", Some("32nm")),
-            (6, 15, 1, 0, 1) => brand_arch(MicroArch::Piledriver, "Trinity", Some("32nm")),
-            (6, 15, 3, 0 | 8, _) => brand_arch(MicroArch::Steamroller, "Godavari", Some("28nm")),
-            (6, 15, 6 | 7, 0 | 5, _) => {
-                brand_arch(MicroArch::Excavator, "Bristol Ridge/Carrizo", Some("28nm"))
-            }
-
-            // Family 16h
-            // HELLO KITTY! ^-^
-            (7, 15, 0, 0, 1) => brand_arch(MicroArch::Jaguar, "Kabini", Some("28nm")),
-
-            // Zen
-
-            // Family 17h
-            (8, 15, 0, 1, 1) => brand_arch(MicroArch::Zen, "Summit Ridge", Some("14nm")),
-            (8, 15, 1, 1, 0) => brand_arch(MicroArch::Zen, "Raven Ridge", Some("14nm")),
-            (8, 15, 7, 1, 0) => brand_arch(MicroArch::Zen2, "Matisse", Some("7nm")),
-
-            // Family 19h
-            (10, 15, 2, 1, _) => brand_arch(MicroArch::Zen3, "Vermeer", Some("7nm")),
-            (10, 15, 5, 0, 0) => brand_arch(MicroArch::Zen3, "Cezanne", Some("7nm")),
-            (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some("5nm")),
-            (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some("4nm")),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
-        }
-    }
-
-    fn find_centaur(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
-        let brand = if vendor_string == VENDOR_ZHAOXIN {
-            CpuBrand::Zhaoxin
-        } else {
-            match s.family {
-                #[cfg(target_arch = "x86")]
-                5 => CpuBrand::IDT,
-                6 => CpuBrand::Via,
-                _ => CpuBrand::Zhaoxin,
-            }
-        };
-
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
-            Self::new(
-                model,
-                ma,
-                code_name,
-                brand.to_brand_name(),
-                vendor_string,
-                tech,
-            )
-        };
-
-        match (
-            s.extended_family,
-            s.family,
-            s.extended_model,
-            s.model,
-            s.stepping,
-        ) {
-            // IDT
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6", Some("350nm")),
-            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "C2", Some("350nm")),
-            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "W2A", Some("250nm")),
-            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "W2B", Some("250nm")),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "C3", Some("250nm")),
-
-            // VIA
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "C5A", Some("180nm")),
-            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "C5B", Some("150nm")),
-            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "C5C", Some("130nm")),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::EzraT, "C5N", Some("130nm")),
-            (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some("130nm")),
-            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", None),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
-
-            // From instlatx64
-            (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
-            (0, 6, 0, 15, 3) => brand_arch(MicroArch::Isaiah, "CNA", Some("65nm")),
-            (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB", None),
-            (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNC", None),
-            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNQ", None),
-            (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
-
-            // (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "CNS", None),
-            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some("65nm")),
-
-            // Zhaoxin
-            (0, 6, 1, 9, _) => brand_arch(MicroArch::ZhangJiang, "ZhangJiang", Some("28nm")),
-            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some("28nm")),
-            (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some("16nm")),
-
-            // Anything else
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
-        }
-    }
-
-    fn find_intel(model: &str, s: CpuSignature) -> Self {
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
-            Self::new(model, ma, code_name, "Intel", VENDOR_INTEL, tech)
-        };
-
-        match (
-            s.extended_family,
-            s.family,
-            s.extended_model,
-            s.model,
-            s.stepping,
-        ) {
-            // 486
-            (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX", None),
-            (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50", None),
-            (0, 4, 0, 2, _) => brand_arch(MicroArch::I486, "i80486SX", None),
-            (0, 4, 0, 3, _) => brand_arch(MicroArch::I486, "i80486DX2", None),
-            (0, 4, 0, 4, _) => brand_arch(MicroArch::I486, "i80486SL", None),
-            (0, 4, 0, 5, _) => brand_arch(MicroArch::I486, "i80486SX2", None),
-            (0, 4, 0, 7, _) => brand_arch(MicroArch::I486, "i80486DX2WB", None),
-            (0, 4, 0, 8, _) => brand_arch(MicroArch::I486, "i80486DX4", None),
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB", None),
-
-            // Pentium
-            (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5", Some("800nm")),
-            (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C", None),
-            (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T", Some("600nm")),
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::P5, "P55C", Some("350nm")), // With MMX
-            (0, 5, 0, 7, _) => brand_arch(MicroArch::P5, "P54C", Some("350nm")),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5, "P55C", Some("250nm")),
-            (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont", Some("32nm")),
-
-            // Pentium Pro
-            (0, 6, 0, 1, 1) => brand_arch(MicroArch::PentiumPro, "P6", None),
-            (0, 6, 0, 1, 2) => brand_arch(MicroArch::PentiumPro, "P6", Some("600nm")),
-            (0, 6, 0, 1, 6..10) => brand_arch(MicroArch::PentiumPro, "P6", Some("350nm")),
-            (0, 6, 0, 3, 2) => brand_arch(MicroArch::PentiumII, "P6T (Deschutes)", Some("250nm")), // Pentium II Overdrive
-
-            // Pentium 2
-            (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::PentiumII, UNK, None),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::PentiumII, "Klamath", Some("350nm")),
-            (0, 6, 0, 4, _) => brand_arch(MicroArch::PentiumIII, UNK, None),
-            (0, 6, 0, 5, 1) => brand_arch(MicroArch::PentiumII, "Deschutes", Some("250nm")),
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::PentiumII, "Dixon / Mendocino", None),
-
-            // Pentium 3
-            (0, 6, 0, 7, _) => brand_arch(MicroArch::PentiumIII, "Katmai", Some("250nm")),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::PentiumIII, "Coppermine", Some("180nm")),
-            (0, 6, 0, 9, 5) => brand_arch(MicroArch::PentiumIII, "Banias", Some("130nm")),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::PentiumIII, "Coppermine T", Some("180nm")),
-            (0, 6, 0, 11, _) => brand_arch(MicroArch::PentiumIII, "Tualatin", Some("130nm")),
-
-            // The dark ages
-
-            // Pentium M
-            (0, 6, 0, 13, 8) => brand_arch(MicroArch::Dothan, "Dothan", Some("90nm")),
-            (0, 6, 0, 14, _) => brand_arch(MicroArch::Yonah, "Yonah", Some("65nm")),
-            (0, 6, 0, 15, 6) => brand_arch(MicroArch::Core, "Merom", Some("65nm")),
-
-            // Core/Core 2
-            (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
-            (0, 6, 1, 7, 10) => brand_arch(MicroArch::Core, "Penryn", Some("45nm")),
-
-            // Core i-series
-            (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
-            (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
-            (0, 6, 4, 12, 4) => brand_arch(MicroArch::Airmont, "Braswell", Some("14nm")),
-            (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some("14nm")),
-            (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some("14nm")),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
-        }
-    }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     #[allow(unused_imports)]
@@ -722,7 +468,7 @@ mod tests {
     }
 
     // Helper to create a dummy CpuSignature
-    fn dummy_signature(
+    pub fn dummy_signature(
         family: u32,
         model: u32,
         ext_family: u32,
@@ -742,94 +488,6 @@ mod tests {
     }
 
     #[test]
-    fn test_cpu_arch_find_amd() {
-        let model = "AMD Processor";
-
-        // Am486
-        let sig_am486 = dummy_signature(4, 3, 0, 0, 0);
-        let arch = CpuArch::find_amd(model, sig_am486);
-        assert_eq!(arch.micro_arch, MicroArch::Am486);
-        assert_eq!(arch.code_name, "Am486DX2");
-
-        // K5
-        let sig_k5 = dummy_signature(5, 1, 0, 0, 0);
-        let arch = CpuArch::find_amd(model, sig_k5);
-        assert_eq!(arch.micro_arch, MicroArch::K5);
-        assert_eq!(arch.code_name, "5k86");
-
-        // Zen4
-        let sig_zen4 = dummy_signature(15, 1, 10, 6, 2);
-        let arch = CpuArch::find_amd(model, sig_zen4);
-        assert_eq!(arch.micro_arch, MicroArch::Zen4);
-        assert_eq!(arch.code_name, "Raphael");
-
-        // Unknown AMD
-        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = CpuArch::find_amd(model, sig_unknown);
-        assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, UNK);
-    }
-
-    #[test]
-    fn test_cpu_arch_find_intel() {
-        let model = "Intel Processor";
-
-        // I486
-        let sig_i486 = dummy_signature(4, 0, 0, 0, 0);
-        let arch = CpuArch::find_intel(model, sig_i486);
-        assert_eq!(arch.micro_arch, MicroArch::I486);
-        assert_eq!(arch.code_name, "i80486DX");
-
-        // P5 (MicroArch::Pentium)
-        let sig_p5 = dummy_signature(5, 2, 0, 0, 0);
-        let arch = CpuArch::find_intel(model, sig_p5);
-        assert_eq!(arch.micro_arch, MicroArch::P5);
-        assert_eq!(arch.code_name, "P54C");
-
-        // Nehalem
-        let sig_nehalem = dummy_signature(6, 14, 0, 1, 5);
-        let arch = CpuArch::find_intel(model, sig_nehalem);
-        assert_eq!(arch.micro_arch, MicroArch::Nehalem);
-        assert_eq!(arch.code_name, "Lynnfield");
-
-        // Unknown Intel
-        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = CpuArch::find_intel(model, sig_unknown);
-        assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, UNK);
-    }
-
-    #[test]
-    fn test_cpu_arch_find_centaur() {
-        let model = "Centaur Processor";
-        let vendor_str = VENDOR_CENTAUR;
-
-        // IDT Winchip
-        let sig_winchip = dummy_signature(5, 4, 0, 0, 0);
-        let arch = CpuArch::find_centaur(model, sig_winchip, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Winchip);
-        assert_eq!(arch.code_name, "C6");
-
-        // VIA Ezra
-        let sig_ezra = dummy_signature(6, 7, 0, 0, 8);
-        let arch = CpuArch::find_centaur(model, sig_ezra, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Ezra);
-        assert_eq!(arch.code_name, "C5C");
-
-        // Zhaoxin Lujiazui
-        let sig_lujiazui = dummy_signature(7, 11, 0, 3, 0);
-        let arch = CpuArch::find_centaur(model, sig_lujiazui, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Lujiazui);
-        assert_eq!(arch.code_name, "LuJiaZui");
-
-        // Unknown Centaur
-        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = CpuArch::find_centaur(model, sig_unknown, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, UNK); // Centaur unknown code_name is empty
-    }
-
-    #[test]
     #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_dmp() {
         let model = "DMP Processor";
@@ -842,31 +500,6 @@ mod tests {
         assert_eq!(arch.code_name, "Vortex86DX3");
 
         // Unknown DMP
-        let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
-        let arch = CpuArch::find(model, sig_unknown, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Unknown);
-        assert_eq!(arch.code_name, UNK);
-    }
-
-    #[test]
-    #[cfg(target_arch = "x86")]
-    fn test_cpu_arch_find_cyrix() {
-        let model = "Cyrix Processor";
-        let vendor_str = VENDOR_CYRIX;
-
-        // Cy5x86
-        let sig_fivex86 = dummy_signature(4, 9, 0, 0, 0);
-        let arch = CpuArch::find(model, sig_fivex86, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::Cy5x86);
-        assert_eq!(arch.code_name, "5x86");
-
-        // M2
-        let sig_m2 = dummy_signature(6, 0, 0, 0, 0);
-        let arch = CpuArch::find(model, sig_m2, vendor_str);
-        assert_eq!(arch.micro_arch, MicroArch::M2);
-        assert_eq!(arch.code_name, "M2");
-
-        // Unknown Cyrix
         let sig_unknown = dummy_signature(99, 0, 0, 0, 0);
         let arch = CpuArch::find(model, sig_unknown, vendor_str);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
