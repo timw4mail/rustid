@@ -32,7 +32,7 @@ impl From<usize> for Vendor {
     fn from(v: usize) -> Self {
         match v {
             0x41 => Self::ARM,
-            0xB3 => Self::Apple,
+            0xB3 | 0xB9 | 0x63 => Self::Apple,
             _ => Self::Unknown,
         }
     }
