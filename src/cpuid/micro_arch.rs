@@ -4,10 +4,10 @@
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
 #[allow(unused_imports)]
-use crate::cpuid::brand::{
+use super::brand::{
     CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_CYRIX, VENDOR_INTEL, VENDOR_ZHAOXIN,
 };
-use crate::cpuid::{CpuSignature, UNK};
+use super::{CpuSignature, UNK, is_centaur, is_zhaoxin};
 use core::str::FromStr;
 use heapless::String;
 
@@ -333,13 +333,13 @@ impl CpuArch {
         };
 
         // Brand for Centaur CPUs is by signature, not vendor string
-        if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
+        if is_centaur() || is_zhaoxin() {
             return Self::find_centaur(model, s, vendor_string);
         }
 
         // Cyrix does its own thing
         #[cfg(target_arch = "x86")]
-        if vendor_string == VENDOR_CYRIX {
+        if super::is_cyrix() {
             use super::vendor::Cyrix;
 
             return match (

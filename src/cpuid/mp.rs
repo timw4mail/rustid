@@ -188,6 +188,11 @@ impl MpTable {
     pub fn detect() -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
+        // MP Table lookup is only applicable to Intel CPUs
+        if !is_intel() {
+            return table;
+        }
+
         // Try BIOS interrupt first (Intel MP Spec BIOS extensions)
         if let Some((_fp_ptr, config_ptr)) = Self::get_config_via_bios() {
             if config_ptr != 0

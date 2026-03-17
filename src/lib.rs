@@ -78,7 +78,7 @@ pub fn cli_main() {
     {
         use crate::println;
 
-        if cpuid::cyrix::Cyrix::can_enable_cpuid() {
+        if cpuid::vendor::Cyrix::can_enable_cpuid() {
             println!("This CPU has CPUID support, but it is disabled.");
             println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
             println!("For DOS, you can download a utility from ");

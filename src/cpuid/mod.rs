@@ -319,6 +319,10 @@ pub fn is_intel() -> bool {
     is_vendor(brand::VENDOR_INTEL)
 }
 
+pub fn is_zhaoxin() -> bool {
+    is_vendor(brand::VENDOR_ZHAOXIN)
+}
+
 /// Returns true if the CPU is an Intel Overdrive processor.
 ///
 /// Checks the Overdrive bit (EAX bit 12) in CPUID leaf 1.

@@ -1,4 +1,4 @@
-use super::{FeatureClass, UNK, has_cx8};
+use crate::cpuid::{FeatureClass, UNK, has_cx8};
 
 use core::str::FromStr;
 use heapless::{String, format};
@@ -15,7 +15,7 @@ pub struct Cyrix {
 
 impl Cyrix {
     pub fn detect() -> Cyrix {
-        if !super::is_cyrix() {
+        if !crate::cpuid::is_cyrix() {
             return Cyrix::default();
         }
 
@@ -37,7 +37,7 @@ impl Cyrix {
     }
 
     fn get_device_ids() -> (u8, u8) {
-        if !super::is_cyrix() {
+        if !crate::cpuid::is_cyrix() {
             return (0, 0);
         }
 
@@ -91,7 +91,7 @@ impl Cyrix {
     /// that can be enabled, if cpuid support is currently disabled
     pub fn can_enable_cpuid() -> bool {
         // If it's not Cyrix, or cpuid is enabled, we don't care
-        if super::has_cpuid() || !super::is_cyrix() {
+        if crate::cpuid::has_cpuid() || !crate::cpuid::is_cyrix() {
             return false;
         }
 
@@ -106,7 +106,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn model_string() -> String<64> {
-        if !super::is_cyrix() {
+        if !crate::cpuid::is_cyrix() {
             return String::from_str(UNK).unwrap();
         }
 
@@ -165,7 +165,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     fn multiplier() -> String<4> {
-        if !super::is_cyrix() {
+        if !crate::cpuid::is_cyrix() {
             return String::from_str("0").unwrap();
         }
 
@@ -193,7 +193,7 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn codename() -> &'static str {
-        if !super::is_cyrix() {
+        if !crate::cpuid::is_cyrix() {
             return UNK;
         }
 
