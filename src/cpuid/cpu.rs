@@ -57,6 +57,10 @@ impl FeatureClass {
 
         #[cfg(target_arch = "x86")]
         {
+            if is_cyrix() {
+                return vendor::Cyrix::get_feature_class();
+            }
+
             if has_cmov() {
                 return FeatureClass::i686;
             }
@@ -299,7 +303,7 @@ impl Cpu {
 
         #[cfg(target_arch = "x86")]
         if super::is_cyrix() {
-            return super::cyrix::Cyrix::model_string();
+            return super::vendor::Cyrix::model_string();
         }
 
         // Check the Intel model lookup table
@@ -654,7 +658,7 @@ impl TCpu for Cpu {
 
         #[cfg(target_arch = "x86")]
         if super::is_cyrix() {
-            let cyrix = super::cyrix::Cyrix::detect();
+            let cyrix = super::vendor::Cyrix::detect();
 
             println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
             println!("{}{:X}h", sublabel("Revision"), cyrix.revision);

@@ -15,11 +15,10 @@ use core::arch::x86::{__cpuid_count, CpuidResult};
 pub mod brand;
 pub mod cache;
 pub mod cpu;
-#[cfg(target_arch = "x86")]
-pub mod cyrix;
 pub mod micro_arch;
 pub mod mp;
 pub mod topology;
+pub mod vendor;
 
 use brand::CpuBrand;
 

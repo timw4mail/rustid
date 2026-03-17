@@ -340,7 +340,7 @@ impl CpuArch {
         // Cyrix does its own thing
         #[cfg(target_arch = "x86")]
         if vendor_string == VENDOR_CYRIX {
-            use super::cyrix::Cyrix;
+            use super::vendor::Cyrix;
 
             return match (
                 s.extended_family,
