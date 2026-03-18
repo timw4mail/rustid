@@ -355,7 +355,7 @@ pub fn get_ht() -> u32 {
     }
 
     let res = x86_cpuid(LEAF_1);
-    (res.edx >> 28) & 0xFF
+    (res.edx >> 28) & 1
 }
 
 /// Returns the number of logical cores.
