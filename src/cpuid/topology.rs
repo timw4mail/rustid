@@ -137,37 +137,7 @@ impl Topology {
 
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 16> = Self::detect_domains();
-
-        let (cores, threads) = if domains.is_empty() {
-            if is_amd() {
-                let threads = logical_cores();
-                let cores = if has_ht() { threads / 2 } else { threads };
-
-                (cores, threads)
-            } else {
-                (1, 1)
-            }
-        } else {
-            let raw_cores = domains
-                .iter()
-                .find(|d| d.kind == TopologyType::Core)
-                .map(|d| d.count)
-                .unwrap_or(1);
-            let raw_threads = domains
-                .iter()
-                .find(|d| d.kind == TopologyType::Thread)
-                .map(|d| d.count)
-                .unwrap_or(1);
-
-            // AMD has literal core count for 'Core' type domain
-            // other have Cores * Threads
-            match vendor_str().as_str() {
-                // AMD has literal core count
-                VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
-                // Others have 'Core' as Threads * Cores
-                _ => (raw_cores / raw_threads, raw_cores),
-            }
-        };
+        let (threads, cores) = Self::count_domains(&domains);
 
         let sockets = {
             #[cfg(any(target_os = "none", target_os = "linux", target_os = "windows"))]
@@ -188,6 +158,59 @@ impl Topology {
             speed,
             cache,
             domains,
+        }
+    }
+
+    fn count_domains(domains: &Vec<TopologyDomain, 16>) -> (u32, u32) {
+        let amd_threads = if is_amd() { logical_cores() } else { 0 };
+
+        // TODO: determine cores/threads for Intel if domains are empty
+        if domains.is_empty() {
+            return match vendor_str().as_str() {
+                VENDOR_AMD => {
+                    if amd_threads > 0 {
+                        let cores = if has_ht() {
+                            amd_threads / 2
+                        } else {
+                            amd_threads
+                        };
+
+                        (cores, amd_threads)
+                    } else {
+                        (1, 1)
+                    }
+                }
+                _ => (1, 1),
+            };
+        }
+
+        // Get the highest count from the domains
+        // We'll assume this is the total thread count
+        let count = domains.iter().count();
+        let highest = domains[count - 1].count;
+
+        let raw_cores = domains
+            .iter()
+            .find(|d| d.kind == TopologyType::Core)
+            .map(|d| d.count)
+            .unwrap_or(1);
+        let raw_threads = domains
+            .iter()
+            .find(|d| d.kind == TopologyType::Thread)
+            .map(|d| d.count)
+            .unwrap_or(1);
+
+        if highest > raw_cores && raw_cores > 1 {
+            return (raw_cores / highest, highest);
+        }
+
+        // AMD has literal core count for 'Core' type domain
+        // other have Cores * Threads
+        match vendor_str().as_str() {
+            // AMD has literal core count
+            VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
+            // Others have 'Core' as Threads * Cores
+            _ => (raw_cores / raw_threads, raw_cores),
         }
     }
 

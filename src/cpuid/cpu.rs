@@ -445,7 +445,7 @@ impl TCpu for Cpu {
         let multi_core = self.topology.cores > 1;
 
         let cache_count = |share_count| {
-            if !multi_core || share_count == 0 || (self.topology.threads / share_count) == 1 {
+            if (!multi_core) || share_count == 0 || (self.topology.threads / share_count) <= 1 {
                 format!("")
             } else {
                 format!("{}x ", self.topology.threads / share_count)

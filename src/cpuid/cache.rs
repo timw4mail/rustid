@@ -1,3 +1,5 @@
+use crate::cpuid::brand::{VENDOR_AMD, VENDOR_CENTAUR};
+
 use super::*;
 
 const DATA_CACHE: u32 = 1;
@@ -130,21 +132,26 @@ impl Cache {
     }
 
     pub fn detect() -> Option<Self> {
-        if is_amd() || is_centaur() {
-            return match is_valid_leaf(EXT_LEAF_1D) {
+        match vendor_str().as_str() {
+            VENDOR_AMD => match is_valid_leaf(EXT_LEAF_1D) {
                 true => Cache::detect_general(EXT_LEAF_1D),
                 false => Cache::detect_ext_5_6(),
-            };
-        }
-
-        // The 1-bit cache descriptors are on LEAF 0x2, but
-        // the extended cache topology is on LEAF 0x4.
-        // We want to use the extended cache topology if
-        // it exists.
-        match max_leaf() {
-            LEAF_2..LEAF_4 => Cache::detect_fallback(),
-            LEAF_4.. => Cache::detect_general(LEAF_4),
-            _ => None,
+            },
+            VENDOR_CENTAUR => match is_valid_leaf(LEAF_4) {
+                true => Cache::detect_general(LEAF_4),
+                false => Cache::detect_ext_5_6(),
+            },
+            _ => {
+                // The 1-bit cache descriptors are on LEAF 0x2, but
+                // the extended cache topology is on LEAF 0x4.
+                // We want to use the extended cache topology if
+                // it exists.
+                match max_leaf() {
+                    LEAF_2..LEAF_4 => Cache::detect_fallback(),
+                    LEAF_4.. => Cache::detect_general(LEAF_4),
+                    _ => None,
+                }
+            }
         }
     }
 
