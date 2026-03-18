@@ -26,3 +26,7 @@ libc = { version = "0.2" }
 # Windows API for MP table detection
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Registry"] }
+
+[features]
+default = []
+file_mock = []

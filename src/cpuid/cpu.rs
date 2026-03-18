@@ -218,7 +218,7 @@ impl Cpu {
     }
 
     /// Gets the CPU model string.
-    fn raw_model_string() -> String<64> {
+    pub fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
         if !is_valid_leaf(EXT_LEAF_4) {
             let _ = model.push_str("Unknown");
@@ -296,7 +296,7 @@ impl Cpu {
         }
     }
 
-    fn display_model_string(&self) -> String<64> {
+    pub fn display_model_string(&self) -> String<64> {
         if &self.arch.model != "Unknown" {
             return self.arch.model.clone();
         }

@@ -13,15 +13,23 @@ use core::arch::x86_64::{__cpuid_count, CpuidResult};
 use core::arch::x86::{__cpuid_count, CpuidResult};
 
 pub mod brand;
+
 pub mod cache;
+
 pub mod cpu;
+
 pub mod micro_arch;
+
 pub mod mp;
+
+#[cfg(feature = "file_mock")]
+pub mod provider;
+
 pub mod topology;
+
 pub mod vendor;
 
-use brand::CpuBrand;
-
+pub use brand::*;
 pub use cpu::*;
 
 pub const UNK: &str = "Unknown";
@@ -116,24 +124,35 @@ pub fn x86_cpuid(leaf: u32) -> Cpuid {
     x86_cpuid_count(leaf, 0)
 }
 
-/// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 #[allow(unused_unsafe)]
-pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
+#[inline]
+pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
         return Cpuid::default();
     }
 
     // I think the latest version of rust just made this a "safe" function.
     // For now, so the very latest version isn't required, I'll wrap in the unsafe block
-
     unsafe { __cpuid_count(leaf, sub_leaf).into() }
+}
+
+/// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
+pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
+    #[cfg(not(feature = "file_mock"))]
+    return real_x86_cpuid_count(leaf, sub_leaf);
+
+    #[cfg(feature = "file_mock")]
+    provider::PROVIDER
+        .read()
+        .unwrap()
+        .cpuid_count(leaf, sub_leaf)
 }
 
 /// Returns true if the CPUID instruction is supported.
 ///
 /// Verified on real hardware
 pub fn has_cpuid() -> bool {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(any(test, feature = "file_mock", target_arch = "x86_64"))]
     return true;
 
     #[cfg(target_arch = "x86")]
