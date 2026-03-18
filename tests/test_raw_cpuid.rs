@@ -192,6 +192,22 @@ mod m3_8100y {
     }
 
     #[test]
+    fn test_intel_threads() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.threads, 4);
+        });
+    }
+
+    #[test]
+    fn test_intel_cores() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.cores, 2);
+        });
+    }
+
+    #[test]
     fn test_intel_topology_leaf_1f() {
         with_mock_cpu(|| {
             let domains = count_topology_domains(0x1F);
@@ -333,6 +349,22 @@ mod amd_5900xt {
     }
 
     #[test]
+    fn test_amd_threads() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.threads, 32);
+        });
+    }
+
+    #[test]
+    fn test_amd_cores() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.cores, 16);
+        });
+    }
+
+    #[test]
     fn test_amd_topology_leaf_b() {
         with_mock_cpu(|| {
             let domains = count_topology_domains(0xB);
@@ -463,6 +495,22 @@ mod zhaoxin_kx5640 {
             let res = x86_cpuid_count(1, 0);
             let ht = (res.edx >> 28) & 1;
             assert_eq!(ht, 1);
+        });
+    }
+
+    #[test]
+    fn test_zhaoxin_threads() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.threads, 4);
+        });
+    }
+
+    #[test]
+    fn test_zhaoxin_cores() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::new();
+            assert_eq!(cpu.topology.cores, 4);
         });
     }
 

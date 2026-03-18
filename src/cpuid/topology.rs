@@ -137,7 +137,7 @@ impl Topology {
 
         let cache = Cache::detect();
         let domains: Vec<TopologyDomain, 16> = Self::detect_domains();
-        let (threads, cores) = Self::count_domains(&domains);
+        let (cores, threads) = Self::count_domains(&domains);
 
         let sockets = {
             #[cfg(any(target_os = "none", target_os = "linux", target_os = "windows"))]
@@ -186,9 +186,11 @@ impl Topology {
 
         // Get the highest count from the domains
         // We'll assume this is the total thread count
-        let count = domains.iter().count();
-        let highest = domains[count - 1].count;
-
+        let raw_sockets = domains
+            .iter()
+            .find(|d| d.kind == TopologyType::Socket)
+            .map(|d| d.count)
+            .unwrap_or(1);
         let raw_cores = domains
             .iter()
             .find(|d| d.kind == TopologyType::Core)
@@ -200,8 +202,14 @@ impl Topology {
             .map(|d| d.count)
             .unwrap_or(1);
 
-        if highest > raw_cores && raw_cores > 1 {
-            return (raw_cores / highest, highest);
+        // Socket/Die/Core/Thread
+        if raw_sockets > 1 && raw_threads > 1 && raw_cores > 1 {
+            return (raw_sockets / raw_threads, raw_sockets);
+        }
+
+        // Thread/core
+        if raw_sockets == 1 && raw_cores > raw_threads {
+            return (raw_cores / raw_threads, raw_cores);
         }
 
         // AMD has literal core count for 'Core' type domain

@@ -115,7 +115,7 @@ run-dos: build-dos
 
 # Run all the (native) tests
 test:
-	cargo test --features file_mock
+	cargo test --features file_mock -- --test-threads=1
 
 # Run 64 and 32 bit tests (on 64bit platform)
 test-all: test test-x86
@@ -124,11 +124,11 @@ test-all: test test-x86
 [linux, unix]
 test-x86:
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo test --target i686-unknown-linux-musl --features file_mock
+	cargo test --target i686-unknown-linux-musl --features file_mock -- --test-threads=1
 
 # Run tests for 32-bit x86
 [windows]
 test-x86:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
-	cargo test --target i686-pc-windows-msvc --features file_mock
+	cargo test --target i686-pc-windows-msvc --features file_mock -- --test-threads=1
 
