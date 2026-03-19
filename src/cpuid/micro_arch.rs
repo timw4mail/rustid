@@ -15,6 +15,9 @@ use core::str::FromStr;
 use heapless::String;
 
 /// CPU Microarchitecture enumeration.
+///
+/// Lists all known x86/x86_64 microarchitectures from various vendors
+/// including Intel, AMD, VIA/Centaur, Cyrix, and others.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     Unknown,
@@ -275,13 +278,20 @@ impl From<MicroArch> for String<64> {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Complete CPU architecture information.
+#[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
+    /// CPU model string
     pub model: String<64>,
+    /// Microarchitecture family
     pub micro_arch: MicroArch,
+    /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
+    /// Brand name (e.g., "Intel", "AMD")
     pub brand_name: String<64>,
+    /// Raw vendor string from CPUID
     pub vendor_string: String<64>,
+    /// Process technology node (e.g., "14nm", "7nm")
     pub technology: Option<String<32>>,
 }
 
@@ -292,6 +302,7 @@ impl Default for CpuArch {
 }
 
 impl CpuArch {
+    /// Creates a new CpuArch with the specified parameters.
     pub fn new(
         model: &str,
         micro_arch: MicroArch,
@@ -321,6 +332,9 @@ impl CpuArch {
         }
     }
 
+    /// Finds and returns the CPU architecture based on model string, signature, and vendor.
+    ///
+    /// Uses CPUID information to determine the microarchitecture and code name.
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
         let arch = |ma: MicroArch,
                     code_name: &'static str,

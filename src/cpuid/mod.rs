@@ -96,6 +96,9 @@ pub const TRANSMETA_LEAF_0: u32 = 0x8086_0000;
 pub const TRANSMETA_LEAF_1: u32 = 0x8086_0001;
 
 /// Represents the result of a CPUID instruction call.
+///
+/// The CPUID instruction returns processor identification and feature information
+/// in the EAX, EBX, ECX, and EDX registers.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cpuid {
     /// EAX register value
@@ -278,6 +281,10 @@ pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
 }
 
+/// Returns true if the given leaf is valid and supported by the CPU.
+///
+/// Checks whether the specified CPUID leaf is within the range supported by
+/// the processor (either basic or extended leaves).
 pub fn is_valid_leaf(leaf: u32) -> bool {
     if !has_cpuid() {
         return false;
@@ -322,22 +329,27 @@ fn is_vendor(v: &str) -> bool {
     vendor_str().as_str() == v
 }
 
+/// Returns true if the CPU is from AMD.
 pub fn is_amd() -> bool {
     is_vendor(brand::VENDOR_AMD)
 }
 
+/// Returns true if the CPU is from Centaur (IDT/VIA/Zhaoxin).
 pub fn is_centaur() -> bool {
     is_vendor(brand::VENDOR_CENTAUR)
 }
 
+/// Returns true if the CPU is from Cyrix.
 pub fn is_cyrix() -> bool {
     is_vendor(brand::VENDOR_CYRIX)
 }
 
+/// Returns true if the CPU is from Intel.
 pub fn is_intel() -> bool {
     is_vendor(brand::VENDOR_INTEL)
 }
 
+/// Returns true if the CPU is from Zhaoxin.
 pub fn is_zhaoxin() -> bool {
     is_vendor(brand::VENDOR_ZHAOXIN)
 }
@@ -349,6 +361,9 @@ pub fn is_overdrive() -> bool {
     (x86_cpuid(LEAF_1).eax & (1 << 12)) != 0
 }
 
+/// Returns the Hyper-Threading bit value from CPUID.
+///
+/// Returns 1 if Hyper-Threading is detected, 0 otherwise.
 pub fn get_ht() -> u32 {
     if !has_ht() {
         return 0;
@@ -377,7 +392,7 @@ pub fn logical_cores() -> u32 {
 // ! CPU Feature Lookups
 // ------------------------------------------------------------------------
 
-/// Represents a CPUID register.
+/// CPUID register selector for feature bit checking.
 #[allow(unused)]
 enum Reg {
     Eax,
@@ -404,6 +419,9 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 // ! Leaf 0000_0001h
 // ------------------------------------------------------------------------
 
+/// Returns the CPU brand ID from extended leaf 0x80000001.
+///
+/// The brand ID is a value that identifies the specific CPU brand variant.
 pub fn get_brand_id() -> u32 {
     let res = x86_cpuid(EXT_LEAF_1);
     res.ebx >> 8

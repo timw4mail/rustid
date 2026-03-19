@@ -3,12 +3,15 @@
 //! This module implements scanning and parsing of the Intel MP specification
 //! tables to determine multi-processor topology (sockets, cores).
 
+/// MultiProcessor (MP) table information for multi-socket systems.
 #[derive(Debug, Default)]
 pub struct MpTable {
+    /// Number of processor sockets
     pub sockets: usize,
 }
 
 impl MpTable {
+    /// Returns the number of processor sockets.
     pub fn socket_count(&self) -> usize {
         self.sockets
     }
@@ -16,6 +19,7 @@ impl MpTable {
 
 #[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
 impl MpTable {
+    /// Detects the number of sockets (returns 1 on unsupported platforms).
     pub fn detect() -> MpTable {
         MpTable { sockets: 1 }
     }
@@ -23,6 +27,7 @@ impl MpTable {
 
 #[cfg(target_os = "windows")]
 impl MpTable {
+    /// Detects the number of sockets on Windows using the Win32 API.
     pub fn detect() -> MpTable {
         use windows::Win32::System::SystemInformation::{
             GetLogicalProcessorInformation, LOGICAL_PROCESSOR_RELATIONSHIP,
@@ -70,10 +75,12 @@ impl MpTable {
 
 #[cfg(target_os = "linux")]
 impl MpTable {
+    /// Detects the number of sockets on Linux by parsing /proc/cpuinfo.
     pub fn detect() -> MpTable {
         Self::detect_file("/proc/cpuinfo")
     }
 
+    /// Detects the number of sockets by reading the specified file.
     pub fn detect_file(file: &str) -> MpTable {
         use std::collections::HashSet;
 
@@ -100,17 +107,12 @@ impl MpTable {
                 }
             }
 
-            if !(physical_ids.is_empty() || core_ids.is_empty()) {
-                // For the Pentium Pro, all the rules seem to be broken.
-                // There might be multiple entries in /proc/cpuinfo, all with identical ids
-                if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-                    table.sockets = entries;
-                } else {
-                    table.sockets = physical_ids.len();
-                }
-
-
-                return table;
+            // For the Pentium Pro, all the rules seem to be broken.
+            // There might be multiple entries in /proc/cpuinfo, all with identical ids
+            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
+                table.sockets = entries;
+            } else {
+                table.sockets = physical_ids.len();
             }
         }
 
@@ -122,43 +124,69 @@ impl MpTable {
 #[cfg(target_os = "none")]
 const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
+/// MP Floating Pointer Structure from the Intel MP Specification.
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone)]
 #[cfg(target_os = "none")]
 pub struct MpFloatingPointer {
+    /// Structure signature ("_MP_")
     pub signature: [u8; 4],
+    /// Physical address of the configuration table
     pub config_table_ptr: u32,
+    /// Length of this structure (in bytes)
     pub length: u8,
+    /// MP specification revision
     pub spec_rev: u8,
+    /// Checksum of this structure
     pub checksum: u8,
+    /// MP feature byte 1
     pub mp_feature1: u8,
+    /// MP feature byte 2
     pub mp_feature2: u8,
+    /// MP feature byte 3
     pub mp_feature3: u8,
+    /// MP feature byte 4
     pub mp_feature4: u8,
+    /// MP feature byte 5
     pub mp_feature5: u8,
 }
 
+/// MP Configuration Table Header from the Intel MP Specification.
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone)]
 #[cfg(target_os = "none")]
 pub struct MpTableHeader {
+    /// Table signature ("PCMP")
     pub signature: [u8; 4],
+    /// Table length in bytes
     pub length: u16,
+    /// Specification revision
     pub spec_rev: u8,
+    /// Checksum of the table
     pub checksum: u8,
+    /// OEM identifier string
     pub oem_id: [u8; 8],
+    /// OEM product identifier string
     pub product_id: [u8; 12],
+    /// OEM table pointer
     pub oem_table_ptr: u32,
+    /// OEM table size
     pub oem_table_size: u16,
+    /// Number of entries in the table
     pub entry_count: u16,
+    /// Local APIC address
     pub lapic_addr: u32,
+    /// Extended table length
     pub extended_table_length: u16,
+    /// Extended table checksum
     pub extended_table_checksum: u8,
+    /// Reserved
     pub reserved: u8,
 }
 
 #[cfg(target_os = "none")]
 impl MpTable {
+    /// Detects the number of sockets using the Intel MP Specification.
     pub fn detect() -> MpTable {
         let mut table = MpTable { sockets: 1 };
 

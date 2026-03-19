@@ -6,17 +6,25 @@ use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use core::str::FromStr;
 use heapless::{String, format};
 
+/// Cyrix-specific CPU identification and detection.
 #[derive(Debug, Default, Clone)]
 pub struct Cyrix {
+    /// Device ID register 0
     pub dir0: u8,
+    /// CPU revision
     pub revision: u8,
+    /// CPU stepping
     pub stepping: u8,
+    /// Bus multiplier factor
     pub multiplier: String<4>,
+    /// Model name
     pub model: String<64>,
+    /// Code name
     pub code_name: String<64>,
 }
 
 impl Cyrix {
+    /// Detects and returns Cyrix CPU information.
     pub fn detect() -> Cyrix {
         if !crate::cpuid::is_cyrix() {
             return Cyrix::default();

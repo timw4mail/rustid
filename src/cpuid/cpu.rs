@@ -11,23 +11,35 @@ use crate::{TCpu, println};
 use core::str::FromStr;
 use heapless::String;
 
+/// CPU feature class/level enumeration.
+///
+/// Represents the instruction set and feature level of an x86 processor,
+/// roughly based on x86-64 microarchitecture levels.
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FeatureClass {
+    /// 80386-class processor
     i386,
+    /// 80486-class processor
     i486,
+    /// Pentium-class processor (i586)
     i586,
+    /// Pentium Pro/II/III-class processor (i686)
     i686,
+    /// x86-64 version 1 (baseline SSE/SSE2)
     x86_64_v1,
+    /// x86-64 version 2 (adds CMPXCHG16B, POPCNT, SSE4.2)
     x86_64_v2,
+    /// x86-64 version 3 (adds AVX, AVX2, BMI, F16C, FMA)
     x86_64_v3,
+    /// x86-64 version 4 (adds AVX-512)
     x86_64_v4,
 }
 
 impl FeatureClass {
-    /// Rough detection of cpu feature class
+    /// Cpu Feature Detection
     ///
-    /// Roughly based on https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+    /// Roughly based on <https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels>
     pub fn detect() -> FeatureClass {
         use super::*;
 
@@ -77,6 +89,7 @@ impl FeatureClass {
         }
     }
 
+    /// Returns a string representation of the feature class.
     pub fn to_str(self) -> &'static str {
         match self {
             FeatureClass::i386 => "i386",
@@ -149,7 +162,11 @@ impl CpuSignature {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+/// Extended CPU signature information from AMD processors.
+///
+/// Contains additional CPU identification data available on AMD processors
+/// via the extended CPUID leaf 0x80000001.
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct ExtendedSignature {
     pub base_brand_id: u32,
     pub brand_id: u32,
@@ -173,7 +190,7 @@ impl ExtendedSignature {
 }
 
 /// Represents a complete x86/x86_64 CPU with all detected information.
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
@@ -191,21 +208,11 @@ pub struct Cpu {
     pub topology: Topology,
 }
 
-impl Default for Cpu {
-    fn default() -> Self {
-        Self {
-            arch: CpuArch::default(),
-            easter_egg: None,
-            brand_id: 0,
-            signature: CpuSignature::default(),
-            ext_signature: None,
-            features: FeatureList::default(),
-            topology: Topology::default(),
-        }
-    }
-}
-
 impl Cpu {
+    /// Detects and returns comprehensive CPU information.
+    ///
+    /// Performs full CPU detection including architecture, microarchitecture,
+    /// brand string, signature, features, and topology.
     pub fn detect() -> Self {
         Self {
             arch: CpuArch::find(
@@ -304,6 +311,11 @@ impl Cpu {
         }
     }
 
+    /// Returns a human-readable display name for the CPU model.
+    ///
+    /// This attempts to produce a marketing-style name based on the
+    /// detected CPU, falling back to architecture class names for
+    /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String<64> {
         if &self.arch.model != "Unknown" {
             return self.arch.model.clone();

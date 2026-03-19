@@ -2,9 +2,11 @@ use crate::cpuid::brand::VENDOR_INTEL;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, UNK};
 
+/// Intel-specific microarchitecture detection.
 pub struct Intel;
 
 impl Intel {
+    /// Detects the Intel microarchitecture based on the CPU model string and signature.
     pub fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
             CpuArch::new(model, ma, code_name, "Intel", VENDOR_INTEL, tech)

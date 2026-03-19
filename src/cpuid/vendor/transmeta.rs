@@ -3,6 +3,7 @@ use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, UNK};
 
+/// Transmeta-specific microarchitecture detection.
 pub struct Transmeta;
 
 impl TMicroArch for Transmeta {

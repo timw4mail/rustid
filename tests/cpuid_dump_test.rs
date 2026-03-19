@@ -148,11 +148,9 @@ fn count_topology_domains(leaf: u32) -> usize {
     count
 }
 
-
 mod ppro {
-    use rustid::cpuid::mp::MpTable;
-    use crate::set_file_cpuid_provider;
     use super::*;
+    use rustid::cpuid::mp::MpTable;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("p6x2.txt");
@@ -194,9 +192,7 @@ mod ppro {
 }
 
 mod m3_8100y {
-    use crate::set_file_cpuid_provider;
     use super::*;
-    use crate::FeatureClass;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("m3-8100y.txt");
@@ -507,7 +503,6 @@ mod amd_5900xt {
 }
 
 mod zhaoxin_kx5640 {
-    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
@@ -623,7 +618,6 @@ mod zhaoxin_kx5640 {
 }
 
 mod via_c7d {
-    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {

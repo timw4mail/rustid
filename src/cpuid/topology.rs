@@ -7,16 +7,21 @@ use super::{
 
 use heapless::Vec;
 
-#[derive(Debug, Default)]
+/// CPU speed information (base and boost frequencies).
+#[derive(Debug, Default, PartialEq)]
 #[cfg(not(target_os = "none"))]
 pub struct Speed {
+    /// Base frequency in MHz
     pub base: u32,
+    /// Boost frequency in MHz
     pub boost: u32,
+    /// Whether the frequency was measured (vs reported by CPU)
     pub measured: bool,
 }
 
 #[cfg(not(target_os = "none"))]
 impl Speed {
+    /// Detects the CPU speed from available sources.
     pub fn detect() -> Self {
         use super::{LEAF_16, x86_cpuid};
         match vendor_str().as_str() {
@@ -95,6 +100,7 @@ impl Speed {
     }
 }
 
+/// Represents a topology domain (thread, core, die, socket, etc.).
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct TopologyDomain {
     level: u32,
@@ -102,28 +108,43 @@ pub struct TopologyDomain {
     count: u32,
 }
 
+/// CPU topology domain type.
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub enum TopologyType {
+    /// Invalid or unknown topology level
     #[default]
     Invalid,
+    /// Thread level (logical processor)
     Thread,
+    /// Core level (physical processor)
     Core,
+    /// Die level
     Die,
+    /// Socket level (processor package)
     Socket,
+    /// Module level
     Module,
+    /// Tile level
     Tile,
+    /// Die group level
     DieGroup,
 }
 
-#[derive(Debug, Default)]
+/// Complete CPU topology information including sockets, cores, threads, and cache.
+#[derive(Debug, Default, PartialEq)]
 pub struct Topology {
+    /// Number of processor sockets
     pub sockets: usize,
+    /// Number of physical cores
     pub cores: u32,
+    /// Number of logical threads (includes SMT)
     pub threads: u32,
 
+    /// CPU speed information (not available on bare-metal/no_std)
     #[cfg(not(target_os = "none"))]
     pub speed: Speed,
 
+    /// Cache hierarchy information
     pub cache: Option<Cache>,
 
     #[allow(unused)]
@@ -131,6 +152,7 @@ pub struct Topology {
 }
 
 impl Topology {
+    /// Detects and returns the CPU topology.
     pub fn detect() -> Self {
         #[cfg(not(target_os = "none"))]
         let speed = Speed::detect();

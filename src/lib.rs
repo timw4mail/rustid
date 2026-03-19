@@ -12,11 +12,13 @@
 //!
 //! # Usage
 //!
-//! ```ignore
+//! ```
 //! use rustid::Cpu;
+//! use rustid::TCpu;
 //!
-//! let cpu = Cpu::new();
+//! let cpu = Cpu::detect();
 //! cpu.display_table();
+//! # assert_ne!(cpu, Cpu::default());
 //! ```
 //!
 //! # CLI Usage
@@ -38,17 +40,17 @@ extern crate std;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod cpuid;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use cpuid::Cpu;
+pub use cpuid::Cpu;
 
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 pub mod ppc;
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
-use ppc::cpu::Cpu;
+pub use ppc::cpu::Cpu;
 
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 pub mod arm;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
-use arm::cpu::Cpu;
+pub use arm::cpu::Cpu;
 
 #[cfg(target_os = "none")]
 pub mod dos;
