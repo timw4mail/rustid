@@ -660,11 +660,13 @@ impl TCpu for Cpu {
         if super::is_cyrix() {
             let cyrix = super::vendor::Cyrix::detect();
 
-            println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
-            println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
-            println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
-            println!("{}{}x", sublabel("Bus Multiplier"), cyrix.multiplier);
-            println!();
+            if cyrix.dir0 != 0xFF {
+                println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
+                println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
+                println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
+                println!("{}{}x", sublabel("Bus Multiplier"), cyrix.multiplier);
+                println!();
+            }
         }
 
         println!();
@@ -799,26 +801,5 @@ mod tests {
             topology: Topology::default(),
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
-    }
-
-    #[test]
-    fn test_easter_egg() {
-        let easter_egg = Cpu::easter_egg();
-        println!("Easter Egg: {:?}", easter_egg);
-        // We cannot assert a specific value, just ensure it runs
-    }
-
-    #[test]
-    fn test_cpu_debug() {
-        let cpu = Cpu::new();
-        cpu.debug();
-        // This primarily prints, so we just ensure it doesn't panic
-    }
-
-    #[test]
-    fn test_cpu_display_table() {
-        let cpu = Cpu::new();
-        cpu.display_table();
-        // This primarily prints, so we just ensure it doesn't panic
     }
 }

@@ -127,6 +127,36 @@ fn count_topology_domains(leaf: u32) -> usize {
     count
 }
 
+mod ppro {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let path = PathBuf::from(manifest_dir).join("raw/p6x2.txt");
+        let cpu = DumpCpu::parse_file(&path);
+        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        test();
+        reset_cpuid_provider();
+    }
+
+    #[test]
+    fn test_intel_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(vendor.as_str(), "GenuineIntel");
+        });
+    }
+
+    #[test]
+    fn test_intel_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::new().display_model_string();
+            assert!(brand.contains("Intel"));
+            assert!(brand.contains("Pentium Pro"));
+        });
+    }
+}
+
 mod m3_8100y {
     use super::*;
 

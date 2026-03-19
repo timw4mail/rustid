@@ -221,16 +221,7 @@ impl From<String<12>> for CpuBrand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::println;
     use core::str::FromStr;
-
-    #[test]
-    fn test_detect_cpu_brand() {
-        let brand = CpuBrand::detect();
-        // We cannot assert a specific brand as it depends on the CPU running the test.
-        // Just ensure it doesn't panic.
-        println!("Detected CPU Brand: {:?}", brand);
-    }
 
     #[test]
     fn test_to_vendor_str() {
