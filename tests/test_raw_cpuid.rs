@@ -159,6 +159,7 @@ mod ppro {
 
 mod m3_8100y {
     use super::*;
+    use crate::FeatureClass;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -235,6 +236,15 @@ mod m3_8100y {
             let cpu = Cpu::new();
             assert_eq!(cpu.topology.cores, 2);
         });
+    }
+
+    #[test]
+    fn test_intel_feature_class() {
+        with_mock_cpu(|| {
+            let fc = FeatureClass::detect();
+            assert_eq!(fc, FeatureClass::x86_64_v3);
+            assert_eq!(fc.to_str(), "x86_64-v3");
+        })
     }
 
     #[test]
