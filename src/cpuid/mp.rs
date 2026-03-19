@@ -71,76 +71,50 @@ impl MpTable {
 #[cfg(target_os = "linux")]
 impl MpTable {
     pub fn detect() -> MpTable {
-        use std::fs::File;
-        use std::io::Read;
+        Self::detect_file("/proc/cpuinfo")
+    }
+
+    pub fn detect_file(file: &str) -> MpTable {
+        use std::collections::HashSet;
 
         let mut table = MpTable { sockets: 1 };
 
-        // Try /sys/firmware/mptable first
-        if let Ok(mut f) = File::open("/sys/firmware/mptable") {
-            let mut buf = Vec::new();
-            if f.read_to_end(&mut buf).is_ok()
-                && let Some(count) = Self::parse_buffer(&buf)
-            {
-                table.sockets = count;
-                return table;
-            }
-        }
-
         // Fallback: /proc/cpuinfo unique physical ids
-        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-            let mut ids = std::collections::HashSet::new();
+        if let Ok(content) = std::fs::read_to_string(file) {
+            let mut entries = 0;
+            let mut physical_ids = HashSet::new();
+            let mut core_ids = HashSet::new();
+
             for line in content.lines() {
                 if line.starts_with("physical id")
                     && let Some(id) = line.split(':').nth(1)
                 {
-                    ids.insert(id.trim());
+                    physical_ids.insert(id.trim());
+                    entries += 1;
+                }
+
+                if line.starts_with("core id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    core_ids.insert(id.trim());
                 }
             }
-            if !ids.is_empty() {
-                table.sockets = ids.len();
+
+            if !(physical_ids.is_empty() || core_ids.is_empty()) {
+                // For the Pentium Pro, all the rules seem to be broken.
+                // There might be multiple entries in /proc/cpuinfo, all with identical ids
+                if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
+                    table.sockets = entries;
+                } else {
+                    table.sockets = physical_ids.len();
+                }
+
+
                 return table;
             }
         }
 
         table
-    }
-
-    fn parse_buffer(buf: &[u8]) -> Option<usize> {
-        if buf.len() < 44 {
-            return None;
-        }
-
-        if &buf[0..4] != b"PCMP" {
-            // Might be the whole memory dump, search for PCMP
-            // But usually /sys/firmware/mptable starts with PCMP
-            return None;
-        }
-
-        let entry_count = u16::from_le_bytes([buf[34], buf[35]]);
-        let mut sockets = 0;
-        let mut current_off = 44;
-
-        for _ in 0..entry_count {
-            if current_off + 20 > buf.len() {
-                break;
-            }
-            let entry_type = buf[current_off];
-            if entry_type == 0 {
-                // Processor Entry
-                let flags = buf[current_off + 3];
-                if (flags & 0x01) != 0 {
-                    sockets += 1;
-                }
-                current_off += 20;
-            } else if entry_type <= 4 {
-                current_off += 8;
-            } else {
-                break;
-            }
-        }
-
-        if sockets > 0 { Some(sockets) } else { None }
     }
 }
 
@@ -393,43 +367,5 @@ impl MpTable {
             let seg = peek_u16(0x0040, 0x000E);
             if seg != 0 { Some(seg) } else { None }
         }
-    }
-}
-
-#[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_buffer_valid() {
-        let mut buf = vec![0u8; 64];
-        buf[0..4].copy_from_slice(b"PCMP"); // Signature
-        buf[34] = 2; // 2 entries
-        // Entry 1: Processor, enabled
-        buf[44] = 0; // Type: Processor
-        buf[47] = 1; // Flags: Enabled
-        // Entry 2: Bus
-        buf[44 + 8] = 1; // Type: Bus
-        assert_eq!(MpTable::parse_buffer(&buf), Some(1));
-    }
-
-    #[test]
-    fn test_parse_buffer_empty() {
-        let buf = vec![];
-        assert_eq!(MpTable::parse_buffer(&buf), None);
-    }
-
-    #[test]
-    fn test_parse_buffer_invalid_sig() {
-        let buf = vec![0u8; 44];
-        assert_eq!(MpTable::parse_buffer(&buf), None);
-    }
-
-    #[test]
-    fn test_parse_buffer_incomplete() {
-        let mut buf = vec![0u8; 44];
-        buf[0..4].copy_from_slice(b"PCMP");
-        buf[34] = 5; // 5 entries, but buffer is too small
-        assert_eq!(MpTable::parse_buffer(&buf), None);
     }
 }

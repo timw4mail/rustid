@@ -6,12 +6,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// ----------------------------------------------------------------------------
+// Test Setup
+// ----------------------------------------------------------------------------
+
 #[derive(Clone)]
-struct DumpCpu {
+struct CpuDump {
     leaves: HashMap<(u32, u32), Cpuid>,
 }
 
-impl DumpCpu {
+impl CpuDump {
     fn parse_file<P: AsRef<Path>>(path: P) -> Self {
         let contents = fs::read_to_string(path).expect("Failed to read dump file");
         let mut leaves: HashMap<(u32, u32), Cpuid> = HashMap::new();
@@ -58,7 +62,7 @@ impl DumpCpu {
             leaves.insert((leaf, sub_leaf), Cpuid { eax, ebx, ecx, edx });
         }
 
-        DumpCpu { leaves }
+        CpuDump { leaves }
     }
 
     fn get(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
@@ -70,7 +74,7 @@ impl DumpCpu {
 }
 
 struct MockCpuidProvider {
-    cpu: DumpCpu,
+    cpu: CpuDump,
 }
 
 impl CpuidProvider for MockCpuidProvider {
@@ -79,6 +83,23 @@ impl CpuidProvider for MockCpuidProvider {
     }
 }
 
+fn raw_path(segment: &str) -> PathBuf {
+    let mut path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    path.push("raw");
+    path.push(segment);
+
+    path
+}
+
+fn set_file_cpuid_provider(path: &str) {
+    let path = raw_path(path);
+    let cpu = CpuDump::parse_file(path);
+    set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+}
+
+// ----------------------------------------------------------------------------
+// Test Helpers
+// ----------------------------------------------------------------------------
 fn get_signature() -> (u32, u32, u32, u32, u32) {
     let sig = CpuSignature::detect();
 
@@ -127,44 +148,57 @@ fn count_topology_domains(leaf: u32) -> usize {
     count
 }
 
+
 mod ppro {
+    use rustid::cpuid::mp::MpTable;
+    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = PathBuf::from(manifest_dir).join("raw/p6x2.txt");
-        let cpu = DumpCpu::parse_file(&path);
-        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        set_file_cpuid_provider("p6x2.txt");
         test();
         reset_cpuid_provider();
     }
 
     #[test]
-    fn test_intel_vendor_detection() {
+    fn test_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
             assert_eq!(vendor.as_str(), "GenuineIntel");
+            assert_eq!(is_intel(), true);
         });
     }
 
     #[test]
-    fn test_intel_brand_string() {
+    fn test_model_string() {
         with_mock_cpu(|| {
-            let brand = Cpu::new().display_model_string();
+            let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("Pentium Pro"));
         });
     }
+
+    #[test]
+    fn test_raw_model_string() {
+        with_mock_cpu(|| {
+            assert_eq!(Cpu::raw_model_string(), UNK);
+        })
+    }
+
+    #[test]
+    fn test_socket_count() {
+        let file = raw_path("p6x2cpuinfo.txt");
+        let mp = MpTable::detect_file(file.to_str().unwrap());
+        assert_eq!(mp.socket_count(), 2);
+    }
 }
 
 mod m3_8100y {
+    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = PathBuf::from(manifest_dir).join("raw/m3-8100y.txt");
-        let cpu = DumpCpu::parse_file(&path);
-        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        set_file_cpuid_provider("m3-8100y.txt");
         test();
         reset_cpuid_provider();
     }
@@ -180,7 +214,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_brand_string() {
         with_mock_cpu(|| {
-            let brand = Cpu::new().display_model_string();
+            let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("m3-8100Y"));
         });
@@ -224,7 +258,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_threads() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
     }
@@ -232,7 +266,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_cores() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 2);
         });
     }
@@ -307,10 +341,7 @@ mod amd_5900xt {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = PathBuf::from(manifest_dir).join("raw/5900XT.txt");
-        let cpu = DumpCpu::parse_file(&path);
-        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        set_file_cpuid_provider("5900XT.txt");
         test();
         reset_cpuid_provider();
     }
@@ -326,7 +357,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_brand_string() {
         with_mock_cpu(|| {
-            let brand = Cpu::new().display_model_string();
+            let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("AMD"));
             assert!(brand.contains("5900"));
         });
@@ -381,7 +412,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_threads() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 32);
         });
     }
@@ -389,7 +420,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cores() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 16);
         });
     }
@@ -466,13 +497,11 @@ mod amd_5900xt {
 }
 
 mod zhaoxin_kx5640 {
+    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = PathBuf::from(manifest_dir).join("raw/kx5640.txt");
-        let cpu = DumpCpu::parse_file(&path);
-        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        set_file_cpuid_provider("kx5640.txt");
         test();
         reset_cpuid_provider();
     }
@@ -488,7 +517,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_brand_string() {
         with_mock_cpu(|| {
-            let brand = Cpu::new().display_model_string();
+            let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("KX-5640") || brand.contains("ZHAOXIN"));
         });
     }
@@ -531,7 +560,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_threads() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
     }
@@ -539,7 +568,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_cores() {
         with_mock_cpu(|| {
-            let cpu = Cpu::new();
+            let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 4);
         });
     }
@@ -584,13 +613,11 @@ mod zhaoxin_kx5640 {
 }
 
 mod via_c7d {
+    use crate::set_file_cpuid_provider;
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = PathBuf::from(manifest_dir).join("raw/c7d.txt");
-        let cpu = DumpCpu::parse_file(&path);
-        set_cpuid_provider(MockCpuidProvider { cpu: cpu.clone() });
+        set_file_cpuid_provider("c7d.txt");
         test();
         reset_cpuid_provider();
     }
@@ -606,7 +633,7 @@ mod via_c7d {
     #[test]
     fn test_via_brand_string() {
         with_mock_cpu(|| {
-            let brand = Cpu::new().display_model_string();
+            let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("C7") || !brand.is_empty());
         });
     }

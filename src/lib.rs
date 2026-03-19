@@ -87,7 +87,7 @@ pub fn cli_main() {
         }
     }
 
-    let cpu = Cpu::new();
+    let cpu = Cpu::detect();
 
     #[cfg(target_os = "none")]
     {

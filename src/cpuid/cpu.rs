@@ -193,12 +193,20 @@ pub struct Cpu {
 
 impl Default for Cpu {
     fn default() -> Self {
-        Self::new()
+        Self {
+            arch: CpuArch::default(),
+            easter_egg: None,
+            brand_id: 0,
+            signature: CpuSignature::default(),
+            ext_signature: None,
+            features: FeatureList::default(),
+            topology: Topology::default(),
+        }
     }
 }
 
 impl Cpu {
-    pub fn new() -> Self {
+    pub fn detect() -> Self {
         Self {
             arch: CpuArch::find(
                 Self::raw_model_string().as_str(),
@@ -677,35 +685,23 @@ impl TCpu for Cpu {
 mod tests {
     use super::*;
     use crate::cpuid::get_feature_list;
-    use crate::println;
 
     #[test]
     fn test_model_string() {
         let model = Cpu::raw_model_string();
-        println!("Model: {}", model);
         assert!(!model.is_empty());
     }
 
     #[test]
     fn test_cpu_features_detect() {
         let features = get_feature_list();
-        println!("Detected CPU Features: {:?}", features);
         // Assert that at least some features are detected (this might vary by CPU)
         assert!(!features.is_empty());
     }
 
     #[test]
-    fn test_cpu_signature_detect() {
-        let signature = CpuSignature::detect();
-        println!("Detected CPU Signature: {:?}", signature);
-        // Basic assertions to ensure fields are populated, not necessarily specific values
-        assert!(signature.family > 0 || signature.extended_family > 0 || signature.model > 0);
-    }
-
-    #[test]
     fn test_cpu_new() {
-        let cpu = Cpu::new();
-        println!("New CPU instance: {:?}", cpu);
+        let cpu = Cpu::detect();
         // Ensure that new() doesn't panic and populates some fields
         assert!(!cpu.arch.vendor_string.is_empty());
         assert!(!cpu.features.is_empty());

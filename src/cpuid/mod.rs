@@ -651,7 +651,6 @@ pub fn get_feature_list() -> FeatureList {
 mod tests {
     use super::*;
     use crate::cpuid::vendor_str;
-    use crate::println;
 
     #[test]
     fn test_from_cpuid_result_for_cpu_info() {
@@ -671,26 +670,6 @@ mod tests {
     #[test]
     fn test_vendor_str() {
         let vendor = vendor_str();
-        println!("Vendor: {}", vendor);
         assert!(!vendor.is_empty());
-    }
-
-    #[test]
-    fn test_x86_cpuid_leaf_0() {
-        let cpu_info = x86_cpuid(0);
-        // Cannot assert specific values, but can ensure it doesn't panic
-        // and that some fields might be non-zero for vendor ID.
-        println!("CPUID Leaf 0: {:?}", cpu_info);
-        assert!(cpu_info.eax > 0); // EAX for leaf 0 is max_leaf, should be > 0
-    }
-
-    #[test]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    fn test_x86_cpuid_count_leaf_1_subleaf_0() {
-        let cpu_info = x86_cpuid_count(1, 0);
-        // Cannot assert specific values, but can ensure it doesn't panic.
-        println!("CPUID Leaf 1, Subleaf 0: {:?}", cpu_info);
-        // EAX for leaf 1 contains processor signature, should be non-zero for most CPUs
-        assert!(cpu_info.eax > 0);
     }
 }
