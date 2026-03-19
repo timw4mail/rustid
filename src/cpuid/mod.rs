@@ -83,6 +83,9 @@ pub const EXT_LEAF_1D: u32 = 0x8000_001D;
 /// AMD extended CPU topology
 pub const EXT_LEAF_26: u32 = 0x8000_0026;
 
+/// The max value of the extended CPUID leaf
+pub const EXT_LEAF_MAX: u32 = 0x8000_FFFF;
+
 /// Centaur/Zhaoxin vendor leaf base
 pub const CENTAUR_LEAF_0: u32 = 0xC000_0000;
 
@@ -155,7 +158,7 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 ///
 /// Verified on real hardware
 pub fn has_cpuid() -> bool {
-    #[cfg(any(test, feature = "file_mock", target_arch = "x86_64"))]
+    #[cfg(target_arch = "x86_64")]
     return true;
 
     #[cfg(target_arch = "x86")]
@@ -181,9 +184,6 @@ pub fn has_cpuid() -> bool {
         }
         supported != 0
     }
-
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    false
 }
 
 /// Returns true if the CPU is a Cyrix processor (detected without CPUID).
@@ -281,22 +281,34 @@ pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
 }
 
+/// Returns the maximum vendor-specific CPUID leaf, if one exists,
+/// otherwise returns the maximum extended leaf.
+pub fn max_vendor_leaf() -> u32 {
+    match vendor_str().as_str() {
+        VENDOR_CENTAUR => x86_cpuid(CENTAUR_LEAF_0).eax,
+        VENDOR_TRANSMETA => x86_cpuid(TRANSMETA_LEAF_0).eax,
+        _ => max_extended_leaf(),
+    }
+}
+
 /// Returns true if the given leaf is valid and supported by the CPU.
 ///
 /// Checks whether the specified CPUID leaf is within the range supported by
-/// the processor (either basic or extended leaves).
+/// the processor (basic, extends, or vendor-specific).
 pub fn is_valid_leaf(leaf: u32) -> bool {
     if !has_cpuid() {
         return false;
     }
 
     match leaf {
-        EXT_LEAF_0.. => leaf <= max_extended_leaf(),
         0..EXT_LEAF_0 => leaf <= max_leaf(),
+        EXT_LEAF_0..=EXT_LEAF_MAX => leaf <= max_extended_leaf(),
+        _ => leaf <= max_vendor_leaf(),
     }
 }
 
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
+///
 /// Returns a 12-character vendor string from CPUID leaf 0.
 pub fn vendor_str() -> heapless::String<12> {
     #[cfg(target_arch = "x86")]
@@ -304,7 +316,7 @@ pub fn vendor_str() -> heapless::String<12> {
     if !has_cpuid() && cyrix_5_2_test() {
         use core::str::FromStr;
 
-        return heapless::String::from_str(brand::VENDOR_CYRIX).unwrap();
+        return heapless::String::from_str(VENDOR_CYRIX).unwrap();
     }
 
     let mut s = heapless::String::new();
@@ -331,27 +343,27 @@ fn is_vendor(v: &str) -> bool {
 
 /// Returns true if the CPU is from AMD.
 pub fn is_amd() -> bool {
-    is_vendor(brand::VENDOR_AMD)
+    is_vendor(VENDOR_AMD)
 }
 
 /// Returns true if the CPU is from Centaur (IDT/VIA/Zhaoxin).
 pub fn is_centaur() -> bool {
-    is_vendor(brand::VENDOR_CENTAUR)
+    is_vendor(VENDOR_CENTAUR)
 }
 
 /// Returns true if the CPU is from Cyrix.
 pub fn is_cyrix() -> bool {
-    is_vendor(brand::VENDOR_CYRIX)
+    is_vendor(VENDOR_CYRIX)
 }
 
 /// Returns true if the CPU is from Intel.
 pub fn is_intel() -> bool {
-    is_vendor(brand::VENDOR_INTEL)
+    is_vendor(VENDOR_INTEL)
 }
 
 /// Returns true if the CPU is from Zhaoxin.
 pub fn is_zhaoxin() -> bool {
-    is_vendor(brand::VENDOR_ZHAOXIN)
+    is_vendor(VENDOR_ZHAOXIN)
 }
 
 /// Returns true if the CPU is an Intel Overdrive processor.
@@ -359,18 +371,6 @@ pub fn is_zhaoxin() -> bool {
 /// Checks the Overdrive bit (EAX bit 12) in CPUID leaf 1.
 pub fn is_overdrive() -> bool {
     (x86_cpuid(LEAF_1).eax & (1 << 12)) != 0
-}
-
-/// Returns the Hyper-Threading bit value from CPUID.
-///
-/// Returns 1 if Hyper-Threading is detected, 0 otherwise.
-pub fn get_ht() -> u32 {
-    if !has_ht() {
-        return 0;
-    }
-
-    let res = x86_cpuid(LEAF_1);
-    (res.edx >> 28) & 1
 }
 
 /// Returns the number of logical cores.

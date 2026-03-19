@@ -248,7 +248,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_ht_support() {
         with_mock_cpu(|| {
-            assert_eq!(get_ht(), 1);
+            assert_eq!(has_ht(), true);
         });
     }
 
