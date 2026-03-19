@@ -117,6 +117,10 @@ run-dos: build-dos
 test:
 	cargo test --features file_mock -- --test-threads=1
 
+# Run tests and generate code coverage
+coverage:
+	cargo llvm-cov --open --features file_mock -- --test-threads=1
+
 # Run 64 and 32 bit tests (on 64bit platform)
 test-all: test test-x86
 

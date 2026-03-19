@@ -196,6 +196,7 @@ mod ppro {
 mod m3_8100y {
     use crate::set_file_cpuid_provider;
     use super::*;
+    use crate::FeatureClass;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("m3-8100y.txt");
@@ -269,6 +270,15 @@ mod m3_8100y {
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 2);
         });
+    }
+
+    #[test]
+    fn test_intel_feature_class() {
+        with_mock_cpu(|| {
+            let fc = FeatureClass::detect();
+            assert_eq!(fc, FeatureClass::x86_64_v3);
+            assert_eq!(fc.to_str(), "x86_64-v3");
+        })
     }
 
     #[test]

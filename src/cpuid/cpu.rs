@@ -83,10 +83,10 @@ impl FeatureClass {
             FeatureClass::i486 => "i486",
             FeatureClass::i586 => "i586",
             FeatureClass::i686 => "i686",
-            FeatureClass::x86_64_v1 => "x86_64_v1",
-            FeatureClass::x86_64_v2 => "x86_64_v2",
-            FeatureClass::x86_64_v3 => "x86_64_v3",
-            FeatureClass::x86_64_v4 => "x86_64_v4",
+            FeatureClass::x86_64_v1 => "x86_64-v1",
+            FeatureClass::x86_64_v2 => "x86_64-v2",
+            FeatureClass::x86_64_v3 => "x86_64-v3",
+            FeatureClass::x86_64_v4 => "x86_64-v4",
         }
     }
 }
