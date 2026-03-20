@@ -13,6 +13,7 @@ fn get_synth_midr() -> usize {
     use std::collections::HashMap;
     use std::process::Command;
 
+    let mut values: HashMap<&str, &str> = HashMap::new();
     let raw_sysctl: String = Command::new("sysctl")
         .arg("-a")
         .output()
@@ -21,42 +22,32 @@ fn get_synth_midr() -> usize {
         .try_into()
         .unwrap();
 
-    let mut values: HashMap<&str, &str> = HashMap::new();
     raw_sysctl
         .split('\n')
-        .filter(|l| l.len() > 0)
+        .filter(|l| !l.is_empty())
         .for_each(|x| {
             let line: Vec<_> = x.split(": ").collect();
-            if let Some(key) = line.get(0)
+            if let Some(key) = line.first()
                 && let Some(val) = line.get(1)
+                && (key.starts_with("machdep.cpu")
+                    || (key.starts_with("hw") && (key.contains("cpu") || key.contains("cache"))))
             {
-                if key.starts_with("machdep.cpu")
-                    || (key.starts_with("hw") && (key.contains("cpu") || key.contains("cache")))
-                {
-                    values.insert(key, val);
-                }
+                values.insert(key, val);
             }
         });
 
     // println!("{:#?}", values);
 
     let cpufamily = if let Some(family) = values.get("hw.cpufamily") {
-        match family.parse::<u64>() {
-            Ok(f) => Some(f),
-            Err(_) => None,
-        }
+        family.parse::<u64>().ok()
     } else {
         None
     };
 
-    let brand_string = if let Some(brand_string) = values.get("machdep.cpu.brand_string") {
-        Some(brand_string)
-    } else {
-        None
-    };
+    let brand_string = values.get("machdep.cpu.brand_string");
 
     if let (Some(family), Some(brand)) = (cpufamily, brand_string) {
-        cpufamily_to_midr(family, &brand)
+        cpufamily_to_midr(family, brand)
     } else {
         0
     }
