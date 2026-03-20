@@ -17,6 +17,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading the specified file.
+    #[cfg(not(target_os = "none"))]
     pub fn detect_file(file: &str) -> MpTable {
         use std::collections::HashSet;
 

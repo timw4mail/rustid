@@ -199,57 +199,8 @@ impl CpuArch {
 
     fn find_apple(part: usize) -> Self {
         match part {
-            0x001 => Self::new(
-                "Apple A7",
-                MicroArch::AppleCyclone,
-                "Cyclone (E) / Typhoon (P)",
-                0x001,
-                Some("28nm"),
-            ),
-            0x002 => Self::new(
-                "Apple A8",
-                MicroArch::AppleTyphoon,
-                "Typhoon (E) / Swift (P)",
-                0x002,
-                Some("20nm"),
-            ),
-            0x003 => Self::new(
-                "Apple A9",
-                MicroArch::AppleTwister,
-                "Twister (E) / Hurricane (P)",
-                0x003,
-                Some("16nm"),
-            ),
-            0x004 => Self::new(
-                "Apple A10",
-                MicroArch::AppleZephyr,
-                "Hurricane (E) / Zephyr (P)",
-                0x004,
-                Some("16nm"),
-            ),
-            0x005 => Self::new(
-                "Apple A11",
-                MicroArch::AppleMonsoon,
-                "Mistral (E) / Monsoon (P)",
-                0x005,
-                Some("10nm"),
-            ),
-            0x006 => Self::new(
-                "Apple A12",
-                MicroArch::AppleVortex,
-                "Vortex (E) / Tempest (P)",
-                0x006,
-                Some("7nm"),
-            ),
-            0x007 => Self::new(
-                "Apple A13",
-                MicroArch::AppleLightning,
-                "Lightning (E) / Thunder (P)",
-                0x007,
-                Some("7nm"),
-            ),
             0x008 => Self::new(
-                "Apple A14 / M1",
+                "Apple M1",
                 MicroArch::AppleFirestorm,
                 "Firestorm (E) / Icestorm (P)",
                 0x008,
@@ -361,7 +312,7 @@ mod tests {
     #[test]
     fn test_apple_cpu_find() {
         let cpu = CpuArch::find(0x61, 0x008, 0x0);
-        assert_eq!(cpu.marketing_name.as_str(), "Apple A14 / M1");
+        assert_eq!(cpu.marketing_name.as_str(), "Apple M1");
         assert_eq!(cpu.micro_arch, MicroArch::AppleFirestorm);
         assert_eq!(cpu.part_number, 0x008);
         assert_eq!(cpu.technology, Some("5nm"));

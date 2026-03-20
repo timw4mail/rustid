@@ -29,11 +29,6 @@ impl TCpu for Cpu {
     }
 
     fn debug(&self) {
-        crate::println!("{:#?}", self);
-    }
-
-    fn display_table(&self) {
-        crate::println!();
         crate::println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr);
         crate::println!(
             "Implementer: 0x{:X} ({})",
@@ -43,15 +38,25 @@ impl TCpu for Cpu {
         crate::println!("Variant: 0x{:X}", self.midr.variant);
         crate::println!("Part Number: 0x{:X}", self.midr.part);
         crate::println!("Revision: 0x{:X}", self.midr.revision);
-        crate::println!("---");
-        crate::println!("Marketing Name: {}", self.cpu_arch.marketing_name.as_str());
-        crate::println!(
-            "Microarchitecture: {}",
-            String::from(self.cpu_arch.micro_arch)
-        );
-        crate::println!("Code Name: {}", self.cpu_arch.code_name);
+        crate::println!("{:#?}", self);
+    }
+
+    fn display_table(&self) {
+        let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
+        // let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
+
+        let simple_line = |l, v: &str| {
+            let l = label(l);
+            println!("{}{}", l, v);
+            println!();
+        };
+
+        crate::println!();
+        simple_line("Marketing Name", self.cpu_arch.marketing_name.as_str());
+        simple_line("Microarchitecture", &String::from(self.cpu_arch.micro_arch));
+        simple_line("Code Name", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
-            crate::println!("Process: {}", tech);
+            simple_line("Process", tech);
         }
         crate::println!();
     }
