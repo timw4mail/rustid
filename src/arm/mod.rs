@@ -10,9 +10,8 @@ pub mod micro_arch;
 
 #[cfg(target_os = "macos")]
 mod macos_api_ffi {
-    #[link(name = "c")] // sysctl is in libc
+    #[link(name = "c")]
     unsafe extern "C" {
-        // Changed to unsafe extern "C"
         pub fn sysctlbyname(
             name: *const libc::c_char,
             oldp: *mut libc::c_void,
@@ -27,34 +26,59 @@ mod macos_api_ffi {
 fn get_synth_midr() -> usize {
     use crate::arm::macos_api_ffi::*;
 
-    let mut cpufamily: u64 = 0;
-    let mut len = core::mem::size_of_val(&cpufamily);
-    let family_name = b"hw.cpufamily\0";
-
-    unsafe {
-        if sysctlbyname(
-            family_name.as_ptr() as *const libc::c_char,
-            &mut cpufamily as *mut _ as *mut libc::c_void,
-            &mut len as *mut libc::size_t,
-            core::ptr::null_mut(),
-            0,
-        ) == 0
-        {
-            return cpufamily_to_midr(cpufamily);
+    let cpufamily = {
+        let mut family: u64 = 0;
+        let mut len = core::mem::size_of_val(&family);
+        let name = b"hw.cpufamily\0";
+        unsafe {
+            if sysctlbyname(
+                name.as_ptr() as *const libc::c_char,
+                &mut family as *mut _ as *mut libc::c_void,
+                &mut len as *mut libc::size_t,
+                core::ptr::null_mut(),
+                0,
+            ) == 0
+            {
+                Some(family)
+            } else {
+                None
+            }
         }
-    }
+    };
 
-    0
+    let brand_string = {
+        let mut buf = [0u8; 64];
+        let mut len = buf.len();
+        let name = b"machdep.cpu.brand_string\0";
+        unsafe {
+            if sysctlbyname(
+                name.as_ptr() as *const libc::c_char,
+                buf.as_mut_ptr() as *mut libc::c_void,
+                &mut len as *mut libc::size_t,
+                core::ptr::null_mut(),
+                0,
+            ) == 0
+            {
+                let s = core::str::from_utf8(&buf).unwrap_or("");
+                Some(s.trim_end_matches('\0').to_string())
+            } else {
+                None
+            }
+        }
+    };
+
+    if let (Some(family), Some(brand)) = (cpufamily, brand_string) {
+        cpufamily_to_midr(family, &brand)
+    } else {
+        0
+    }
 }
 
 #[cfg(target_os = "macos")]
-fn cpufamily_to_midr(cpufamily: u64) -> usize {
+fn cpufamily_to_midr(cpufamily: u64, brand_string: &str) -> usize {
     const APPLE_IMPLEMENTER: usize = 0x61;
-
     let midr_base = APPLE_IMPLEMENTER << 24;
 
-    // Apple Silicon hw.cpufamily values to MIDR part number mappings
-    // Part numbers are based on cpufetch and Apple's MIDR definitions
     match cpufamily {
         // Apple A7 - Cyclone
         0x000C_0C0C_0C0E => midr_base | (0x001 << 4),
@@ -70,26 +94,58 @@ fn cpufamily_to_midr(cpufamily: u64) -> usize {
         0x0000_0024_0C0A => midr_base | (0x006 << 4),
         // Apple A13 - Lightning
         0x0000_0025_0C0A => midr_base | (0x007 << 4),
-        // Apple A14 / M1 (Firestorm/Icestorm)
-        0x0000_1B58_8BB3 => midr_base | (0x008 << 4),
-        // Apple M1 Pro/Max/Ultra (Firestorm/Icestorm)
-        0x0000_312F_8C0A => midr_base | (0x009 << 4),
-        // Apple A15 / M1 (Avalanche/Blizzard)
-        0x0000_323F_6C0A => midr_base | (0x00C << 4),
-        // Apple M2 (Avalanche/Blizzard)
-        0x0000_373F_7C0A => midr_base | (0x00A << 4),
-        // Apple A16 / M1 (Everest/Sawtooth)
-        0x0000_330F_7C0A => midr_base | (0x00F << 4),
-        // Apple M3 (Gibraltar/Hull)
-        0x0000_384F_8C0A => midr_base | (0x00D << 4),
-        // Apple M3 Pro/Max/Ultra (Gibraltar/Hull)
-        0x0000_3B4F_9C0A => midr_base | (0x00E << 4),
-        // Apple A18 / A18 Pro (Ice/Dawn) - 0x75D4ACB9 is A18 Pro
-        0x0000_75D4_ACB9 => midr_base | (0x101 << 4),
-        // Apple M4 (Ice/Dawn)
-        0x0000_4B4F_AE0A => midr_base | (0x010 << 4),
-        // Apple M4 Pro/Max/Ultra (Ice/Dawn)
-        0x0000_4F4F_AE0A => midr_base | (0x011 << 4),
+
+        // Apple M1 family (0x1b588bb3) - need brand string to distinguish variants
+        0x0000_1B58_8BB3 => {
+            if brand_string.contains("M1 Pro") || brand_string.contains("M1 Max") {
+                midr_base | (0x009 << 4)
+            } else if brand_string.contains("M1 Ultra") {
+                midr_base | (0x00A << 4)
+            } else {
+                midr_base | (0x008 << 4) // M1 base
+            }
+        }
+
+        // Apple A15 / M2 family (0xda33d83d) - Avalanche/Blizzard
+        0x0000_DA33_D83D => {
+            if brand_string.contains("M2 Pro") || brand_string.contains("M2 Max") {
+                midr_base | (0x00B << 4)
+            } else if brand_string.contains("M2 Ultra") {
+                midr_base | (0x00C << 4)
+            } else {
+                midr_base | (0x00D << 4) // A15, M2 base
+            }
+        }
+
+        // Apple A16 / M3 family (0x8765edea) - Everest/Sawtooth
+        0x0000_8765_EDEA => {
+            if brand_string.contains("M3 Pro") || brand_string.contains("M3 Max") {
+                midr_base | (0x00E << 4)
+            } else {
+                midr_base | (0x00F << 4) // A16, M3 base
+            }
+        }
+
+        // Apple A18 / A18 Pro (0x75D4ACB9)
+        0x0000_75D4_ACB9 => {
+            if brand_string.contains("A18 Pro") {
+                midr_base | (0x101 << 4)
+            } else {
+                midr_base | (0x100 << 4) // A18
+            }
+        }
+
+        // Apple M4 family
+        0x0000_4B4F_AE0A => {
+            if brand_string.contains("M4 Pro") || brand_string.contains("M4 Max") {
+                midr_base | (0x011 << 4)
+            } else if brand_string.contains("M4 Ultra") {
+                midr_base | (0x012 << 4)
+            } else {
+                midr_base | (0x010 << 4) // M4 base
+            }
+        }
+
         _ => 0,
     }
 }
@@ -114,7 +170,7 @@ pub struct SYSTEM_INFO {
     _unused_dwPageSize: u32,
     _unused_lpMinimumApplicationAddress: *mut core::ffi::c_void,
     _unused_lpMaximumApplicationAddress: *mut core::ffi::c_void,
-    _unused_dwActiveProcessorMask: usize, // DWORD_PTR
+    _unused_dwActiveProcessorMask: usize,
     _unused_dwNumberOfProcessors: u32,
     _unused_dwProcessorType: u32,
     _unused_dwAllocationGranularity: u32,
@@ -124,31 +180,27 @@ pub struct SYSTEM_INFO {
 
 #[cfg(target_os = "windows")]
 fn get_synth_midr() -> usize {
-    use windows_api_ffi::*; // Explicitly import from the module
+    use windows_api_ffi::*;
     let mut sys_info: SYSTEM_INFO = unsafe { core::mem::zeroed() };
     unsafe {
         GetNativeSystemInfo(&mut sys_info);
     }
 
     let mut synthetic_midr: usize = 0;
-    synthetic_midr |= (0x41 as usize) << 24; // Implementer: ARM
+    synthetic_midr |= (0x41 as usize) << 24;
     synthetic_midr |= (sys_info.wProcessorLevel as usize & 0xFFF) << 4;
     synthetic_midr |= sys_info.wProcessorRevision as usize & 0xF;
 
-    return synthetic_midr;
+    synthetic_midr
 }
 
 // ----------------------------------------------------------------------------
-// Linux
+// ! Linux
 // ----------------------------------------------------------------------------
 
 /// Gets the Main ID Register (MIDR).
 ///
 /// The MIDR contains information about the CPU implementer, part number, and revision.
-///
-/// Note: Accessing system registers like MIDR requires privileged mode (e.g., kernel mode)
-/// or specific architectural features. This function assumes an environment where it's
-/// safe and permitted to read MIDR (e.g., Linux user space if exposed, or bare-metal).
 pub fn get_midr() -> usize {
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     return get_synth_midr();
