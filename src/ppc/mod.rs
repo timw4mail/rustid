@@ -4,6 +4,7 @@
 compile_error!("This crate only supports PowerPC architectures.");
 
 pub mod cpu;
+pub mod micro_arch;
 
 /// Gets the Processor Version Register (PVR).
 ///

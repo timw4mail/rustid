@@ -124,7 +124,7 @@ pub struct SYSTEM_INFO {
 
 #[cfg(target_os = "windows")]
 fn get_synth_midr() -> usize {
-    use crate::arm::fns::windows_api_ffi::*; // Explicitly import from the module
+    use windows_api_ffi::*; // Explicitly import from the module
     let mut sys_info: SYSTEM_INFO = unsafe { core::mem::zeroed() };
     unsafe {
         GetNativeSystemInfo(&mut sys_info);
