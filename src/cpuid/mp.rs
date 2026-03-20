@@ -15,6 +15,45 @@ impl MpTable {
     pub fn socket_count(&self) -> usize {
         self.sockets
     }
+
+    /// Detects the number of sockets by reading the specified file.
+    pub fn detect_file(file: &str) -> MpTable {
+        use std::collections::HashSet;
+
+        let mut table = MpTable { sockets: 1 };
+
+        // Fallback: /proc/cpuinfo unique physical ids
+        if let Ok(content) = std::fs::read_to_string(file) {
+            let mut entries = 0;
+            let mut physical_ids = HashSet::new();
+            let mut core_ids = HashSet::new();
+
+            for line in content.lines() {
+                if line.starts_with("physical id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    physical_ids.insert(id.trim());
+                    entries += 1;
+                }
+
+                if line.starts_with("core id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    core_ids.insert(id.trim());
+                }
+            }
+
+            // For the Pentium Pro, all the rules seem to be broken.
+            // There might be multiple entries in /proc/cpuinfo, all with identical ids
+            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
+                table.sockets = entries;
+            } else {
+                table.sockets = physical_ids.len();
+            }
+        }
+
+        table
+    }
 }
 
 #[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
@@ -78,45 +117,6 @@ impl MpTable {
     /// Detects the number of sockets on Linux by parsing /proc/cpuinfo.
     pub fn detect() -> MpTable {
         Self::detect_file("/proc/cpuinfo")
-    }
-
-    /// Detects the number of sockets by reading the specified file.
-    pub fn detect_file(file: &str) -> MpTable {
-        use std::collections::HashSet;
-
-        let mut table = MpTable { sockets: 1 };
-
-        // Fallback: /proc/cpuinfo unique physical ids
-        if let Ok(content) = std::fs::read_to_string(file) {
-            let mut entries = 0;
-            let mut physical_ids = HashSet::new();
-            let mut core_ids = HashSet::new();
-
-            for line in content.lines() {
-                if line.starts_with("physical id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    physical_ids.insert(id.trim());
-                    entries += 1;
-                }
-
-                if line.starts_with("core id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    core_ids.insert(id.trim());
-                }
-            }
-
-            // For the Pentium Pro, all the rules seem to be broken.
-            // There might be multiple entries in /proc/cpuinfo, all with identical ids
-            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-                table.sockets = entries;
-            } else {
-                table.sockets = physical_ids.len();
-            }
-        }
-
-        table
     }
 }
 

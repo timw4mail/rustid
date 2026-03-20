@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 // ----------------------------------------------------------------------------
-// Test Setup
+// ! Test Setup
 // ----------------------------------------------------------------------------
 
 #[derive(Clone)]
@@ -99,7 +99,7 @@ fn set_file_cpuid_provider(path: &str) {
 }
 
 // ----------------------------------------------------------------------------
-// Test Helpers
+// ! Test Helpers
 // ----------------------------------------------------------------------------
 fn get_signature() -> (u32, u32, u32, u32, u32) {
     let sig = CpuSignature::detect();
@@ -171,6 +171,8 @@ mod ppro {
     #[test]
     fn test_model_string() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("Pentium Pro"));
@@ -212,6 +214,8 @@ mod m3_8100y {
     #[test]
     fn test_intel_brand_string() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("m3-8100Y"));
@@ -256,6 +260,8 @@ mod m3_8100y {
     #[test]
     fn test_intel_threads() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
@@ -264,6 +270,8 @@ mod m3_8100y {
     #[test]
     fn test_intel_cores() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 2);
         });
@@ -364,6 +372,8 @@ mod amd_5900xt {
     #[test]
     fn test_amd_brand_string() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("AMD"));
             assert!(brand.contains("5900"));
@@ -419,6 +429,8 @@ mod amd_5900xt {
     #[test]
     fn test_amd_threads() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 32);
         });
@@ -427,6 +439,8 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cores() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 16);
         });
@@ -523,6 +537,8 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_brand_string() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("KX-5640") || brand.contains("ZHAOXIN"));
         });
@@ -566,6 +582,8 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_threads() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
@@ -574,6 +592,8 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_cores() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 4);
         });
@@ -638,6 +658,8 @@ mod via_c7d {
     #[test]
     fn test_via_brand_string() {
         with_mock_cpu(|| {
+            use rustid::TCpu;
+
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("C7") || !brand.is_empty());
         });
