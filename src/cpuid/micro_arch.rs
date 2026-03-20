@@ -501,6 +501,7 @@ pub(crate) mod tests {
             display_family: family, // Simplified for tests
             display_model: model,   // Simplified for tests
             is_overdrive: false,
+            from_cpuid: false,
         }
     }
 

@@ -29,8 +29,14 @@ pub mod topology;
 
 pub mod vendor;
 
+#[cfg(target_arch = "x86")]
+pub mod precpuid;
+
 pub use brand::*;
 pub use cpu::*;
+
+#[cfg(target_arch = "x86")]
+pub use precpuid::*;
 
 pub const UNK: &str = "Unknown";
 pub type FeatureList = heapless::Vec<&'static str, 64>;
@@ -186,91 +192,6 @@ pub fn has_cpuid() -> bool {
     }
 }
 
-/// Returns true if the CPU is a Cyrix processor (detected without CPUID).
-///
-/// Cyrix processors are unique in that they do not modify flags during a `div`
-/// instruction, whereas other x86 processors do.
-///
-/// Verified on real hardware
-pub fn cyrix_5_2_test() -> bool {
-    #[cfg(target_arch = "x86_64")]
-    return false;
-
-    #[cfg(target_arch = "x86")]
-    {
-        let flags: u8;
-        unsafe {
-            core::arch::asm!(
-                "xor ax, ax",
-                "sahf",         // Clear flags (SF, ZF, AF, PF, CF)
-                "mov ax, 5",
-                "mov bx, 2",
-                "div bl",       // Cyrix CPUs do not modify flags on 'div'
-                "lahf",         // Load flags into AH
-                out("ah") flags,
-                out("al") _,
-                out("bx") _,
-            );
-        }
-        // Cyrix: flags (SF, ZF, AF, PF, CF) remain unchanged (0).
-        // Mask 0xD5 (11010101b) selects these flags.
-        (flags & 0xD5) == 0
-    }
-}
-
-/// Returns true if the CPU is at least a 386-class processor.
-///
-/// This is determined by checking if the AC (Alignment Check) flag in EFLAGS
-/// can be toggled. 386 CPUs do not support this, while 486 and newer do.
-///
-/// Verified on real hardware
-pub fn is_386() -> bool {
-    !is_ac_flag_supported()
-}
-
-/// Returns true if the CPU is at least a 486-class processor
-///
-/// Verified on real hardware
-pub fn is_486() -> bool {
-    is_ac_flag_supported()
-}
-
-/// Helper to check for AC flag support in EFLAGS register, which is a shibboleth that can
-/// determine if the CPU is a 386 or 486.
-///
-/// Verified on real hardware
-fn is_ac_flag_supported() -> bool {
-    #[cfg(target_arch = "x86_64")]
-    return true; // 64-bit CPUs are much newer than 486
-
-    #[cfg(target_arch = "x86")]
-    {
-        let supported: u32;
-        unsafe {
-            core::arch::asm!(
-                "pushfd",
-                "pop eax",
-                "mov ecx, eax",
-                "xor eax, 0x40000", // Toggle AC flag (bit 18)
-                "push eax",
-                "popfd",
-                "pushfd",
-                "pop eax",
-                "push ecx",
-                "popfd",
-                "xor eax, ecx",
-                "and eax, 0x40000",
-                out("eax") supported,
-                out("ecx") _,
-            );
-        }
-        supported != 0
-    }
-
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    false
-}
-
 /// Returns the maximum basic CPUID leaf supported.
 pub fn max_leaf() -> u32 {
     x86_cpuid(LEAF_0).eax
@@ -312,11 +233,12 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
 /// Returns a 12-character vendor string from CPUID leaf 0.
 pub fn vendor_str() -> heapless::String<12> {
     #[cfg(target_arch = "x86")]
-    // This is important for later Cyrix checks.
-    if !has_cpuid() && cyrix_5_2_test() {
+    if !has_cpuid() {
         use core::str::FromStr;
 
-        return heapless::String::from_str(VENDOR_CYRIX).unwrap();
+        let v = get_pre_cpuid_vendor();
+
+        return heapless::String::from_str(v).unwrap();
     }
 
     let mut s = heapless::String::new();

@@ -123,11 +123,59 @@ pub struct CpuSignature {
     pub display_model: u32,
     /// Is this an Intel Overdrive CPU?
     pub is_overdrive: bool,
+    /// Is the signature detected from CPUID?
+    pub from_cpuid: bool,
 }
 
 impl CpuSignature {
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
+        let from_cpuid = super::has_cpuid();
+
+        #[cfg(target_arch = "x86")]
+        if !from_cpuid {
+            #[cfg(target_os = "none")]
+            {
+                let (family, stepping) = super::get_bios_signature();
+                if family != 0 {
+                    // Normalize common values (e.g., 386SX=0x23 -> family=3)
+                    let display_family = match family {
+                        0x23 => 3,
+                        0xA3 => 3,
+                        0xA4 => 4,
+                        _ => family as u32,
+                    };
+
+                    return Self {
+                        extended_model: 0,
+                        extended_family: 0,
+                        family: display_family,
+                        model: 0, // Model info is limited in BIOS call
+                        stepping: stepping as u32,
+                        display_family,
+                        display_model: 0,
+                        is_overdrive: false,
+                        from_cpuid,
+                    };
+                }
+            }
+
+            // let family = if super::is_486() || super::is_cyrix() {
+            //     4
+            // } else if super::is_386() {
+            //     3
+            // } else {
+            //     0
+            // };
+            //
+            // return Self {
+            //     family,
+            //     display_family: family,
+            //     from_cpuid,
+            //     ..Self::default()
+            // };
+        }
+
         let res = x86_cpuid(1);
         let stepping = res.eax & 0xF;
         let model = (res.eax >> 4) & 0xF;
@@ -158,6 +206,7 @@ impl CpuSignature {
             display_family,
             display_model,
             is_overdrive,
+            from_cpuid,
         }
     }
 }
@@ -308,6 +357,7 @@ impl Cpu {
             return model_name;
         }
 
+        #[cfg(target_arch = "x86")]
         if self.signature == CpuSignature::default() || !super::has_cpuid() {
             let s = if super::is_386() {
                 "386 Class CPU"
@@ -641,9 +691,15 @@ impl TCpu for Cpu {
 
         // CPU Signature
         if self.signature != CpuSignature::default() {
+            let key = if self.signature.from_cpuid {
+                "Signature"
+            } else {
+                "Synthetic Sig"
+            };
+
             println!(
                 "{}Family {:X}h, Model {:X}h, Stepping {:X}h",
-                label("Signature"),
+                label(key),
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping
@@ -684,7 +740,13 @@ impl TCpu for Cpu {
                 println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
                 println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
                 println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
-                println!("{}{}x", sublabel("Bus Multiplier"), cyrix.multiplier);
+                if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
+                    println!(
+                        "{}{}x",
+                        sublabel("Bus Multiplier"),
+                        cyrix.multiplier.as_str()
+                    );
+                }
                 println!();
             }
         }
@@ -720,7 +782,8 @@ mod tests {
     }
 
     #[test]
-    fn test_display_model_string() {
+    #[cfg(target_arch = "x86")]
+    fn test_display_model_string_x32() {
         // Test case for MicroArch::Am486
         let mut arch_am486 = CpuArch::default();
         arch_am486.micro_arch = MicroArch::Am486;
@@ -782,13 +845,17 @@ mod tests {
                 display_family: 0,
                 display_model: 0,
                 is_overdrive: false,
+                from_cpuid: false,
             },
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
+    }
 
+    #[test]
+    fn test_display_model_string() {
         // Test case for "Unknown"
         let cpu_unknown = Cpu {
             arch: CpuArch::default(),
@@ -803,6 +870,7 @@ mod tests {
                 display_family: 1,
                 display_model: 1,
                 is_overdrive: false,
+                from_cpuid: false,
             },
             ext_signature: None,
             features: get_feature_list(),
