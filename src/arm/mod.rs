@@ -9,62 +9,50 @@ pub mod micro_arch;
 // ----------------------------------------------------------------------------
 
 #[cfg(target_os = "macos")]
-mod macos_api_ffi {
-    #[link(name = "c")]
-    unsafe extern "C" {
-        pub fn sysctlbyname(
-            name: *const libc::c_char,
-            oldp: *mut libc::c_void,
-            oldlenp: *mut libc::size_t,
-            newp: *mut libc::c_void,
-            newlen: libc::size_t,
-        ) -> libc::c_int;
-    }
-}
-
-#[cfg(target_os = "macos")]
 fn get_synth_midr() -> usize {
-    use crate::arm::macos_api_ffi::*;
+    use std::collections::HashMap;
+    use std::process::Command;
 
-    let cpufamily = {
-        let mut family: u64 = 0;
-        let mut len = core::mem::size_of_val(&family);
-        let name = b"hw.cpufamily\0";
-        unsafe {
-            if sysctlbyname(
-                name.as_ptr() as *const libc::c_char,
-                &mut family as *mut _ as *mut libc::c_void,
-                &mut len as *mut libc::size_t,
-                core::ptr::null_mut(),
-                0,
-            ) == 0
+    let raw_sysctl: String = Command::new("sysctl")
+        .arg("-a")
+        .output()
+        .expect("Failed to load cpu details from sysctl")
+        .stdout
+        .try_into()
+        .unwrap();
+
+    let mut values: HashMap<&str, &str> = HashMap::new();
+    raw_sysctl
+        .split('\n')
+        .filter(|l| l.len() > 0)
+        .for_each(|x| {
+            let line: Vec<_> = x.split(": ").collect();
+            if let Some(key) = line.get(0)
+                && let Some(val) = line.get(1)
             {
-                Some(family)
-            } else {
-                None
+                if key.starts_with("machdep.cpu")
+                    || (key.starts_with("hw") && (key.contains("cpu") || key.contains("cache")))
+                {
+                    values.insert(key, val);
+                }
             }
+        });
+
+    // println!("{:#?}", values);
+
+    let cpufamily = if let Some(family) = values.get("hw.cpufamily") {
+        match family.parse::<u64>() {
+            Ok(f) => Some(f),
+            Err(_) => None,
         }
+    } else {
+        None
     };
 
-    let brand_string = {
-        let mut buf = [0u8; 64];
-        let mut len = buf.len();
-        let name = b"machdep.cpu.brand_string\0";
-        unsafe {
-            if sysctlbyname(
-                name.as_ptr() as *const libc::c_char,
-                buf.as_mut_ptr() as *mut libc::c_void,
-                &mut len as *mut libc::size_t,
-                core::ptr::null_mut(),
-                0,
-            ) == 0
-            {
-                let s = core::str::from_utf8(&buf).unwrap_or("");
-                Some(s.trim_end_matches('\0').to_string())
-            } else {
-                None
-            }
-        }
+    let brand_string = if let Some(brand_string) = values.get("machdep.cpu.brand_string") {
+        Some(brand_string)
+    } else {
+        None
     };
 
     if let (Some(family), Some(brand)) = (cpufamily, brand_string) {
