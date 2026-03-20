@@ -33,8 +33,26 @@ impl Midr {
 
 pub const UNK: &str = "Unknown";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Implementer {
+    #[default]
+    Unknown,
+
+    Apple,
+}
+
+impl From<Implementer> for &'static str {
+    fn from(val: Implementer) -> Self {
+        match val {
+            Implementer::Apple => "Apple",
+            _ => UNK,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
+    #[default]
     Unknown,
 
     AppleCyclone,
@@ -160,7 +178,8 @@ impl From<MicroArch> for String {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
-    pub marketing_name: String,
+    pub implementer: Implementer,
+    pub model: String,
     pub micro_arch: MicroArch,
     pub code_name: &'static str,
     pub part_number: usize,
@@ -169,20 +188,29 @@ pub struct CpuArch {
 
 impl Default for CpuArch {
     fn default() -> Self {
-        Self::new(UNK, MicroArch::Unknown, UNK, 0, None)
+        Self::new(
+            Implementer::default(),
+            UNK,
+            MicroArch::default(),
+            UNK,
+            0,
+            None,
+        )
     }
 }
 
 impl CpuArch {
     pub fn new(
-        marketing_name: &str,
+        implementer: Implementer,
+        model: &str,
         micro_arch: MicroArch,
         code_name: &'static str,
         part_number: usize,
         technology: Option<&'static str>,
     ) -> Self {
         CpuArch {
-            marketing_name: String::from(marketing_name),
+            implementer,
+            model: String::from(model),
             micro_arch,
             code_name,
             part_number,
@@ -200,6 +228,7 @@ impl CpuArch {
     fn find_apple(part: usize) -> Self {
         match part {
             0x008 => Self::new(
+                Implementer::Apple,
                 "Apple M1",
                 MicroArch::AppleFirestorm,
                 "Firestorm (E) / Icestorm (P)",
@@ -207,6 +236,7 @@ impl CpuArch {
                 Some("5nm"),
             ),
             0x009 => Self::new(
+                Implementer::Apple,
                 "Apple M1 Pro / Max / Ultra",
                 MicroArch::AppleFirestorm,
                 "Firestorm (E) / Icestorm (P)",
@@ -214,6 +244,7 @@ impl CpuArch {
                 Some("5nm"),
             ),
             0x00A => Self::new(
+                Implementer::Apple,
                 "Apple M2",
                 MicroArch::AppleAvalanche,
                 "Avalanche (E) / Blizzard (P)",
@@ -221,6 +252,7 @@ impl CpuArch {
                 Some("5nm"),
             ),
             0x00B => Self::new(
+                Implementer::Apple,
                 "Apple M2 Pro / Max / M2 Ultra",
                 MicroArch::AppleAvalanche,
                 "Avalanche (E) / Blizzard (P)",
@@ -228,6 +260,7 @@ impl CpuArch {
                 Some("5nm"),
             ),
             0x00C => Self::new(
+                Implementer::Apple,
                 "Apple A15 / M1",
                 MicroArch::AppleAvalanche,
                 "Avalanche (E) / Blizzard (P)",
@@ -235,6 +268,7 @@ impl CpuArch {
                 Some("5nm"),
             ),
             0x00D => Self::new(
+                Implementer::Apple,
                 "Apple M3",
                 MicroArch::AppleHull,
                 "Gibraltar (E) / Hull (P)",
@@ -242,6 +276,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x00E => Self::new(
+                Implementer::Apple,
                 "Apple M3 Pro / Max / M3 Ultra",
                 MicroArch::AppleHull,
                 "Gibraltar (E) / Hull (P)",
@@ -249,6 +284,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x00F => Self::new(
+                Implementer::Apple,
                 "Apple A16 / M1",
                 MicroArch::AppleEverest,
                 "Everest (E) / Sawmill (P)",
@@ -256,6 +292,7 @@ impl CpuArch {
                 Some("4nm"),
             ),
             0x010 => Self::new(
+                Implementer::Apple,
                 "Apple M4",
                 MicroArch::AppleDawn,
                 "Ice (E) / Dawn (P)",
@@ -263,6 +300,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x011 => Self::new(
+                Implementer::Apple,
                 "Apple M4 Pro / Max / M4 Ultra",
                 MicroArch::AppleDawn,
                 "Ice (E) / Dawn (P)",
@@ -270,6 +308,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x012 => Self::new(
+                Implementer::Apple,
                 "Apple A17 / M1",
                 MicroArch::AppleDawn,
                 "Ice (E) / Dawn (P)",
@@ -277,6 +316,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x100 => Self::new(
+                Implementer::Apple,
                 "Apple A18",
                 MicroArch::AppleIce,
                 "Ice (E) / Dawn (P)",
@@ -284,6 +324,7 @@ impl CpuArch {
                 Some("3nm"),
             ),
             0x101 => Self::new(
+                Implementer::Apple,
                 "Apple A18 Pro",
                 MicroArch::AppleIce,
                 "Ice (E) / Dawn (P)",
@@ -312,7 +353,7 @@ mod tests {
     #[test]
     fn test_apple_cpu_find() {
         let cpu = CpuArch::find(0x61, 0x008, 0x0);
-        assert_eq!(cpu.marketing_name.as_str(), "Apple M1");
+        assert_eq!(cpu.model.as_str(), "Apple M1");
         assert_eq!(cpu.micro_arch, MicroArch::AppleFirestorm);
         assert_eq!(cpu.part_number, 0x008);
         assert_eq!(cpu.technology, Some("5nm"));
@@ -321,14 +362,14 @@ mod tests {
     #[test]
     fn test_apple_cpu_unknown() {
         let cpu = CpuArch::find(0x61, 0x999, 0x0);
-        assert_eq!(cpu.marketing_name.as_str(), UNK);
+        assert_eq!(cpu.model.as_str(), UNK);
         assert_eq!(cpu.micro_arch, MicroArch::Unknown);
     }
 
     #[test]
     fn test_non_apple_implementer() {
         let cpu = CpuArch::find(0x41, 0xD0B, 0x0);
-        assert_eq!(cpu.marketing_name.as_str(), UNK);
+        assert_eq!(cpu.model.as_str(), UNK);
     }
 
     #[test]

@@ -52,7 +52,8 @@ impl TCpu for Cpu {
         };
 
         crate::println!();
-        simple_line("Marketing Name", self.cpu_arch.marketing_name.as_str());
+        simple_line("Brand/Implementor", self.cpu_arch.implementer.into());
+        simple_line("Model", &self.cpu_arch.model);
         simple_line("Microarchitecture", &String::from(self.cpu_arch.micro_arch));
         simple_line("Code Name", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
