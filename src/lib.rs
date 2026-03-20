@@ -62,6 +62,9 @@ pub use dos::*;
 pub use std::println;
 
 pub trait TCpu {
+    /// Detect the CPU
+    fn detect() -> Self;
+
     /// Display the Rust debug output of the CPU object
     fn debug(&self);
 

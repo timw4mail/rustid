@@ -209,29 +209,6 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    /// Detects and returns comprehensive CPU information.
-    ///
-    /// Performs full CPU detection including architecture, microarchitecture,
-    /// brand string, signature, features, and topology.
-    pub fn detect() -> Self {
-        Self {
-            arch: CpuArch::find(
-                Self::raw_model_string().as_str(),
-                CpuSignature::detect(),
-                &super::vendor_str(),
-            ),
-            easter_egg: Self::easter_egg(),
-            brand_id: super::get_brand_id(),
-            signature: CpuSignature::detect(),
-            ext_signature: match super::is_amd() {
-                true => Some(ExtendedSignature::detect()),
-                false => None,
-            },
-            features: super::get_feature_list(),
-            topology: Topology::detect(),
-        }
-    }
-
     /// Gets the CPU model string.
     pub fn raw_model_string() -> String<64> {
         let mut model: String<64> = String::new();
@@ -448,6 +425,29 @@ impl Cpu {
 }
 
 impl TCpu for Cpu {
+    /// Detects and returns comprehensive CPU information.
+    ///
+    /// Performs full CPU detection including architecture, microarchitecture,
+    /// brand string, signature, features, and topology.
+    fn detect() -> Self {
+        Self {
+            arch: CpuArch::find(
+                Self::raw_model_string().as_str(),
+                CpuSignature::detect(),
+                &super::vendor_str(),
+            ),
+            easter_egg: Self::easter_egg(),
+            brand_id: super::get_brand_id(),
+            signature: CpuSignature::detect(),
+            ext_signature: match super::is_amd() {
+                true => Some(ExtendedSignature::detect()),
+                false => None,
+            },
+            features: super::get_feature_list(),
+            topology: Topology::detect(),
+        }
+    }
+
     fn debug(&self) {
         #[cfg(not(target_os = "none"))]
         println!("{:#?}", self);

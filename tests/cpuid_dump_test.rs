@@ -1,4 +1,5 @@
 #![cfg(feature = "file_mock")]
+#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
 use rustid::cpuid::provider::*;
 use rustid::cpuid::*;

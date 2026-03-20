@@ -2,7 +2,7 @@
 
 use crate::TCpu;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Cpu {
     pub pvr: u32,
     pub version: u16,
@@ -11,12 +11,12 @@ pub struct Cpu {
 
 impl Default for Cpu {
     fn default() -> Self {
-        Self::new()
+        Self::detect()
     }
 }
 
-impl Cpu {
-    pub fn new() -> Self {
+impl TCpu for Cpu {
+    fn detect() -> Self {
         let pvr = super::get_pvr();
         Self {
             pvr,
@@ -24,9 +24,7 @@ impl Cpu {
             revision: (pvr & 0xFFFF) as u16,
         }
     }
-}
 
-impl TCpu for Cpu {
     fn debug(&self) {
         println!("{:#?}", self);
     }

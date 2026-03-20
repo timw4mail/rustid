@@ -1,7 +1,7 @@
 #[allow(unused)]
 #[derive(Debug, Copy, Clone)]
 pub enum Vendor {
-    ARM,
+    Arm,
     Apple,
     Broadcom,
     Mediatek,
@@ -10,12 +10,12 @@ pub enum Vendor {
     Unknown,
 }
 
-impl Into<String> for Vendor {
-    fn into(self) -> String {
+impl From<Vendor> for String {
+    fn from(val: Vendor) -> Self {
         use Vendor::*;
 
-        let s = match self {
-            ARM => "ARM",
+        let s = match val {
+            Arm => "ARM",
             Apple => "Apple",
             Broadcom => "Broadcom",
             Mediatek => "Mediatek",
@@ -31,7 +31,7 @@ impl Into<String> for Vendor {
 impl From<usize> for Vendor {
     fn from(v: usize) -> Self {
         match v {
-            0x41 => Self::ARM,
+            0x41 => Self::Arm,
             0xB3 | 0xB9 | 0x63 => Self::Apple,
             _ => Self::Unknown,
         }

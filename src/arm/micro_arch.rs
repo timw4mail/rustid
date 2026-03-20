@@ -10,7 +10,7 @@ pub const ARCHITECTURE_OFFSET: usize = 16;
 pub const PART_OFFSET: usize = 4;
 pub const REVISION_OFFSET: usize = 0;
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct Midr {
     pub implementer: usize,
     pub variant: usize,

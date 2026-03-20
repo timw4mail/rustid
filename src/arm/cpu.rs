@@ -6,21 +6,15 @@ use std::println;
 
 use crate::arm::micro_arch::Midr;
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     pub raw_midr: usize,
     pub midr: Midr,
     pub vendor: String,
 }
 
-impl Default for Cpu {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Cpu {
-    pub fn new() -> Self {
+impl TCpu for Cpu {
+    fn detect() -> Self {
         let raw_midr = super::get_midr();
         let midr = Midr::new(raw_midr);
         Self {
@@ -29,9 +23,7 @@ impl Cpu {
             vendor: Vendor::from(midr.implementer).into(),
         }
     }
-}
 
-impl TCpu for Cpu {
     fn debug(&self) {
         println!("{:#?}", self);
     }
