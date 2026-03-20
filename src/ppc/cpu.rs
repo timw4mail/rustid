@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::TCpu;
-use crate::ppc::micro_arch::{CpuArch, MicroArch};
+use crate::ppc::micro_arch::CpuArch;
 
 #[derive(Debug, PartialEq)]
 pub struct Cpu {
