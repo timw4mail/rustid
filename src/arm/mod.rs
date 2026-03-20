@@ -26,12 +26,10 @@ mod macos_api_ffi {
 #[cfg(target_os = "macos")]
 fn get_synth_midr() -> usize {
     use crate::arm::macos_api_ffi::*;
-    let mut synthetic_midr: usize = 0;
 
-    // Try to get hw.cpufamily
-    let mut cpufamily: u64 = 0; // It's often u64
+    let mut cpufamily: u64 = 0;
     let mut len = core::mem::size_of_val(&cpufamily);
-    let family_name = b"hw.cpufamily\0"; // C string
+    let family_name = b"hw.cpufamily\0";
 
     unsafe {
         if sysctlbyname(
@@ -42,16 +40,58 @@ fn get_synth_midr() -> usize {
             0,
         ) == 0
         {
-            // Map CPU family to Part Number (bits 4-15) and Implementer (bits 24-31)
-            // This is a rough mapping and not precise MIDR.
-            synthetic_midr |= ((cpufamily as usize) & 0xFF) << 24; // Implementer: lower 8 bits of family
-            synthetic_midr |= ((cpufamily as usize) & 0xFFF00) << 4; // PartNum: higher bits of family
-
-            return synthetic_midr;
+            return cpufamily_to_midr(cpufamily);
         }
     }
 
-    synthetic_midr
+    0
+}
+
+#[cfg(target_os = "macos")]
+fn cpufamily_to_midr(cpufamily: u64) -> usize {
+    const APPLE_IMPLEMENTER: usize = 0x61;
+
+    let midr_base = APPLE_IMPLEMENTER << 24;
+
+    // Apple Silicon hw.cpufamily values to MIDR part number mappings
+    // Part numbers are based on cpufetch and Apple's MIDR definitions
+    match cpufamily {
+        // Apple A7 - Cyclone
+        0x000C_0C0C_0C0E => midr_base | (0x001 << 4),
+        // Apple A8 - Typhoon
+        0x0000_1F2F_0E08 => midr_base | (0x002 << 4),
+        // Apple A9 - Twister
+        0x0000_0021_0C0A => midr_base | (0x003 << 4),
+        // Apple A10 - Hurricane
+        0x0000_0022_0C0A => midr_base | (0x004 << 4),
+        // Apple A11 - Monsoon
+        0x0000_0023_0C0A => midr_base | (0x005 << 4),
+        // Apple A12 - Vortex
+        0x0000_0024_0C0A => midr_base | (0x006 << 4),
+        // Apple A13 - Lightning
+        0x0000_0025_0C0A => midr_base | (0x007 << 4),
+        // Apple A14 / M1 (Firestorm/Icestorm)
+        0x0000_1B58_8BB3 => midr_base | (0x008 << 4),
+        // Apple M1 Pro/Max/Ultra (Firestorm/Icestorm)
+        0x0000_312F_8C0A => midr_base | (0x009 << 4),
+        // Apple A15 / M1 (Avalanche/Blizzard)
+        0x0000_323F_6C0A => midr_base | (0x00C << 4),
+        // Apple M2 (Avalanche/Blizzard)
+        0x0000_373F_7C0A => midr_base | (0x00A << 4),
+        // Apple A16 / M1 (Everest/Sawtooth)
+        0x0000_330F_7C0A => midr_base | (0x00F << 4),
+        // Apple M3 (Gibraltar/Hull)
+        0x0000_384F_8C0A => midr_base | (0x00D << 4),
+        // Apple M3 Pro/Max/Ultra (Gibraltar/Hull)
+        0x0000_3B4F_9C0A => midr_base | (0x00E << 4),
+        // Apple A18 / A18 Pro (Ice/Dawn) - 0x75D4ACB9 is A18 Pro
+        0x0000_75D4_ACB9 => midr_base | (0x101 << 4),
+        // Apple M4 (Ice/Dawn)
+        0x0000_4B4F_AE0A => midr_base | (0x010 << 4),
+        // Apple M4 Pro/Max/Ultra (Ice/Dawn)
+        0x0000_4F4F_AE0A => midr_base | (0x011 << 4),
+        _ => 0,
+    }
 }
 
 // ----------------------------------------------------------------------------
