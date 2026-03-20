@@ -51,6 +51,12 @@ impl From<Implementer> for &'static str {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum CoreMicroArch {
+    #[default]
+    Unknown,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     #[default]
     Unknown,
@@ -77,6 +83,7 @@ pub enum MicroArch {
     AppleHull,
     AppleIce,
     AppleDawn,
+    AppleTahiti,
 
     ArmCortexA7,
     ArmCortexA8,
@@ -138,6 +145,7 @@ impl From<MicroArch> for String {
             MicroArch::AppleHull => "Hull",
             MicroArch::AppleIce => "Ice",
             MicroArch::AppleDawn => "Dawn",
+            MicroArch::AppleTahiti => "Tahiti",
             MicroArch::ArmCortexA7 => "Cortex-A7",
             MicroArch::ArmCortexA8 => "Cortex-A8",
             MicroArch::ArmCortexA9 => "Cortex-A9",
@@ -174,6 +182,21 @@ impl From<MicroArch> for String {
 
         String::from(s)
     }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum CoreType {
+    Efficiency,
+    #[default]
+    Performance,
+    Super,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Core {
+    kind: CoreType,
+    count: usize,
+    micro_arch: CoreMicroArch,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -326,8 +349,8 @@ impl CpuArch {
             0x101 => Self::new(
                 Implementer::Apple,
                 "Apple A18 Pro",
-                MicroArch::AppleIce,
-                "Ice (E) / Dawn (P)",
+                MicroArch::AppleTahiti,
+                "Sawtooth (E) / Everest (P)",
                 0x101,
                 Some("3nm"),
             ),
