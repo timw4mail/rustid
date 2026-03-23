@@ -37,6 +37,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(not(target_os = "none"))]
 extern crate std;
 
+pub mod common;
+
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod cpuid;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -50,7 +52,7 @@ pub use ppc::cpu::Cpu;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 pub mod arm;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
-pub use arm::cpu::Cpu;
+pub use arm::Cpu;
 
 #[cfg(target_os = "none")]
 pub mod dos;

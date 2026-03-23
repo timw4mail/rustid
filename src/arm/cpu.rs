@@ -2,8 +2,7 @@
 
 use super::brand::Vendor;
 use crate::TCpu;
-use crate::arm::micro_arch::CpuArch;
-use crate::arm::micro_arch::Midr;
+pub use crate::arm::micro_arch::*;
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
