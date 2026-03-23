@@ -1,5 +1,4 @@
 //! Contains the Cpu struct for ARM.
-
 use super::brand::Vendor;
 use crate::TCpu;
 pub use crate::arm::micro_arch::*;

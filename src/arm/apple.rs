@@ -54,21 +54,6 @@ fn cpufamily_to_midr(cpufamily: u64, brand_string: &str) -> usize {
     let midr_base = APPLE_IMPLEMENTER << 24;
 
     match cpufamily {
-        // Apple A7 - Cyclone
-        0x000C_0C0C_0C0E => midr_base | (0x001 << 4),
-        // Apple A8 - Typhoon
-        0x0000_1F2F_0E08 => midr_base | (0x002 << 4),
-        // Apple A9 - Twister
-        0x0000_0021_0C0A => midr_base | (0x003 << 4),
-        // Apple A10 - Hurricane
-        0x0000_0022_0C0A => midr_base | (0x004 << 4),
-        // Apple A11 - Monsoon
-        0x0000_0023_0C0A => midr_base | (0x005 << 4),
-        // Apple A12 - Vortex
-        0x0000_0024_0C0A => midr_base | (0x006 << 4),
-        // Apple A13 - Lightning
-        0x0000_0025_0C0A => midr_base | (0x007 << 4),
-
         // Apple M1 family (0x1b588bb3) - need brand string to distinguish variants
         0x0000_1B58_8BB3 => {
             if brand_string.contains("M1 Pro") || brand_string.contains("M1 Max") {
@@ -124,12 +109,24 @@ fn cpufamily_to_midr(cpufamily: u64, brand_string: &str) -> usize {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq, Hash)]
 pub enum CoreType {
     Super,
     #[default]
     Performance,
     Efficiency,
+}
+
+impl From<CoreType> for String {
+    fn from(val: CoreType) -> Self {
+        let s = match val {
+            CoreType::Super => "Super",
+            CoreType::Performance => "Performance",
+            CoreType::Efficiency => "Efficiency",
+        };
+
+        String::from(s)
+    }
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -155,11 +152,14 @@ pub struct Cpu {
     pub vendor: String,
     pub cpu_arch: CpuArch,
     pub model: String,
+    pub cores: HashMap<CoreType, CpuCore>,
     pub raw: HashMap<String, String>,
 }
 
 impl TCpu for Cpu {
     fn detect() -> Self {
+        let cores: HashMap<CoreType, CpuCore> = HashMap::new();
+
         let raw_midr = get_synth_midr();
         let midr = Midr::new(raw_midr);
         let vendor = Vendor::from(midr.implementer);
@@ -172,6 +172,7 @@ impl TCpu for Cpu {
             midr,
             vendor: vendor.into(),
             cpu_arch,
+            cores,
             raw: values,
         }
     }

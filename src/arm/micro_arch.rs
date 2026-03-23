@@ -251,94 +251,6 @@ impl CpuArch {
     fn find_apple(part: usize) -> Self {
         match part {
             // A-series chips
-            0x001 => Self::new(
-                Implementer::Apple,
-                "Apple A7",
-                MicroArch::AppleCyclone,
-                "Cyclone",
-                0x001,
-                Some("28nm"),
-            ),
-            0x002 => Self::new(
-                Implementer::Apple,
-                "Apple A8",
-                MicroArch::AppleTyphoon,
-                "Typhoon",
-                0x002,
-                Some("20nm"),
-            ),
-            0x003 => Self::new(
-                Implementer::Apple,
-                "Apple A9",
-                MicroArch::AppleTwister,
-                "Twister",
-                0x003,
-                Some("16nm"),
-            ),
-            0x004 => Self::new(
-                Implementer::Apple,
-                "Apple A10",
-                MicroArch::AppleHurricane,
-                "Hurricane",
-                0x004,
-                Some("16nm"),
-            ),
-            0x005 => Self::new(
-                Implementer::Apple,
-                "Apple A11",
-                MicroArch::AppleMonsoon,
-                "Mistral (E) / Monsoon (P)",
-                0x005,
-                Some("10nm"),
-            ),
-            0x006 => Self::new(
-                Implementer::Apple,
-                "Apple A12",
-                MicroArch::AppleVortex,
-                "Tempest (E) / Vortex (P)",
-                0x006,
-                Some("7nm"),
-            ),
-            0x007 => Self::new(
-                Implementer::Apple,
-                "Apple A13",
-                MicroArch::AppleLightning,
-                "Thunder (E) / Lightning (P)",
-                0x007,
-                Some("7nm"),
-            ),
-            0x008 => Self::new(
-                Implementer::Apple,
-                "Apple A14",
-                MicroArch::AppleFirestorm,
-                "Icestorm (E) / Firestorm (P)",
-                0x008,
-                Some("5nm"),
-            ),
-            0x00D => Self::new(
-                Implementer::Apple,
-                "Apple A15",
-                MicroArch::AppleAvalanche,
-                "Blizzard (E) / Avalanche (P)",
-                0x00D,
-                Some("5nm"),
-            ),
-            0x00F => Self::new(
-                Implementer::Apple,
-                "Apple A16",
-                MicroArch::AppleEverest,
-                "Sawtooth (E) / Everest (P)",
-                0x00F,
-                Some("4nm"),
-            ),
-            0x100 => Self::new(
-                Implementer::Apple,
-                "Apple A18",
-                MicroArch::AppleEverest,
-                "Sawtooth (E) / Everest (P)",
-                0x100,
-                Some("3nm"),
-            ),
             0x101 => Self::new(
                 Implementer::Apple,
                 "Apple A18 Pro",
@@ -469,15 +381,6 @@ mod tests {
         assert_eq!(midr.architecture, 0xF);
         assert_eq!(midr.part, 0x0F0);
         assert_eq!(midr.revision, 0x2);
-    }
-
-    #[test]
-    fn test_apple_a14_find() {
-        let cpu = CpuArch::find(0x61, 0x008, 0x0);
-        assert_eq!(cpu.model.as_str(), "Apple A14");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleFirestorm);
-        assert_eq!(cpu.part_number, 0x008);
-        assert_eq!(cpu.technology, Some("5nm"));
     }
 
     #[test]
