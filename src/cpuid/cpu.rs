@@ -1,10 +1,10 @@
 //! CPU detection and information for x86/x86_64 processors.
 
 use super::brand::CpuBrand;
-use super::cache::Level1Cache;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, read_multi_leaf_str, x86_cpuid};
+use crate::common::cache::Level1Cache;
 
 use crate::{TCpu, println};
 
