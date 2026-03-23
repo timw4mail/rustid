@@ -2,11 +2,11 @@ use super::brand::Vendor;
 use super::micro_arch::*;
 use crate::TCpu;
 use crate::common::cache::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::process::Command;
 
-fn get_sysctl_map() -> HashMap<String, String> {
-    let mut values: HashMap<String, String> = HashMap::new();
+fn get_sysctl_map() -> BTreeMap<String, String> {
+    let mut values: BTreeMap<String, String> = BTreeMap::new();
     TryInto::<String>::try_into(
         Command::new("sysctl")
             .arg("-a")
@@ -152,13 +152,13 @@ pub struct Cpu {
     pub vendor: String,
     pub cpu_arch: CpuArch,
     pub model: String,
-    pub cores: HashMap<CoreType, CpuCore>,
-    pub raw: HashMap<String, String>,
+    pub cores: BTreeMap<CoreType, CpuCore>,
+    pub raw: BTreeMap<String, String>,
 }
 
 impl TCpu for Cpu {
     fn detect() -> Self {
-        let cores: HashMap<CoreType, CpuCore> = HashMap::new();
+        let cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
 
         let raw_midr = get_synth_midr();
         let midr = Midr::new(raw_midr);

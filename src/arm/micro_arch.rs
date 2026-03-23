@@ -243,7 +243,7 @@ impl CpuArch {
 
     pub fn find(implementer: usize, part: usize, _variant: usize) -> Self {
         match implementer {
-            0x61 | 0xB3 | 0xB9 | 0x63 => Self::find_apple(part),
+            0x61 => Self::find_apple(part),
             _ => Self::default(),
         }
     }
@@ -261,9 +261,17 @@ impl CpuArch {
             ),
 
             // M1 series - Icestorm (E) / Firestorm (P)
-            0x009 => Self::new(
+            0x008 => Self::new(
                 Implementer::Apple,
                 "Apple M1",
+                MicroArch::AppleFirestorm,
+                "Icestorm (E) / Firestorm (P)",
+                0x008,
+                Some("5nm"),
+            ),
+            0x009 => Self::new(
+                Implementer::Apple,
+                "Apple M1 Pro",
                 MicroArch::AppleFirestorm,
                 "Icestorm (E) / Firestorm (P)",
                 0x009,
