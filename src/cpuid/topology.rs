@@ -23,6 +23,9 @@ pub struct Speed {
 impl Speed {
     /// Detects the CPU speed from available sources.
     pub fn detect() -> Self {
+        #[cfg(target_arch = "x86")]
+        use crate::cpuid::VENDOR_TRANSMETA;
+
         use super::{LEAF_16, x86_cpuid};
         match vendor_str().as_str() {
             VENDOR_INTEL => {
@@ -38,6 +41,24 @@ impl Speed {
                 if base == 0 {
                     return Speed::measure();
                 }
+
+                Speed {
+                    base,
+                    boost,
+                    measured: false,
+                }
+            }
+            #[cfg(target_arch = "x86")]
+            VENDOR_TRANSMETA => {
+                use crate::cpuid::TRANSMETA_LEAF_1;
+
+                if !is_valid_leaf(TRANSMETA_LEAF_1) {
+                    return Speed::measure();
+                }
+
+                let res = x86_cpuid(TRANSMETA_LEAF_1);
+                let base = res.ecx;
+                let boost = res.ecx;
 
                 Speed {
                     base,

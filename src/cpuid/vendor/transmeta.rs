@@ -4,7 +4,8 @@ use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, UNK};
 
 /// Transmeta-specific microarchitecture detection.
-pub struct Transmeta;
+#[derive(Debug, Default, PartialEq)]
+pub struct Transmeta {}
 
 impl TMicroArch for Transmeta {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {

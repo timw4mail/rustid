@@ -98,11 +98,25 @@ pub const CENTAUR_LEAF_0: u32 = 0xC000_0000;
 /// Centaur/Zhaoxin extended CPU features
 pub const CENTAUR_LEAF_1: u32 = 0xC000_0001;
 
+pub const CENTAUR_LEAF_2: u32 = 0xC000_0002;
+
 /// Transmeta vendor leaf base
 pub const TRANSMETA_LEAF_0: u32 = 0x8086_0000;
 
 /// Transmeta extended CPU features
 pub const TRANSMETA_LEAF_1: u32 = 0x8086_0001;
+
+/// Transmeta CMS (Code Morphing Software)
+pub const TRANSMETA_LEAF_2: u32 = 0x8086_0002;
+
+/// Transmeta Cpu model string start
+pub const TRANSMETA_LEAF_3: u32 = 0x8086_0003;
+
+/// Transmeta Cpu model string end
+pub const TRANSMETA_LEAF_6: u32 = 0x8086_0006;
+
+/// Transmeta live CPU information
+pub const TRANSMETA_LEAF_7: u32 = 0x8086_0007;
 
 /// Represents the result of a CPUID instruction call.
 ///

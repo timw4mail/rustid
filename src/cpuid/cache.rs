@@ -174,6 +174,10 @@ impl Cache {
                 true => Cache::detect_general(LEAF_4),
                 false => Cache::detect_ext_5_6(),
             },
+            VENDOR_TRANSMETA => match is_valid_leaf(EXT_LEAF_6) {
+                true => Cache::detect_ext_5_6(),
+                false => Cache::detect_fallback(),
+            },
             _ => {
                 // The 1-bit cache descriptors are on LEAF 0x2, but
                 // the extended cache topology is on LEAF 0x4.
