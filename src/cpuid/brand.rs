@@ -7,31 +7,18 @@ use super::UNK;
 
 use heapless::String;
 
-/// CPU vendor string for AMD processors.
 pub const VENDOR_AMD: &str = "AuthenticAMD";
-/// CPU vendor string for Centaur (IDT/VIA) processors.
 pub const VENDOR_CENTAUR: &str = "CentaurHauls";
-/// CPU vendor string for Cyrix processors.
 pub const VENDOR_CYRIX: &str = "CyrixInstead";
-/// CPU vendor string for DM&P (Vortex86) processors.
 pub const VENDOR_DMP: &str = "Vortex86 SoC";
-/// CPU vendor string for Hygon processors.
 pub const VENDOR_HYGON: &str = "HygonGenuine";
-/// CPU vendor string for Intel processors.
 pub const VENDOR_INTEL: &str = "GenuineIntel";
-/// CPU vendor string for NexGen processors.
 pub const VENDOR_NEXGEN: &str = "NexGenDriven";
-/// CPU vendor string for National Semiconductor (Geode) processors.
 pub const VENDOR_NSC: &str = "Geode by NSC";
-/// CPU vendor string for Rise processors.
 pub const VENDOR_RISE: &str = "RiseRiseRise";
-/// CPU vendor string for SiS processors.
 pub const VENDOR_SIS: &str = "SiS SiS SiS ";
-/// CPU vendor string for Transmeta processors.
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
-/// CPU vendor string for UMC processors.
 pub const VENDOR_UMC: &str = "UMC UMC UMC ";
-/// CPU vendor string for Zhaoxin processors.
 pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
 /// CPU brand/vendor enumeration.

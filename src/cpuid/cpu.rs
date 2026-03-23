@@ -4,7 +4,7 @@ use super::brand::CpuBrand;
 use super::cache::Level1Cache;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, is_valid_leaf, x86_cpuid};
+use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, read_multi_leaf_str, x86_cpuid};
 
 use crate::{TCpu, println};
 
@@ -260,27 +260,7 @@ pub struct Cpu {
 impl Cpu {
     /// Gets the CPU model string.
     pub fn raw_model_string() -> String<64> {
-        let mut model: String<64> = String::new();
-        if !is_valid_leaf(EXT_LEAF_4) {
-            let _ = model.push_str("Unknown");
-            return model;
-        }
-
-        for leaf in EXT_LEAF_2..=EXT_LEAF_4 {
-            let res = x86_cpuid(leaf);
-            for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
-                for &b in &reg.to_le_bytes() {
-                    if b != 0 {
-                        let _ = model.push(b as char);
-                    }
-                }
-            }
-        }
-
-        let trimmed = model.trim();
-        let mut out: String<64> = String::new();
-        let _ = out.push_str(trimmed);
-        out
+        read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
     fn intel_brand_index(&self) -> Option<String<64>> {

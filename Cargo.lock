@@ -28,12 +28,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libc"
-version = "0.2.182"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -56,7 +50,6 @@ name = "rustid"
 version = "0.8.3"
 dependencies = [
  "heapless",
- "libc",
  "windows",
 ]
 

@@ -3,9 +3,7 @@
 
 use rustid::cpuid::provider::*;
 use rustid::cpuid::*;
-use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 // ----------------------------------------------------------------------------
 // ! Test Setup
@@ -86,6 +84,50 @@ fn count_topology_domains(leaf: u32) -> usize {
     count
 }
 
+#[cfg(target_arch = "x86")]
+mod tm5700 {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("tm5700.txt");
+        test();
+        reset_cpuid_provider();
+    }
+
+    #[test]
+    fn test_vendor_detection() {
+        with_mock_cpu(|| assert_eq!(vendor_str().as_str(), VENDOR_TRANSMETA))
+    }
+
+    #[test]
+    fn test_max_leaf() {
+        with_mock_cpu(|| {
+            assert_eq!(max_leaf(), LEAF_1);
+            assert_eq!(max_extended_leaf(), EXT_LEAF_6);
+            assert_eq!(max_vendor_leaf(), TRANSMETA_LEAF_7);
+        })
+    }
+
+    #[test]
+    fn test_model_str() {
+        with_mock_cpu(|| {
+            let model_string = Cpu::raw_model_string();
+            assert_eq!(model_string, "Transmeta(tm) Crusoe(tm) Processor TM5700");
+        })
+    }
+
+    #[test]
+    fn test_version_str() {
+        with_mock_cpu(|| {
+            let transmeta = rustid::cpuid::vendor::Transmeta::detect();
+            assert_eq!(
+                transmeta.version_str.as_str(),
+                "20040614 15:00 official release 4.5.2#1"
+            );
+        })
+    }
+}
+
 mod ppro {
     use super::*;
     use rustid::cpuid::mp::MpTable;
@@ -100,7 +142,7 @@ mod ppro {
     fn test_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), "GenuineIntel");
+            assert_eq!(vendor.as_str(), VENDOR_INTEL);
             assert_eq!(is_intel(), true);
         });
     }
@@ -144,7 +186,7 @@ mod m3_8100y {
     fn test_intel_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), "GenuineIntel");
+            assert_eq!(vendor.as_str(), VENDOR_INTEL);
         });
     }
 
@@ -302,7 +344,7 @@ mod amd_5900xt {
     fn test_amd_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), "AuthenticAMD");
+            assert_eq!(vendor.as_str(), VENDOR_AMD);
         });
     }
 
@@ -467,7 +509,7 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), "CentaurHauls");
+            assert_eq!(vendor.as_str(), VENDOR_CENTAUR);
         });
     }
 
@@ -588,7 +630,7 @@ mod via_c7d {
     fn test_via_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), "CentaurHauls");
+            assert_eq!(vendor.as_str(), VENDOR_CENTAUR);
         });
     }
 

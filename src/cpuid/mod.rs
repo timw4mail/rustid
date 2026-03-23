@@ -273,6 +273,32 @@ pub fn vendor_str() -> heapless::String<12> {
     s
 }
 
+pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> heapless::String<64> {
+    use heapless::String;
+
+    let mut model: String<64> = String::new();
+    if !is_valid_leaf(max_leaf) {
+        let _ = model.push_str(UNK);
+        return model;
+    }
+
+    for leaf in min_leaf..=max_leaf {
+        let res = x86_cpuid(leaf);
+        for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
+            for &b in &reg.to_le_bytes() {
+                if b != 0 {
+                    let _ = model.push(b as char);
+                }
+            }
+        }
+    }
+
+    let trimmed = model.trim();
+    let mut out: String<64> = String::new();
+    let _ = out.push_str(trimmed);
+    out
+}
+
 fn is_vendor(v: &str) -> bool {
     vendor_str().as_str() == v
 }

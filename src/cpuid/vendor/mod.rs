@@ -7,12 +7,9 @@ pub mod intel;
 pub mod transmeta;
 
 pub use amd::Amd;
-
+pub use centaur::Centaur;
 #[cfg(target_arch = "x86")]
 pub use cyrix::Cyrix;
-
-pub use centaur::Centaur;
-
 pub use intel::Intel;
 #[cfg(target_arch = "x86")]
 pub use transmeta::Transmeta;
