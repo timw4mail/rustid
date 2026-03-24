@@ -259,33 +259,32 @@ impl TCpu for Cpu {
                 print!("{}{}", l, "");
             };
 
-            println!();
             println!("{}", label("Cache"));
 
             // L1 Cache
             match &cache.l1 {
                 Level1Cache::Unified(l1) => {
                     cache_label("L1:");
-                    println!("Unified {:>4} KB", l1.size);
+                    println!("Unified {:>4} KB", l1.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    cache_label("L1d:");
-                    println!("{:>4} KB", data.size);
-                    cache_label("L1i:");
-                    println!("{:>4} KB", instruction.size);
+                    cache_label("L1d");
+                    println!("{:>4} KB", data.size / 1024);
+                    cache_label("L1i");
+                    println!("{:>4} KB", instruction.size / 1024);
                 }
             }
 
             // L2 Cache
             if let Some(l2) = &cache.l2 {
                 cache_label("L2:");
-                println!("Unified {:>4} KB", l2.size);
+                println!("{:>4} KB", l2.size / 1024);
             }
 
             // L3 Cache
             if let Some(l3) = &cache.l3 {
                 cache_label("L3:");
-                println!("Unified {:>4} KB", l3.size);
+                println!("{:>4} KB", l3.size / 1024);
             }
         }
 
