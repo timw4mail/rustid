@@ -60,11 +60,6 @@ impl From<MicroArch> for String {
             MicroArch::Ppc7460 => "PowerPC 7460 (G4)",
             MicroArch::Ppc970 => "PowerPC 970 (G5)",
             MicroArch::Ppc970fx => "PowerPC 970FX (G5)",
-            MicroArch::AppleTitan => "Apple Titan",
-            MicroArch::AppleApollo => "Apple Apollo",
-            MicroArch::AppleDiana => "Apple Diana",
-            MicroArch::AppleApollo2 => "Apple Apollo 2",
-            MicroArch::AppleDiana2 => "Apple Diana 2",
         };
 
         String::from(s)
@@ -304,44 +299,6 @@ impl CpuArch {
                 Some("90nm"),
             ),
 
-            // Apple RISC (Titan/Apollo/Diana) - these are custom Apple cores
-            // Based on IBM 7400 architecture with custom modifications
-            0x8003 => Self::new(
-                "Apple Titan",
-                MicroArch::AppleTitan,
-                "Titan",
-                0x8003,
-                Some("0.18μm"),
-            ),
-            0x8004 => Self::new(
-                "Apple Apollo",
-                MicroArch::AppleApollo,
-                "Apollo",
-                0x8004,
-                Some("0.13μm"),
-            ),
-            0x8005 => Self::new(
-                "Apple Diana",
-                MicroArch::AppleDiana,
-                "Diana",
-                0x8005,
-                Some("90nm"),
-            ),
-            0x8006 => Self::new(
-                "Apple Apollo 2",
-                MicroArch::AppleApollo2,
-                "Apollo 2",
-                0x8006,
-                Some("65nm"),
-            ),
-            0x8007 => Self::new(
-                "Apple Diana 2",
-                MicroArch::AppleDiana2,
-                "Diana 2",
-                0x8007,
-                Some("65nm"),
-            ),
-
             _ => Self::default(),
         }
     }
@@ -367,13 +324,6 @@ mod tests {
     }
 
     #[test]
-    fn test_apple_apollo_lookup() {
-        let cpu = CpuArch::find(0x8004);
-        assert_eq!(cpu.marketing_name.as_str(), "Apple Apollo");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleApollo);
-    }
-
-    #[test]
     fn test_unknown_lookup() {
         let cpu = CpuArch::find(0xFFFF);
         assert_eq!(cpu.marketing_name.as_str(), UNK);
@@ -385,13 +335,6 @@ mod tests {
         let cpu = CpuArch::find(0x003C);
         assert_eq!(cpu.marketing_name.as_str(), "PowerPC 970FX");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc970fx);
-    }
-
-    #[test]
-    fn test_apple_diana2_lookup() {
-        let cpu = CpuArch::find(0x8007);
-        assert_eq!(cpu.marketing_name.as_str(), "Apple Diana 2");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleDiana2);
     }
 
     #[test]
