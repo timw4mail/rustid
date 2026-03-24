@@ -1,3 +1,5 @@
+use crate::arm::brand::{IMPL_APPLE, IMPL_ARM, Vendor};
+
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
 pub const ARCHITECTURE_MASK: usize = 0x000F0000;
@@ -32,23 +34,7 @@ impl Midr {
 }
 
 pub const UNK: &str = "Unknown";
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum Implementer {
-    #[default]
-    Unknown,
-
-    Apple,
-}
-
-impl From<Implementer> for &'static str {
-    fn from(val: Implementer) -> Self {
-        match val {
-            Implementer::Apple => "Apple",
-            _ => UNK,
-        }
-    }
-}
+type Implementer = Vendor;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CoreMicroArch {
@@ -192,12 +178,35 @@ impl From<MicroArch> for String {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
 pub enum CoreType {
-    Efficiency,
+    Super,
     #[default]
     Performance,
-    Super,
+    Efficiency,
+}
+
+impl From<String> for CoreType {
+    fn from(val: String) -> Self {
+        match val.as_str() {
+            "Super" => CoreType::Super,
+            "Performance" => CoreType::Performance,
+            "Efficiency" => CoreType::Efficiency,
+            _ => CoreType::Performance,
+        }
+    }
+}
+
+impl From<CoreType> for String {
+    fn from(val: CoreType) -> Self {
+        let s = match val {
+            CoreType::Super => "Super",
+            CoreType::Performance => "Performance",
+            CoreType::Efficiency => "Efficiency",
+        };
+
+        String::from(s)
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -251,7 +260,14 @@ impl CpuArch {
 
     pub fn find(implementer: usize, part: usize, _variant: usize) -> Self {
         match implementer {
-            0x61 => Self::find_apple(part),
+            IMPL_ARM => Self::find_arm(part),
+            IMPL_APPLE => Self::find_apple(part),
+            _ => Self::default(),
+        }
+    }
+
+    fn find_arm(part: usize) -> Self {
+        match part {
             _ => Self::default(),
         }
     }
