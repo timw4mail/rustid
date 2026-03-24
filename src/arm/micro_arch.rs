@@ -64,16 +64,11 @@ pub enum MicroArch {
     AppleAvalanche,
     AppleBlizzard,
     AppleEverest,
-    AppleSawmill,
+    AppleSawtooth,
     AppleGibraltar,
     AppleHull,
     AppleIce,
     AppleDawn,
-    AppleTahiti,
-    AppleTonga,
-    AppleJadeChop,
-    AppleJade1C,
-    AppleJade2C,
 
     ArmCortexA7,
     ArmCortexA8,
@@ -130,16 +125,11 @@ impl From<MicroArch> for String {
             MicroArch::AppleAvalanche => "Avalanche",
             MicroArch::AppleBlizzard => "Blizzard",
             MicroArch::AppleEverest => "Everest",
-            MicroArch::AppleSawmill => "Sawmill",
+            MicroArch::AppleSawtooth => "Sawtooth",
             MicroArch::AppleGibraltar => "Gibraltar",
             MicroArch::AppleHull => "Hull",
             MicroArch::AppleIce => "Ice",
             MicroArch::AppleDawn => "Dawn",
-            MicroArch::AppleTahiti => "Tahiti",
-            MicroArch::AppleTonga => "Tonga",
-            MicroArch::AppleJadeChop => "Jade Chop",
-            MicroArch::AppleJade1C => "Jade 1C",
-            MicroArch::AppleJade2C => "Jade 2C",
             MicroArch::ArmCortexA7 => "Cortex-A7",
             MicroArch::ArmCortexA8 => "Cortex-A8",
             MicroArch::ArmCortexA9 => "Cortex-A9",
@@ -532,127 +522,216 @@ impl CpuArch {
         }
     }
 
+    /// See https://github.com/freebsd/freebsd-src/blob/main/sys/arm64/include/cpu.h
     fn find_apple(part: usize) -> Self {
         match part {
-            // A-series chips
-            0x101 => Self::new(
-                Implementer::Apple,
-                "Apple A18 Pro",
-                MicroArch::AppleTahiti,
-                "Tahiti",
-                0x101,
-                Some("3nm"),
-            ),
-
-            // M1 series - Icestorm (E) / Firestorm (P)
-            0x008 => Self::new(
+            // M1
+            0x022 => Self::new(
                 Implementer::Apple,
                 "Apple M1",
-                MicroArch::AppleTonga,
+                MicroArch::AppleIcestorm,
                 "Tonga",
-                0x008,
+                0x022,
                 Some("5nm"),
             ),
-            0x009 => Self::new(
+            0x023 => Self::new(
+                Implementer::Apple,
+                "Apple M1",
+                MicroArch::AppleFirestorm,
+                "Tonga",
+                0x023,
+                Some("5nm"),
+            ),
+            0x024 => Self::new(
                 Implementer::Apple,
                 "Apple M1 Pro",
-                MicroArch::AppleJadeChop,
+                MicroArch::AppleIcestorm,
                 "Jade Chop",
-                0x009,
+                0x024,
                 Some("5nm"),
             ),
-            0x00A => Self::new(
+            0x025 => Self::new(
                 Implementer::Apple,
                 "Apple M1 Pro",
-                MicroArch::AppleJadeChop,
+                MicroArch::AppleFirestorm,
                 "Jade Chop",
-                0x00A,
+                0x025,
                 Some("5nm"),
             ),
-            0x00B => Self::new(
+            0x028 => Self::new(
                 Implementer::Apple,
                 "Apple M1 Max",
-                MicroArch::AppleJade1C,
+                MicroArch::AppleIcestorm,
                 "Jade 1C",
-                0x00B,
+                0x028,
+                Some("5nm"),
+            ),
+            0x029 => Self::new(
+                Implementer::Apple,
+                "Apple M1 Max",
+                MicroArch::AppleFirestorm,
+                "Jade 1C",
+                0x029,
                 Some("5nm"),
             ),
 
-            // M2 series - Blizzard (E) / Avalanche (P)
-            0x00C => Self::new(
+            // M2
+            0x32 => Self::new(
+                Implementer::Apple,
+                "Apple M2",
+                MicroArch::AppleBlizzard,
+                "Staten",
+                0x32,
+                Some("5nm"),
+            ),
+            0x33 => Self::new(
                 Implementer::Apple,
                 "Apple M2",
                 MicroArch::AppleAvalanche,
                 "Staten",
-                0x00C,
+                0x33,
                 Some("5nm"),
             ),
-            0x00E => Self::new(
+            0x34 => Self::new(
+                Implementer::Apple,
+                "Apple M2 Pro",
+                MicroArch::AppleBlizzard,
+                "Rhodes Chop",
+                0x34,
+                Some("5nm"),
+            ),
+            0x35 => Self::new(
                 Implementer::Apple,
                 "Apple M2 Pro",
                 MicroArch::AppleAvalanche,
                 "Rhodes Chop",
-                0x00E,
+                0x35,
                 Some("5nm"),
             ),
-            0x010 => Self::new(
+            0x38 => Self::new(
+                Implementer::Apple,
+                "Apple M2 Max",
+                MicroArch::AppleBlizzard,
+                "Rhodes 1C",
+                0x38,
+                Some("5nm"),
+            ),
+            0x39 => Self::new(
                 Implementer::Apple,
                 "Apple M2 Max",
                 MicroArch::AppleAvalanche,
                 "Rhodes 1C",
-                0x010,
+                0x39,
                 Some("5nm"),
             ),
 
-            // M3 series - Cream (E) / Everest (P)
-            0x011 => Self::new(
+            // M3
+            0x42 => Self::new(
                 Implementer::Apple,
                 "Apple M3",
-                MicroArch::AppleHull,
+                MicroArch::AppleEverest,
                 "Ibiza",
-                0x011,
+                0x42,
                 Some("3nm"),
             ),
-            0x012 => Self::new(
+            0x43 => Self::new(
+                Implementer::Apple,
+                "Apple M3",
+                MicroArch::AppleSawtooth,
+                "Ibiza",
+                0x43,
+                Some("3nm"),
+            ),
+            0x44 => Self::new(
                 Implementer::Apple,
                 "Apple M3 Pro",
-                MicroArch::AppleHull,
+                MicroArch::AppleEverest,
                 "Lobos",
-                0x012,
+                0x44,
                 Some("3nm"),
             ),
-            0x013 => Self::new(
+            0x45 => Self::new(
+                Implementer::Apple,
+                "Apple M3 Pro",
+                MicroArch::AppleSawtooth,
+                "Lobos",
+                0x45,
+                Some("3nm"),
+            ),
+            0x48 => Self::new(
                 Implementer::Apple,
                 "Apple M3 Max",
-                MicroArch::AppleHull,
+                MicroArch::AppleEverest,
                 "Palma",
-                0x013,
+                0x48,
+                Some("3nm"),
+            ),
+            0x49 => Self::new(
+                Implementer::Apple,
+                "Apple M3 Max",
+                MicroArch::AppleSawtooth,
+                "Palma",
+                0x49,
                 Some("3nm"),
             ),
 
-            // M4 series - S4 (E) / S3 (P) - Names TBD
-            0x014 => Self::new(
+            // M4
+            0x052 => Self::new(
                 Implementer::Apple,
                 "Apple M4",
-                MicroArch::AppleDawn,
+                MicroArch::AppleEverest,
                 "Donan",
-                0x014,
+                0x052,
                 Some("3nm"),
             ),
-            0x015 => Self::new(
+            0x053 => Self::new(
+                Implementer::Apple,
+                "Apple M4",
+                MicroArch::AppleSawtooth,
+                "Donan",
+                0x053,
+                Some("3nm"),
+            ),
+            0x54 => Self::new(
                 Implementer::Apple,
                 "Apple M4 Pro",
-                MicroArch::AppleDawn,
+                MicroArch::AppleEverest,
                 "Brava Chop",
-                0x015,
+                0x54,
                 Some("3nm"),
             ),
-            0x016 => Self::new(
+            0x55 => Self::new(
+                Implementer::Apple,
+                "Apple M4 Pro",
+                MicroArch::AppleSawtooth,
+                "Brava Chop",
+                0x55,
+                Some("3nm"),
+            ),
+            0x58 => Self::new(
                 Implementer::Apple,
                 "Apple M4 Max",
-                MicroArch::AppleDawn,
+                MicroArch::AppleEverest,
                 "Brava",
-                0x016,
+                0x58,
+                Some("3nm"),
+            ),
+            0x59 => Self::new(
+                Implementer::Apple,
+                "Apple M4 Max",
+                MicroArch::AppleSawtooth,
+                "Brava",
+                0x59,
+                Some("3nm"),
+            ),
+
+            // A18 Pro
+            0x101 => Self::new(
+                Implementer::Apple,
+                "Apple A18 Pro",
+                MicroArch::AppleEverest,
+                "Tahiti",
+                0x101,
                 Some("3nm"),
             ),
 
@@ -676,45 +755,55 @@ mod tests {
     }
 
     #[test]
+    fn test_midr_parsing_m1() {
+        let midr = Midr::new(0x611F0231);
+        assert_eq!(midr.implementer, 0x61);
+        assert_eq!(midr.variant, 0x1);
+        assert_eq!(midr.architecture, 0xF);
+        assert_eq!(midr.part, 0x023);
+        assert_eq!(midr.revision, 0x1);
+    }
+
+    #[test]
     fn test_apple_m1_find() {
-        let cpu = CpuArch::find(0x61, 0x009, 0x0);
-        assert_eq!(cpu.model.as_str(), "Apple M1 Pro");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleJadeChop);
+        let cpu = CpuArch::find(0x61, 0x022, 0x0);
+        assert_eq!(cpu.model.as_str(), "Apple M1");
+        assert_eq!(cpu.micro_arch, MicroArch::AppleIcestorm);
     }
 
     #[test]
     fn test_apple_m1_pro_find() {
-        let cpu = CpuArch::find(0x61, 0x00A, 0x0);
+        let cpu = CpuArch::find(0x61, 0x024, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M1 Pro");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleJadeChop);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleIcestorm);
     }
 
     #[test]
     fn test_apple_m2_find() {
-        let cpu = CpuArch::find(0x61, 0x00C, 0x0);
+        let cpu = CpuArch::find(0x61, 0x032, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M2");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleAvalanche);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleBlizzard);
     }
 
     #[test]
     fn test_apple_m3_find() {
-        let cpu = CpuArch::find(0x61, 0x011, 0x0);
+        let cpu = CpuArch::find(0x61, 0x042, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M3");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleHull);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]
     fn test_apple_m4_find() {
-        let cpu = CpuArch::find(0x61, 0x014, 0x0);
+        let cpu = CpuArch::find(0x61, 0x052, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M4");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleDawn);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]
     fn test_apple_a18_pro_find() {
         let cpu = CpuArch::find(0x61, 0x101, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple A18 Pro");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleTahiti);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]

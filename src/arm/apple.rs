@@ -1,9 +1,14 @@
 use super::brand::Vendor;
 use super::micro_arch::*;
 use crate::TCpu;
+use crate::arm::brand::IMPL_APPLE;
 use crate::common::cache::*;
 use std::collections::BTreeMap;
 use std::process::Command;
+
+const CPUFAMILY_ARM_FIRESTORM_ICESTORM: usize = 0x1b588bb3;
+const CPUFAMILY_ARM_BLIZZARD_AVALANCHE: usize = 0xda33d83d;
+const CPUFAMILY_ARM_EVEREST_SAWTOOTH: usize = 0x8765edea;
 
 fn get_sysctl_map() -> BTreeMap<String, String> {
     let mut values: BTreeMap<String, String> = BTreeMap::new();
@@ -35,7 +40,7 @@ pub fn get_synth_midr() -> usize {
     let values = get_sysctl_map();
 
     let cpufamily = if let Some(family) = values.get("hw.cpufamily") {
-        family.parse::<u64>().ok()
+        family.parse::<usize>().ok()
     } else {
         None
     };
@@ -49,59 +54,60 @@ pub fn get_synth_midr() -> usize {
     }
 }
 
-fn cpufamily_to_midr(cpufamily: u64, brand_string: &str) -> usize {
-    const APPLE_IMPLEMENTER: usize = 0x61;
-    let midr_base = APPLE_IMPLEMENTER << 24;
+fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
+    let midr_base = IMPL_APPLE << 24;
 
     match cpufamily {
-        // Apple M1 family (0x1b588bb3) - need brand string to distinguish variants
-        0x0000_1B58_8BB3 => {
-            if brand_string.contains("M1 Pro") || brand_string.contains("M1 Max") {
-                midr_base | (0x009 << 4)
-            } else if brand_string.contains("M1 Ultra") {
-                midr_base | (0x00A << 4)
+        // M1 family
+        CPUFAMILY_ARM_FIRESTORM_ICESTORM => {
+            if brand_string.contains("M1 Pro") {
+                midr_base | (0x024 << 4)
+            } else if brand_string.contains("M1 Max") {
+                midr_base | (0x028 << 4)
             } else {
-                midr_base | (0x008 << 4) // M1 base
+                midr_base | (0x022 << 4) // M1 base
             }
         }
 
-        // Apple A15 / M2 family (0xda33d83d) - Avalanche/Blizzard
-        0x0000_DA33_D83D => {
-            if brand_string.contains("M2 Pro") || brand_string.contains("M2 Max") {
-                midr_base | (0x00B << 4)
-            } else if brand_string.contains("M2 Ultra") {
-                midr_base | (0x00C << 4)
+        // M2 Family
+        CPUFAMILY_ARM_BLIZZARD_AVALANCHE => {
+            if brand_string.contains("M2 Pro") {
+                midr_base | (0x034 << 4)
+            } else if brand_string.contains("M2 Max") {
+                midr_base | (0x038 << 4)
             } else {
-                midr_base | (0x00D << 4) // A15, M2 base
+                midr_base | (0x030 << 4) // A15, M2 base
             }
         }
 
-        // Apple A16 / M3 family (0x8765edea) - Everest/Sawtooth
-        0x0000_8765_EDEA => {
-            if brand_string.contains("M3 Pro") || brand_string.contains("M3 Max") {
-                midr_base | (0x00E << 4)
+        // M3 family
+        CPUFAMILY_ARM_EVEREST_SAWTOOTH => {
+            if brand_string.contains("M3 Pro") {
+                midr_base | (0x044 << 4)
+            } else if brand_string.contains("M3 Max") {
+                midr_base | (0x048 << 4)
             } else {
-                midr_base | (0x00F << 4) // A16, M3 base
+                midr_base | (0x042 << 4) // A16, M3 base
+            }
+        }
+
+        // M4 family
+        0x4B4FAE0A => {
+            if brand_string.contains("M4 Pro") {
+                midr_base | (0x054 << 4)
+            } else if brand_string.contains("M4 Max") {
+                midr_base | (0x058 << 4)
+            } else {
+                midr_base | (0x052 << 4) // M4 base
             }
         }
 
         // Apple A18 / A18 Pro (0x75D4ACB9)
-        0x0000_75D4_ACB9 => {
+        0x75D4ACB9 => {
             if brand_string.contains("A18 Pro") {
                 midr_base | (0x101 << 4)
             } else {
                 midr_base | (0x100 << 4) // A18
-            }
-        }
-
-        // Apple M4 family
-        0x0000_4B4F_AE0A => {
-            if brand_string.contains("M4 Pro") || brand_string.contains("M4 Max") {
-                midr_base | (0x011 << 4)
-            } else if brand_string.contains("M4 Ultra") {
-                midr_base | (0x012 << 4)
-            } else {
-                midr_base | (0x010 << 4) // M4 base
             }
         }
 
@@ -132,16 +138,16 @@ impl Cpu {
     fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
         let str = match (midr.part, kind) {
             // M1
-            (0x008..=0x00B, CoreType::Performance) => "FireStorm",
-            (0x008..=0x00B, CoreType::Efficiency) => "IceStorm",
+            (0x022..=0x029, CoreType::Performance) => "FireStorm",
+            (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
 
             // M2
-            (0x00C..=0x010, CoreType::Performance) => "Avalanche",
-            (0x00C..=0x010, CoreType::Efficiency) => "Blizzard",
+            (0x030..=0x039, CoreType::Performance) => "Avalanche",
+            (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
 
             // M3+, A18 Pro
-            (0x101 | 0x011..=0x016, CoreType::Performance) => "Everest",
-            (0x101 | 0x011..=0x016, CoreType::Efficiency) => "Sawtooth",
+            (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
+            (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
 
             (_, _) => UNK,
         };
@@ -234,6 +240,15 @@ impl TCpu for Cpu {
         }
     }
     fn debug(&self) {
+        crate::println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr);
+        crate::println!(
+            "Implementer: 0x{:X} ({})",
+            self.midr.implementer,
+            self.vendor
+        );
+        crate::println!("Variant: 0x{:X}", self.midr.variant);
+        crate::println!("Part Number: 0x{:X}", self.midr.part);
+        crate::println!("Revision: 0x{:X}", self.midr.revision);
         println!("{:#?}", self);
     }
     fn display_table(&self) {
