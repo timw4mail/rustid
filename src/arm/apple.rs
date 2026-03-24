@@ -148,14 +148,6 @@ pub struct CpuCore {
     pub count: usize,
 }
 
-impl CpuCore {
-    // fn detect() -> Self {
-    //     CpuCore {
-    //
-    //     }
-    // }
-}
-
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     pub raw_midr: usize,
@@ -165,6 +157,32 @@ pub struct Cpu {
     pub model: String,
     pub cores: BTreeMap<CoreType, CpuCore>,
     pub raw: BTreeMap<String, String>,
+}
+
+impl Cpu {
+    fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
+        let str = match (midr.part, kind) {
+            // M1
+            (0x008..=0x00B, CoreType::Performance) => "FireStorm",
+            (0x008..=0x00B, CoreType::Efficiency) => "IceStorm",
+
+            // M2
+            (0x00C..=0x010, CoreType::Performance) => "Avalanche",
+            (0x00C..=0x010, CoreType::Efficiency) => "Blizzard",
+
+            // M3+, A18 Pro
+            (0x101 | 0x011..=0x016, CoreType::Performance) => "Everest",
+            (0x101 | 0x011..=0x016, CoreType::Efficiency) => "Sawtooth",
+
+            (_, _) => UNK,
+        };
+
+        if str == UNK {
+            None
+        } else {
+            Some(String::from(str))
+        }
+    }
 }
 
 impl TCpu for Cpu {
@@ -212,7 +230,9 @@ impl TCpu for Cpu {
                 .unwrap();
 
             l1.set_data(l1d_size / 1024, 0);
+            l1.set_data_share_count(1);
             l1.set_instruction(l1i_size / 1024, 0);
+            l1.set_instruction_share_count(1);
             cache.l1 = l1;
             cache.l2 = Some(CacheLevel::new(
                 l2_size / 1024,
@@ -221,11 +241,13 @@ impl TCpu for Cpu {
                 cpus_per_l2,
             ));
 
+            let name = Self::find_core_codename(&midr, kind);
+
             cores.insert(
                 kind,
                 CpuCore {
                     kind,
-                    name: None,
+                    name,
                     cache: Some(cache),
                     count,
                 },
@@ -248,6 +270,7 @@ impl TCpu for Cpu {
     fn display_table(&self) {
         let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
         let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
+        let terlabel: fn(&str) -> String = |label| format!("{:>21}{}:{:1}", "", label, "");
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -259,7 +282,6 @@ impl TCpu for Cpu {
         simple_line("Brand/Implementor", self.cpu_arch.implementer.into());
         simple_line("Model", &self.model);
         simple_line("Microarchitecture", &String::from(self.cpu_arch.micro_arch));
-        simple_line("Code Name", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
             simple_line("Process", tech);
         }
@@ -269,11 +291,10 @@ impl TCpu for Cpu {
             .for_each(|k| {
                 if let Some(core) = self.cores.get(k) {
                     let name = format!("{} Cores", Into::<String>::into(*k));
-                    println!("{}", label(&name));
+                    println!("{}{}", label(&name), core.count);
 
-                    println!("{}{}", label("Count"), core.count);
                     if let Some(name) = core.name.clone() {
-                        println!("{}{}", label("Code Name"), name);
+                        println!("{}{}", sublabel("Name"), name);
                     }
 
                     if let Some(cache) = core.cache {
@@ -285,18 +306,20 @@ impl TCpu for Cpu {
                             }
                         };
 
+                        println!("{}", sublabel("Cache"));
+
                         match cache.l1 {
                             Level1Cache::Unified(cache) => {
-                                println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size);
+                                println!("L1: Unified {:>4} KB", cache.size);
                             }
                             Level1Cache::Split { data, instruction } => {
                                 let data_count: String = cache_count(data.share_count);
                                 let instruction_count = cache_count(instruction.share_count);
 
-                                println!("{}L1d: {}{} KB", label("Cache"), &data_count, data.size);
+                                println!("{}{}{} KB", terlabel("L1d"), &data_count, data.size);
                                 println!(
                                     "{}{}{} KB",
-                                    sublabel("L1i"),
+                                    terlabel("L1i"),
                                     &instruction_count,
                                     instruction.size,
                                 );
@@ -313,7 +336,7 @@ impl TCpu for Cpu {
                                 num /= 1024;
                             }
 
-                            println!("{} {}{} {}", sublabel("L2"), &count, num, unit);
+                            println!("{} {}{} {}", terlabel("L2"), &count, num, unit);
                         }
 
                         if let Some(cache) = cache.l3 {
@@ -324,7 +347,7 @@ impl TCpu for Cpu {
                                 num /= 1024
                             }
 
-                            println!("{} {} {}", sublabel("L3"), num, unit);
+                            println!("{} {} {}", terlabel("L3"), num, unit);
                         }
 
                         println!();
