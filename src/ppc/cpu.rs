@@ -169,16 +169,6 @@ impl Cpu {
                 l3: None,
             }),
 
-            // Apple RISC Reduced (Titan/Apollo/Diana)
-            0x8003..=0x8007 => Some(Cache {
-                l1: Level1Cache::Split {
-                    data: CacheLevel::new(32 * 1024, CacheType::Data, 8, 0), // 32KB data, 8-way
-                    instruction: CacheLevel::new(32 * 1024, CacheType::Instruction, 8, 0), // 32KB instruction, 8-way
-                },
-                l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
-                l3: None,
-            }),
-
             _ => None,
         }
     }
@@ -277,13 +267,13 @@ impl TCpu for Cpu {
 
             // L2 Cache
             if let Some(l2) = &cache.l2 {
-                cache_label("L2:");
+                cache_label("L2");
                 println!("{:>4} KB", l2.size / 1024);
             }
 
             // L3 Cache
             if let Some(l3) = &cache.l3 {
-                cache_label("L3:");
+                cache_label("L3");
                 println!("{:>4} KB", l3.size / 1024);
             }
         }
