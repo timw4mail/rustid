@@ -21,33 +21,41 @@ pub use apple::*;
 // ----------------------------------------------------------------------------
 
 #[cfg(target_os = "windows")]
-mod windows_api_ffi {
-    #[link(name = "kernel32")]
-    unsafe extern "system" {
-        pub fn GetNativeSystemInfo(lpSystemInfo: *mut super::SYSTEM_INFO);
-    }
-}
-
-#[cfg(target_os = "windows")]
-#[repr(C)]
-#[allow(non_snake_case)]
-pub struct SYSTEM_INFO {
-    _unused_dwOemId: u32,
-    _unused_dwPageSize: u32,
-    _unused_lpMinimumApplicationAddress: *mut core::ffi::c_void,
-    _unused_lpMaximumApplicationAddress: *mut core::ffi::c_void,
-    _unused_dwActiveProcessorMask: usize,
-    _unused_dwNumberOfProcessors: u32,
-    _unused_dwProcessorType: u32,
-    _unused_dwAllocationGranularity: u32,
-    pub wProcessorLevel: u16,
-    pub wProcessorRevision: u16,
-}
-
-#[cfg(target_os = "windows")]
 fn get_synth_midr() -> usize {
-    use windows_api_ffi::*;
-    let mut sys_info: SYSTEM_INFO = unsafe { core::mem::zeroed() };
+    use std::mem::{size_of, zeroed};
+    use windows::Win32::System::Registry::*;
+    use windows::Win32::System::SystemInformation::*;
+    use windows::core::w;
+
+    // Try registry first
+    let mut hkey = HKEY::default();
+    let subkey = w!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
+    let result = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &mut hkey) };
+
+    if result.is_ok() {
+        let mut cpu_id: u32 = 0;
+        let mut cpu_id_size = size_of::<u32>() as u32;
+        let mut dw_type = REG_DWORD;
+        let value_name = w!("CPUID");
+        let query_result = unsafe {
+            RegQueryValueExW(
+                hkey,
+                value_name,
+                None,
+                Some(&mut dw_type),
+                Some(&mut cpu_id as *mut u32 as *mut u8),
+                Some(&mut cpu_id_size),
+            )
+        };
+        let _ = unsafe { RegCloseKey(hkey) };
+
+        if query_result.is_ok() && dw_type == REG_DWORD {
+            return cpu_id as usize;
+        }
+    }
+
+    // Fallback to GetNativeSystemInfo if registry fails
+    let mut sys_info: SYSTEM_INFO = unsafe { zeroed() };
     unsafe {
         GetNativeSystemInfo(&mut sys_info);
     }
