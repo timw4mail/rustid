@@ -60,13 +60,16 @@ impl TCpu for Cpu {
         if let Some(tech) = self.cpu_arch.technology {
             simple_line("Process", tech);
         }
+
+        let cache_count = |_share_count| String::new();
+
         if let Some(cache) = self.cache {
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
                     println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: String<4> = cache_count(data.share_count);
+                    let data_count: String = cache_count(data.share_count);
                     let instruction_count = cache_count(instruction.share_count);
 
                     println!(
