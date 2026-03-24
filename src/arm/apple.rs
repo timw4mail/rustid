@@ -22,7 +22,7 @@ fn get_sysctl_map() -> BTreeMap<String, String> {
         if let Some(key) = line.first()
             && let Some(val) = line.get(1)
             && (key.starts_with("machdep.cpu")
-                || (key.starts_with("hw") && (key.contains("cpu") || key.contains("cache"))))
+                || (key.starts_with("hw") && !key.contains("optional")))
         {
             values.insert(String::from(*key), String::from(*val));
         }
@@ -109,12 +109,23 @@ fn cpufamily_to_midr(cpufamily: u64, brand_string: &str) -> usize {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
 pub enum CoreType {
     Super,
     #[default]
     Performance,
     Efficiency,
+}
+
+impl From<String> for CoreType {
+    fn from(val: String) -> Self {
+        match val.as_str() {
+            "Super" => CoreType::Super,
+            "Performance" => CoreType::Performance,
+            "Efficiency" => CoreType::Efficiency,
+            _ => CoreType::Performance,
+        }
+    }
 }
 
 impl From<CoreType> for String {
@@ -158,13 +169,63 @@ pub struct Cpu {
 
 impl TCpu for Cpu {
     fn detect() -> Self {
-        let cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
+        let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
 
         let raw_midr = get_synth_midr();
         let midr = Midr::new(raw_midr);
         let vendor = Vendor::from(midr.implementer);
         let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
         let values = get_sysctl_map();
+
+        let perf_levels: usize = values.get("hw.nperflevels").unwrap().parse().unwrap();
+
+        for i in 0..perf_levels {
+            let kind_type = values.get(&format!("hw.perflevel{}.name", i));
+            let kind = CoreType::from(kind_type.unwrap().clone());
+            let mut cache = Cache::default();
+            let mut l1 = Level1Cache::default_split();
+
+            let cpus_per_l2: u32 = values
+                .get(&format!("hw.perflevel{}.cpusperl2", i))
+                .unwrap()
+                .parse()
+                .unwrap();
+            let l1d_size: u32 = values
+                .get(&format!("hw.perflevel{}.l1dcachesize", i))
+                .unwrap()
+                .parse()
+                .unwrap();
+            let l1i_size: u32 = values
+                .get(&format!("hw.perflevel{}.l1icachesize", i))
+                .unwrap()
+                .parse()
+                .unwrap();
+            let l2_size: u32 = values
+                .get(&format!("hw.perflevel{}.l2cachesize", i))
+                .unwrap()
+                .parse()
+                .unwrap();
+
+            l1.set_data(l1d_size / 1024, 0);
+            l1.set_instruction(l1i_size / 1024, 0);
+            cache.l1 = l1;
+            cache.l2 = Some(CacheLevel::new(
+                l2_size / 1024,
+                CacheType::Unified,
+                0,
+                cpus_per_l2,
+            ));
+
+            cores.insert(
+                kind,
+                CpuCore {
+                    kind,
+                    name: None,
+                    cache: Some(cache),
+                    count: 2,
+                },
+            );
+        }
 
         Self {
             model: values.get("machdep.cpu.brand_string").unwrap().to_string(),
