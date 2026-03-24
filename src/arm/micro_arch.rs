@@ -225,7 +225,7 @@ impl CpuArch {
             IMPL_APPLE => Self::find_apple(part),
             IMPL_QUALCOMM => Self::find_qualcomm(part),
             _ => Self {
-                implementer: Implementer::from(implementor),
+                implementer: Implementer::from(implementer),
                 ..Self::default()
             },
         }
