@@ -87,6 +87,11 @@ pub enum MicroArch {
     ArmNeoverseV1,
     ArmNeoverseV2,
 
+    QCScorpion,
+    QCKrait,
+    QCKryo,
+    QCFalkor,
+    QCSaphira,
     QCOryon,
 }
 
@@ -132,6 +137,11 @@ impl From<MicroArch> for String {
             MicroArch::ArmNeoverseN2 => "Neoverse N2",
             MicroArch::ArmNeoverseV1 => "Neoverse V1",
             MicroArch::ArmNeoverseV2 => "Neoverse V2",
+            MicroArch::QCScorpion => "Scorpion",
+            MicroArch::QCKrait => "Krait",
+            MicroArch::QCKryo => "Kryo",
+            MicroArch::QCFalkor => "Falkor",
+            MicroArch::QCSaphira => "Saphira",
             MicroArch::QCOryon => "Oryon",
         };
 
@@ -722,6 +732,118 @@ impl CpuArch {
 
     fn find_qualcomm(part: usize) -> Self {
         match part {
+            0x001 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon X Elite",
+                MicroArch::QCOryon,
+                "Oryon",
+                0x001,
+                Some("4nm"),
+            ),
+            0x00F => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon S1/S2/S3",
+                MicroArch::QCScorpion,
+                "Scorpion",
+                0x00F,
+                Some("65-45nm"),
+            ),
+            0x02D => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon S4",
+                MicroArch::QCScorpion,
+                "Scorpion",
+                0x02D,
+                Some("28nm"),
+            ),
+            0x04D => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon S4 Plus/Pro",
+                MicroArch::QCKrait,
+                "Krait",
+                0x04D,
+                Some("28nm"),
+            ),
+            0x06F => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 800/801",
+                MicroArch::QCKrait,
+                "Krait 400",
+                0x06F,
+                Some("28nm"),
+            ),
+            0x201 | 0x205 | 0x211 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 820/821",
+                MicroArch::QCKryo,
+                "Kryo",
+                part,
+                Some("14nm"),
+            ),
+            0x800 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 835",
+                MicroArch::QCFalkor,
+                "Kryo 280 Gold",
+                0x800,
+                Some("10nm"),
+            ),
+            0x801 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 835",
+                MicroArch::ArmCortexA53,
+                "Kryo 280 Silver",
+                0x801,
+                Some("10nm"),
+            ),
+            0x802 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 845",
+                MicroArch::ArmCortexA75,
+                "Kryo 385 Gold",
+                0x802,
+                Some("10nm"),
+            ),
+            0x803 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 845",
+                MicroArch::ArmCortexA55,
+                "Kryo 385 Silver",
+                0x803,
+                Some("10nm"),
+            ),
+            0x804 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 855",
+                MicroArch::ArmCortexA76,
+                "Kryo 485 Gold",
+                0x804,
+                Some("7nm"),
+            ),
+            0x805 => Self::new(
+                Implementer::Qualcomm,
+                "Snapdragon 855",
+                MicroArch::ArmCortexA55,
+                "Kryo 485 Silver",
+                0x805,
+                Some("7nm"),
+            ),
+            0xC00 => Self::new(
+                Implementer::Qualcomm,
+                "Centriq 2400",
+                MicroArch::QCFalkor,
+                "Falkor",
+                0xC00,
+                Some("10nm"),
+            ),
+            0xC01 => Self::new(
+                Implementer::Qualcomm,
+                "Qualcomm Saphira",
+                MicroArch::QCSaphira,
+                "Saphira",
+                0xC01,
+                None,
+            ),
             _ => Self {
                 implementer: Implementer::Qualcomm,
                 ..Self::default()
@@ -856,5 +978,12 @@ mod tests {
         assert_eq!(String::from(MicroArch::AppleFirestorm), "Firestorm");
         assert_eq!(String::from(MicroArch::AppleAvalanche), "Avalanche");
         assert_eq!(String::from(MicroArch::ArmCortexA76), "Cortex-A76");
+    }
+
+    #[test]
+    fn test_qualcomm_oryon_find() {
+        let cpu = CpuArch::find(0x51, 0x001, 0x0);
+        assert_eq!(cpu.model.as_str(), "Snapdragon X Elite");
+        assert_eq!(cpu.micro_arch, MicroArch::QCOryon);
     }
 }
