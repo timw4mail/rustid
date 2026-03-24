@@ -1,4 +1,4 @@
-use crate::arm::brand::{IMPL_APPLE, IMPL_ARM, Vendor};
+use crate::arm::brand::*;
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -223,11 +223,11 @@ impl CpuArch {
         match implementer {
             IMPL_ARM => Self::find_arm(part),
             IMPL_APPLE => Self::find_apple(part),
-            IMPL_QUALCOMM => Self {
-                implementer: Implementer::Qualcomm,
+            IMPL_QUALCOMM => Self::find_qualcomm(part),
+            _ => Self {
+                implementer: Implementer::from(implementor),
                 ..Self::default()
             },
-            _ => Self::default(),
         }
     }
 
@@ -493,7 +493,10 @@ impl CpuArch {
                 None,
             ),
 
-            _ => Self::default(),
+            _ => Self {
+                implementer: Implementer::Arm,
+                ..Self::default()
+            },
         }
     }
 
@@ -710,7 +713,19 @@ impl CpuArch {
                 Some("3nm"),
             ),
 
-            _ => Self::default(),
+            _ => Self {
+                implementer: Implementer::Apple,
+                ..Self::default()
+            },
+        }
+    }
+
+    fn find_qualcomm(part: usize) -> Self {
+        match part {
+            _ => Self {
+                implementer: Implementer::Qualcomm,
+                ..Self::default()
+            },
         }
     }
 }
