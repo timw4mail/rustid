@@ -1,7 +1,6 @@
-use super::brand::Vendor;
+use super::brand::*;
 use super::micro_arch::*;
 use crate::TCpu;
-use crate::arm::brand::IMPL_APPLE;
 use crate::common::cache::*;
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -113,14 +112,6 @@ fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
 
         _ => 0,
     }
-}
-
-#[derive(Debug, Default, PartialEq)]
-pub struct CpuCore {
-    pub kind: CoreType,
-    pub name: Option<String>,
-    pub cache: Option<Cache>,
-    pub count: usize,
 }
 
 #[derive(Debug, Default, PartialEq)]

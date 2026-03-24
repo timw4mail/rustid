@@ -37,12 +37,6 @@ pub const UNK: &str = "Unknown";
 type Implementer = Vendor;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum CoreMicroArch {
-    #[default]
-    Unknown,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
     #[default]
     Unknown,
@@ -137,6 +131,7 @@ impl From<MicroArch> for String {
             MicroArch::ArmNeoverseN2 => "Neoverse N2",
             MicroArch::ArmNeoverseV1 => "Neoverse V1",
             MicroArch::ArmNeoverseV2 => "Neoverse V2",
+
             MicroArch::QCScorpion => "Scorpion",
             MicroArch::QCKrait => "Krait",
             MicroArch::QCKryo => "Kryo",
@@ -147,44 +142,6 @@ impl From<MicroArch> for String {
 
         String::from(s)
     }
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
-pub enum CoreType {
-    Super,
-    #[default]
-    Performance,
-    Efficiency,
-}
-
-impl From<String> for CoreType {
-    fn from(val: String) -> Self {
-        match val.as_str() {
-            "Super" => CoreType::Super,
-            "Performance" => CoreType::Performance,
-            "Efficiency" => CoreType::Efficiency,
-            _ => CoreType::Performance,
-        }
-    }
-}
-
-impl From<CoreType> for String {
-    fn from(val: CoreType) -> Self {
-        let s = match val {
-            CoreType::Super => "Super",
-            CoreType::Performance => "Performance",
-            CoreType::Efficiency => "Efficiency",
-        };
-
-        String::from(s)
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Core {
-    kind: CoreType,
-    count: usize,
-    micro_arch: CoreMicroArch,
 }
 
 #[derive(Debug, Clone, PartialEq)]
