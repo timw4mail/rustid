@@ -263,7 +263,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple A18 Pro",
                 MicroArch::AppleTahiti,
-                "Sawtooth (E) / Everest (P)",
+                "Tahiti",
                 0x101,
                 Some("3nm"),
             ),
@@ -273,7 +273,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M1",
                 MicroArch::AppleTonga,
-                "Icestorm (E) / Firestorm (P)",
+                "Tonga",
                 0x008,
                 Some("5nm"),
             ),
@@ -281,7 +281,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M1 Pro",
                 MicroArch::AppleJadeChop,
-                "Icestorm (E) / Firestorm (P)",
+                "Jade Chop",
                 0x009,
                 Some("5nm"),
             ),
@@ -289,7 +289,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M1 Pro",
                 MicroArch::AppleJadeChop,
-                "Icestorm (E) / Firestorm (P)",
+                "Jade Chop",
                 0x00A,
                 Some("5nm"),
             ),
@@ -297,7 +297,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M1 Max",
                 MicroArch::AppleJade1C,
-                "Icestorm (E) / Firestorm (P)",
+                "Jade 1C",
                 0x00B,
                 Some("5nm"),
             ),
@@ -307,7 +307,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M2",
                 MicroArch::AppleAvalanche,
-                "Blizzard (E) / Avalanche (P)",
+                "Staten",
                 0x00C,
                 Some("5nm"),
             ),
@@ -315,7 +315,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M2 Pro",
                 MicroArch::AppleAvalanche,
-                "Blizzard (E) / Avalanche (P)",
+                "Rhodes Chop",
                 0x00E,
                 Some("5nm"),
             ),
@@ -323,7 +323,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M2 Max",
                 MicroArch::AppleAvalanche,
-                "Blizzard (E) / Avalanche (P)",
+                "Rhodes 1C",
                 0x010,
                 Some("5nm"),
             ),
@@ -333,7 +333,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M3",
                 MicroArch::AppleHull,
-                "Sawtooth (E) / Everest (P)",
+                "Ibiza",
                 0x011,
                 Some("3nm"),
             ),
@@ -341,7 +341,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M3 Pro",
                 MicroArch::AppleHull,
-                "Sawtooth (E) / Everest (P)",
+                "Lobos",
                 0x012,
                 Some("3nm"),
             ),
@@ -349,7 +349,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M3 Max",
                 MicroArch::AppleHull,
-                "Sawtooth (E) / Everest (P)",
+                "Palma",
                 0x013,
                 Some("3nm"),
             ),
@@ -359,7 +359,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M4",
                 MicroArch::AppleDawn,
-                "Sawtooth (E) / Everest (P)",
+                "Donan",
                 0x014,
                 Some("3nm"),
             ),
@@ -367,7 +367,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M4 Pro",
                 MicroArch::AppleDawn,
-                "Sawtooth (E) / Everest (P)",
+                "Brava Chop",
                 0x015,
                 Some("3nm"),
             ),
@@ -375,7 +375,7 @@ impl CpuArch {
                 Implementer::Apple,
                 "Apple M4 Max",
                 MicroArch::AppleDawn,
-                "Sawtooth (E) / Everest (P)",
+                "Brava",
                 0x016,
                 Some("3nm"),
             ),
@@ -402,15 +402,15 @@ mod tests {
     #[test]
     fn test_apple_m1_find() {
         let cpu = CpuArch::find(0x61, 0x009, 0x0);
-        assert_eq!(cpu.model.as_str(), "Apple M1");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleFirestorm);
+        assert_eq!(cpu.model.as_str(), "Apple M1 Pro");
+        assert_eq!(cpu.micro_arch, MicroArch::AppleJadeChop);
     }
 
     #[test]
     fn test_apple_m1_pro_find() {
         let cpu = CpuArch::find(0x61, 0x00A, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M1 Pro");
-        assert_eq!(cpu.micro_arch, MicroArch::AppleFirestorm);
+        assert_eq!(cpu.micro_arch, MicroArch::AppleJadeChop);
     }
 
     #[test]
