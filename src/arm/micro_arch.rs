@@ -84,6 +84,10 @@ pub enum MicroArch {
     AppleIce,
     AppleDawn,
     AppleTahiti,
+    AppleTonga,
+    AppleJadeChop,
+    AppleJade1C,
+    AppleJade2C,
 
     ArmCortexA7,
     ArmCortexA8,
@@ -146,6 +150,10 @@ impl From<MicroArch> for String {
             MicroArch::AppleIce => "Ice",
             MicroArch::AppleDawn => "Dawn",
             MicroArch::AppleTahiti => "Tahiti",
+            MicroArch::AppleTonga => "Tonga",
+            MicroArch::AppleJadeChop => "Jade Chop",
+            MicroArch::AppleJade1C => "Jade 1C",
+            MicroArch::AppleJade2C => "Jade 2C",
             MicroArch::ArmCortexA7 => "Cortex-A7",
             MicroArch::ArmCortexA8 => "Cortex-A8",
             MicroArch::ArmCortexA9 => "Cortex-A9",
@@ -264,7 +272,7 @@ impl CpuArch {
             0x008 => Self::new(
                 Implementer::Apple,
                 "Apple M1",
-                MicroArch::AppleFirestorm,
+                MicroArch::AppleTonga,
                 "Icestorm (E) / Firestorm (P)",
                 0x008,
                 Some("5nm"),
@@ -272,7 +280,7 @@ impl CpuArch {
             0x009 => Self::new(
                 Implementer::Apple,
                 "Apple M1 Pro",
-                MicroArch::AppleFirestorm,
+                MicroArch::AppleJadeChop,
                 "Icestorm (E) / Firestorm (P)",
                 0x009,
                 Some("5nm"),
@@ -280,7 +288,7 @@ impl CpuArch {
             0x00A => Self::new(
                 Implementer::Apple,
                 "Apple M1 Pro",
-                MicroArch::AppleFirestorm,
+                MicroArch::AppleJadeChop,
                 "Icestorm (E) / Firestorm (P)",
                 0x00A,
                 Some("5nm"),
@@ -288,7 +296,7 @@ impl CpuArch {
             0x00B => Self::new(
                 Implementer::Apple,
                 "Apple M1 Max",
-                MicroArch::AppleFirestorm,
+                MicroArch::AppleJade1C,
                 "Icestorm (E) / Firestorm (P)",
                 0x00B,
                 Some("5nm"),

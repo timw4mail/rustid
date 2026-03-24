@@ -281,7 +281,7 @@ impl TCpu for Cpu {
         println!();
         simple_line("Brand/Implementor", self.cpu_arch.implementer.into());
         simple_line("Model", &self.model);
-        simple_line("Microarchitecture", &String::from(self.cpu_arch.micro_arch));
+        simple_line("Code Name", &String::from(self.cpu_arch.micro_arch));
         if let Some(tech) = self.cpu_arch.technology {
             simple_line("Process", tech);
         }
