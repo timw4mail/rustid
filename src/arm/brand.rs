@@ -1,4 +1,5 @@
 pub const IMPL_ARM: usize = 0x41;
+pub const IMPL_QUALCOMM: usize = 0x51;
 pub const IMPL_APPLE: usize = 0x61;
 
 #[allow(unused)]

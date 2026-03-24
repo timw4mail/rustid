@@ -86,6 +86,8 @@ pub enum MicroArch {
     ArmNeoverseN2,
     ArmNeoverseV1,
     ArmNeoverseV2,
+
+    QCOryon,
 }
 
 impl From<MicroArch> for String {
@@ -130,6 +132,7 @@ impl From<MicroArch> for String {
             MicroArch::ArmNeoverseN2 => "Neoverse N2",
             MicroArch::ArmNeoverseV1 => "Neoverse V1",
             MicroArch::ArmNeoverseV2 => "Neoverse V2",
+            MicroArch::QCOryon => "Oryon",
         };
 
         String::from(s)
@@ -220,6 +223,10 @@ impl CpuArch {
         match implementer {
             IMPL_ARM => Self::find_arm(part),
             IMPL_APPLE => Self::find_apple(part),
+            IMPL_QUALCOMM => Self {
+                implementer: Implementer::Qualcomm,
+                ..Self::default()
+            },
             _ => Self::default(),
         }
     }
