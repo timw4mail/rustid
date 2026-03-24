@@ -27,30 +27,51 @@ fn get_synth_midr() -> usize {
     use windows::Win32::System::SystemInformation::*;
     use windows::core::w;
 
-    // Try registry first
+    // Try registry first: 'CP 4000' is the standard for ARM64 MIDR on Windows
     let mut hkey = HKEY::default();
     let subkey = w!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
     let result = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &mut hkey) };
 
     if result.is_ok() {
-        let mut cpu_id: u32 = 0;
-        let mut cpu_id_size = size_of::<u32>() as u32;
-        let mut dw_type = REG_DWORD;
-        let value_name = w!("CPUID");
-        let query_result = unsafe {
+        // 1. Try 'CP 4000' (REG_QWORD)
+        let mut cpu_id_qword: u64 = 0;
+        let mut size_qword = size_of::<u64>() as u32;
+        let mut dw_type = REG_NONE;
+        let value_name_4000 = w!("CP 4000");
+        let query_4000 = unsafe {
             RegQueryValueExW(
                 hkey,
-                value_name,
+                value_name_4000,
                 None,
                 Some(&mut dw_type),
-                Some(&mut cpu_id as *mut u32 as *mut u8),
-                Some(&mut cpu_id_size),
+                Some(&mut cpu_id_qword as *mut u64 as *mut u8),
+                Some(&mut size_qword),
+            )
+        };
+
+        if query_4000.is_ok() && dw_type == REG_QWORD {
+            let _ = unsafe { RegCloseKey(hkey) };
+            return cpu_id_qword as usize;
+        }
+
+        // 2. Fallback to 'CPUID' (REG_DWORD)
+        let mut cpu_id_dword: u32 = 0;
+        let mut size_dword = size_of::<u32>() as u32;
+        let value_name_cpuid = w!("CPUID");
+        let query_cpuid = unsafe {
+            RegQueryValueExW(
+                hkey,
+                value_name_cpuid,
+                None,
+                Some(&mut dw_type),
+                Some(&mut cpu_id_dword as *mut u32 as *mut u8),
+                Some(&mut size_dword),
             )
         };
         let _ = unsafe { RegCloseKey(hkey) };
 
-        if query_result.is_ok() && dw_type == REG_DWORD {
-            return cpu_id as usize;
+        if query_cpuid.is_ok() && dw_type == REG_DWORD {
+            return cpu_id_dword as usize;
         }
     }
 
