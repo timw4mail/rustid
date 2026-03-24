@@ -268,6 +268,266 @@ impl CpuArch {
 
     fn find_arm(part: usize) -> Self {
         match part {
+            // Cortex-A7 series
+            0xC07 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A7",
+                MicroArch::ArmCortexA7,
+                "Cortex-A7",
+                0xC07,
+                None,
+            ),
+
+            // Cortex-A8 series
+            0xC08 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A8",
+                MicroArch::ArmCortexA8,
+                "Cortex-A8",
+                0xC08,
+                None,
+            ),
+
+            // Cortex-A9 series
+            0xC09 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A9",
+                MicroArch::ArmCortexA9,
+                "Cortex-A9",
+                0xC09,
+                None,
+            ),
+
+            // Cortex-A12 series
+            0xC0A => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A12",
+                MicroArch::ArmCortexA12,
+                "Cortex-A12",
+                0xC0A,
+                None,
+            ),
+
+            // Cortex-A15 series
+            0xC0F => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A15",
+                MicroArch::ArmCortexA15,
+                "Cortex-A15",
+                0xC0F,
+                None,
+            ),
+
+            // Cortex-A17 series
+            0xC0E => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A17",
+                MicroArch::ArmCortexA17,
+                "Cortex-A17",
+                0xC0E,
+                None,
+            ),
+
+            // Cortex-A32 series
+            0xC20 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A32",
+                MicroArch::ArmCortexA32,
+                "Cortex-A32",
+                0xC20,
+                None,
+            ),
+
+            // Cortex-A35 series
+            0xC23 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A35",
+                MicroArch::ArmCortexA35,
+                "Cortex-A35",
+                0xC23,
+                None,
+            ),
+
+            // Cortex-A53 series
+            0xD03 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A53",
+                MicroArch::ArmCortexA53,
+                "Cortex-A53",
+                0xD03,
+                None,
+            ),
+
+            // Cortex-A55 series
+            0xD05 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A55",
+                MicroArch::ArmCortexA55,
+                "Cortex-A55",
+                0xD05,
+                None,
+            ),
+
+            // Cortex-A65 series
+            0xD08 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A65",
+                MicroArch::ArmCortexA65,
+                "Cortex-A65",
+                0xD08,
+                None,
+            ),
+
+            // Cortex-A72 series
+            0xD0B => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A72",
+                MicroArch::ArmCortexA72,
+                "Cortex-A72",
+                0xD0B,
+                None,
+            ),
+
+            // Cortex-A73 series
+            0xD0C => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A73",
+                MicroArch::ArmCortexA73,
+                "Cortex-A73",
+                0xD0C,
+                None,
+            ),
+
+            // Cortex-A75 series
+            0xD0D => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A75",
+                MicroArch::ArmCortexA75,
+                "Cortex-A75",
+                0xD0D,
+                None,
+            ),
+
+            // Cortex-A76 series
+            0xD0E => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A76",
+                MicroArch::ArmCortexA76,
+                "Cortex-A76",
+                0xD0E,
+                None,
+            ),
+
+            // Cortex-A77 series
+            0xD10 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A77",
+                MicroArch::ArmCortexA77,
+                "Cortex-A77",
+                0xD10,
+                None,
+            ),
+
+            // Cortex-A78 series
+            0xD11 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A78",
+                MicroArch::ArmCortexA78,
+                "Cortex-A78",
+                0xD11,
+                None,
+            ),
+
+            // Cortex-X1 series
+            0xD13 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-X1",
+                MicroArch::ArmCortexX1,
+                "Cortex-X1",
+                0xD13,
+                None,
+            ),
+
+            // Cortex-X2 series
+            0xD20 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-X2",
+                MicroArch::ArmCortexX2,
+                "Cortex-X2",
+                0xD20,
+                None,
+            ),
+
+            // Cortex-X3 series
+            0xD21 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-X3",
+                MicroArch::ArmCortexX3,
+                "Cortex-X3",
+                0xD21,
+                None,
+            ),
+
+            // Cortex-X4 series
+            0xD22 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-X4",
+                MicroArch::ArmCortexX4,
+                "Cortex-X4",
+                0xD22,
+                None,
+            ),
+
+            // Neoverse E1
+            0xD40 => Self::new(
+                Implementer::Arm,
+                "ARM Neoverse E1",
+                MicroArch::ArmNeoverseE1,
+                "Neoverse E1",
+                0xD40,
+                None,
+            ),
+
+            // Neoverse N1
+            0xD41 => Self::new(
+                Implementer::Arm,
+                "ARM Neoverse N1",
+                MicroArch::ArmNeoverseN1,
+                "Neoverse N1",
+                0xD41,
+                None,
+            ),
+
+            // Neoverse N2
+            0xD42 => Self::new(
+                Implementer::Arm,
+                "ARM Neoverse N2",
+                MicroArch::ArmNeoverseN2,
+                "Neoverse N2",
+                0xD42,
+                None,
+            ),
+
+            // Neoverse V1
+            0xD60 => Self::new(
+                Implementer::Arm,
+                "ARM Neoverse V1",
+                MicroArch::ArmNeoverseV1,
+                "Neoverse V1",
+                0xD60,
+                None,
+            ),
+
+            // Neoverse V2
+            0xD61 => Self::new(
+                Implementer::Arm,
+                "ARM Neoverse V2",
+                MicroArch::ArmNeoverseV2,
+                "Neoverse V2",
+                0xD61,
+                None,
+            ),
+
             _ => Self::default(),
         }
     }
@@ -466,8 +726,50 @@ mod tests {
 
     #[test]
     fn test_non_apple_implementer() {
-        let cpu = CpuArch::find(0x41, 0xD0B, 0x0);
+        let cpu = CpuArch::find(0x41, 0x999, 0x0);
         assert_eq!(cpu.model.as_str(), UNK);
+    }
+
+    #[test]
+    fn test_arm_cortex_a76_find() {
+        let cpu = CpuArch::find(0x41, 0xD0E, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Cortex-A76");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA76);
+    }
+
+    #[test]
+    fn test_arm_cortex_a55_find() {
+        let cpu = CpuArch::find(0x41, 0xD05, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Cortex-A55");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA55);
+    }
+
+    #[test]
+    fn test_arm_cortex_a53_find() {
+        let cpu = CpuArch::find(0x41, 0xD03, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Cortex-A53");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA53);
+    }
+
+    #[test]
+    fn test_arm_cortex_x1_find() {
+        let cpu = CpuArch::find(0x41, 0xD13, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Cortex-X1");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmCortexX1);
+    }
+
+    #[test]
+    fn test_arm_neoverse_n1_find() {
+        let cpu = CpuArch::find(0x41, 0xD41, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Neoverse N1");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmNeoverseN1);
+    }
+
+    #[test]
+    fn test_arm_unknown_part() {
+        let cpu = CpuArch::find(0x41, 0x999, 0x0);
+        assert_eq!(cpu.model.as_str(), UNK);
+        assert_eq!(cpu.micro_arch, MicroArch::Unknown);
     }
 
     #[test]
