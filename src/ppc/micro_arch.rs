@@ -26,15 +26,8 @@ pub enum MicroArch {
     Ppc7460,
     Ppc970,
 
-    // IBM G5 / Apple A10 (PowerPC 970FX variant)
+    // IBM G5
     Ppc970fx,
-
-    // Apple RISC Reduced
-    AppleTitan,
-    AppleApollo,
-    AppleDiana,
-    AppleApollo2,
-    AppleDiana2,
 }
 
 impl From<MicroArch> for String {

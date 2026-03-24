@@ -3,7 +3,6 @@
 use crate::TCpu;
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
 use crate::ppc::micro_arch::CpuArch;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -259,8 +258,6 @@ impl TCpu for Cpu {
                 let l = label(l);
                 print!("{}{}", l, "");
             };
-
-            let cache_sub_label = |l: &str| format!("{:>21}", l);
 
             println!();
             println!("{}", label("Cache"));
