@@ -1,0 +1,91 @@
+# Changelog
+
+## [0.8.5]
+
+### Added
+- Apple Silicon detection with core codenames and cache info
+- Qualcomm CPU mappings
+- PowerPC speed/cache information
+- More ARM core mappings
+- Transmeta CPU support
+- Integration tests using raw CPUID dumps
+- More Zhaoxin CPU support
+- Raw CPUID dump folder for testing/debugging
+
+### Changed
+- Refactored ARM detection to prepare for multiple core types
+- Refactored vendor-specific micro-arch mapping into vendor sub-modules
+- Simplified Linux multi-socket detection via /proc/cpuinfo
+
+## [0.7.6]
+
+### Added
+- Examples folder with output from real systems
+- Another CPU example
+- AMD cache display fix (K5/K6)
+- Socket count detection for Linux
+- Socket count display in DOS (when > 1)
+
+### Changed
+- Refactored mp module to split implementations by OS
+- Re-wrapped __cpuid function in unsafe block for compatibility with older Rust versions
+
+## [0.7.0]
+
+### Added
+- Core/thread count display for DOS
+- Extended topology iteration code
+- Cache multiplier display based on CPID cache share count
+
+### Changed
+- Renamed AMD64 to EM64T for Intel CPUs
+
+### Fixed
+- Intel core/thread count detection
+
+## [0.6.2]
+
+### Added
+- Cyrix-specific matching for fallback cache lookup
+- Associativity to cache output
+- Cores/threads for AMD CPUs
+- Old-style cache lookup for Intel CPUs
+
+### Fixed
+- Logic for determining if Intel cache fallback works
+
+## [0.5.1]
+
+### Added
+- Architecture line to output (i386/i686/x86_64_v1/etc)
+- Cache information display
+- More CPU models
+
+### Changed
+- Reformatted Cyrix-specific block
+
+
+## [0.4.0]
+
+### Added
+- Experimental ARM CPU support
+- Experimental PowerPC (PPC) functionality
+- CPU clock speed display
+- Core 2 Quad detection
+- Topology/cache/speed information lookup
+- AMD extended CPU signature detection (brand_id, pkg_type)
+- Intel overdrive processor detection
+- UMC 486 mappings
+- More CPU mappings and easter eggs
+
+### Changed
+- Removed ufmt dependency
+- Improved formatting of output
+
+## [0.3.9]
+
+### Added
+- Initial release
+- x86/x64 CPU detection
+- Brand and microarchitecture mapping
+- DOS support
