@@ -1,7 +1,8 @@
+use crate::common::UNK;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CENTAUR};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, UNK, is_zhaoxin};
+use crate::cpuid::{CpuSignature, is_zhaoxin};
 
 pub struct Centaur;
 

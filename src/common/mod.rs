@@ -1,6 +1,19 @@
 pub mod cache;
 pub use cache::*;
 
+pub const UNK: &str = "Unknown";
+
+pub trait TCpu {
+    /// Detect the CPU
+    fn detect() -> Self;
+
+    /// Display the Rust debug output of the CPU object
+    fn debug(&self);
+
+    /// Display the CPU information in a table format
+    fn display_table(&self);
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
 pub enum CoreType {
     Super,

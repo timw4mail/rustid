@@ -38,7 +38,8 @@ pub use cpu::*;
 #[cfg(target_arch = "x86")]
 pub use precpuid::*;
 
-pub const UNK: &str = "Unknown";
+use crate::common::UNK;
+
 pub type FeatureList = heapless::Vec<&'static str, 64>;
 
 /// CPUID leaf 0x00000000 - Maximum basic leaf
@@ -150,7 +151,6 @@ pub fn x86_cpuid(leaf: u32) -> Cpuid {
     x86_cpuid_count(leaf, 0)
 }
 
-#[allow(unused_unsafe)]
 #[inline]
 pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     if !has_cpuid() {
@@ -159,7 +159,10 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 
     // I think the latest version of rust just made this a "safe" function.
     // For now, so the very latest version isn't required, I'll wrap in the unsafe block
-    unsafe { __cpuid_count(leaf, sub_leaf).into() }
+    #[allow(unused_unsafe)]
+    unsafe {
+        __cpuid_count(leaf, sub_leaf).into()
+    }
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).

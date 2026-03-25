@@ -3,10 +3,11 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, UNK, read_multi_leaf_str, x86_cpuid};
+use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, read_multi_leaf_str, x86_cpuid};
 use crate::common::cache::Level1Cache;
+use crate::common::{TCpu, UNK};
 
-use crate::{TCpu, println};
+use crate::println;
 
 use core::str::FromStr;
 use heapless::String;

@@ -1,7 +1,8 @@
+use crate::common::UNK;
+use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::VENDOR_AMD;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, UNK};
 
 /// AMD-specific microarchitecture detection.
 pub struct Amd;

@@ -1,6 +1,6 @@
 //! Contains the Cpu struct for PowerPC.
 
-use crate::TCpu;
+use crate::common::TCpu;
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;

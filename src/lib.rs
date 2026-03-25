@@ -62,17 +62,6 @@ pub use dos::*;
 #[cfg(not(target_os = "none"))]
 pub use std::println;
 
-pub trait TCpu {
-    /// Detect the CPU
-    fn detect() -> Self;
-
-    /// Display the Rust debug output of the CPU object
-    fn debug(&self);
-
-    /// Display the CPU information in a table format
-    fn display_table(&self);
-}
-
 fn version() {
     println!("---------------------");
     println!("Rustid version {}", VERSION);
@@ -80,6 +69,8 @@ fn version() {
 }
 
 pub fn cli_main() {
+    use crate::common::TCpu;
+
     #[cfg(target_arch = "x86")]
     {
         use crate::println;
