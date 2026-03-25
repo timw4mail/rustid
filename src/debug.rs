@@ -3,9 +3,5 @@
 
 #[allow(unused)]
 fn main() {
-    #[cfg(not(feature = "debug"))]
     rustid::cli_main();
-
-    #[cfg(feature = "debug")]
-    rustid::debug_main();
 }

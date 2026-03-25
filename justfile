@@ -38,14 +38,23 @@ build:
 build-release:
 	cargo build --release
 
-# Build for DOS
-build-dos:
+_build-dos:
 	# Fetch required tools (if they aren't already installed)
 	@if ! command -v cargo-binutils >/dev/null 2>&1; then cargo install cargo-binutils; fi
 	@if ! rustup component list --installed | grep -q llvm-tools-preview; then rustup component add llvm-tools-preview; fi
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
-	# Cleanup old binary
+	# Cleanup old binaries
 	rm -f rustid.com
+	rm -f drustid.com
+
+_build-dos-debug:
+	# Build initial binary
+	cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --release
+	# Convert to proper DOS com binary
+	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
+
+# Build for DOS
+build-dos: _build-dos _build-dos-debug
 	# Build initial binary
 	cargo +nightly build -Zjson-target-spec --target i486-dos.json --release
 	# Convert to proper DOS com binary
@@ -90,8 +99,8 @@ build-486:
 # Remove build files
 clean:
 	cargo clean
+	rm -f drustid.com
 	rm -f rustid.com
-	rm -f rustid.exe
 
 # Build and run the app
 run arg="":
@@ -108,10 +117,14 @@ run-x86-emu arg="":
 run-dos: build-dos
 	"C:\DOSBox-X\dosbox-x.exe" rustid.com /fastlaunch
 
-# Run the dos build in DOSBox-X
+# Run the dos debug build in DOSBox-X
 [linux, unix]
 run-dos: build-dos
 	dosbox-x rustid.com -fastlaunch
+
+[linux, unix]
+run-dos-debug: build-dos
+	dosbox-x drustid.com -fastlaunch
 
 # Run all the (native) tests
 test:
@@ -122,7 +135,12 @@ coverage:
 	cargo llvm-cov --open --features file_mock -- --test-threads=1
 
 # Run 64 and 32 bit tests (on 64bit platform)
-test-all: test test-x86
+test-all: test test-x86 test-arm
+
+[linux, unix]
+test-arm:
+	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
+	cargo test --target aarch64-unknown-linux-musl --features file_mock -- --test-threads=1
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]

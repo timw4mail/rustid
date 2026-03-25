@@ -66,21 +66,36 @@ fn version() {
     println!("---------------------");
 }
 
+#[cfg(target_arch = "x86")]
+pub fn cyrix_cpuid_check() {
+    use crate::println;
+
+    if cpuid::vendor::Cyrix::can_enable_cpuid() {
+        println!("This CPU has CPUID support, but it is disabled.");
+        println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
+        println!("For DOS, you can download a utility from ");
+        println!("  https://www.deinmeister.de/e_cy6x86cr.htm");
+        println!("If run before rustid, CPUID should be enabled");
+    }
+}
+
+pub fn debug_main() {
+    use crate::common::TCpu;
+
+    #[cfg(target_arch = "x86")]
+    cyrix_cpuid_check();
+
+    let cpu = Cpu::detect();
+
+    version();
+    cpu.debug();
+}
+
 pub fn cli_main() {
     use crate::common::TCpu;
 
     #[cfg(target_arch = "x86")]
-    {
-        use crate::println;
-
-        if cpuid::vendor::Cyrix::can_enable_cpuid() {
-            println!("This CPU has CPUID support, but it is disabled.");
-            println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
-            println!("For DOS, you can download a utility from ");
-            println!("  https://www.deinmeister.de/e_cy6x86cr.htm");
-            println!("If run before rustid, CPUID should be enabled");
-        }
-    }
+    cyrix_cpuid_check();
 
     let cpu = Cpu::detect();
 

@@ -484,7 +484,7 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
 
         #[cfg(target_os = "none")]
-        println!("{:?}", self.topology);
+        println!("{:?}", self);
     }
 
     fn display_table(&self) {

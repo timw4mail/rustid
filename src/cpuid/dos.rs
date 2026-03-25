@@ -20,9 +20,11 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 pub extern "C" fn _start() -> ! {
-    use crate::cli_main;
+    #[cfg(not(feature = "debug"))]
+    crate::cli_main();
 
-    cli_main();
+    #[cfg(feature = "debug")]
+    crate::debug_main();
 
     exit();
 }
