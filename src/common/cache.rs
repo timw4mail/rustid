@@ -1,13 +1,9 @@
 /// Cache type enumeration.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum CacheType {
-    /// Unified cache (contains both code and data)
     Unified,
-    /// Data cache
     Data,
-    /// Instruction cache
     Instruction,
-    /// Invalid/uninitialized cache type
     #[default]
     Invalid,
 }
@@ -49,13 +45,9 @@ impl CacheLevel {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Level1Cache {
-    /// Unified L1 cache containing both code and data
     Unified(CacheLevel),
-    /// Split L1 cache with separate data and instruction caches
     Split {
-        /// Data cache
         data: CacheLevel,
-        /// Instruction cache
         instruction: CacheLevel,
     },
 }
@@ -136,10 +128,7 @@ impl Default for Level1Cache {
 /// Complete cache hierarchy information for a processor.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Cache {
-    /// Level 1 cache configuration
     pub l1: Level1Cache,
-    /// Level 2 cache (if present)
     pub l2: Option<CacheLevel>,
-    /// Level 3 cache (if present)
     pub l3: Option<CacheLevel>,
 }

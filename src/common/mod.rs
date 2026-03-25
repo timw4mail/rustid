@@ -22,6 +22,7 @@ pub enum CoreType {
     Efficiency,
 }
 
+#[cfg(not(target_os = "none"))]
 impl From<String> for CoreType {
     fn from(val: String) -> Self {
         match val.as_str() {
@@ -33,6 +34,7 @@ impl From<String> for CoreType {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 impl From<CoreType> for String {
     fn from(val: CoreType) -> Self {
         let s = match val {
@@ -48,7 +50,13 @@ impl From<CoreType> for String {
 #[derive(Debug, Default, PartialEq)]
 pub struct CpuCore {
     pub kind: CoreType,
+
+    #[cfg(not(target_os = "none"))]
     pub name: Option<String>,
+    #[cfg(target_os = "none")]
+    pub name: Option<heapless::String<64>>,
+
     pub cache: Option<Cache>,
+
     pub count: usize,
 }

@@ -146,39 +146,3 @@ pub fn peek_u16(seg: u16, off: u16) -> u16 {
     }
     val
 }
-
-/// Reads a 32-bit dword from a segmented memory address.
-#[inline(never)]
-pub fn peek_u32(seg: u16, off: u16) -> u32 {
-    let val: u32;
-    unsafe {
-        asm!(
-            "push es",
-            "mov es, {0:x}",
-            "mov eax, es:[bx]",
-            "pop es",
-            in(reg) seg,
-            in("bx") off,
-            out("eax") val,
-            options(preserves_flags)
-        );
-    }
-    val
-}
-
-/// Writes a 32-bit dword to a segmented memory address.
-#[inline(never)]
-pub fn poke_u32(seg: u16, off: u16, val: u32) {
-    unsafe {
-        core::arch::asm!(
-            "push es",
-            "mov es, {0:x}",
-            "mov es:[bx], eax",
-            "pop es",
-            in(reg) seg,
-            in("bx") off,
-            in("eax") val,
-            options(preserves_flags)
-        );
-    }
-}

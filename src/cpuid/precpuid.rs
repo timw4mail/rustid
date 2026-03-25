@@ -31,6 +31,7 @@ pub fn get_pre_cpuid_vendor() -> &'static str {
 }
 
 /// Returns true if the CPU is an AMD 386 (detected via DIV overflow behavior).
+#[inline(never)]
 pub fn amd_386_test() -> bool {
     // This is a known difference between Intel and AMD 386s.
     // AMD 386s set ZF on certain division overflows where Intel 386s don't.
@@ -133,6 +134,7 @@ pub fn cyrix_5_2_test() -> bool {
 ///
 /// AMD 486 processors have a unique behavior where the DIV instruction
 /// clears the Carry Flag (CF), whereas on Intel 486 it is undefined or unchanged.
+#[inline(never)]
 pub fn amd_486_test() -> bool {
     let flags: u16;
     unsafe {
@@ -151,6 +153,7 @@ pub fn amd_486_test() -> bool {
     (flags & 0x01) == 0
 }
 /// Returns true if the CR0 Extended Type (ET) bit is set and hardwired (typical for Intel 486).
+#[inline(never)]
 pub fn intel_cr0_test() -> bool {
     let result: u32;
     unsafe {
@@ -174,6 +177,7 @@ pub fn intel_cr0_test() -> bool {
 /// This call is supported on IBM PS/2 and compatible BIOSes for 386+ processors.
 /// Returns (component_id, revision) if supported, otherwise (0, 0).
 #[cfg(target_os = "none")]
+#[inline(never)]
 pub fn get_bios_signature() -> (u8, u8) {
     let type_rev: u16;
     let success: u16;
