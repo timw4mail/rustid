@@ -1,6 +1,6 @@
 //! Contains the Cpu struct for ARM.
 use super::brand::Vendor;
-pub use crate::arm::micro_arch::*;
+use super::micro_arch::*;
 use crate::common::*;
 use std::collections::BTreeMap;
 
