@@ -1,19 +1,20 @@
+#![cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 //! ARM CPU detection.
 
 mod brand;
 pub mod cpu;
 pub mod micro_arch;
 
-#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+#[cfg(not(target_os = "macos"))]
 pub use cpu::*;
 
 // ----------------------------------------------------------------------------
 // ! MacOS
 // ----------------------------------------------------------------------------
 
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(target_os = "macos")]
 pub mod apple;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(target_os = "macos")]
 pub use apple::*;
 
 // ----------------------------------------------------------------------------
