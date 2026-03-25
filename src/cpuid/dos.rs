@@ -31,12 +31,12 @@ pub extern "C" fn _start() -> ! {
 #[macro_export]
 macro_rules! print {
     ($s:literal) => {
-        $crate::dos::_print_str($s)
+        $crate::cpuid::dos::_print_str($s)
     };
     ($($arg:tt)*) => {
         {
             use core::fmt::Write;
-            let _ = write!(&mut $crate::dos::DosWriter {}, $($arg)*);
+            let _ = write!(&mut $crate::cpuid::dos::DosWriter {}, $($arg)*);
         }
     };
 }

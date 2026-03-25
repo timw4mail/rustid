@@ -262,7 +262,7 @@ impl MpTable {
 
     #[inline(never)]
     fn check_sig(seg: u16, off: u16, sig: &[u8; 4]) -> bool {
-        use crate::dos::peek_u8;
+        use crate::cpuid::dos::peek_u8;
 
         peek_u8(seg, off) == sig[0]
             && peek_u8(seg, off + 1) == sig[1]
@@ -272,7 +272,7 @@ impl MpTable {
 
     #[inline(never)]
     fn parse_config_table(config_ptr: u32) -> Option<usize> {
-        use crate::dos::{peek_u8, peek_u16};
+        use crate::cpuid::dos::{peek_u8, peek_u16};
 
         if config_ptr == 0 || config_ptr > 0xFFF00 {
             return None;
@@ -329,7 +329,7 @@ impl MpTable {
 
     #[inline(never)]
     fn scan_range(seg: u16, start_off: u16, length: u16) -> Option<MpFloatingPointer> {
-        use crate::dos::peek_u8;
+        use crate::cpuid::dos::peek_u8;
 
         for off in (start_off..(start_off.saturating_add(length))).step_by(16) {
             if Self::check_sig(seg, off, &MP_SIGNATURE) {
@@ -364,7 +364,7 @@ impl MpTable {
 
     #[inline(never)]
     fn get_ebda_seg() -> Option<u16> {
-        use crate::dos::peek_u16;
+        use crate::cpuid::dos::peek_u16;
         use core::arch::asm;
 
         let es_val: u16;

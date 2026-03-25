@@ -55,9 +55,7 @@ pub mod arm;
 pub use arm::Cpu;
 
 #[cfg(target_os = "none")]
-pub mod dos;
-#[cfg(target_os = "none")]
-pub use dos::*;
+pub use cpuid::dos::*;
 
 #[cfg(not(target_os = "none"))]
 pub use std::println;

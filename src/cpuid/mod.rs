@@ -18,6 +18,9 @@ pub mod cache;
 
 pub mod cpu;
 
+#[cfg(target_os = "none")]
+pub mod dos;
+
 pub mod micro_arch;
 
 pub mod mp;
