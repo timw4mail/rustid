@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.5]
+## [0.8.6]
 
 ### Added
 - Apple Silicon detection with core codenames and cache info
