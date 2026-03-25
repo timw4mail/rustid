@@ -1,7 +1,7 @@
 use super::brand::*;
 use super::micro_arch::*;
-use crate::TCpu;
-use crate::common::cache::*;
+use crate::common::*;
+use crate::common::{TCpu, UNK};
 use std::collections::BTreeMap;
 use std::process::Command;
 
