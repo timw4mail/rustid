@@ -14,7 +14,7 @@
 //!
 //! ```
 //! use rustid::Cpu;
-//! use rustid::TCpu;
+//! use rustid::common::TCpu;
 //!
 //! let cpu = Cpu::detect();
 //! cpu.display_table();
