@@ -56,7 +56,6 @@ pub use arm::Cpu;
 
 #[cfg(target_os = "none")]
 pub mod dos;
-
 #[cfg(target_os = "none")]
 pub use dos::*;
 

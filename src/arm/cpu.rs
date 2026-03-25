@@ -64,8 +64,6 @@ impl TCpu for Cpu {
             simple_line("Process", tech);
         }
 
-        let cache_count = |_share_count: u32| String::new();
-
         [CoreType::Super, CoreType::Performance, CoreType::Efficiency]
             .iter()
             .for_each(|k| {
