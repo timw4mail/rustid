@@ -2,7 +2,8 @@ set unstable
 
 # Lists the available actions
 default:
-	echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus"
+	@echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus/cores/threads"
+	@rustup default
 	@just --list
 
 base_run := if arch() == "powerpc" || "powerpc64" { "cargo +nightly run -Z build-std" } else { "cargo run" }
@@ -17,7 +18,7 @@ check:
 
 # More in-depth code style checking
 lint:
-	cargo clippy
+	cargo clippy --all-targets
 
 # Fix linting erros
 fix:
@@ -138,15 +139,21 @@ coverage:
 test-all: test test-x86 test-arm
 
 [linux, unix]
-test-arm:
+test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo test --target aarch64-unknown-linux-musl --features file_mock -- --test-threads=1
+	cargo cross test --target aarch64-unknown-linux-musl --features file_mock -- --test-threads=1
+
+[windows]
+test-arm: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
+	cargo cross test --target aarch64-pc-windows-gnu --features file_mock -- --test-threads=1
+
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]
-test-x86:
+test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo test --target i686-unknown-linux-musl --features file_mock -- --test-threads=1
+	cargo cross test --target i686-unknown-linux-musl --features file_mock -- --test-threads=1
 
 # Run tests for 32-bit x86
 [windows]

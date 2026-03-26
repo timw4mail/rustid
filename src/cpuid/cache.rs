@@ -733,7 +733,7 @@ mod tests {
 
     #[test]
     fn test_amd_assoc() {
-        assert_eq!(Cache::amd_assoc((0x00000000 >> 16) & 0xF), 0);
+        assert_eq!(Cache::amd_assoc(0), 0);
         assert_eq!(Cache::amd_assoc((0x00010000 >> 16) & 0xF), 2);
         assert_eq!(Cache::amd_assoc((0x00020000 >> 16) & 0xF), 4);
         assert_eq!(Cache::amd_assoc((0x00030000 >> 16) & 0xF), 8);
