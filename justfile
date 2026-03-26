@@ -116,16 +116,16 @@ run-x86-emu arg="":
 # Run the dos build in DOSBox-X
 [windows]
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" rustid.com /fastlaunch
+	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.com
 
 # Run the dos debug build in DOSBox-X
 [linux, unix]
 run-dos: build-dos
-	dosbox-x rustid.com -fastlaunch
+	dosbox-x . -fastlaunch rustid.com
 
 [linux, unix]
 run-dos-debug: build-dos
-	dosbox-x drustid.com -fastlaunch
+	dosbox-x . -fastlaunch drustid.com
 
 # Run all the (native) tests
 test:

@@ -22,6 +22,7 @@ impl CpuidProvider for MockCpuidProvider {
 
 fn raw_path(segment: &str) -> PathBuf {
     let mut path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    path.push("tests");
     path.push("raw");
     path.push(segment);
 
