@@ -7,21 +7,21 @@
 use super::*;
 
 /// Returns the CPU vendor for 386/486-class processors without CPUID support.
-pub fn get_pre_cpuid_vendor() -> &'static str {
+pub fn get_vendor_by_quirk() -> &'static str {
     if is_486() {
-        if cyrix_5_2_test() {
+        if has_cyrix_5_2_quirk() {
             return VENDOR_CYRIX;
         }
 
-        if amd_486_test() {
+        if has_amd_486_quirk() {
             return VENDOR_AMD;
         }
 
-        if intel_cr0_test() {
+        if has_intel_cr0_quirk() {
             return VENDOR_INTEL;
         }
     } else if is_386() {
-        if amd_386_test() {
+        if has_amd_386_quirk() {
             return VENDOR_AMD;
         }
         return VENDOR_INTEL;
@@ -32,7 +32,7 @@ pub fn get_pre_cpuid_vendor() -> &'static str {
 
 /// Returns true if the CPU is an AMD 386 (detected via DIV overflow behavior).
 #[inline(never)]
-pub fn amd_386_test() -> bool {
+pub fn has_amd_386_quirk() -> bool {
     // This is a known difference between Intel and AMD 386s.
     // AMD 386s set ZF on certain division overflows where Intel 386s don't.
     // Or rather, there's an errata/difference in how they handle flags in corner cases.
@@ -111,7 +111,7 @@ fn is_ac_flag_supported() -> bool {
 ///
 /// Cyrix processors are unique in that they do not modify flags during a `div`
 /// instruction, whereas other x86 processors do.
-pub fn cyrix_5_2_test() -> bool {
+pub fn has_cyrix_5_2_quirk() -> bool {
     let flags: u8;
     unsafe {
         core::arch::asm!(
@@ -135,7 +135,7 @@ pub fn cyrix_5_2_test() -> bool {
 /// AMD 486 processors have a unique behavior where the DIV instruction
 /// clears the Carry Flag (CF), whereas on Intel 486 it is undefined or unchanged.
 #[inline(never)]
-pub fn amd_486_test() -> bool {
+pub fn has_amd_486_quirk() -> bool {
     let flags: u16;
     unsafe {
         core::arch::asm!(
@@ -154,7 +154,7 @@ pub fn amd_486_test() -> bool {
 }
 /// Returns true if the CR0 Extended Type (ET) bit is set and hardwired (typical for Intel 486).
 #[inline(never)]
-pub fn intel_cr0_test() -> bool {
+pub fn has_intel_cr0_quirk() -> bool {
     let result: u32;
     unsafe {
         core::arch::asm!(

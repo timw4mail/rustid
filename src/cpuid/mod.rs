@@ -33,13 +33,13 @@ pub mod topology;
 pub mod vendor;
 
 #[cfg(target_arch = "x86")]
-pub mod precpuid;
+pub mod quirks;
 
 pub use brand::*;
 pub use cpu::*;
 
 #[cfg(target_arch = "x86")]
-pub use precpuid::*;
+pub use quirks::*;
 
 use crate::common::UNK;
 
@@ -256,7 +256,7 @@ pub fn vendor_str() -> heapless::String<12> {
     if !has_cpuid() {
         use core::str::FromStr;
 
-        let v = get_pre_cpuid_vendor();
+        let v = get_vendor_by_quirk();
 
         return heapless::String::from_str(v).unwrap();
     }
