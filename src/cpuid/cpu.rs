@@ -6,7 +6,6 @@ use super::topology::Topology;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, read_multi_leaf_str, x86_cpuid};
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
-
 use crate::println;
 
 use core::str::FromStr;
@@ -137,44 +136,10 @@ impl CpuSignature {
         if !from_cpuid {
             #[cfg(target_os = "none")]
             {
-                let (family, stepping) = super::get_bios_signature();
-                if family != 0 {
-                    // Normalize common values (e.g., 386SX=0x23 -> family=3)
-                    let display_family = match family {
-                        0x23 => 3,
-                        0xA3 => 3,
-                        0xA4 => 4,
-                        _ => family as u32,
-                    };
-
-                    return Self {
-                        extended_model: 0,
-                        extended_family: 0,
-                        family: display_family,
-                        model: 0, // Model info is limited in BIOS call
-                        stepping: stepping as u32,
-                        display_family,
-                        display_model: 0,
-                        is_overdrive: false,
-                        from_cpuid,
-                    };
+                if let Some(reset_sig) = super::get_reset_signature() {
+                    return reset_sig;
                 }
             }
-
-            // let family = if super::is_486() || super::is_cyrix() {
-            //     4
-            // } else if super::is_386() {
-            //     3
-            // } else {
-            //     0
-            // };
-            //
-            // return Self {
-            //     family,
-            //     display_family: family,
-            //     from_cpuid,
-            //     ..Self::default()
-            // };
         }
 
         let res = x86_cpuid(1);
@@ -324,10 +289,6 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String<64> {
-        if &self.arch.model != "Unknown" {
-            return self.arch.model.clone();
-        }
-
         #[cfg(target_arch = "x86")]
         if super::is_cyrix() {
             return super::vendor::Cyrix::model_string();
@@ -338,12 +299,16 @@ impl Cpu {
             return model_name;
         }
 
+        if self.arch.model != UNK {
+            return self.arch.model.clone();
+        }
+
         #[cfg(target_arch = "x86")]
-        if self.signature == CpuSignature::default() || !super::has_cpuid() {
+        if CpuBrand::detect() == CpuBrand::Unknown {
             let s = if super::is_386() {
-                "386 Class CPU"
+                "'Classic' 386"
             } else {
-                "486 Class CPU"
+                "'Classic' 486"
             };
 
             return String::from_str(s).unwrap();
@@ -352,11 +317,14 @@ impl Cpu {
         let s = match self.arch.micro_arch {
             // AMD
             MicroArch::Am486 => match self.arch.code_name {
+                "Am486DX" => "AMD 486 DX",
+                "Am486DX-40" => "AMD 486 DX-40",
+                "Am486SX" => "AMD 486 SX",
                 "Am486DX2" => "AMD 486 DX2",
                 "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
                 "Am486DX4" => "AMD 486 DX4",
                 "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
-                _ => "486 Class CPU",
+                _ => "'Classic' 486",
             },
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
 
@@ -372,7 +340,7 @@ impl Cpu {
                 "i80486DX2WB" => "Intel 486 DX2 with Write-Back Cache",
                 "i80486DX4" => "Intel 486 DX4",
                 "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
-                _ => "486 Class CPU",
+                _ => "'Classic' 486",
             },
             MicroArch::P5 => {
                 if super::has_mmx() {
@@ -461,15 +429,12 @@ impl TCpu for Cpu {
     /// Performs full CPU detection including architecture, microarchitecture,
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
+        let sig = CpuSignature::detect();
         Self {
-            arch: CpuArch::find(
-                Self::raw_model_string().as_str(),
-                CpuSignature::detect(),
-                &super::vendor_str(),
-            ),
+            arch: CpuArch::find(Self::raw_model_string().as_str(), sig, &super::vendor_str()),
             easter_egg: Self::easter_egg(),
             brand_id: super::get_brand_id(),
-            signature: CpuSignature::detect(),
+            signature: sig,
             ext_signature: match super::is_amd() {
                 true => Some(ExtendedSignature::detect()),
                 false => None,
@@ -519,9 +484,7 @@ impl TCpu for Cpu {
         simple_line("Architecture", FeatureClass::detect().to_str());
 
         // Vendor_string (brand_name)
-        if self.arch.vendor_string.is_empty() && self.arch.brand_name == UNK {
-            simple_line("Vendor", "Unknown");
-        } else {
+        if self.arch.brand_name != UNK {
             println!(
                 "{}{} ({})",
                 label("Vendor"),

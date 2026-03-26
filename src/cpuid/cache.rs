@@ -20,6 +20,10 @@ impl Cache {
     ///
     /// Returns `None` if cache information cannot be determined.
     pub fn detect() -> Option<Self> {
+        if !has_cpuid() {
+            return None;
+        }
+
         match vendor_str().as_str() {
             VENDOR_AMD => match is_valid_leaf(EXT_LEAF_1D) {
                 true => Cache::detect_general(EXT_LEAF_1D),

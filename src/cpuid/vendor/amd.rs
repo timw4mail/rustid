@@ -21,6 +21,9 @@ impl TMicroArch for Amd {
             s.stepping,
         ) {
             // 486
+            (0, 4, 0, 0, _) => brand_arch(MicroArch::Am486, "Am486DX", None),
+            (0, 4, 0, 1, _) => brand_arch(MicroArch::Am486, "Am486DX-40", None),
+            (0, 4, 0, 2, _) => brand_arch(MicroArch::Am486, "Am486SX", None),
             (0, 4, 0, 3, _) => brand_arch(MicroArch::Am486, "Am486DX2", None),
             (0, 4, 0, 7, _) => brand_arch(MicroArch::Am486, "Am486X2WB", None),
             (0, 4, 0, 8, _) => brand_arch(MicroArch::Am486, "Am486DX4", None),

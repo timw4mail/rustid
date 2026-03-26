@@ -76,7 +76,22 @@ impl Cyrix {
         let dir0 = read_ccr(0xFE);
         let dir1 = read_ccr(0xFF);
 
+        let dir0 = if dir0 == 0xFF || dir0 == 0x00 {
+            Self::get_device_id_from_signature()
+        } else {
+            dir0
+        };
+
         (dir0, dir1)
+    }
+
+    fn get_device_id_from_signature() -> u8 {
+        let signature = CpuSignature::detect();
+
+        match (signature.family, signature.model) {
+            (3, 2) => 0x01,
+            _ => 0,
+        }
     }
 
     pub fn get_feature_class() -> FeatureClass {
@@ -244,6 +259,7 @@ impl TMicroArch for Cyrix {
             s.model,
             s.stepping,
         ) {
+            (0, 3, 0, 2, _) => brand_arch(MicroArch::Cy486DLC, "M0.5", None),
             (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
             (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
             (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),

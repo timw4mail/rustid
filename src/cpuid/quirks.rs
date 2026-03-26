@@ -65,9 +65,6 @@ pub fn has_amd_386_quirk() -> bool {
 
 /// Returns true if the CPU is at least a 386-class processor.
 ///
-/// This is determined by checking if the AC (Alignment Check) flag in EFLAGS
-/// can be toggled. 386 CPUs do not support this, while 486 and newer do.
-///
 /// Verified on real hardware
 pub fn is_386() -> bool {
     !is_ac_flag_supported()
@@ -172,33 +169,159 @@ pub fn has_intel_cr0_quirk() -> bool {
     (result & 0x10) != 0
 }
 
-/// Retrieves the CPU Type (component) and Mask Revision via BIOS INT 15h, AH=C9h.
+/// Attempts to retrieve the CPU signature (EDX value at reset) by performing a soft reset.
 ///
-/// This call is supported on IBM PS/2 and compatible BIOSes for 386+ processors.
-/// Returns (component_id, revision) if supported, otherwise (0, 0).
+/// This method uses the CMOS shutdown byte (0x0F) set to 0x0A, which tells the BIOS
+/// to jump to the address stored at 0040:0067h after reset.
+///
+/// **WARNING**: This is extremely disruptive as it resets the CPU. It is only
+/// suitable for environments where the caller can handle a full CPU reset and
+/// subsequent return to the code.
+///
+/// Verified on some 386/486 systems.
 #[cfg(target_os = "none")]
-#[inline(never)]
-pub fn get_bios_signature() -> (u8, u8) {
-    let type_rev: u16;
-    let success: u16;
+#[allow(static_mut_refs)]
+pub fn get_reset_signature() -> Option<CpuSignature> {
+    static mut RESET_DONE: bool = false;
+    static mut CACHED_SIG: Option<CpuSignature> = None;
+    static mut SAVED_EDX: u32 = 0;
+    static mut SAVED_SS: u16 = 0;
+    static mut SAVED_SP: u16 = 0;
+    static mut SAVED_BP: u16 = 0;
+    static mut SAVED_SI: u16 = 0;
+    static mut SAVED_DI: u16 = 0;
+    static mut SAVED_BX: u16 = 0;
+
+    unsafe {
+        if RESET_DONE {
+            return CACHED_SIG.clone();
+        }
+        RESET_DONE = true;
+    }
+
     unsafe {
         core::arch::asm!(
-            "xor ax, ax",
-            "mov ah, 0xC9",
-            "int 0x15",
-            "mov {0:x}, cx",
-            "sbb ax, ax",
-            out(reg) type_rev,
-            out("ax") success,
-            out("bx") _,
-            out("dx") _,
-            out("di") _,
+        "cli",
+
+        // Save all important registers to static memory
+        "mov word ptr ds:[{ss_ptr}], ss",
+        "mov word ptr ds:[{sp_ptr}], sp",
+        "mov word ptr ds:[{bp_ptr}], bp",
+        "mov word ptr ds:[{si_ptr}], si",
+        "mov word ptr ds:[{di_ptr}], di",
+        "mov word ptr ds:[{bx_ptr}], bx",
+
+        // 1. Set the warm boot pointer at 0040:0067h
+        "mov ax, 0x40",
+        "mov es, ax",
+        "lea ax, [2f]",      // Get offset of label 2 forward
+        "mov word ptr es:[0x67], ax",
+        "mov word ptr es:[0x69], cs",
+
+        // 2. Set CMOS shutdown byte to 0x0A (Jump to 40:67 after reset)
+        "mov al, 0x0F",
+        "out 0x70, al",
+        "out 0xEB, al", // IO delay
+        "mov al, 0x0A",
+        "out 0x71, al",
+        "out 0xEB, al", // IO delay
+
+        // 3. Trigger Reset
+        // Method 1: Fast Reset via Port 0x92
+        "in al, 0x92",
+        "or al, 1",
+        "out 0x92, al",
+        "out 0xEB, al", // IO delay
+
+        // Method 2: Keyboard Controller Reset (Port 0x64)
+        "mov cx, 0xFFFF",
+        "4:",
+        "in al, 0x64",
+        "test al, 2",
+        "jz 5f",
+        "loop 4b",
+        "5:",
+        "mov al, 0xFE",
+        "out 0x64, al",
+
+        "3: hlt",
+        "jmp 3b",
+
+        "2:",
+        // --- We are now back after reset ---
+        // IMMEDIATELY restore DS/ES so we can access our variables
+        "mov ax, cs",
+        "mov ds, ax",
+        "mov es, ax",
+
+        // Capture EDX immediately
+        "mov dword ptr ds:[{edx_ptr}], edx",
+
+        // Restore stack and other registers
+        "mov ss, word ptr ds:[{ss_ptr}]",
+        "mov sp, word ptr ds:[{sp_ptr}]",
+        "mov bp, word ptr ds:[{bp_ptr}]",
+        "mov si, word ptr ds:[{si_ptr}]",
+        "mov di, word ptr ds:[{di_ptr}]",
+        "mov bx, word ptr ds:[{bx_ptr}]",
+
+        // Cleanup: Clear CMOS shutdown byte
+        "mov al, 0x0F",
+        "out 0x70, al",
+        "xor al, al",
+        "out 0x71, al",
+
+        "sti",
+        ss_ptr = sym SAVED_SS,
+        sp_ptr = sym SAVED_SP,
+        bp_ptr = sym SAVED_BP,
+        si_ptr = sym SAVED_SI,
+        di_ptr = sym SAVED_DI,
+        bx_ptr = sym SAVED_BX,
+        edx_ptr = sym SAVED_EDX,
+        out("ax") _,
+        out("cx") _,
         );
     }
 
-    if success == 0 {
-        ((type_rev >> 8) as u8, (type_rev & 0xFF) as u8)
-    } else {
-        (0, 0)
+    let raw_sig = unsafe { SAVED_EDX };
+
+    if raw_sig == 0 || raw_sig == 0xFFFFFFFF {
+        return None;
     }
+
+    let stepping = raw_sig & 0xF;
+    let model = (raw_sig >> 4) & 0xF;
+    let family = (raw_sig >> 8) & 0xF;
+    let ext_model = (raw_sig >> 16) & 0xF;
+    let ext_family = (raw_sig >> 20) & 0xFF;
+
+    let display_family = if family == 0xF {
+        family + ext_family
+    } else {
+        family
+    };
+    let display_model = if family == 0x6 || family == 0xF {
+        (ext_model << 4) + model
+    } else {
+        model
+    };
+
+    let sig = CpuSignature {
+        extended_family: ext_family,
+        family,
+        extended_model: ext_model,
+        model,
+        stepping,
+        display_family,
+        display_model,
+        is_overdrive: false,
+        from_cpuid: false,
+    };
+
+    unsafe {
+        CACHED_SIG = Some(sig.clone());
+    }
+
+    Some(sig)
 }

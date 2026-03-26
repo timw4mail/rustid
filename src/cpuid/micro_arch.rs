@@ -72,6 +72,7 @@ pub enum MicroArch {
     Lujiazui,
 
     // Cyrix
+    Cy486DLC,
     Cy5x86,
     M1,
     M2,
@@ -85,6 +86,7 @@ pub enum MicroArch {
 
     // Intel
     I486,
+    RapidCad,
     P5,
     Lakemont,
     // ! P6 start
@@ -202,6 +204,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::Lujiazui => "LuJiaZui",
 
             // Cyrix
+            MicroArch::Cy486DLC => "486DLC",
             MicroArch::Cy5x86 => "5x86",
             MicroArch::M1 => "M1",
             MicroArch::M2 => "M2",
@@ -215,6 +218,7 @@ impl From<MicroArch> for String<64> {
 
             // Intel
             MicroArch::I486 => "i486",
+            MicroArch::RapidCad => "RapidCad",
             MicroArch::P5 => "P5",
             MicroArch::Lakemont => "Lakemont",
             MicroArch::PentiumPro | MicroArch::PentiumII | MicroArch::PentiumIII => "P6",
@@ -415,6 +419,17 @@ impl CpuArch {
                 (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
 
                 (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            },
+
+            #[cfg(target_arch = "x86")]
+            CpuBrand::Unknown => match (s.family, s.model, s.stepping) {
+                (3, 4, 0) => arch(
+                    MicroArch::RapidCad,
+                    "RapidCad",
+                    CpuBrand::from(VENDOR_INTEL).to_brand_name(),
+                    None,
+                ),
+                _ => arch(MicroArch::Unknown, UNK, UNK, None),
             },
 
             #[cfg(target_arch = "x86")]
