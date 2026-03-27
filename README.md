@@ -1,19 +1,20 @@
 # Rustid
 
-A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets.
+A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets. There is also some support for ARM and PowerPC cpu detection.
 
 ### AI Disclaimer:
 
 This application is developed using *some* AI, mostly related to:
 
-* Project scaffolding
 * DOS Build
 * Assembly code
 
 ## Features
 
-- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, and more.
-- **Feature Flag Reporting:** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
+- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, and PowerPC.
+- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
+- **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
+- **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 
 ## Getting Started
@@ -37,6 +38,9 @@ just build-dos
 ```
 This produces a `rustid.com` binary compatible with DOS environments (like DOSBox-X).
 
+**Cross-Compilation:**
+For other architectures, see the `justfile` for available targets (`just build-arm64`, `just build-ppc`, etc). Cross-compilation should be considered experimental.
+
 ## Usage
 
 Simply run the compiled binary to see your CPU details:
@@ -45,10 +49,11 @@ Simply run the compiled binary to see your CPU details:
 cargo run
 ```
 
-Example Output:
+Output varies by architecture. Here is an example for x86_64:
+
 ```text
 ---------------------
-Rustid version 0.7.6
+Rustid version 0.9.0
 ---------------------
 
   Architecture: x86_64_v4
@@ -75,8 +80,10 @@ Rustid version 0.7.6
      Signature: Family 19h, Model 61h, Stepping 2h
                 (10, 15, 6, 1, 2)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C 
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C
 ```
+
+For ARM and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
 
 ## Information References
 

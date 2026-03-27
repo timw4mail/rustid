@@ -61,7 +61,7 @@ pub fn has_amd_386_quirk() -> bool {
     (flags & 0xf000) != 0xf000
 }
 
-/// Returns true if the CPU is at least a 386-class processor.
+/// Returns true if the CPU is a 386-class processor.
 ///
 /// Verified on real hardware
 pub fn is_386() -> bool {
