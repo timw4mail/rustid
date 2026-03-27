@@ -90,6 +90,8 @@ impl Cyrix {
 
         match (signature.family, signature.model) {
             (3, 2) => 0x01,
+            (4, 5) => 0x10,
+            (4, 8) => 0x1B,
             _ => 0,
         }
     }
@@ -253,18 +255,18 @@ impl TMicroArch for Cyrix {
         };
 
         match (
-            s.extended_family,
             s.family,
-            s.extended_model,
             s.model,
             s.stepping,
         ) {
-            (0, 3, 0, 2, _) => brand_arch(MicroArch::Cy486DLC, "M0.5", None),
-            (0, 4, 0, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
-            (0, 5, 0, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
-            (0, 6, 0, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
+            (3, 2, _) => brand_arch(MicroArch::Cx486DLC, Cyrix::codename(), None),
+            (4, 5, _) => brand_arch(MicroArch::Cx486S, Cyrix::codename(), None),
+            (4, 8, _) => brand_arch(MicroArch::Cx486DX, Cyrix::codename(), None),
+            (4, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
+            (5, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
+            (5, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
+            (6, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
+            _ => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
         }
     }
 }

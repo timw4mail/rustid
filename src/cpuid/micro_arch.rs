@@ -72,7 +72,9 @@ pub enum MicroArch {
     Lujiazui,
 
     // Cyrix
-    Cy486DLC,
+    Cx486DX,
+    Cx486S,
+    Cx486DLC,
     Cy5x86,
     M1,
     M2,
@@ -204,7 +206,9 @@ impl From<MicroArch> for String<64> {
             MicroArch::Lujiazui => "LuJiaZui",
 
             // Cyrix
-            MicroArch::Cy486DLC => "486DLC",
+            MicroArch::Cx486DLC => "486DLC",
+            MicroArch::Cx486DX => "486DX",
+            MicroArch::Cx486S => "486S",
             MicroArch::Cy5x86 => "5x86",
             MicroArch::M1 => "M1",
             MicroArch::M2 => "M2",

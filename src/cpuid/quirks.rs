@@ -8,23 +8,20 @@ use super::*;
 
 /// Returns the CPU vendor for 386/486-class processors without CPUID support.
 pub fn get_vendor_by_quirk() -> &'static str {
-    if is_486() {
-        if has_cyrix_5_2_quirk() {
-            return VENDOR_CYRIX;
-        }
+    if is_386() {
+        return UNK;
+    }
 
-        if has_amd_486_quirk() {
-            return VENDOR_AMD;
-        }
+    if has_cyrix_5_2_quirk() {
+        return VENDOR_CYRIX;
+    }
 
-        if has_intel_cr0_quirk() {
-            return VENDOR_INTEL;
-        }
-    } else if is_386() {
-        if has_amd_386_quirk() {
-            return VENDOR_AMD;
-        }
+    if has_intel_cr0_quirk() {
         return VENDOR_INTEL;
+    }
+
+    if has_amd_486_quirk() {
+        return VENDOR_AMD;
     }
 
     UNK
@@ -44,6 +41,7 @@ pub fn has_amd_386_quirk() -> bool {
     let flags: u16;
     unsafe {
         core::arch::asm!(
+            "cli",
             "pushf",
             "pop ax",
             "mov cx, ax",
@@ -128,15 +126,13 @@ pub fn has_cyrix_5_2_quirk() -> bool {
 }
 
 /// Returns true if the CPU is an AMD processor (detected via DIV flag behavior).
-///
-/// AMD 486 processors have a unique behavior where the DIV instruction
-/// clears the Carry Flag (CF), whereas on Intel 486 it is undefined or unchanged.
 #[inline(never)]
 pub fn has_amd_486_quirk() -> bool {
     let flags: u16;
     unsafe {
         core::arch::asm!(
-            "stc",          // Set Carry Flag
+            "cli",
+            "stc",          // Set Carry Flag (CF=1)
             "mov ax, 5",
             "mov bl, 2",
             "div bl",
@@ -155,6 +151,7 @@ pub fn has_intel_cr0_quirk() -> bool {
     let result: u32;
     unsafe {
         core::arch::asm!(
+            "cli",
             "mov eax, cr0",
             "mov ecx, eax",
             "and eax, 0xffffffef", // Try to clear bit 4 (ET)

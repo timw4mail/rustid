@@ -449,7 +449,14 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
 
         #[cfg(target_os = "none")]
-        println!("{:?}", self);
+        {
+            use super::is_cyrix;
+
+            println!("{:?}", self.arch);
+            if is_cyrix() {
+                println!("{:?}", super::vendor::Cyrix::detect());
+            }
+        }
     }
 
     fn display_table(&self) {
@@ -795,7 +802,7 @@ mod tests {
             features: get_feature_list(),
             topology: Topology::default(),
         };
-        assert_eq!(cpu_no_cpuid.display_model_string(), "486 Class CPU");
+        assert_eq!(cpu_no_cpuid.display_model_string(), UNK);
     }
 
     #[test]
