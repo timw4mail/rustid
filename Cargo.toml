@@ -6,6 +6,7 @@ authors = ["Timothy J. Warren <tim@timshome.page>"]
 description = "A utility to identify the name and properties of the current cpu"
 repository = "https://git.timshomepage.net/timw4mail/rustid.git"
 license = "MIT"
+default-run = "rustid"
 
 [dependencies]
 

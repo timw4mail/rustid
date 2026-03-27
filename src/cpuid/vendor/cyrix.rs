@@ -254,11 +254,7 @@ impl TMicroArch for Cyrix {
             )
         };
 
-        match (
-            s.family,
-            s.model,
-            s.stepping,
-        ) {
+        match (s.family, s.model, s.stepping) {
             (3, 2, _) => brand_arch(MicroArch::Cx486DLC, Cyrix::codename(), None),
             (4, 5, _) => brand_arch(MicroArch::Cx486S, Cyrix::codename(), None),
             (4, 8, _) => brand_arch(MicroArch::Cx486DX, Cyrix::codename(), None),
