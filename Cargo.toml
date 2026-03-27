@@ -30,6 +30,7 @@ path="src/rustid.rs"
 
 [[bin]]
 name = "debug"
+required-features = ["debug"]
 path="src/debug.rs"
 
 [features]

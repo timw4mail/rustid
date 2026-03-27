@@ -16,12 +16,12 @@ pub fn get_vendor_by_quirk() -> &'static str {
         return VENDOR_CYRIX;
     }
 
-    if has_intel_cr0_quirk() {
-        return VENDOR_INTEL;
-    }
-
     if has_amd_486_quirk() {
         return VENDOR_AMD;
+    }
+
+    if has_intel_cr0_quirk() {
+        return VENDOR_INTEL;
     }
 
     UNK
@@ -125,45 +125,65 @@ pub fn has_cyrix_5_2_quirk() -> bool {
     (flags & 0xD5) == 0
 }
 
-/// Returns true if the CPU is an AMD processor (detected via DIV flag behavior).
+/// Returns true if the CPU is an AMD processor.
+/// For early AMD 486s (like DX2-80), this returns false as reliable detection
+/// is difficult without CPUID. The CR0.ET test is the only reliable method
+/// but doesn't work on all AMD 486 variants.
 #[inline(never)]
 pub fn has_amd_486_quirk() -> bool {
-    let flags: u16;
+    // For early AMD 486s without enhanced features, we can't reliably
+    // distinguish from Intel using software methods alone.
+    // This will be detected as "Unknown" if neither Intel nor AMD quirks match.
+    false
+}
+
+/// Debug: Returns TR3 values for diagnostics.
+#[cfg(feature = "debug")]
+pub fn debug_tr3() -> (u32, u32) {
+    let first: u32;
+    let second: u32;
+
     unsafe {
         core::arch::asm!(
-            "cli",
-            "stc",          // Set Carry Flag (CF=1)
-            "mov ax, 5",
-            "mov bl, 2",
-            "div bl",
-            "pushf",
-            "pop ax",
-            out("ax") flags,
-            out("bl") _,
+            "mov eax, 0",
+            ".byte 0x0F, 0x26, 0xE8", // mov tr5, eax
+            ".byte 0x0F, 0x24, 0xD8", // mov eax, tr3
+            out("eax") first,
         );
     }
-    // AMD: CF is cleared (0) after DIV
-    (flags & 0x01) == 0
+
+    unsafe {
+        core::arch::asm!(
+            "mov eax, 0",
+            ".byte 0x0F, 0x26, 0xE8", // mov tr5, eax
+            ".byte 0x0F, 0x24, 0xD8", // mov eax, tr3
+            out("eax") second,
+        );
+    }
+
+    (first, second)
 }
-/// Returns true if the CR0 Extended Type (ET) bit is set and hardwired (typical for Intel 486).
+
+/// Debug: Returns raw CR0 value for diagnostics.
+#[cfg(feature = "debug")]
+pub fn debug_cr0() -> u32 {
+    let cr0: u32;
+    unsafe {
+        core::arch::asm!(
+            "mov eax, cr0",
+            out("eax") cr0,
+        );
+    }
+    cr0
+}
+/// Returns true if the CPU is definitively Intel.
+/// Note: Early AMD 486s cannot be reliably distinguished from Intel 486s
+/// using software methods. This returns false to avoid false positives.
 #[inline(never)]
 pub fn has_intel_cr0_quirk() -> bool {
-    let result: u32;
-    unsafe {
-        core::arch::asm!(
-            "cli",
-            "mov eax, cr0",
-            "mov ecx, eax",
-            "and eax, 0xffffffef", // Try to clear bit 4 (ET)
-            "mov cr0, eax",
-            "mov eax, cr0",
-            "mov cr0, ecx",        // Restore original CR0
-            out("eax") result,
-            out("ecx") _,
-        );
-    }
-    // If it stayed 1, it's likely Intel 486
-    (result & 0x10) != 0
+    // Without CPUID, early AMD 486s are indistinguishable from Intel 486s
+    // using the CR0.ET test alone. We return false to avoid false detection.
+    false
 }
 
 /// Attempts to retrieve the CPU signature (EDX value at reset) by performing a soft reset.
@@ -175,7 +195,7 @@ pub fn has_intel_cr0_quirk() -> bool {
 /// suitable for environments where the caller can handle a full CPU reset and
 /// subsequent return to the code.
 ///
-/// Verified on some 386/486 systems.
+/// Verified on some real 386/486 systems.
 #[cfg(target_os = "none")]
 #[allow(static_mut_refs)]
 pub fn get_reset_signature() -> Option<CpuSignature> {
@@ -321,4 +341,38 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     }
 
     Some(sig)
+}
+
+#[cfg(feature = "debug")]
+pub fn debug_quirks() {
+    use crate::println;
+
+    println!("=== Quirk Detection Debug ===");
+    println!();
+
+    println!("CPU Class:");
+    println!("  is_386: {}", is_386());
+    println!("  is_486: {}", is_486());
+    println!();
+
+    println!("CR0 Debug:");
+    let cr0 = debug_cr0();
+    println!("  CR0 = 0x{:08X}", cr0);
+    println!("  ET bit (4) = {}", (cr0 >> 4) & 1);
+    println!();
+
+    println!("AMD TR3 Debug:");
+    let (tr3_first, tr3_second) = debug_tr3();
+    println!("  TR3 read 1 = 0x{:08X}", tr3_first);
+    println!("  TR3 read 2 = 0x{:08X}", tr3_second);
+    println!("  TR3 incremented = {}", tr3_second > tr3_first);
+    println!();
+
+    println!("Vendor Detection:");
+    println!("  has_cyrix_5_2_quirk: {}", has_cyrix_5_2_quirk());
+    println!("  has_amd_486_quirk: {}", has_amd_486_quirk());
+    println!("  has_intel_cr0_quirk: {}", has_intel_cr0_quirk());
+    println!();
+
+    println!("Result: {}", get_vendor_by_quirk());
 }

@@ -79,16 +79,22 @@ pub fn cyrix_cpuid_check() {
     }
 }
 
+#[cfg(feature = "debug")]
 pub fn debug_main() {
     use crate::common::TCpu;
 
-    #[cfg(target_arch = "x86")]
-    cyrix_cpuid_check();
-
-    let cpu = Cpu::detect();
-
     version();
-    cpu.debug();
+
+    #[cfg(target_arch = "x86")]
+    {
+        use crate::cpuid::quirks::debug_quirks;
+
+        cyrix_cpuid_check();
+        debug_quirks();
+        println!("---");
+    }
+
+    Cpu::detect().debug();
 }
 
 pub fn cli_main() {

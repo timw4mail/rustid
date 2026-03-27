@@ -35,6 +35,10 @@ quality: fmt check lint
 build:
 	cargo build
 
+# Build debug app
+build-debug:
+	cargo build --features debug --bin debug
+
 # Do an optimized, release build for the current platform
 build-release:
 	cargo build --release
@@ -50,7 +54,7 @@ _build-dos:
 
 _build-dos-debug:
 	# Build initial binary
-	cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --release
+	cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
 	# Convert to proper DOS com binary
 	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
 
@@ -106,6 +110,10 @@ clean:
 # Build and run the app
 run arg="":
 	{{base_run}} {{arg}}
+
+# Build and run the debug app
+run-debug arg="":
+	{{base_run}} --features debug --bin debug {{arg}}
 
 # Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
 [windows]
