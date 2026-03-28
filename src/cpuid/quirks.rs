@@ -8,69 +8,44 @@ use super::*;
 
 /// Returns the CPU vendor for 386/486-class processors without CPUID support.
 pub fn get_vendor_by_quirk() -> &'static str {
-    if is_386() {
-        return UNK;
-    }
-
+    // Cyrix quirk works for both 386 and 486 and is very reliable.
     if has_cyrix_5_2_quirk() {
         return VENDOR_CYRIX;
     }
 
-    if has_amd_486_quirk() {
-        return VENDOR_AMD;
+    if is_386() {
+        // Intel 386 allows toggling CR0.ET. AMD 386 has it hardwired to 1.
+        if can_toggle_et() {
+            return VENDOR_INTEL;
+        }
+
+        if has_amd_386_quirk() {
+            return VENDOR_AMD;
+        }
     }
 
-    if has_intel_cr0_quirk() {
-        return VENDOR_INTEL;
+    if is_486() {
+        // Try AMD-specific quirks first.
+        if has_amd_486_quirk() {
+            return VENDOR_AMD;
+        }
+
+        // If it's a 486 and not AMD, and ET is hardwired to 1, it's likely Intel.
+        if has_intel_486_quirk() {
+            return VENDOR_INTEL;
+        }
     }
 
     UNK
 }
 
-/// Returns true if the CPU is an AMD 386 (detected via DIV overflow behavior).
-#[inline(never)]
-pub fn has_amd_386_quirk() -> bool {
-    // This is a known difference between Intel and AMD 386s.
-    // AMD 386s set ZF on certain division overflows where Intel 386s don't.
-    // Or rather, there's an errata/difference in how they handle flags in corner cases.
-    // Another common test: AMD 386 DX can toggle a bit in a reserved register,
-    // but the most portable is the "pushfd" behavior or a specific 32-bit math result.
-    // Let's use the "pushf" / "popf" difference if available.
-    // On 80386, bits 12-15 of EFLAGS are always set in real mode on Intel,
-    // but can be cleared on some clones.
-    let flags: u16;
-    unsafe {
-        core::arch::asm!(
-            "cli",
-            "pushf",
-            "pop ax",
-            "mov cx, ax",
-            "and ax, 0x0fff", // Try to clear bits 12-15
-            "push ax",
-            "popf",
-            "pushf",
-            "pop ax",
-            "push cx", // Restore original flags
-            "popf",
-            out("ax") flags,
-            out("cx") _,
-        );
-    }
-    // If bits 12-15 were cleared, it's likely an AMD or other clone.
-    // On Intel 80386, they are hardwired to 1 in real mode.
-    (flags & 0xf000) != 0xf000
-}
-
 /// Returns true if the CPU is a 386-class processor.
-///
-/// Verified on real hardware
 pub fn is_386() -> bool {
-    !is_ac_flag_supported()
+    !is_486()
 }
 
-/// Returns true if the CPU is at least a 486-class processor
-///
-/// Verified on real hardware
+/// Returns true if the CPU is at least a 486-class processor.
+#[inline(never)]
 pub fn is_486() -> bool {
     is_ac_flag_supported()
 }
@@ -102,10 +77,19 @@ fn is_ac_flag_supported() -> bool {
     supported != 0
 }
 
-/// Returns true if the CPU is a Cyrix processor (detected without CPUID).
-///
-/// Cyrix processors are unique in that they do not modify flags during a `div`
-/// instruction, whereas other x86 processors do.
+/// Returns true if the CPU is an AMD 386 (detected via ET bit behavior).
+#[inline(never)]
+pub fn has_amd_386_quirk() -> bool {
+    if !is_386() {
+        return false;
+    }
+    // AMD 386 has ET (bit 4 of CR0) hardwired to 1.
+    // Intel 386 allows toggling it.
+    !can_toggle_et() && is_et_set()
+}
+
+/// Returns true if the CPU is a Cyrix processor.
+#[inline(never)]
 pub fn has_cyrix_5_2_quirk() -> bool {
     let flags: u8;
     unsafe {
@@ -119,6 +103,7 @@ pub fn has_cyrix_5_2_quirk() -> bool {
             out("ah") flags,
             out("al") _,
             out("bx") _,
+            options(nostack)
         );
     }
     // Cyrix: flags remain unchanged
@@ -126,64 +111,110 @@ pub fn has_cyrix_5_2_quirk() -> bool {
 }
 
 /// Returns true if the CPU is an AMD processor.
-/// For early AMD 486s (like DX2-80), this returns false as reliable detection
-/// is difficult without CPUID. The CR0.ET test is the only reliable method
-/// but doesn't work on all AMD 486 variants.
 #[inline(never)]
 pub fn has_amd_486_quirk() -> bool {
-    // For early AMD 486s without enhanced features, we can't reliably
-    // distinguish from Intel using software methods alone.
-    // This will be detected as "Unknown" if neither Intel nor AMD quirks match.
+    if !is_486() {
+        return false;
+    }
+
+    // 1. FPU State check: If FPU exists, check if FNINIT fails to clear pointers.
+    if has_fpu() && has_amd_fpu_quirk() {
+        return true;
+    }
+
+    // 2. Known AMD-only signatures (Model 0, 1, 3, 7, 8, 9, 14, 15)
+    #[cfg(target_os = "none")]
+    if let Some(sig) = get_reset_signature() {
+        if sig.family == 4 {
+            match sig.model {
+                0 | 1 | 3 | 7 | 8 | 9 | 14 | 15 => return true,
+                _ => {}
+            }
+        }
+    }
+
     false
 }
 
-/// Debug: Returns TR3 values for diagnostics.
-#[cfg(feature = "debug")]
-pub fn debug_tr3() -> (u32, u32) {
-    let first: u32;
-    let second: u32;
-
+/// Returns true if the FPU state exhibits AMD-specific behavior in reserved fields.
+#[inline(never)]
+pub fn has_amd_fpu_quirk() -> bool {
+    let mut fpu_env = [0u16; 7]; // 14 bytes for FSTENV in 16-bit real mode
     unsafe {
         core::arch::asm!(
-            "mov eax, 0",
-            ".byte 0x0F, 0x26, 0xE8", // mov tr5, eax
-            ".byte 0x0F, 0x24, 0xD8", // mov eax, tr3
-            out("eax") first,
+            "cli",
+            "fld1",
+            "fninit",
+            "fnstenv [{0}]",
+            "fwait",
+            "sti",
+            in(reg) &mut fpu_env,
+            options(nostack)
         );
     }
-
-    unsafe {
-        core::arch::asm!(
-            "mov eax, 0",
-            ".byte 0x0F, 0x26, 0xE8", // mov tr5, eax
-            ".byte 0x0F, 0x24, 0xD8", // mov eax, tr3
-            out("eax") second,
-        );
-    }
-
-    (first, second)
+    // Intel clears these on fninit, but early AMD/clones often do not.
+    // Index 3: IP Offset, 4: CS Selector, 5: Data Offset, 6: Data Selector
+    fpu_env[3] != 0 || fpu_env[4] != 0 || fpu_env[5] != 0 || fpu_env[6] != 0
 }
 
-/// Debug: Returns raw CR0 value for diagnostics.
-#[cfg(feature = "debug")]
-pub fn debug_cr0() -> u32 {
+/// Returns true if the CPU is definitively Intel 486.
+#[inline(never)]
+pub fn has_intel_486_quirk() -> bool {
+    // Intel 486: Is 486, ET is hardwired to 1
+    is_486() && !can_toggle_et() && is_et_set()
+}
+
+/// Returns true if the ET bit (bit 4) of CR0 can be toggled.
+#[inline(never)]
+fn can_toggle_et() -> bool {
+    let mut original: u32;
+    let mut toggled: u32;
+    unsafe {
+        core::arch::asm!(
+            "cli",
+            "mov {orig:e}, cr0",
+            "mov {tmp:e}, {orig:e}",
+            "xor {tmp:e}, 0x10", // Toggle ET bit
+            "mov cr0, {tmp:e}",
+            "xor {tmp:e}, {tmp:e}", // Clear register before reading back
+            "mov {tmp:e}, cr0",
+            "mov {togg:e}, {tmp:e}",
+            "mov cr0, {orig:e}", // Restore
+            "sti",
+            orig = out(reg) original,
+            tmp = out(reg) _,
+            togg = out(reg) toggled,
+            options(nostack)
+        );
+    }
+    ((original ^ toggled) & 0x10) != 0
+}
+
+/// Returns true if the ET bit (bit 4) of CR0 is currently set.
+#[inline(never)]
+fn is_et_set() -> bool {
     let cr0: u32;
     unsafe {
+        core::arch::asm!("mov {0:e}, cr0", out(reg) cr0, options(nostack));
+    }
+    (cr0 & 0x10) != 0
+}
+
+/// Returns true if the CPU has a Floating Point Unit (FPU).
+#[inline(never)]
+pub fn has_fpu() -> bool {
+    let mut control: u16 = 0xFFFF;
+    unsafe {
         core::arch::asm!(
-            "mov eax, cr0",
-            out("eax") cr0,
+            "cli",
+            "fninit",
+            "fnstcw [{0}]",
+            "sti",
+            in(reg) &mut control,
+            options(nostack)
         );
     }
-    cr0
-}
-/// Returns true if the CPU is definitively Intel.
-/// Note: Early AMD 486s cannot be reliably distinguished from Intel 486s
-/// using software methods. This returns false to avoid false positives.
-#[inline(never)]
-pub fn has_intel_cr0_quirk() -> bool {
-    // Without CPUID, early AMD 486s are indistinguishable from Intel 486s
-    // using the CR0.ET test alone. We return false to avoid false detection.
-    false
+    (control & 0x103F) == 0x003F
 }
 
 /// Attempts to retrieve the CPU signature (EDX value at reset) by performing a soft reset.
@@ -355,23 +386,16 @@ pub fn debug_quirks() {
     println!("  is_486: {}", is_486());
     println!();
 
-    println!("CR0 Debug:");
-    let cr0 = debug_cr0();
-    println!("  CR0 = 0x{:08X}", cr0);
-    println!("  ET bit (4) = {}", (cr0 >> 4) & 1);
-    println!();
-
-    println!("AMD TR3 Debug:");
-    let (tr3_first, tr3_second) = debug_tr3();
-    println!("  TR3 read 1 = 0x{:08X}", tr3_first);
-    println!("  TR3 read 2 = 0x{:08X}", tr3_second);
-    println!("  TR3 incremented = {}", tr3_second > tr3_first);
-    println!();
-
     println!("Vendor Detection:");
-    println!("  has_cyrix_5_2_quirk: {}", has_cyrix_5_2_quirk());
-    println!("  has_amd_486_quirk: {}", has_amd_486_quirk());
-    println!("  has_intel_cr0_quirk: {}", has_intel_cr0_quirk());
+    println!("  has_cyrix_5_2_quirk:  {}", has_cyrix_5_2_quirk());
+    println!("  has_amd_386_quirk:    {}", has_amd_386_quirk());
+    println!(
+        "  has_amd_fpu_quirk:    {}",
+        has_fpu() && has_amd_fpu_quirk()
+    );
+    println!("  has_amd_486_quirk:    {}", has_amd_486_quirk());
+    println!("  has_intel_486_quirk:  {}", has_intel_486_quirk());
+    println!("  can_toggle_et:        {}", can_toggle_et());
     println!();
 
     println!("Result: {}", get_vendor_by_quirk());
