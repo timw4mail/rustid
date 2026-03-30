@@ -610,31 +610,27 @@ impl TCpu for Cpu {
             println!();
         }
 
-        // TODO: Clock Speed (Base/Boost)
-        // Not implemented for DOS as float formatting takes up too
-        // much space in the binary
-        #[cfg(not(target_os = "none"))]
-        if self.topology.speed.base > 10 {
+        // Clock Speed (Base/Boost)
+        if self.topology.speed.base > 0 {
             let base = self.topology.speed.base;
             let boost = self.topology.speed.boost;
-            let unit = if base > 1000 { "GHz" } else { "MHz" };
-            let freq = if base > 1000 {
-                (base as f32) / 1000.0
-            } else {
-                base as f32
+
+            let print_speed = |l: &str, mhz: u32| {
+                let is_ghz = mhz >= 1000;
+                let unit = if is_ghz { "GHz" } else { "MHz" };
+                let whole = if is_ghz { mhz / 1000 } else { mhz };
+                let fract = if is_ghz { (mhz % 1000) / 10 } else { 0 };
+
+                if is_ghz {
+                    println!("{}{}.{:02} {}", l, whole, fract, unit);
+                } else {
+                    println!("{}{}.00 {}", l, whole, unit);
+                }
             };
 
+            print_speed(label("Frequency").as_str(), base);
             if boost > base {
-                let boost_freq = if boost > 1000 {
-                    (boost as f32) / 1000.0
-                } else {
-                    boost as f32
-                };
-
-                println!("{}Base:  {:.2} {}", label("Frequency"), freq, unit);
-                println!("{}{:.2} {}", sublabel("Boost"), boost_freq, unit);
-            } else {
-                println!("{}{:.2} {}", label("Frequency"), freq, unit);
+                print_speed(sublabel("Boost").as_str(), boost);
             }
 
             println!();

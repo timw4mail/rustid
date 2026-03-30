@@ -9,7 +9,6 @@ use heapless::Vec;
 
 /// CPU speed information (base and boost frequencies).
 #[derive(Debug, Default, PartialEq)]
-#[cfg(not(target_os = "none"))]
 pub struct Speed {
     /// Base frequency in MHz
     pub base: u32,
@@ -19,7 +18,6 @@ pub struct Speed {
     pub measured: bool,
 }
 
-#[cfg(not(target_os = "none"))]
 impl Speed {
     /// Detects the CPU speed from available sources.
     pub fn detect() -> Self {
@@ -71,11 +69,12 @@ impl Speed {
     }
 
     fn measure() -> Self {
+        #[cfg(not(target_os = "none"))]
         if !super::has_tsc() {
             return Speed::default();
         }
 
-        let freq = Self::measure_tsc_frequency();
+        let freq = Self::measure_frequency();
         if freq == 0 {
             return Speed::default();
         }
@@ -87,7 +86,8 @@ impl Speed {
         }
     }
 
-    fn measure_tsc_frequency() -> u32 {
+    #[cfg(not(target_os = "none"))]
+    fn measure_frequency() -> u32 {
         #[cfg(target_arch = "x86")]
         use core::arch::x86::_rdtsc as rdtsc;
         #[cfg(target_arch = "x86_64")]
@@ -118,6 +118,79 @@ impl Speed {
         let freq_mhz = (tsc_delta * MHZ_DIVISOR) / elapsed;
 
         (freq_mhz / 1000) as u32
+    }
+
+    #[cfg(target_os = "none")]
+    fn measure_frequency() -> u32 {
+        use crate::cpuid::dos::peek_u16;
+
+        // Use BIOS timer ticks at 0040:006C
+        // 1 tick = 65536 / 1193182 seconds (~54.9 ms)
+
+        let start_ticks = peek_u16(0x0040, 0x006C);
+        let mut t1 = start_ticks;
+
+        // Wait for a fresh tick
+        while t1 == start_ticks {
+            t1 = peek_u16(0x0040, 0x006C);
+        }
+
+        if super::has_tsc() {
+            #[cfg(target_arch = "x86")]
+            use core::arch::x86::_rdtsc as rdtsc;
+            #[cfg(target_arch = "x86_64")]
+            use core::arch::x86_64::_rdtsc as rdtsc;
+
+            let start_tsc = unsafe { rdtsc() };
+
+            // Wait for 2 ticks (~110ms)
+            let target_ticks = t1.wrapping_add(2);
+            while peek_u16(0x0040, 0x006C) != target_ticks {
+                core::hint::spin_loop();
+            }
+
+            let end_tsc = unsafe { rdtsc() };
+            let tsc_delta = end_tsc - start_tsc;
+
+            // freq_mhz = (tsc_delta * 1193182) / (2 * 65536 * 1_000_000)
+            let freq_mhz = (tsc_delta * 1193182) / 131072000000u64;
+            freq_mhz as u32
+        } else {
+            // No TSC (386/486). Use a calibrated instruction loop.
+            // We'll count how many times we can run a loop in 2 ticks.
+
+            let mut iterations: u32 = 0;
+            let target_ticks = t1.wrapping_add(2);
+
+            unsafe {
+                core::arch::asm!(
+                    "push es",
+                    "mov ax, 0x40",
+                    "mov es, ax",
+                    "2:",
+                    "add {0:e}, 1",
+                    "push ax", // Extra work to slow down the loop and be more consistent
+                    "pop ax",
+                    "mov ax, es:[0x6C]",
+                    "cmp ax, {1:x}",
+                    "jne 2b",
+                    "pop es",
+                    inout(reg) iterations,
+                    in(reg) target_ticks,
+                    out("ax") _,
+                );
+            }
+
+            // Calibration:
+            // 486 loop: add(1) + push(1) + pop(4) + mov mem(1) + cmp(1) + jne(3) = 11 cycles
+            // 386 loop: add(2) + push(2) + pop(4) + mov mem(4) + cmp(2) + jne(7) = 21 cycles
+            // Time: 2 ticks = ~0.1098 seconds
+            // freq_mhz = (iterations * cycles_per_loop) / (0.1098 * 1,000,000)
+            // freq_mhz = (iterations * cycles_per_loop) / 109800
+
+            let factor = if crate::cpuid::is_386() { 24 } else { 12 };
+            (iterations * factor) / 109800
+        }
     }
 }
 
@@ -161,8 +234,7 @@ pub struct Topology {
     /// Number of logical threads (includes SMT)
     pub threads: u32,
 
-    /// CPU speed information (not available on bare-metal/no_std)
-    #[cfg(not(target_os = "none"))]
+    /// CPU speed information
     pub speed: Speed,
 
     /// Cache hierarchy information
@@ -175,7 +247,6 @@ pub struct Topology {
 impl Topology {
     /// Detects and returns the CPU topology.
     pub fn detect() -> Self {
-        #[cfg(not(target_os = "none"))]
         let speed = Speed::detect();
 
         let cache = Cache::detect();
@@ -197,7 +268,6 @@ impl Topology {
             sockets,
             cores,
             threads,
-            #[cfg(not(target_os = "none"))]
             speed,
             cache,
             domains,
