@@ -245,7 +245,6 @@ impl TCpu for Cpu {
     fn display_table(&self) {
         let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
         let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
-        let terlabel: fn(&str) -> String = |label| format!("{:>21}{}:{:1}", "", label, "");
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -266,11 +265,12 @@ impl TCpu for Cpu {
             .for_each(|k| {
                 if let Some(core) = self.cores.get(k) {
                     let name = format!("{} Cores", Into::<String>::into(*k));
-                    println!("{}{}", label(&name), core.count);
+                    println!("{}", label(&name));
 
                     if let Some(name) = core.name.clone() {
-                        println!("{}{}", sublabel("Name"), name);
+                        println!("{}{}", label("Name"), name);
                     }
+                    println!("{}{}", label("Count"), core.count);
 
                     if let Some(cache) = core.cache {
                         let cache_count = |share_count| {
@@ -281,20 +281,18 @@ impl TCpu for Cpu {
                             }
                         };
 
-                        println!("{}", sublabel("Cache"));
-
                         match cache.l1 {
                             Level1Cache::Unified(cache) => {
-                                println!("L1: Unified {:>4} KB", cache.size);
+                                println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size);
                             }
                             Level1Cache::Split { data, instruction } => {
                                 let data_count: String = cache_count(data.share_count);
                                 let instruction_count = cache_count(instruction.share_count);
 
-                                println!("{}{}{} KB", terlabel("L1d"), &data_count, data.size);
+                                println!("{}{}{}{} KB", label("Cache"), "L1d: ", &data_count, data.size);
                                 println!(
                                     "{}{}{} KB",
-                                    terlabel("L1i"),
+                                    sublabel("L1i"),
                                     &instruction_count,
                                     instruction.size,
                                 );
@@ -311,7 +309,7 @@ impl TCpu for Cpu {
                                 num /= 1024;
                             }
 
-                            println!("{} {}{} {}", terlabel("L2"), &count, num, unit);
+                            println!("{} {}{} {}", sublabel("L2"), &count, num, unit);
                         }
 
                         if let Some(cache) = cache.l3 {
@@ -322,7 +320,7 @@ impl TCpu for Cpu {
                                 num /= 1024
                             }
 
-                            println!("{} {} {}", terlabel("L3"), num, unit);
+                            println!("{} {} {}", sublabel("L3"), num, unit);
                         }
 
                         println!();
