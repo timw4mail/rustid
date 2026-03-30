@@ -452,7 +452,7 @@ impl TCpu for Cpu {
         {
             use super::is_cyrix;
 
-            println!("{:?}", self.arch);
+            println!("{:?}", self);
             if is_cyrix() {
                 println!("{:?}", super::vendor::Cyrix::detect());
             }
@@ -616,6 +616,8 @@ impl TCpu for Cpu {
             let boost = self.topology.speed.boost;
 
             let print_speed = |l: &str, mhz: u32| {
+                let mhz = if mhz == 999 { 1000 } else { mhz };
+
                 let is_ghz = mhz >= 1000;
                 let unit = if is_ghz { "GHz" } else { "MHz" };
                 let whole = if is_ghz { mhz / 1000 } else { mhz };

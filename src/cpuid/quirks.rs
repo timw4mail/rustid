@@ -230,6 +230,10 @@ pub fn has_fpu() -> bool {
 #[cfg(target_os = "none")]
 #[allow(static_mut_refs)]
 pub fn get_reset_signature() -> Option<CpuSignature> {
+    if has_cpuid() {
+        return Some(CpuSignature::detect());
+    }
+
     static mut RESET_DONE: bool = false;
     static mut CACHED_SIG: Option<CpuSignature> = None;
     static mut SAVED_EDX: u32 = 0;
