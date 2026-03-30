@@ -8,7 +8,6 @@ use super::*;
 
 /// Returns the CPU vendor for 386/486-class processors without CPUID support.
 pub fn get_vendor_by_quirk() -> &'static str {
-    // Cyrix quirk works for both 386 and 486 and is very reliable.
     if has_cyrix_5_2_quirk() {
         return VENDOR_CYRIX;
     }
@@ -225,28 +224,7 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     let ext_model = (raw_sig >> 16) & 0xF;
     let ext_family = (raw_sig >> 20) & 0xFF;
 
-    let display_family = if family == 0xF {
-        family + ext_family
-    } else {
-        family
-    };
-    let display_model = if family == 0x6 || family == 0xF {
-        (ext_model << 4) + model
-    } else {
-        model
-    };
-
-    let sig = CpuSignature {
-        extended_family: ext_family,
-        family,
-        extended_model: ext_model,
-        model,
-        stepping,
-        display_family,
-        display_model,
-        is_overdrive: false,
-        from_cpuid: false,
-    };
+    let sig = CpuSignature::new(ext_family, family, ext_model, model, stepping, false);
 
     unsafe {
         CACHED_SIG = Some(sig.clone());

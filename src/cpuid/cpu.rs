@@ -3,7 +3,9 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, read_multi_leaf_str, x86_cpuid};
+use super::{
+    EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, LEAF_1, read_multi_leaf_str, x86_cpuid,
+};
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
 use crate::println;
@@ -128,27 +130,14 @@ pub struct CpuSignature {
 }
 
 impl CpuSignature {
-    /// Detects the CPU signature from CPUID leaf 1.
-    pub fn detect() -> Self {
-        let from_cpuid = super::has_cpuid();
-
-        #[cfg(target_arch = "x86")]
-        if !from_cpuid {
-            #[cfg(target_os = "none")]
-            {
-                if let Some(reset_sig) = super::get_reset_signature() {
-                    return reset_sig;
-                }
-            }
-        }
-
-        let res = x86_cpuid(1);
-        let stepping = res.eax & 0xF;
-        let model = (res.eax >> 4) & 0xF;
-        let family = (res.eax >> 8) & 0xF;
-        let extended_model = (res.eax >> 16) & 0xF;
-        let extended_family = (res.eax >> 20) & 0xFF;
-
+    pub fn new(
+        extended_family: u32,
+        family: u32,
+        extended_model: u32,
+        model: u32,
+        stepping: u32,
+        from_cpuid: bool,
+    ) -> Self {
         let display_family = if family == 0xF {
             family + extended_family
         } else {
@@ -174,6 +163,36 @@ impl CpuSignature {
             is_overdrive,
             from_cpuid,
         }
+    }
+    /// Detects the CPU signature from CPUID leaf 1.
+    pub fn detect() -> Self {
+        let from_cpuid = super::has_cpuid();
+
+        #[cfg(target_arch = "x86")]
+        if !from_cpuid {
+            #[cfg(target_os = "none")]
+            {
+                if let Some(reset_sig) = super::get_reset_signature() {
+                    return reset_sig;
+                }
+            }
+        }
+
+        let res = x86_cpuid(LEAF_1);
+        let stepping = res.eax & 0xF;
+        let model = (res.eax >> 4) & 0xF;
+        let family = (res.eax >> 8) & 0xF;
+        let extended_model = (res.eax >> 16) & 0xF;
+        let extended_family = (res.eax >> 20) & 0xFF;
+
+        Self::new(
+            extended_family,
+            family,
+            extended_model,
+            model,
+            stepping,
+            from_cpuid,
+        )
     }
 }
 
@@ -638,7 +657,7 @@ impl TCpu for Cpu {
 
             print_speed(label("Frequency").as_str(), base);
             if boost > base {
-                print_speed(sublabel("Boost").as_str(), boost);
+                print_speed(label("Boost").as_str(), boost);
             }
 
             println!();
