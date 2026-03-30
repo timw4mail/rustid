@@ -20,6 +20,7 @@ impl Intel {
             s.model,
             s.stepping,
         ) {
+            (0, 3, 0, 4, _) => brand_arch(MicroArch::RapidCad, "RapidCad", None),
             // 486
             (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX", None),
             (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50", None),

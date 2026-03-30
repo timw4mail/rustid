@@ -289,7 +289,13 @@ impl TCpu for Cpu {
                                 let data_count: String = cache_count(data.share_count);
                                 let instruction_count = cache_count(instruction.share_count);
 
-                                println!("{}{}{}{} KB", label("Cache"), "L1d: ", &data_count, data.size);
+                                println!(
+                                    "{}{}{}{} KB",
+                                    label("Cache"),
+                                    "L1d: ",
+                                    &data_count,
+                                    data.size
+                                );
                                 println!(
                                     "{}{}{} KB",
                                     sublabel("L1i"),

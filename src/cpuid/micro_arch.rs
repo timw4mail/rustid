@@ -426,17 +426,6 @@ impl CpuArch {
             },
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Unknown => match (s.family, s.model, s.stepping) {
-                (3, 4, 0) => arch(
-                    MicroArch::RapidCad,
-                    "RapidCad",
-                    CpuBrand::from(VENDOR_INTEL).to_brand_name(),
-                    None,
-                ),
-                _ => arch(MicroArch::Unknown, UNK, UNK, None),
-            },
-
-            #[cfg(target_arch = "x86")]
             CpuBrand::NexGen | CpuBrand::SiS => brand_arch(MicroArch::Unknown, UNK, None),
 
             #[cfg(target_arch = "x86_64")]

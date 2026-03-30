@@ -308,7 +308,13 @@ impl Cpu {
             let s = if super::is_386() {
                 "'Classic' 386"
             } else {
-                "'Classic' 486"
+                match (self.signature.family, self.signature.model) {
+                    (4, 2) => "'Classic' 486 SX",
+                    (4, 3) => "'Classic' 486 DX2",
+                    (4, 4) => "Intel 486SL",
+                    (4, 5) => "'Classic' 486 SX2",
+                    _ => "'Classic' 486",
+                }
             };
 
             return String::from_str(s).unwrap();
@@ -329,9 +335,9 @@ impl Cpu {
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
 
             //Intel
+            MicroArch::RapidCad => "Intel RapidCAD",
             MicroArch::I486 => match self.arch.code_name {
                 "i80486DX" => "Intel 486 DX",
-                "RapidCAD" => "Intel RapidCAD",
                 "i80486DX-50" => "Intel 486 DX-50",
                 "i80486SX" => "Intel 486 SX",
                 "i80486DX2" => "Intel 486 DX2",
