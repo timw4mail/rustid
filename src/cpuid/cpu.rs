@@ -28,6 +28,10 @@ pub enum FeatureClass {
     i586,
     /// Pentium Pro/II/III-class processor (i686)
     i686,
+    /// i686 with SSE instruction
+    i686_SSE,
+    /// i686 with SSE2 instruction
+    i686_SSE2,
     /// x86-64 version 1 (baseline SSE/SSE2)
     x86_64_v1,
     /// x86-64 version 2 (adds CMPXCHG16B, POPCNT, SSE4.2)
@@ -75,6 +79,14 @@ impl FeatureClass {
                 return vendor::Cyrix::get_feature_class();
             }
 
+            if has_sse2() {
+                return FeatureClass::i686_SSE2;
+            }
+
+            if has_sse() {
+                return FeatureClass::i686_SSE;
+            }
+
             if has_cmov() {
                 return FeatureClass::i686;
             }
@@ -98,6 +110,8 @@ impl FeatureClass {
             FeatureClass::i486 => "i486",
             FeatureClass::i586 => "i586",
             FeatureClass::i686 => "i686",
+            FeatureClass::i686_SSE => "i686-SSE",
+            FeatureClass::i686_SSE2 => "i686-SSE2",
             FeatureClass::x86_64_v1 => "x86_64-v1",
             FeatureClass::x86_64_v2 => "x86_64-v2",
             FeatureClass::x86_64_v3 => "x86_64-v3",
