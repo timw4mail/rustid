@@ -453,7 +453,7 @@ pub(crate) mod tests {
         assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "LuJiaZui");
 
         #[cfg(target_arch = "x86")]
-        assert_eq!(String::<64>::from(MicroArch::Cy5x86).as_str(), "5x86");
+        assert_eq!(String::<64>::from(MicroArch::Cy5x86).as_str(), "Cx5x86");
 
         #[cfg(target_arch = "x86")]
         assert_eq!(
