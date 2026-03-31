@@ -636,6 +636,8 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l3 {
+                let count = cache_count(cache.share_count);
+
                 let mut num = cache.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
 
@@ -643,7 +645,7 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{} {} {}, {}-way", sublabel("L3"), num, unit, cache.assoc);
+                println!("{} {}{} {}, {}-way", sublabel("L3"), &count, num, unit, cache.assoc);
             }
 
             println!();
