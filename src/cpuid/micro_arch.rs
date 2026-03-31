@@ -105,6 +105,7 @@ pub enum MicroArch {
     Nehalem,
     Westmere,
     Bonnel,
+    Dunnington,
     Core,
     Saltwell,
     Silvermont,
@@ -137,6 +138,9 @@ pub enum MicroArch {
     Prescott,
     CedarMill,
     AmberLake,
+
+    // RDC
+    Iad,
 
     // Rise
     MP6,
@@ -206,10 +210,10 @@ impl From<MicroArch> for String<64> {
             MicroArch::Lujiazui => "LuJiaZui",
 
             // Cyrix
-            MicroArch::Cx486DLC => "486DLC",
-            MicroArch::Cx486DX => "486DX",
-            MicroArch::Cx486S => "486S",
-            MicroArch::Cy5x86 => "5x86",
+            MicroArch::Cx486DLC => "Cx486DLC",
+            MicroArch::Cx486DX => "Cx486DX",
+            MicroArch::Cx486S => "Cx486S",
+            MicroArch::Cy5x86 => "Cx5x86",
             MicroArch::M1 => "M1",
             MicroArch::M2 => "M2",
             MicroArch::MediaGx => "MediaGX",
@@ -233,6 +237,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::Nehalem => "Nehalem",
             MicroArch::Westmere => "Westmere",
             MicroArch::Bonnel => "Bonnel",
+            MicroArch::Dunnington => "Dunnington",
             MicroArch::Core => "Core",
             MicroArch::Saltwell => "Saltwell",
             MicroArch::Silvermont => "Silvermont",
@@ -265,6 +270,9 @@ impl From<MicroArch> for String<64> {
             MicroArch::Prescott => "Prescott",
             MicroArch::CedarMill => "Cedar Mill",
             MicroArch::AmberLake => "Amber Lake",
+
+            // RDC
+            MicroArch::Iad => "Iad",
 
             // Rise
             MicroArch::MP6 => "mP6",
@@ -371,34 +379,29 @@ impl CpuArch {
             CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::NationalSemiconductor => match (
-                s.extended_family,
-                s.family,
-                s.extended_model,
-                s.model,
-                s.stepping,
-            ) {
-                (0, 5, 0, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some("180nm")),
-                (0, 5, 0, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some("180nm")),
-                (0, 5, 0, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            CpuBrand::NationalSemiconductor => match (s.family, s.model, s.stepping) {
+                (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some("180nm")),
+                (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some("180nm")),
+                (5, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
+                _ => brand_arch(MicroArch::Unknown, UNK, None),
             },
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Rise => match (
-                s.extended_family,
-                s.family,
-                s.extended_model,
-                s.model,
-                s.stepping,
-            ) {
-                (0, 5, 0, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
-                (0, 5, 0, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some("180nm")),
+            // From sandpile.org
+            CpuBrand::Rdc => match (s.family, s.model, s.stepping) {
+                (5, 8, _) => brand_arch(MicroArch::Iad, "Iad", None),
+                _ => brand_arch(MicroArch::Unknown, UNK, None),
+            },
+
+            #[cfg(target_arch = "x86")]
+            CpuBrand::Rise => match (s.family, s.model, s.stepping) {
+                (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
+                (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some("180nm")),
 
                 // These two come from instlatx64
-                (0, 5, 0, 8, _) => brand_arch(MicroArch::MP62, UNK, Some("250nm")),
-                (0, 5, 0, 9, _) => brand_arch(MicroArch::MP62, UNK, Some("180nm")),
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+                (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some("250nm")),
+                (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some("180nm")),
+                _ => brand_arch(MicroArch::Unknown, UNK, None),
             },
 
             #[cfg(target_arch = "x86")]
@@ -406,23 +409,17 @@ impl CpuArch {
 
             // As long as the signature doesn't overlap, might as well match for multiple brands
             #[cfg(target_arch = "x86")]
-            CpuBrand::DMP | CpuBrand::Umc => match (
-                s.extended_family,
-                s.family,
-                s.extended_model,
-                s.model,
-                s.stepping,
-            ) {
+            CpuBrand::DMP | CpuBrand::Umc => match (s.family, s.model, s.stepping) {
                 // UMC
-                (0, 4, 0, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
-                (0, 4, 0, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
+                (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
+                (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
 
                 // DM&P
-                (0, 5, 0, 2, 2) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
-                (0, 5, 0, 8, 6) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
-                (0, 6, 0, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
+                (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
+                (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
+                (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
 
-                (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+                _ => brand_arch(MicroArch::Unknown, UNK, None),
             },
 
             #[cfg(target_arch = "x86")]

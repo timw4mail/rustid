@@ -42,7 +42,8 @@ impl TMicroArch for Amd {
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT (K6-2)", Some("250nm")),
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth (K6-III)", Some("250nm")),
             (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some("130nm")), // Per instlatx64
-            (0, 5, 0, 13, _) => {
+            (0, 5, 0, 12 | 13, _) => {
+                // per sandpile.org
                 brand_arch(MicroArch::K6, "Sharptooth (K6-2+/K6-III+)", Some("180nm"))
             }
 

@@ -15,6 +15,7 @@ pub const VENDOR_HYGON: &str = "HygonGenuine";
 pub const VENDOR_INTEL: &str = "GenuineIntel";
 pub const VENDOR_NEXGEN: &str = "NexGenDriven";
 pub const VENDOR_NSC: &str = "Geode by NSC";
+pub const VENDOR_RDC: &str = "Genuine  RDC";
 pub const VENDOR_RISE: &str = "RiseRiseRise";
 pub const VENDOR_SIS: &str = "SiS SiS SiS ";
 pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
@@ -44,6 +45,9 @@ pub enum CpuBrand {
 
     #[cfg(target_arch = "x86")]
     NexGen,
+
+    #[cfg(target_arch = "x86")]
+    Rdc,
 
     #[cfg(target_arch = "x86")]
     Rise,
@@ -99,6 +103,9 @@ impl CpuBrand {
             CpuBrand::NexGen => VENDOR_NEXGEN,
 
             #[cfg(target_arch = "x86")]
+            CpuBrand::Rdc => VENDOR_RDC,
+
+            #[cfg(target_arch = "x86")]
             CpuBrand::Rise => VENDOR_RISE,
 
             #[cfg(target_arch = "x86")]
@@ -137,6 +144,9 @@ impl CpuBrand {
 
             #[cfg(target_arch = "x86")]
             CpuBrand::NexGen => "NexGen",
+
+            #[cfg(target_arch = "x86")]
+            CpuBrand::Rdc => "RDC",
 
             #[cfg(target_arch = "x86")]
             CpuBrand::Rise => "Rise",
@@ -179,6 +189,9 @@ impl From<&str> for CpuBrand {
 
             #[cfg(target_arch = "x86")]
             VENDOR_NSC => CpuBrand::NationalSemiconductor,
+
+            #[cfg(target_arch = "x86")]
+            VENDOR_RDC => CpuBrand::Rdc,
 
             #[cfg(target_arch = "x86")]
             VENDOR_RISE => CpuBrand::Rise,
@@ -232,6 +245,9 @@ mod tests {
 
         #[cfg(target_arch = "x86")]
         assert_eq!(CpuBrand::NexGen.to_vendor_str(), VENDOR_NEXGEN);
+
+        #[cfg(target_arch = "x86")]
+        assert_eq!(CpuBrand::Rdc.to_vendor_str(), VENDOR_RDC);
 
         #[cfg(target_arch = "x86")]
         assert_eq!(CpuBrand::Rise.to_vendor_str(), VENDOR_RISE);

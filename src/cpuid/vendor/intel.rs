@@ -21,6 +21,7 @@ impl Intel {
             s.stepping,
         ) {
             (0, 3, 0, 4, _) => brand_arch(MicroArch::RapidCad, "RapidCad", None),
+
             // 486
             (0, 4, 0, 0, _) => brand_arch(MicroArch::I486, "i80486DX", None),
             (0, 4, 0, 1, _) => brand_arch(MicroArch::I486, "i80486DX-50", None),
@@ -33,7 +34,8 @@ impl Intel {
             (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB", None),
 
             // Pentium
-            (0, 5, 0, 0 | 1, _) => brand_arch(MicroArch::P5, "P5", Some("800nm")),
+            (0, 5, 0, 0, _) => brand_arch(MicroArch::P5, "P5 A-step", Some("800nm")),
+            (0, 5, 0, 1, _) => brand_arch(MicroArch::P5, "P5", Some("800nm")),
             (0, 5, 0, 2, _) => brand_arch(MicroArch::P5, "P54C", None),
             (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T", Some("600nm")),
             (0, 5, 0, 4, _) => brand_arch(MicroArch::P5, "P55C", Some("350nm")), // With MMX
@@ -58,21 +60,33 @@ impl Intel {
             (0, 6, 0, 7, _) => brand_arch(MicroArch::PentiumIII, "Katmai", Some("250nm")),
             (0, 6, 0, 8, _) => brand_arch(MicroArch::PentiumIII, "Coppermine", Some("180nm")),
             (0, 6, 0, 9, 5) => brand_arch(MicroArch::PentiumIII, "Banias", Some("130nm")),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::PentiumIII, "Coppermine T", Some("180nm")),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::PentiumIII, "Cascades", Some("180nm")),
             (0, 6, 0, 11, _) => brand_arch(MicroArch::PentiumIII, "Tualatin", Some("130nm")),
 
             // The dark ages
+            // from sandpile.org
+            (0, 15, 0, 0, _) => brand_arch(MicroArch::Willamette, "Willamette", Some("180nm")),
+            (0, 15, 0, 1, _) => {
+                brand_arch(MicroArch::Willamette, "Willamette/Foster", Some("180nm"))
+            }
+            (0, 15, 0, 2, _) => {
+                brand_arch(MicroArch::Northwood, "Northwood/Gallatin", Some("130nm"))
+            }
+            (0, 15, 0, 3, _) => brand_arch(MicroArch::Prescott, "Prescott", Some("90nm")),
+            (0, 15, 0, 4, _) => brand_arch(MicroArch::Prescott, "Prescott/Potomac", Some("90nm")),
+            (0, 15, 0, 6, _) => brand_arch(MicroArch::CedarMill, "Cedar Mill/Tulsa", Some("64nm")),
 
-            // Pentium M
+            // Pentium M/Core/Core 2
+            (0, 6, 0, 12, _) => brand_arch(MicroArch::PentiumIII, "Timna", Some("180nm")),
             (0, 6, 0, 13, 8) => brand_arch(MicroArch::Dothan, "Dothan", Some("90nm")),
             (0, 6, 0, 14, _) => brand_arch(MicroArch::Yonah, "Yonah", Some("65nm")),
             (0, 6, 0, 15, 6) => brand_arch(MicroArch::Core, "Merom", Some("65nm")),
-
-            // Core/Core 2
+            (0, 6, 1, 6, _) => brand_arch(MicroArch::Core, "Merom-L", Some("65nm")),
             (0, 6, 1, 7, 0) => brand_arch(MicroArch::Core, "Yorkfield", Some("45nm")),
             (0, 6, 1, 7, 10) => brand_arch(MicroArch::Core, "Penryn", Some("45nm")),
 
             // Core i-series
+            (0, 6, 1, 13, _) => brand_arch(MicroArch::Dunnington, "Dunnington", Some("45nm")),
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
             (0, 6, 2, 12, 0) => brand_arch(MicroArch::Westmere, "Arrandale", Some("32nm")),

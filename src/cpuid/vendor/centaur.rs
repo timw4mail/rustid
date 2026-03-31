@@ -48,17 +48,18 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "C5A", Some("180nm")),
             (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "C5B", Some("150nm")),
             (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "C5C", Some("130nm")),
-            (0, 6, 0, 8, _) => brand_arch(MicroArch::EzraT, "C5N", Some("130nm")),
+            (0, 6, 0, 8, 0..=7) => brand_arch(MicroArch::EzraT, "C5N", Some("130nm")), // per sandpile.org
+            (0, 6, 0, 8, 8..=15) => brand_arch(MicroArch::Nehemiah, "C5X", Some("130nm")), // per sandpile.org
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some("130nm")),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", None),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
 
             // From instlatx64
             (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
-            (0, 6, 0, 15, 3) => brand_arch(MicroArch::Isaiah, "CNA", Some("65nm")),
-            (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB", None),
-            (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNC", None),
-            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNQ", None),
+            (0, 6, 0, 15, 0..8) => brand_arch(MicroArch::Isaiah, "CNA", Some("65nm")),
+            (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB A1", None),
+            (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNB A2", None),
+            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ", None),
             (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
 
             // (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "CNS", None),
