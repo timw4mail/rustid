@@ -332,6 +332,15 @@ impl Cpu {
             return model_name;
         }
 
+        // The Geode NX is special
+        if CpuBrand::detect() == CpuBrand::AMD
+            && self.signature.family == 6
+            && self.signature.model == 8
+            && self.signature.stepping == 1
+        {
+            return String::from_str("AMD Geode NX").unwrap();
+        }
+
         if self.arch.model != UNK {
             return self.arch.model.clone();
         }
@@ -645,7 +654,14 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{} {}{} {}, {}-way", sublabel("L3"), &count, num, unit, cache.assoc);
+                println!(
+                    "{} {}{} {}, {}-way",
+                    sublabel("L3"),
+                    &count,
+                    num,
+                    unit,
+                    cache.assoc
+                );
             }
 
             println!();

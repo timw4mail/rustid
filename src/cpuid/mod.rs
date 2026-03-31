@@ -577,7 +577,7 @@ pub fn get_feature_list() -> FeatureList {
         let _ = out.push("3DNow!");
     };
     if has_3dnow_plus() {
-        let _ = out.push("3DNow+");
+        let _ = out.push("3DNow!+");
     };
     if has_ht() {
         let _ = out.push("HT");
