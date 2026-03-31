@@ -322,11 +322,6 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String<64> {
-        #[cfg(target_arch = "x86")]
-        if super::is_cyrix() {
-            return super::vendor::Cyrix::model_string();
-        }
-
         // Check the Intel model lookup table
         if let Some(model_name) = self.intel_brand_index() {
             return model_name;
@@ -343,6 +338,11 @@ impl Cpu {
 
         if self.arch.model != UNK {
             return self.arch.model.clone();
+        }
+
+        #[cfg(target_arch = "x86")]
+        if super::is_cyrix() {
+            return super::vendor::Cyrix::model_string();
         }
 
         #[cfg(target_arch = "x86")]
@@ -645,7 +645,17 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l3 {
-                let count = cache_count(cache.share_count);
+                let cache_count = |share_count| {
+                    if (!multi_core) || share_count == 0 || (self.topology.cores / share_count) <= 1
+                    {
+                        format!("")
+                    } else {
+                        format!("{}x ", self.topology.cores / share_count)
+                    }
+                    .unwrap()
+                };
+
+                let count: String<4> = cache_count(cache.share_count);
 
                 let mut num = cache.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
