@@ -343,11 +343,7 @@ pub fn is_overdrive() -> bool {
 
 /// Returns the number of logical cores.
 pub fn logical_cores() -> u32 {
-    if max_leaf() < 1 {
-        return 1;
-    }
-
-    if !is_amd() {
+    if (!is_amd()) || max_leaf() < 1 {
         return 1;
     }
 
@@ -393,6 +389,10 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 pub fn get_brand_id() -> u32 {
     let res = x86_cpuid(EXT_LEAF_1);
     res.ebx >> 8
+}
+
+pub fn has_aes() -> bool {
+    has_feature(LEAF_1, Reg::Ecx, 25)
 }
 
 /// Returns true if the CPU has a Floating Point Unit (FPU).
@@ -489,9 +489,19 @@ pub fn has_rdrand() -> bool {
 // ! Leaf 0000_0007h - Extended feature flags
 // ----------------------------------------------------------------------------
 
+/// Returns true if the CPU supports BMI1 (Bit Manipulation Instructions).
+pub fn has_bmi1() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 3)
+}
+
 /// Returns true if the CPU supports AVX2 instructions.
 pub fn has_avx2() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 5)
+}
+
+/// Returns true if the CPU supports BMI2 instructions.
+pub fn has_bmi2() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 8)
 }
 
 /// Returns true if the CPU supports AVX-512 Foundation instructions.
@@ -499,14 +509,12 @@ pub fn has_avx512f() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 16)
 }
 
-/// Returns true if the CPU supports BMI1 (Bit Manipulation Instructions).
-pub fn has_bmi1() -> bool {
-    has_feature(LEAF_7, Reg::Ebx, 3)
+pub fn has_sha() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 29)
 }
 
-/// Returns true if the CPU supports BMI2 instructions.
-pub fn has_bmi2() -> bool {
-    has_feature(LEAF_7, Reg::Ebx, 8)
+pub fn has_vaes() -> bool {
+    has_feature(LEAF_7, Reg::Ecx, 9)
 }
 
 // ----------------------------------------------------------------------------
@@ -602,6 +610,12 @@ pub fn get_feature_list() -> FeatureList {
     if has_ssse3() {
         let _ = out.push("SSSE3");
     };
+    if has_aes() {
+        let _ = out.push("AES");
+    };
+    if has_vaes() {
+        let _ = out.push("VAES");
+    };
     if has_avx() {
         let _ = out.push("AVX");
     };
@@ -628,6 +642,9 @@ pub fn get_feature_list() -> FeatureList {
     };
     if has_f16c() {
         let _ = out.push("F16C");
+    };
+    if has_sha() {
+        let _ = out.push("SHA");
     };
 
     out
