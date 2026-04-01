@@ -75,6 +75,7 @@ impl TMicroArch for Amd {
 
             // Family 10h (K10)
             (1, 15, 0, 2, 3) => match logical_cores() {
+                2 => brand_arch(MicroArch::K10, "Kuma", Some("65nm")),
                 3 => brand_arch(MicroArch::K10, "Toliman", Some("65nm")),
                 _ => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
             },
