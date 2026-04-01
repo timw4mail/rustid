@@ -282,14 +282,9 @@ impl Topology {
         if domains.is_empty() {
             return match vendor_str().as_str() {
                 VENDOR_AMD => {
+                    // Logical cpus = cores before Bulldozer
                     if amd_threads > 0 {
-                        let cores = if has_ht() {
-                            amd_threads / 2
-                        } else {
-                            amd_threads
-                        };
-
-                        (cores, amd_threads)
+                        (amd_threads, amd_threads)
                     } else {
                         (1, 1)
                     }
