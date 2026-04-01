@@ -645,18 +645,6 @@ impl TCpu for Cpu {
             }
 
             if let Some(cache) = cache.l3 {
-                let cache_count = |share_count| {
-                    if (!multi_core) || share_count == 0 || (self.topology.cores / share_count) <= 1
-                    {
-                        format!("")
-                    } else {
-                        format!("{}x ", self.topology.cores / share_count)
-                    }
-                    .unwrap()
-                };
-
-                let count: String<4> = cache_count(cache.share_count);
-
                 let mut num = cache.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
 
@@ -665,9 +653,8 @@ impl TCpu for Cpu {
                 }
 
                 println!(
-                    "{} {}{} {}, {}-way",
+                    "{} {} {}, {}-way",
                     sublabel("L3"),
-                    &count,
                     num,
                     unit,
                     cache.assoc
