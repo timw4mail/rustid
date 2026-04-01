@@ -32,7 +32,7 @@ impl TMicroArch for Amd {
             (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB", None),
 
             // K5
-            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA5", Some("350nm")),
+            (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA/5", Some("350nm")),
             (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", Some("350nm")),
 
             // K6 (K6, K6-2, K6-III, K6-2+/K6-III+)
