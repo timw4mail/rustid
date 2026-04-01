@@ -96,6 +96,10 @@ impl Cache {
     fn amd_assoc(reg: u32) -> u32 {
         match reg {
             0 | 0xF => 0,
+            2 => 4,
+            6 => 8,
+            8 => 16,
+            10 => 32,
             n => 1 << n,
         }
     }
