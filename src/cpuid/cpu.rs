@@ -534,8 +534,6 @@ impl TCpu for Cpu {
             println!();
         };
 
-        println!();
-
         simple_line("Architecture", FeatureClass::detect().to_str());
 
         // Vendor_string (brand_name)
@@ -753,8 +751,6 @@ impl TCpu for Cpu {
                 println!();
             }
         }
-
-        println!();
     }
 }
 

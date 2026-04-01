@@ -61,9 +61,7 @@ pub use cpuid::dos::*;
 pub use std::println;
 
 fn version() {
-    println!("---------------------");
-    println!("Rustid version {}", VERSION);
-    println!("---------------------");
+    println!("--------------- Rustid {} ---------------", VERSION);
 }
 
 #[cfg(target_arch = "x86")]
