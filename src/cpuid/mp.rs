@@ -57,59 +57,11 @@ impl MpTable {
     }
 }
 
-#[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
+#[cfg(not(any(target_os = "none", target_os = "linux")))]
 impl MpTable {
     /// Detects the number of sockets (returns 1 on unsupported platforms).
     pub fn detect() -> MpTable {
         MpTable { sockets: 1 }
-    }
-}
-
-#[cfg(target_os = "windows")]
-impl MpTable {
-    /// Detects the number of sockets on Windows using the Win32 API.
-    pub fn detect() -> MpTable {
-        use windows::Win32::System::SystemInformation::{
-            GetLogicalProcessorInformation, LOGICAL_PROCESSOR_RELATIONSHIP,
-            SYSTEM_LOGICAL_PROCESSOR_INFORMATION,
-        };
-
-        let mut buffer_len: u32 = 0;
-        unsafe {
-            let _ = GetLogicalProcessorInformation(None, &mut buffer_len);
-        }
-
-        if buffer_len == 0 {
-            return MpTable { sockets: 1 };
-        }
-
-        let mut buffer = vec![0u8; buffer_len as usize];
-        let result = unsafe {
-            GetLogicalProcessorInformation(Some(buffer.as_mut_ptr() as *mut _), &mut buffer_len)
-        };
-
-        if result.is_err() {
-            return MpTable { sockets: 1 };
-        }
-
-        let mut sockets = 0usize;
-        let mut offset = 0;
-
-        while offset + size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>() <= buffer_len as usize {
-            let info = unsafe {
-                &*(buffer.as_ptr().add(offset) as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION)
-            };
-
-            if info.Relationship == LOGICAL_PROCESSOR_RELATIONSHIP(1) {
-                sockets += 1;
-            }
-
-            offset += size_of::<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>();
-        }
-
-        MpTable {
-            sockets: if sockets > 0 { sockets } else { 1 },
-        }
     }
 }
 
