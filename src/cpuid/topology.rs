@@ -1,6 +1,6 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, has_ht, is_amd, is_valid_leaf, logical_cores, vendor_str,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, is_amd, is_valid_leaf, logical_cores, vendor_str,
     x86_cpuid_count,
 };
 use crate::common::cache::Cache;
