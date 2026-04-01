@@ -254,11 +254,11 @@ impl Topology {
         let (cores, threads) = Self::count_domains(&domains);
 
         let sockets = {
-            #[cfg(any(target_os = "none", target_os = "linux", target_os = "windows"))]
+            #[cfg(any(target_os = "none", target_os = "linux"))]
             {
                 super::mp::MpTable::detect().socket_count()
             }
-            #[cfg(not(any(target_os = "none", target_os = "linux", target_os = "windows")))]
+            #[cfg(not(any(target_os = "none", target_os = "linux")))]
             {
                 1usize
             }
@@ -278,6 +278,7 @@ impl Topology {
         let amd_threads = if is_amd() { logical_cores() } else { 0 };
 
         // TODO: determine cores/threads for Intel if domains are empty
+        // Perhaps via x2APIC?
         if domains.is_empty() {
             return match vendor_str().as_str() {
                 VENDOR_AMD => {

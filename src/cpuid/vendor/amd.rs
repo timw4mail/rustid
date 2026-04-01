@@ -70,7 +70,7 @@ impl TMicroArch for Amd {
             (0, 15, 4, 15, 2) => brand_arch(MicroArch::K8, "Manilla", Some("90nm")),
             (0, 15, 4, 12, 2) => brand_arch(MicroArch::K8, "Windsor", Some("90nm")),
             (0, 15, 5, 15, 2) => brand_arch(MicroArch::K8, "Orleans", Some("90nm")),
-            (0, 15, 6, 12, 2) => brand_arch(MicroArch::K8, "Brisbane", Some("65nm")),
+            (0, 15, 6, 11, 2) => brand_arch(MicroArch::K8, "Brisbane", Some("65nm")),
             (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
 
             // Family 10h (K10)
