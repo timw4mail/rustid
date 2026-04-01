@@ -80,7 +80,10 @@ impl TMicroArch for Amd {
                 _ => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
             },
 
-            (1, 15, 0, 4, _) => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
+            (1, 15, 0, 4, _) => match logical_cores() {
+                2 => brand_arch(MicroArch::K10, "Callisto", Some("45nm")),
+                _ => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
+            },
             (1, 15, 0, 5, 3) => brand_arch(MicroArch::K10, "Propus", Some("45nm")),
             (1, 15, 0, 6, 2) => brand_arch(MicroArch::K10, "Sargas", Some("45nm")),
             (1, 15, 0, 6, 3) => brand_arch(MicroArch::K10, "Regor", Some("45nm")),
