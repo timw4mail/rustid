@@ -650,13 +650,7 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!(
-                    "{} {} {}, {}-way",
-                    sublabel("L3"),
-                    num,
-                    unit,
-                    cache.assoc
-                );
+                println!("{} {} {}, {}-way", sublabel("L3"), num, unit, cache.assoc);
             }
 
             println!();

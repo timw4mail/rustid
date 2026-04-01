@@ -1,8 +1,8 @@
 use crate::common::UNK;
-use crate::cpuid::CpuSignature;
 use crate::cpuid::brand::VENDOR_AMD;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
+use crate::cpuid::{CpuSignature, logical_cores};
 
 /// AMD-specific microarchitecture detection.
 pub struct Amd;
@@ -74,7 +74,11 @@ impl TMicroArch for Amd {
             (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
 
             // Family 10h (K10)
-            (1, 15, 0, 2, 3) => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
+            (1, 15, 0, 2, 3) => match logical_cores() {
+                3 => brand_arch(MicroArch::K10, "Toliman", Some("65nm")),
+                _ => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
+            },
+
             (1, 15, 0, 4, 3) => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
             (1, 15, 0, 5, 3) => brand_arch(MicroArch::K10, "Propus", Some("45nm")),
             (1, 15, 0, 6, 2) => brand_arch(MicroArch::K10, "Sargas", Some("45nm")),
