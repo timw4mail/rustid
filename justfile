@@ -49,14 +49,12 @@ _build-dos:
 	@if ! rustup component list --installed | grep -q llvm-tools-preview; then rustup component add llvm-tools-preview; fi
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 	# Cleanup old binaries
-	rm -f rustid.com
-	rm -f drustid.com
+	@rm -f rustid.com
+	@rm -f drustid.com
 
 _build-dos-debug:
-	# Build initial binary
-	cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
-	# Convert to proper DOS com binary
-	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
+	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
 
 # Build for DOS
 build-dos: _build-dos _build-dos-debug
@@ -103,17 +101,17 @@ build-486:
 
 # Remove build files
 clean:
-	cargo clean
-	rm -f drustid.com
-	rm -f rustid.com
+	@cargo clean
+	@rm -f drustid.com
+	@rm -f rustid.com
 
 # Build and run the app
 run arg="":
-	{{base_run}} {{arg}}
+	@{{base_run}} {{arg}}
 
 # Build and run the debug app
 run-debug arg="":
-	{{base_run}} --features debug --bin debug {{arg}}
+	@{{base_run}} --features debug --bin debug {{arg}}
 
 # Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
 [windows]
