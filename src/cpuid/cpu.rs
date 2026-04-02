@@ -435,7 +435,7 @@ impl Cpu {
             CpuBrand::AMD => AMD_EASTER_EGG_ADDR,
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Rise => RISE_EASTER_EGG_ADDR,
+            CpuBrand::Rise | CpuBrand::DMP | CpuBrand::Rdc => RISE_EASTER_EGG_ADDR,
 
             _ => 1,
         };

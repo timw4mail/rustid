@@ -97,7 +97,7 @@ build-mac-arm: _cargo_cross
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup target list --installed | grep -q i586-unknown-linux-gnu; then rustup target add i586-unknown-linux-gnu; fi
-	cargo build --target i586-unknown-linux-gnu --release
+	cargo build --target i586-unknown-linux-gnu -C target-cpu=i486 --release
 
 # Remove build files
 clean:
