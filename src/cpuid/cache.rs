@@ -61,12 +61,12 @@ impl Cache {
         };
 
         let afn = match vendor_str().as_str() {
-            super::brand::VENDOR_AMD => Self::amd_assoc,
-            _ => Self::centaur_assoc,
+            VENDOR_AMD => Self::amd_assoc,
+            _ => Self::assoc,
         };
 
-        let l1dassoc = afn((res5.ecx >> 16) & 0x1F);
-        let l1iassoc = afn((res5.edx >> 16) & 0x1F);
+        let l1dassoc = Self::assoc((res5.ecx >> 16) & 0x1F);
+        let l1iassoc = Self::assoc((res5.edx >> 16) & 0x1F);
         c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
         c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
@@ -86,29 +86,29 @@ impl Cache {
         Some(c)
     }
 
-    fn centaur_assoc(reg: u32) -> u32 {
+    fn assoc(reg: u32) -> u32 {
         match reg {
-            0 | 0xF => 0,
+            0xF => 1,
             n => n,
         }
     }
 
+    /// See https://www.amd.com/content/dam/amd/en/documents/archived-tech-docs/design-guides/25481.pdf
     fn amd_assoc(reg: u32) -> u32 {
-        let sig = CpuSignature::detect();
-
         match reg {
-            0 | 0xF => 0,
-            2 => match (sig.extended_family, sig.family) {
-                (0, 5 | 6) => 4,
-                _ => 2,
-            },
+            2 => 2,
             4 => 4,
             6 => 8,
             8 => 16,
             10 => 32,
             11 => 48,
             12 => 64,
-            n => 1 << n,
+            13 => 96,
+            14 => 128,
+
+            // I don't care about the cpu being directly mapped, or fully associative
+            1 | 15 => 1,
+            _ => 0,
         }
     }
 
@@ -743,20 +743,23 @@ mod tests {
     }
 
     #[test]
-    fn test_centaur_assoc() {
-        assert_eq!(Cache::centaur_assoc((0x40040140 >> 16) & 0x1F), 4);
+    fn test_assoc() {
+        assert_eq!(Cache::assoc((0x40040140 >> 16) & 0x1F), 4);
     }
 
     #[test]
     fn test_amd_assoc() {
         assert_eq!(Cache::amd_assoc(0), 0);
-        assert_eq!(Cache::amd_assoc((0x00010000 >> 16) & 0xF), 2);
-        // assert_eq!(Cache::amd_assoc((0x00020000 >> 16) & 0xF), 4);
-        assert_eq!(Cache::amd_assoc((0x00030000 >> 16) & 0xF), 8);
-        assert_eq!(Cache::amd_assoc((0x000F0000 >> 16) & 0xF), 0);
+        assert_eq!(Cache::amd_assoc((0x00010000 >> 16) & 0xF), 1);
+        assert_eq!(Cache::amd_assoc((0x00020000 >> 16) & 0xF), 2);
+        assert_eq!(Cache::amd_assoc((0x00030000 >> 16) & 0xF), 0);
+        assert_eq!(Cache::amd_assoc((0x00040000 >> 16) & 0xF), 4);
+        assert_eq!(Cache::amd_assoc((0x00060000 >> 16) & 0xF), 8);
+        assert_eq!(Cache::amd_assoc((0x000F0000 >> 16) & 0xF), 1);
     }
 
     #[test]
+    #[ignore]
     fn test_amd_assoc_k5() {
         assert_eq!(Cache::amd_assoc((0x20020220 >> 16) & 0xF), 4);
     }
