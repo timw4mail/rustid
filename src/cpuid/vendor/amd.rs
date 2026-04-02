@@ -74,12 +74,13 @@ impl TMicroArch for Amd {
             (0, 15, 7, 15, 2) => brand_arch(MicroArch::K8, "Sparta", Some("65nm")),
 
             // Family 10h (K10)
+            // Phenom X2 (Athlon X2), Phenom X3, Phenom X4
             (1, 15, 0, 2, 3) => match logical_cores() {
                 2 => brand_arch(MicroArch::K10, "Kuma", Some("65nm")),
                 3 => brand_arch(MicroArch::K10, "Toliman", Some("65nm")),
                 _ => brand_arch(MicroArch::K10, "Agena", Some("65nm")),
             },
-
+            // Phenom II X2, Phenom II X4
             (1, 15, 0, 4, _) => match logical_cores() {
                 2 => brand_arch(MicroArch::K10, "Callisto", Some("45nm")),
                 _ => brand_arch(MicroArch::K10, "Deneb", Some("45nm")),
