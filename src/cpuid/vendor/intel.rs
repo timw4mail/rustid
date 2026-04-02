@@ -95,7 +95,8 @@ impl Intel {
             (0, 6, 4, 12, 4) => brand_arch(MicroArch::Airmont, "Braswell", Some("14nm")),
             (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some("14nm")),
             (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some("14nm")),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            (0, 6, 11, 14, _) => brand_arch(MicroArch::AlderLake, "Alder Lake-N", Some("10nm")),
+            _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 }
