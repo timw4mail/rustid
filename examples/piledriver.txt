@@ -1,0 +1,27 @@
+--------------- Rustid 0.9.4 ---------------
+  Architecture: x86_64-v2
+
+        Vendor: AuthenticAMD (AMD)
+
+         Model: AMD FX(tm)-9590 Eight-Core Processor
+
+     MicroArch: Piledriver
+
+      Codename: Vishera
+
+  Process Node: 32nm
+
+         Cores: 8 cores
+
+         Cache: L1d: 8x 16 KB, 4-way
+                L1i: 4x 64 KB, 2-way
+                L2:  4x 2 MB, 16-way
+                L3:  8 MB, 64-way
+
+     Frequency: 4.70 GHz
+
+     Signature: Family 15h, Model 2h, Stepping 0h
+                (6, 15, 0, 2, 0)
+
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES AVX FMA BMI1 POPCNT F16C 
+
