@@ -262,11 +262,8 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
+    #[cfg(target_arch = "x86")]
     fn intel_brand_index(&self) -> Option<String<64>> {
-        if !super::is_intel() {
-            return None;
-        }
-
         let brand_id = super::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
@@ -280,8 +277,8 @@ impl Cpu {
         );
 
         // If the family and model are greater than (0xF, 0x3),
-        // this table does not apply
-        if (family == 15 && model >= 3) || (family == 6 && model >= 12) {
+        // (Prescott, or 64-bit), this table dos not apply
+        if family == 15 && model >= 3 {
             return None;
         }
 
@@ -322,44 +319,50 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String<64> {
-        // Check the Intel model lookup table
-        if let Some(model_name) = self.intel_brand_index() {
-            return model_name;
-        }
-
-        // The Geode NX is special
-        if CpuBrand::detect() == CpuBrand::AMD
-            && self.signature.family == 6
-            && self.signature.model == 8
-            && self.signature.stepping == 1
-        {
-            return String::from_str("AMD Geode NX").unwrap();
-        }
-
-        if self.arch.model != UNK {
-            return self.arch.model.clone();
-        }
-
         #[cfg(target_arch = "x86")]
-        if super::is_cyrix() {
-            return super::vendor::Cyrix::model_string();
-        }
-
-        #[cfg(target_arch = "x86")]
-        if CpuBrand::detect() == CpuBrand::Unknown {
-            let s = if super::is_386() {
-                "'Classic' 386"
-            } else {
-                match (self.signature.family, self.signature.model) {
-                    (4, 2) => "'Classic' 486 SX",
-                    (4, 3) => "'Classic' 486 DX2",
-                    (4, 4) => "Intel 486SL",
-                    (4, 5) => "'Classic' 486 SX2",
-                    _ => "'Classic' 486",
+        match CpuBrand::detect() {
+            CpuBrand::AMD => {
+                // The Geode NX is special
+                if CpuBrand::detect() == CpuBrand::AMD
+                    && self.signature.family == 6
+                    && self.signature.model == 8
+                    && self.signature.stepping == 1
+                {
+                    return String::from_str("AMD Geode NX").unwrap();
                 }
-            };
+            }
+            CpuBrand::Cyrix => {
+                // Cyrix MSR model lookup is more accurate than the 'generic' way
+                return super::vendor::Cyrix::model_string();
+            }
+            CpuBrand::Intel => {
+                // Check the Intel model lookup table
+                if let Some(model_name) = self.intel_brand_index() {
+                    return model_name;
+                }
+            }
+            CpuBrand::Unknown => {
+                // Not a 386 or 486
+                if self.arch.model != UNK || self.signature.family > 4 {
+                    return self.arch.model.clone();
+                }
 
-            return String::from_str(s).unwrap();
+                // 486s without cpuid
+                let s = if super::is_386() {
+                    "'Classic' 386"
+                } else {
+                    match (self.signature.family, self.signature.model) {
+                        (4, 2) => "'Classic' 486 SX",
+                        (4, 3) => "'Classic' 486 DX2",
+                        (4, 4) => "Intel 486SL",
+                        (4, 5) => "'Classic' 486 SX2",
+                        _ => "'Classic' 486",
+                    }
+                };
+
+                return String::from_str(s).unwrap();
+            }
+            _ => (),
         }
 
         let s = match self.arch.micro_arch {
@@ -378,6 +381,10 @@ impl Cpu {
 
             // Centaur
             MicroArch::Winchip => "IDT Winchip",
+            MicroArch::Winchip2 => "IDT Winchip 2",
+            MicroArch::Winchip2A => "IDT Winchip 2A",
+            MicroArch::Winchip2B => "IDT Winchip 2B",
+            MicroArch::Winchip3 => "IDT Winchip 3",
             MicroArch::Samuel
             | MicroArch::Samuel2
             | MicroArch::Ezra
@@ -419,11 +426,18 @@ impl Cpu {
                 _ => "Rise mP6",
             },
 
-            // UMCs
+            // UMC
             MicroArch::U5S => "UMC Green CPU U5S (486 SX)",
             MicroArch::U5D => "UMC Green CPU U5D (486 DX)",
 
-            _ => UNK,
+            // Make sure to return the original model string if there are no overrides
+            _ => {
+                if self.arch.model != UNK {
+                    &self.arch.model
+                } else {
+                    UNK
+                }
+            }
         };
 
         String::from_str(s).unwrap()
