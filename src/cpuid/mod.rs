@@ -35,13 +35,16 @@ pub mod vendor;
 #[cfg(target_arch = "x86")]
 pub mod quirks;
 
+pub mod string;
+
 pub use brand::*;
 pub use cpu::*;
+pub use string::*;
 
 #[cfg(target_arch = "x86")]
 pub use quirks::*;
 
-use crate::common::UNK;
+pub use crate::common::UNK;
 
 pub type FeatureList = heapless::Vec<&'static str, 64>;
 
@@ -225,7 +228,7 @@ pub fn max_extended_leaf() -> u32 {
 /// Returns the maximum vendor-specific CPUID leaf, if one exists,
 /// otherwise returns the maximum extended leaf.
 pub fn max_vendor_leaf() -> u32 {
-    match vendor_str().as_str() {
+    match &*vendor_str() {
         VENDOR_CENTAUR => x86_cpuid(CENTAUR_LEAF_0).eax,
         VENDOR_TRANSMETA => x86_cpuid(TRANSMETA_LEAF_0).eax,
         _ => max_extended_leaf(),
@@ -251,17 +254,15 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
 ///
 /// Returns a 12-character vendor string from CPUID leaf 0.
-pub fn vendor_str() -> heapless::String<12> {
+pub fn vendor_str() -> Str<12> {
     #[cfg(target_arch = "x86")]
     if !has_cpuid() {
-        use core::str::FromStr;
-
         let v = get_vendor_by_quirk();
 
-        return heapless::String::from_str(v).unwrap();
+        return Str::from(v);
     }
 
-    let mut s = heapless::String::new();
+    let mut s = Str::new();
 
     let res = x86_cpuid(0);
     let mut bytes = [0u8; 12];
@@ -272,20 +273,17 @@ pub fn vendor_str() -> heapless::String<12> {
 
     for &b in &bytes {
         if b != 0 {
-            let _ = s.push(b as char);
+            s.push(b as char);
         }
     }
 
     s
 }
 
-pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> heapless::String<64> {
-    use heapless::String;
-
-    let mut model: String<64> = String::new();
+pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<64> {
+    let mut model: Str<64> = Str::new();
     if !is_valid_leaf(max_leaf) {
-        let _ = model.push_str(UNK);
-        return model;
+        return Str::from(UNK);
     }
 
     for leaf in min_leaf..=max_leaf {
@@ -293,20 +291,19 @@ pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> heapless::String<64>
         for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
             for &b in &reg.to_le_bytes() {
                 if b != 0 {
-                    let _ = model.push(b as char);
+                    model.push(b as char);
                 }
             }
         }
     }
 
     let trimmed = model.trim();
-    let mut out: String<64> = String::new();
-    let _ = out.push_str(trimmed);
-    out
+
+    Str::from(trimmed)
 }
 
 fn is_vendor(v: &str) -> bool {
-    vendor_str().as_str() == v
+    vendor_str() == v
 }
 
 /// Returns true if the CPU is from AMD.

@@ -1,13 +1,14 @@
 use crate::cpuid::brand::{CpuBrand, VENDOR_TRANSMETA};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, TRANSMETA_LEAF_3, TRANSMETA_LEAF_6, UNK, read_multi_leaf_str};
-use heapless::String;
+use crate::cpuid::{
+    CpuSignature, Str, TRANSMETA_LEAF_3, TRANSMETA_LEAF_6, UNK, read_multi_leaf_str,
+};
 
 /// Transmeta-specific microarchitecture detection.
 #[derive(Debug, Default, PartialEq)]
 pub struct Transmeta {
-    pub version_str: String<64>,
+    pub version_str: Str<64>,
 }
 
 impl Transmeta {
@@ -17,7 +18,7 @@ impl Transmeta {
         }
     }
 
-    fn version_str() -> String<64> {
+    fn version_str() -> Str<64> {
         read_multi_leaf_str(TRANSMETA_LEAF_3, TRANSMETA_LEAF_6)
     }
 }

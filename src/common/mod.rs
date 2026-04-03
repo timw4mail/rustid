@@ -54,10 +54,10 @@ impl From<CoreType> for &str {
 pub struct CpuCore {
     pub kind: CoreType,
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
     pub name: Option<String>,
-    #[cfg(target_os = "none")]
-    pub name: Option<heapless::String<64>>,
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    pub name: Option<crate::cpuid::Str<64>>,
 
     pub cache: Option<Cache>,
 

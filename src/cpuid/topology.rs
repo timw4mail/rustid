@@ -25,7 +25,7 @@ impl Speed {
         use crate::cpuid::VENDOR_TRANSMETA;
 
         use super::{LEAF_16, x86_cpuid};
-        match vendor_str().as_str() {
+        match &*vendor_str() {
             VENDOR_INTEL => {
                 if !is_valid_leaf(LEAF_16) {
                     return Speed::measure();
@@ -280,7 +280,7 @@ impl Topology {
         // TODO: determine cores/threads for Intel if domains are empty
         // Perhaps via x2APIC?
         if domains.is_empty() {
-            return match vendor_str().as_str() {
+            return match &*vendor_str() {
                 VENDOR_AMD => {
                     // Logical cpus = cores before Bulldozer
                     if threads > 1 {
@@ -334,7 +334,7 @@ impl Topology {
 
         // AMD has literal core count for 'Core' type domain
         // other have Cores * Threads
-        match vendor_str().as_str() {
+        match &*vendor_str() {
             // AMD has literal core count
             VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
             // Others have 'Core' as Threads * Cores
@@ -349,7 +349,7 @@ impl Topology {
             return d;
         }
 
-        let v2_leaf = match vendor_str().as_str() {
+        let v2_leaf = match &*vendor_str() {
             VENDOR_INTEL => LEAF_1F,
             VENDOR_AMD => EXT_LEAF_26,
             _ => 0,

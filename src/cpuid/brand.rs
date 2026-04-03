@@ -3,9 +3,7 @@
 //! This module provides CPU vendor detection for x86/x86_64 processors
 //! using the CPUID instruction.
 
-use super::UNK;
-
-use heapless::String;
+use super::{Str, UNK};
 
 pub const VENDOR_AMD: &str = "AuthenticAMD";
 pub const VENDOR_CENTAUR: &str = "CentaurHauls";
@@ -212,16 +210,15 @@ impl From<&str> for CpuBrand {
     }
 }
 
-impl From<String<12>> for CpuBrand {
-    fn from(brand: String<12>) -> Self {
-        Self::from(brand.as_str())
+impl From<Str<12>> for CpuBrand {
+    fn from(brand: Str<12>) -> Self {
+        Self::from(&*brand)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::str::FromStr;
 
     #[test]
     fn test_to_vendor_str() {
@@ -349,11 +346,11 @@ mod tests {
     }
 
     #[test]
-    fn test_from_heapless_string_for_cpu_brand() {
-        let amd_string: String<12> = String::from_str(VENDOR_AMD).unwrap();
+    fn test_from_cpuid_str_for_cpu_brand() {
+        let amd_string: Str<12> = Str::from(VENDOR_AMD);
         assert_eq!(CpuBrand::from(amd_string), CpuBrand::AMD);
 
-        let unknown_string: String<12> = String::from_str("UNKNOWN_VEN").unwrap();
+        let unknown_string: Str<12> = Str::from("UNKNOWN_VEN");
         assert_eq!(CpuBrand::from(unknown_string), CpuBrand::Unknown);
     }
 }

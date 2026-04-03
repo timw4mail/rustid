@@ -1,10 +1,8 @@
-use crate::cpuid::{CpuSignature, FeatureClass, UNK, has_cx8, vendor_str};
+use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, format, has_cx8, vendor_str};
 
 use super::TMicroArch;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use core::str::FromStr;
-use heapless::{String, format};
 
 /// Cyrix-specific CPU identification and detection.
 #[derive(Debug, Default, Clone)]
@@ -16,11 +14,11 @@ pub struct Cyrix {
     /// CPU stepping
     pub stepping: u8,
     /// Bus multiplier factor
-    pub multiplier: String<4>,
+    pub multiplier: Str<4>,
     /// Model name
-    pub model: String<64>,
+    pub model: Str<64>,
     /// Code name
-    pub code_name: String<64>,
+    pub code_name: Str<64>,
 }
 
 impl Cyrix {
@@ -35,7 +33,7 @@ impl Cyrix {
         let stepping = dir1 >> 4;
         let multiplier = Self::multiplier();
         let model = Self::model_string();
-        let code_name = String::from_str(Self::codename()).unwrap();
+        let code_name = Str::from(Self::codename());
 
         Cyrix {
             dir0,
@@ -133,9 +131,9 @@ impl Cyrix {
     /// Get Cyrix processor model via registers
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
-    pub fn model_string() -> String<64> {
+    pub fn model_string() -> Str<64> {
         if !crate::cpuid::is_cyrix() {
-            return String::from_str(UNK).unwrap();
+            return Str::from(UNK);
         }
 
         let (dir0, _) = Self::get_device_ids();
@@ -186,15 +184,15 @@ impl Cyrix {
 
         let s = format!("Cyrix {}", model);
 
-        s.unwrap()
+        s.unwrap().into()
     }
 
     /// Get bus multiplier for the current cpu
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
-    fn multiplier() -> String<4> {
+    fn multiplier() -> Str<4> {
         if !crate::cpuid::is_cyrix() {
-            return String::from_str("0").unwrap();
+            return Str::from("0");
         }
 
         let (dir0, _) = Self::get_device_ids();
@@ -214,7 +212,7 @@ impl Cyrix {
             _ => "0",
         };
 
-        String::from_str(s).unwrap()
+        Str::from(s)
     }
 
     /// Get Cyrix processor model via registers

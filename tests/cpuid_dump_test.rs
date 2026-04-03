@@ -142,7 +142,7 @@ mod ppro {
     fn test_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), VENDOR_INTEL);
+            assert_eq!(&*vendor, VENDOR_INTEL);
             assert_eq!(is_intel(), true);
         });
     }
@@ -185,7 +185,7 @@ mod m3_8100y {
     fn test_intel_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), VENDOR_INTEL);
+            assert_eq!(&*vendor, VENDOR_INTEL);
         });
     }
 
@@ -342,7 +342,7 @@ mod amd_5900xt {
     fn test_amd_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), VENDOR_AMD);
+            assert_eq!(&*vendor, VENDOR_AMD);
         });
     }
 
@@ -506,7 +506,7 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), VENDOR_CENTAUR);
+            assert_eq!(&*vendor, VENDOR_CENTAUR);
         });
     }
 
@@ -626,7 +626,7 @@ mod via_c7d {
     fn test_via_vendor_detection() {
         with_mock_cpu(|| {
             let vendor = vendor_str();
-            assert_eq!(vendor.as_str(), VENDOR_CENTAUR);
+            assert_eq!(&*vendor, VENDOR_CENTAUR);
         });
     }
 

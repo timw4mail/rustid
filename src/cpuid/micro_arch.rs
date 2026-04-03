@@ -10,9 +10,7 @@ use super::brand::{
 use super::vendor::{Amd, Centaur, Intel, TMicroArch};
 #[cfg(target_arch = "x86")]
 use super::vendor::{Cyrix, Transmeta};
-use super::{CpuSignature, UNK, is_centaur, is_zhaoxin};
-use core::str::FromStr;
-use heapless::String;
+use super::{CpuSignature, Str, UNK, is_centaur, is_zhaoxin};
 
 /// CPU Microarchitecture enumeration.
 ///
@@ -155,8 +153,8 @@ pub enum MicroArch {
     U5D,
 }
 
-impl From<MicroArch> for String<64> {
-    fn from(ma: MicroArch) -> String<64> {
+impl From<MicroArch> for Str<64> {
+    fn from(ma: MicroArch) -> Str<64> {
         let s = match ma {
             MicroArch::Unknown => UNK,
 
@@ -287,10 +285,7 @@ impl From<MicroArch> for String<64> {
             MicroArch::U5D => "U5D",
         };
 
-        let mut out: String<64> = String::new();
-        let _ = out.push_str(s);
-
-        out
+        Str::from(s)
     }
 }
 
@@ -298,17 +293,17 @@ impl From<MicroArch> for String<64> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     /// CPU model string
-    pub model: String<64>,
+    pub model: Str<64>,
     /// Microarchitecture family
     pub micro_arch: MicroArch,
     /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
     /// Brand name (e.g., "Intel", "AMD")
-    pub brand_name: String<64>,
+    pub brand_name: Str<64>,
     /// Raw vendor string from CPUID
-    pub vendor_string: String<64>,
+    pub vendor_string: Str<64>,
     /// Process technology node (e.g., "14nm", "7nm")
-    pub technology: Option<String<32>>,
+    pub technology: Option<Str<32>>,
 }
 
 impl Default for CpuArch {
@@ -327,16 +322,16 @@ impl CpuArch {
         vendor_string: &str,
         technology: Option<&str>,
     ) -> Self {
-        let mut model_s: String<64> = String::new();
-        let _ = model_s.push_str(model);
+        let mut model_s: Str<64> = Str::new();
+        model_s.push_str(model);
 
-        let mut brand_s: String<64> = String::new();
-        let _ = brand_s.push_str(brand_name);
+        let mut brand_s: Str<64> = Str::new();
+        brand_s.push_str(brand_name);
 
-        let mut vendor_s: String<64> = String::new();
-        let _ = vendor_s.push_str(vendor_string);
+        let mut vendor_s: Str<64> = Str::new();
+        vendor_s.push_str(vendor_string);
 
-        let technology = technology.map(|s| String::from_str(s).unwrap());
+        let technology = technology.map(Str::from);
 
         CpuArch {
             model: model_s,
@@ -444,31 +439,28 @@ pub(crate) mod tests {
 
     #[test]
     fn test_micro_arch_from_string() {
-        assert_eq!(String::<64>::from(MicroArch::Am486).as_str(), "Am486");
-        assert_eq!(String::<64>::from(MicroArch::ZenPlus).as_str(), "Zen+");
+        assert_eq!(Str::<64>::from(MicroArch::Am486), "Am486");
+        assert_eq!(Str::<64>::from(MicroArch::ZenPlus), "Zen+");
 
         #[cfg(target_arch = "x86")]
-        assert_eq!(String::<64>::from(MicroArch::Winchip).as_str(), "Winchip");
+        assert_eq!(Str::<64>::from(MicroArch::Winchip), "Winchip");
 
-        assert_eq!(String::<64>::from(MicroArch::Lujiazui).as_str(), "LuJiaZui");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(String::<64>::from(MicroArch::Cy5x86).as_str(), "Cx5x86");
+        assert_eq!(Str::<64>::from(MicroArch::Lujiazui), "LuJiaZui");
 
         #[cfg(target_arch = "x86")]
-        assert_eq!(
-            String::<64>::from(MicroArch::VortexDX3).as_str(),
-            "Vortex86DX3"
-        );
-        assert_eq!(String::<64>::from(MicroArch::I486).as_str(), "i486");
+        assert_eq!(Str::<64>::from(MicroArch::Cy5x86), "Cx5x86");
 
         #[cfg(target_arch = "x86")]
-        assert_eq!(String::<64>::from(MicroArch::Crusoe).as_str(), "Crusoe");
+        assert_eq!(Str::<64>::from(MicroArch::VortexDX3), "Vortex86DX3");
+        assert_eq!(Str::<64>::from(MicroArch::I486), "i486");
 
         #[cfg(target_arch = "x86")]
-        assert_eq!(String::<64>::from(MicroArch::U5S).as_str(), "U5S");
+        assert_eq!(Str::<64>::from(MicroArch::Crusoe), "Crusoe");
 
-        assert_eq!(String::<64>::from(MicroArch::Unknown).as_str(), UNK);
+        #[cfg(target_arch = "x86")]
+        assert_eq!(Str::<64>::from(MicroArch::U5S), "U5S");
+
+        assert_eq!(Str::<64>::from(MicroArch::Unknown), UNK);
     }
 
     #[test]
@@ -481,11 +473,11 @@ pub(crate) mod tests {
             "Test Vendor",
             None,
         );
-        assert_eq!(arch.model.as_str(), "Test Model");
+        assert_eq!(arch.model, "Test Model");
         assert_eq!(arch.micro_arch, MicroArch::Zen);
         assert_eq!(arch.code_name, "Test Codename");
-        assert_eq!(arch.brand_name.as_str(), "Test Brand");
-        assert_eq!(arch.vendor_string.as_str(), "Test Vendor");
+        assert_eq!(arch.brand_name, "Test Brand");
+        assert_eq!(arch.vendor_string, "Test Vendor");
         assert!(arch.technology.is_none());
     }
 
@@ -583,6 +575,6 @@ pub(crate) mod tests {
         let arch = CpuArch::find(model, sig, vendor_str);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
         assert_eq!(arch.code_name, UNK);
-        assert_eq!(arch.brand_name.as_str(), UNK);
+        assert_eq!(arch.brand_name, UNK);
     }
 }

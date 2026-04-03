@@ -4,14 +4,11 @@ use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::{
-    EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, LEAF_1, read_multi_leaf_str, x86_cpuid,
+    EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, LEAF_1, Str, read_multi_leaf_str, x86_cpuid,
 };
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
 use crate::println;
-
-use core::str::FromStr;
-use heapless::String;
 
 /// CPU feature class/level enumeration.
 ///
@@ -189,14 +186,9 @@ impl CpuSignature {
     pub fn detect() -> Self {
         let from_cpuid = super::has_cpuid();
 
-        #[cfg(target_arch = "x86")]
-        if !from_cpuid {
-            #[cfg(target_os = "none")]
-            {
-                if let Some(reset_sig) = super::get_reset_signature() {
-                    return reset_sig;
-                }
-            }
+        #[cfg(all(target_arch = "x86", target_os = "none"))]
+        if !from_cpuid && let Some(reset_sig) = super::get_reset_signature() {
+            return reset_sig;
         }
 
         let res = x86_cpuid(LEAF_1);
@@ -250,7 +242,7 @@ pub struct Cpu {
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
-    pub easter_egg: Option<String<64>>,
+    pub easter_egg: Option<Str<64>>,
     /// Model brand id
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
@@ -265,12 +257,12 @@ pub struct Cpu {
 
 impl Cpu {
     /// Gets the CPU model string.
-    pub fn raw_model_string() -> String<64> {
+    pub fn raw_model_string() -> Str<64> {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
     #[cfg(target_arch = "x86")]
-    fn intel_brand_index(&self) -> Option<String<64>> {
+    fn intel_brand_index(&self) -> Option<Str<64>> {
         let brand_id = super::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
@@ -316,7 +308,7 @@ impl Cpu {
 
         match str {
             UNK => None,
-            _ => Some(String::from_str(str).unwrap()),
+            _ => Some(Str::from(str)),
         }
     }
 
@@ -325,7 +317,7 @@ impl Cpu {
     /// This attempts to produce a marketing-style name based on the
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
-    pub fn display_model_string(&self) -> String<64> {
+    pub fn display_model_string(&self) -> Str<64> {
         #[cfg(target_arch = "x86")]
         match CpuBrand::detect() {
             CpuBrand::AMD => {
@@ -335,7 +327,7 @@ impl Cpu {
                     && self.signature.model == 8
                     && self.signature.stepping == 1
                 {
-                    return String::from_str("AMD Geode NX").unwrap();
+                    return Str::from("AMD Geode NX");
                 }
             }
             CpuBrand::Cyrix => {
@@ -367,7 +359,7 @@ impl Cpu {
                     }
                 };
 
-                return String::from_str(s).unwrap();
+                return Str::from(s);
             }
             _ => (),
         }
@@ -447,15 +439,15 @@ impl Cpu {
             }
         };
 
-        String::from_str(s).unwrap()
+        Str::from(s)
     }
 
-    fn easter_egg() -> Option<String<64>> {
+    fn easter_egg() -> Option<Str<64>> {
         const AMD_EASTER_EGG_ADDR: u32 = 0x8FFF_FFFF;
         #[cfg(target_arch = "x86")]
         const RISE_EASTER_EGG_ADDR: u32 = 0x0000_5A4E;
 
-        let mut out: String<64> = String::new();
+        let mut out: Str<64> = Str::new();
         let brand = CpuBrand::detect();
 
         let addr = match brand {
@@ -482,7 +474,7 @@ impl Cpu {
                 let bytes = reg.to_le_bytes();
                 for &b in &bytes {
                     if b != 0 {
-                        let _ = out.push(b as char);
+                        out.push(b as char);
                     }
                 }
             }
@@ -490,8 +482,7 @@ impl Cpu {
 
         let trimmed = out.trim();
         if !trimmed.is_empty() {
-            let final_out: String<64> = String::from_str(trimmed).unwrap();
-            Some(final_out)
+            Some(Str::from(trimmed))
         } else {
             None
         }
@@ -506,7 +497,7 @@ impl TCpu for Cpu {
     fn detect() -> Self {
         let sig = CpuSignature::detect();
         Self {
-            arch: CpuArch::find(Self::raw_model_string().as_str(), sig, &super::vendor_str()),
+            arch: CpuArch::find(&Self::raw_model_string(), sig, &super::vendor_str()),
             easter_egg: Self::easter_egg(),
             brand_id: super::get_brand_id(),
             signature: sig,
@@ -535,25 +526,33 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        use heapless::format;
+        use super::string::format;
 
-        let ma: String<64> = self.arch.micro_arch.into();
-        let ma = ma.as_str();
+        #[cfg(target_os = "none")]
+        macro_rules! fmt {
+            ($($arg:tt)*) => { format!($($arg)*).unwrap().into() };
+        }
+
+        #[cfg(not(target_os = "none"))]
+        macro_rules! fmt {
+            ($($arg:tt)*) => { format!($($arg)*).into() };
+        }
+
+        let ma: Str<64> = self.arch.micro_arch.into();
+        let ma: &str = &ma;
 
         let multi_core = self.topology.cores > 1;
 
-        let cache_count = |share_count| {
+        let cache_count = |share_count| -> Str<_> {
             if (!multi_core) || share_count == 0 || (self.topology.threads / share_count) <= 1 {
-                format!("")
+                fmt!("")
             } else {
-                format!("{}x ", self.topology.threads / share_count)
+                fmt!("{}x ", self.topology.threads / share_count)
             }
-            .unwrap()
         };
 
-        let label: fn(&str) -> String<32> = |label| format!("{:>14}:{:1}", label, "").unwrap();
-        let sublabel: fn(&str) -> String<32> =
-            |label| format!("{:>16}{}:{:1}", "", label, "").unwrap();
+        let label: fn(&str) -> Str<32> = |label| fmt!("{:>14}:{:1}", label, "");
+        let sublabel: fn(&str) -> Str<32> = |label| fmt!("{:>16}{}:{:1}", "", label, "");
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -570,8 +569,8 @@ impl TCpu for Cpu {
             println!(
                 "{}{} ({})",
                 label("Vendor"),
-                self.arch.vendor_string.as_str(),
-                self.arch.brand_name.as_str()
+                self.arch.vendor_string,
+                self.arch.brand_name
             );
 
             #[cfg(not(target_os = "none"))]
@@ -608,12 +607,12 @@ impl TCpu for Cpu {
 
         // Process node
         if let Some(tech) = &self.arch.technology {
-            simple_line("Process Node", tech.as_str());
+            simple_line("Process Node", tech);
         }
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
-            simple_line("Easter Egg", easter_egg.as_str());
+            simple_line("Easter Egg", easter_egg);
         }
 
         // Sockets
@@ -646,8 +645,8 @@ impl TCpu for Cpu {
                     println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: String<4> = cache_count(data.share_count);
-                    let instruction_count = cache_count(instruction.share_count);
+                    let data_count: Str<4> = cache_count(data.share_count);
+                    let instruction_count: Str<4> = cache_count(instruction.share_count);
 
                     if data.assoc > 0 {
                         println!(
@@ -726,9 +725,9 @@ impl TCpu for Cpu {
                 }
             };
 
-            print_speed(label("Frequency").as_str(), base);
+            print_speed(&label("Frequency"), base);
             if boost > base {
-                print_speed(label("Boost").as_str(), boost);
+                print_speed(&label("Boost"), boost);
             }
 
             #[cfg(not(target_os = "none"))]
@@ -766,17 +765,17 @@ impl TCpu for Cpu {
         // CPU Features
         if !self.features.is_empty() {
             #[cfg(target_os = "none")]
-            let mut features: String<128> = String::new();
+            let mut features: Str<128> = Str::new();
 
             #[cfg(not(target_os = "none"))]
-            let mut features: String<512> = String::new();
+            let mut features: Str<512> = Str::new();
 
             self.features.iter().for_each(|feature| {
-                let _ = features.push_str(feature);
-                let _ = features.push_str(" ");
+                features.push_str(feature);
+                features.push_str(" ");
             });
 
-            simple_line("Features", features.as_str());
+            simple_line("Features", &features);
         }
 
         #[cfg(target_arch = "x86")]
@@ -788,11 +787,7 @@ impl TCpu for Cpu {
                 println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
                 println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
-                    println!(
-                        "{}{}x",
-                        sublabel("Bus Multiplier"),
-                        cyrix.multiplier.as_str()
-                    );
+                    println!("{}{}x", sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
                 #[cfg(not(target_os = "none"))]
                 println!();

@@ -24,7 +24,7 @@ impl Cache {
             return None;
         }
 
-        match vendor_str().as_str() {
+        match &*vendor_str() {
             VENDOR_AMD => match is_valid_leaf(EXT_LEAF_1D) {
                 true => Cache::detect_general(EXT_LEAF_1D),
                 false => Cache::detect_ext_5_6(),
@@ -60,7 +60,7 @@ impl Cache {
             ..Cache::default()
         };
 
-        let afn = match vendor_str().as_str() {
+        let afn = match &*vendor_str() {
             VENDOR_AMD => Self::amd_assoc,
             _ => Self::assoc,
         };
