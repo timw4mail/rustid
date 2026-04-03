@@ -390,6 +390,13 @@ impl Cpu {
             | MicroArch::EzraT
             | MicroArch::Nehemiah => "VIA C3",
             MicroArch::Esther => "VIA C7",
+            MicroArch::Isaiah => {
+                if self.arch.model.contains("Eden") {
+                    &self.arch.model.replace("Eden", "Nano")
+                } else {
+                    &self.arch.model
+                }
+            }
 
             //Intel
             MicroArch::RapidCad => "Intel RapidCAD",

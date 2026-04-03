@@ -22,9 +22,6 @@ macro_rules! sfmt {
 use heapless::String as HeaplessString;
 
 #[cfg(not(target_os = "none"))]
-pub use std::format;
-
-#[cfg(not(target_os = "none"))]
 use std::string::String as StdString;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -36,7 +33,6 @@ pub struct Str<const N: usize> {
     inner: HeaplessString<N>,
 }
 
-#[cfg(not(target_os = "none"))]
 impl<const N: usize> Str<N> {
     pub fn new() -> Self {
         Self {
@@ -64,6 +60,27 @@ impl<const N: usize> Str<N> {
     pub fn trim(&self) -> &str {
         self.inner.trim()
     }
+
+    #[cfg(not(target_os = "none"))]
+    pub fn replace(&self, from: &str, to: &str) -> Self {
+        let s: &str = self.deref();
+        let replaced = s.replace(from, to);
+        replaced.into()
+    }
+
+    #[cfg(target_os = "none")]
+    pub fn replace(&self, from: &str, to: &str) -> Self {
+        let s: &str = self.deref();
+        let mut result = HeaplessString::new();
+        let mut last = 0;
+        for (idx, _) in s.match_indices(from) {
+            let _ = result.push_str(&s[last..idx]);
+            let _ = result.push_str(to);
+            last = idx + from.len();
+        }
+        let _ = result.push_str(&s[last..]);
+        result.into()
+    }
 }
 
 #[cfg(not(target_os = "none"))]
@@ -90,12 +107,6 @@ impl<const N: usize> Deref for Str<N> {
 impl<const N: usize> AsRef<str> for Str<N> {
     fn as_ref(&self) -> &str {
         &self.inner
-    }
-}
-
-impl<const N: usize> AsRef<[u8]> for Str<N> {
-    fn as_ref(&self) -> &[u8] {
-        self.inner.as_bytes()
     }
 }
 
