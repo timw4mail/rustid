@@ -281,7 +281,7 @@ impl Cpu {
 
         // If the family and model are greater than (0xF, 0x3),
         // this table does not apply
-        if family > 0xF || (family == 0xF && model >= 0x3) {
+        if (family == 15 && model >= 3) || (family == 6 && model >= 12) {
             return None;
         }
 
@@ -376,6 +376,15 @@ impl Cpu {
             },
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
 
+            // Centaur
+            MicroArch::Winchip => "IDT Winchip",
+            MicroArch::Samuel
+            | MicroArch::Samuel2
+            | MicroArch::Ezra
+            | MicroArch::EzraT
+            | MicroArch::Nehemiah => "VIA C3",
+            MicroArch::Esther => "VIA C7",
+
             //Intel
             MicroArch::RapidCad => "Intel RapidCAD",
             MicroArch::I486 => match self.arch.code_name {
@@ -403,9 +412,6 @@ impl Cpu {
             MicroArch::PentiumPro => "Intel Pentium Pro",
             MicroArch::PentiumII => "Intel Pentium II",
             MicroArch::PentiumIII => "Intel Pentium III",
-
-            // IDT
-            MicroArch::Winchip => "IDT Winchip",
 
             // Rise
             MicroArch::MP6 => match self.arch.code_name {
@@ -551,7 +557,15 @@ impl TCpu for Cpu {
             simple_line("Overdrive", "Yes");
         }
 
-        simple_line("Model", self.display_model_string().as_str());
+        let (raw_model, disp_model) = (Cpu::raw_model_string(), self.display_model_string());
+        if raw_model.eq(UNK) {
+            simple_line("Model (synth)", &disp_model);
+        } else if raw_model.eq(&disp_model) {
+            simple_line("Model", &disp_model);
+        } else {
+            println!("{}{}", label("Model (synth)"), &disp_model);
+            println!("{}{}", label("Model (raw)"), &raw_model);
+        }
 
         if ma != UNK {
             simple_line("MicroArch", ma);
