@@ -526,17 +526,7 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        use super::string::format;
-
-        #[cfg(target_os = "none")]
-        macro_rules! fmt {
-            ($($arg:tt)*) => { format!($($arg)*).unwrap().into() };
-        }
-
-        #[cfg(not(target_os = "none"))]
-        macro_rules! fmt {
-            ($($arg:tt)*) => { format!($($arg)*).into() };
-        }
+        use crate::sfmt;
 
         let ma: Str<64> = self.arch.micro_arch.into();
         let ma: &str = &ma;
@@ -545,14 +535,14 @@ impl TCpu for Cpu {
 
         let cache_count = |share_count| -> Str<_> {
             if (!multi_core) || share_count == 0 || (self.topology.threads / share_count) <= 1 {
-                fmt!("")
+                sfmt!("")
             } else {
-                fmt!("{}x ", self.topology.threads / share_count)
+                sfmt!("{}x ", self.topology.threads / share_count)
             }
         };
 
-        let label: fn(&str) -> Str<32> = |label| fmt!("{:>14}:{:1}", label, "");
-        let sublabel: fn(&str) -> Str<32> = |label| fmt!("{:>16}{}:{:1}", "", label, "");
+        let label: fn(&str) -> Str<32> = |label| sfmt!("{:>14}:{:1}", label, "");
+        let sublabel: fn(&str) -> Str<32> = |label| sfmt!("{:>16}{}:{:1}", "", label, "");
 
         let simple_line = |l, v: &str| {
             let l = label(l);

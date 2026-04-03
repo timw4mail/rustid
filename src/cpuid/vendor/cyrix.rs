@@ -1,8 +1,8 @@
-use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, format, has_cx8, vendor_str};
-
 use super::TMicroArch;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
+use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8, vendor_str};
+use crate::sfmt;
 
 /// Cyrix-specific CPU identification and detection.
 #[derive(Debug, Default, Clone)]
@@ -182,9 +182,7 @@ impl Cyrix {
             _ => UNK,
         };
 
-        let s = format!("Cyrix {}", model);
-
-        s.unwrap().into()
+        sfmt!("Cyrix {}", model).into()
     }
 
     /// Get bus multiplier for the current cpu

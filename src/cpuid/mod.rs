@@ -35,6 +35,7 @@ pub mod vendor;
 #[cfg(target_arch = "x86")]
 pub mod quirks;
 
+#[macro_use]
 pub mod string;
 
 pub use brand::*;

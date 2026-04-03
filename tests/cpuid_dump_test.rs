@@ -97,7 +97,7 @@ mod tm5700 {
 
     #[test]
     fn test_vendor_detection() {
-        with_mock_cpu(|| assert_eq!(vendor_str().as_str(), VENDOR_TRANSMETA))
+        with_mock_cpu(|| assert_eq!(vendor_str(), VENDOR_TRANSMETA))
     }
 
     #[test]
@@ -122,7 +122,7 @@ mod tm5700 {
         with_mock_cpu(|| {
             let transmeta = rustid::cpuid::vendor::Transmeta::detect();
             assert_eq!(
-                transmeta.version_str.as_str(),
+                transmeta.version_str,
                 "20040614 15:00 official release 4.5.2#1"
             );
         })
