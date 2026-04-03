@@ -473,6 +473,10 @@ pub fn has_sse42() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 20)
 }
 
+pub fn has_x2apic() -> bool {
+    has_feature(LEAF_1, Reg::Ecx, 21)
+}
+
 /// Returns true if the CPU supports POPCNT instruction.
 pub fn has_popcnt() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 23)
@@ -589,6 +593,9 @@ pub fn get_feature_list() -> FeatureList {
     };
     if has_ht() {
         let _ = out.push("HT");
+    };
+    if has_x2apic() {
+        let _ = out.push("x2apic");
     };
     if has_amd64() {
         if is_intel() {

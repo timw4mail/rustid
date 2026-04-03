@@ -93,7 +93,6 @@ mod tm5700 {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("tm5700.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -137,7 +136,6 @@ mod ppro {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("p6x2.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -181,7 +179,6 @@ mod m3_8100y {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("m3-8100y.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -339,7 +336,6 @@ mod amd_5900xt {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("5900XT.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -504,7 +500,6 @@ mod zhaoxin_kx5640 {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("kx5640.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -625,7 +620,6 @@ mod via_c7d {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("c7d.txt");
         test();
-        reset_cpuid_provider();
     }
 
     #[test]
@@ -684,13 +678,9 @@ mod via_c7d {
     #[test]
     fn test_via_sse_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let sse = (res.edx >> 25) & 1;
-            let sse2 = (res.edx >> 26) & 1;
-            let sse3 = (res.ecx >> 0) & 1;
-            assert_eq!(sse, 1);
-            assert_eq!(sse2, 1);
-            assert_eq!(sse3, 1);
+            assert_eq!(has_sse(), true);
+            assert_eq!(has_sse2(), true);
+            assert_eq!(has_sse3(), true);
         });
     }
 
