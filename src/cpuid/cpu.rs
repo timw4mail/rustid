@@ -558,6 +558,8 @@ impl TCpu for Cpu {
         let simple_line = |l, v: &str| {
             let l = label(l);
             println!("{}{}", l, v);
+
+            #[cfg(not(target_os = "none"))]
             println!();
         };
 
@@ -571,6 +573,8 @@ impl TCpu for Cpu {
                 self.arch.vendor_string.as_str(),
                 self.arch.brand_name.as_str()
             );
+
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -586,6 +590,9 @@ impl TCpu for Cpu {
         } else {
             println!("{}{}", label("Model (synth)"), &disp_model);
             println!("{}{}", label("Model (raw)"), &raw_model);
+
+            #[cfg(not(target_os = "none"))]
+            println!();
         }
 
         if ma != UNK {
@@ -612,6 +619,7 @@ impl TCpu for Cpu {
         // Sockets
         if self.topology.sockets > 1 {
             println!("{}{}", label("Sockets"), self.topology.sockets);
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -628,6 +636,7 @@ impl TCpu for Cpu {
                 println!("{}{} cores", label("Cores"), self.topology.cores);
             }
 
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -693,6 +702,7 @@ impl TCpu for Cpu {
                 println!("{} {} {}, {}-way", sublabel("L3"), num, unit, l3.assoc);
             }
 
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -721,6 +731,7 @@ impl TCpu for Cpu {
                 print_speed(label("Boost").as_str(), boost);
             }
 
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -748,6 +759,7 @@ impl TCpu for Cpu {
                 self.signature.model,
                 self.signature.stepping
             );
+            #[cfg(not(target_os = "none"))]
             println!();
         }
 
@@ -782,6 +794,7 @@ impl TCpu for Cpu {
                         cyrix.multiplier.as_str()
                     );
                 }
+                #[cfg(not(target_os = "none"))]
                 println!();
             }
         }
