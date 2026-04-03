@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.9.5]
+
+### Added
+- Intel N100 CPU mapping
+- Intel Haswell-EP CPU mapping
+- AMD K10 Dual-Core Athlon mapping
+- AMD FX-9590 example
+- RapidCAD example
+- AES, VAES, and SHA flag checks
+- Additional feature classes for 686 class processors with SSE and SSE2
+- Qualcomm CPU mappings
+- Codenames for more Apple Silicon CPUs
+
+### Changed
+- Improved AMD cache associativity detection
+- Improved detection of 386 and 486 socket Cyrix CPUs
+- Improved detection of 486 CPUs
+- Improved formatting of Apple Silicon CPUs on macOS
+- Various output formatting tweaks
+- Added rough speed detection for DOS
+
+### Fixed
+- Fix Windsor CPU mapping
+- Fix core count for AMD CPUs before Bulldozer
+- Fix mapping of Brisbane
+- Differentiate between 3 and 4 core Phenom 1 chips
+- Fix M1 CPU mapping
+
+### Removed
+- Removed Windows code for getting MP tables (packages won't run on old CPUs)
+- Removed arm-only dependency from x86/x86_64 Windows builds
+
 ## [0.8.6]
 
 ### Added

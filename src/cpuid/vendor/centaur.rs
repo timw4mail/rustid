@@ -60,9 +60,8 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB A1", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNB A2", None),
             (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ", None),
+            (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNQ A2", Some("40nm")), // My hardware
             (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
-
-            // (0, 6, 1, 9..=12, 8) => brand_arch(MicroArch::Isaiah, "CNS", None),
             (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some("65nm")),
 
             // Zhaoxin

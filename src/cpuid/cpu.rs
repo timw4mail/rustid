@@ -627,9 +627,7 @@ impl TCpu for Cpu {
                 }
             }
 
-            if let Some(l2) = cache.l2
-                && l2.assoc > 0
-            {
+            if let Some(l2) = cache.l2 {
                 let count = cache_count(l2.share_count);
 
                 let mut num = l2.size / 1024;
@@ -649,9 +647,7 @@ impl TCpu for Cpu {
                 );
             }
 
-            if let Some(l3) = cache.l3
-                && l3.assoc > 0
-            {
+            if let Some(l3) = cache.l3 {
                 let mut num = l3.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
 
