@@ -1,6 +1,6 @@
 use super::brand::{VENDOR_AMD, VENDOR_INTEL};
 use super::{
-    EXT_LEAF_26, LEAF_0B, LEAF_1F, is_amd, is_valid_leaf, logical_cores, vendor_str,
+    EXT_LEAF_26, LEAF_0B, LEAF_1F, has_ht, is_valid_leaf, logical_cores, vendor_str,
     x86_cpuid_count,
 };
 use crate::common::cache::Cache;
@@ -275,7 +275,7 @@ impl Topology {
     }
 
     fn count_domains(domains: &Vec<TopologyDomain, 16>) -> (u32, u32) {
-        let amd_threads = if is_amd() { logical_cores() } else { 0 };
+        let threads = logical_cores();
 
         // TODO: determine cores/threads for Intel if domains are empty
         // Perhaps via x2APIC?
@@ -283,8 +283,19 @@ impl Topology {
             return match vendor_str().as_str() {
                 VENDOR_AMD => {
                     // Logical cpus = cores before Bulldozer
-                    if amd_threads > 0 {
-                        (amd_threads, amd_threads)
+                    if threads > 1 {
+                        (threads, threads)
+                    } else {
+                        (1, 1)
+                    }
+                }
+                VENDOR_INTEL => {
+                    if threads > 1 {
+                        if has_ht() {
+                            (threads, threads / 2)
+                        } else {
+                            (threads, threads)
+                        }
                     } else {
                         (1, 1)
                     }

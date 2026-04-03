@@ -343,13 +343,21 @@ pub fn is_overdrive() -> bool {
 
 /// Returns the number of logical cores.
 pub fn logical_cores() -> u32 {
-    if (!is_amd()) || max_leaf() < 1 {
-        return 1;
+    // Since AMD has a handy flag for getting logical cores,
+    // try that first
+    if is_amd() && max_leaf() > 0 {
+        let res = x86_cpuid(1);
+        let count = (res.ebx >> 16) & 0xFF;
+        if count != 0 {
+            return count;
+        }
     }
 
-    let res = x86_cpuid(1);
-    let count = (res.ebx >> 16) & 0xFF;
-    if count == 0 { 1 } else { count }
+    #[cfg(not(target_os = "none"))]
+    return crate::common::logical_cores() as u32;
+
+    #[cfg(target_os = "none")]
+    1
 }
 
 // ------------------------------------------------------------------------

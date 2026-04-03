@@ -67,7 +67,7 @@ impl TCpu for Cpu {
             .iter()
             .for_each(|k| {
                 if let Some(core) = self.cores.get(k) {
-                    let name = format!("{} Cores", Into::<String>::into(*k));
+                    let name = format!("{} Cores", Into::<&str>::into(*k));
                     println!("{}{}", label(&name), core.count);
 
                     if let Some(name) = core.name.clone() {

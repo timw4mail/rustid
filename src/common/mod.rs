@@ -1,5 +1,12 @@
 pub mod cache;
+
+#[cfg(not(target_os = "none"))]
+pub mod cores;
+
 pub use cache::*;
+
+#[cfg(not(target_os = "none"))]
+pub use cores::*;
 
 pub const UNK: &str = "Unknown";
 
@@ -22,10 +29,9 @@ pub enum CoreType {
     Efficiency,
 }
 
-#[cfg(not(target_os = "none"))]
-impl From<String> for CoreType {
-    fn from(val: String) -> Self {
-        match val.as_str() {
+impl From<&str> for CoreType {
+    fn from(val: &str) -> Self {
+        match val {
             "Super" => CoreType::Super,
             "Performance" => CoreType::Performance,
             "Efficiency" => CoreType::Efficiency,
@@ -34,16 +40,13 @@ impl From<String> for CoreType {
     }
 }
 
-#[cfg(not(target_os = "none"))]
-impl From<CoreType> for String {
-    fn from(val: CoreType) -> Self {
-        let s = match val {
+impl From<CoreType> for &str {
+    fn from(val: CoreType) -> &'static str {
+        match val {
             CoreType::Super => "Super",
             CoreType::Performance => "Performance",
             CoreType::Efficiency => "Efficiency",
-        };
-
-        String::from(s)
+        }
     }
 }
 
