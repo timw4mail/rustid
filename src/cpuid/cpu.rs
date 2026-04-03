@@ -343,7 +343,7 @@ impl Cpu {
             CpuBrand::Unknown => {
                 // Not a 386 or 486
                 if self.arch.model != UNK || self.signature.family > 4 {
-                    return self.arch.model.clone();
+                    return ();
                 }
 
                 // 486s without cpuid
@@ -535,6 +535,11 @@ impl TCpu for Cpu {
     fn display_table(&self) {
         use crate::sfmt;
 
+        #[cfg(not(target_os = "none"))]
+        let newline = || println!();
+        #[cfg(target_os = "none")]
+        let newline = || {};
+
         let ma: Str<64> = self.arch.micro_arch.into();
         let ma: &str = &ma;
 
@@ -555,8 +560,7 @@ impl TCpu for Cpu {
             let l = label(l);
             println!("{}{}", l, v);
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         };
 
         simple_line("Architecture", FeatureClass::detect().to_str());
@@ -570,8 +574,7 @@ impl TCpu for Cpu {
                 self.arch.brand_name
             );
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         if self.signature.is_overdrive {
@@ -587,8 +590,7 @@ impl TCpu for Cpu {
             println!("{}{}", label("Model (synth)"), &disp_model);
             println!("{}{}", label("Model (raw)"), &raw_model);
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         if ma != UNK {
@@ -615,8 +617,7 @@ impl TCpu for Cpu {
         // Sockets
         if self.topology.sockets > 1 {
             println!("{}{}", label("Sockets"), self.topology.sockets);
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         // Cores / Threads
@@ -632,8 +633,7 @@ impl TCpu for Cpu {
                 println!("{}{} cores", label("Cores"), self.topology.cores);
             }
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         if let Some(cache) = self.topology.cache {
@@ -698,8 +698,7 @@ impl TCpu for Cpu {
                 println!("{} {} {}, {}-way", sublabel("L3"), num, unit, l3.assoc);
             }
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         // Clock Speed (Base/Boost)
@@ -727,8 +726,7 @@ impl TCpu for Cpu {
                 print_speed(&label("Boost"), boost);
             }
 
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         // CPU Signature
@@ -755,8 +753,7 @@ impl TCpu for Cpu {
                 self.signature.model,
                 self.signature.stepping
             );
-            #[cfg(not(target_os = "none"))]
-            println!();
+            newline();
         }
 
         // CPU Features

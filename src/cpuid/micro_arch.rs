@@ -322,14 +322,9 @@ impl CpuArch {
         vendor_string: &str,
         technology: Option<&str>,
     ) -> Self {
-        let mut model_s: Str<64> = Str::new();
-        model_s.push_str(model);
-
-        let mut brand_s: Str<64> = Str::new();
-        brand_s.push_str(brand_name);
-
-        let mut vendor_s: Str<64> = Str::new();
-        vendor_s.push_str(vendor_string);
+        let model_s: Str<64> = Str::from(model);
+        let brand_s: Str<64> = Str::from(brand_name);
+        let vendor_s: Str<64> = Str::from(vendor_string);
 
         let technology = technology.map(Str::from);
 
