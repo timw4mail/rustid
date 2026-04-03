@@ -461,7 +461,7 @@ impl Cpu {
             CpuBrand::AMD => AMD_EASTER_EGG_ADDR,
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Rise | CpuBrand::DMP | CpuBrand::Rdc => RISE_EASTER_EGG_ADDR,
+            CpuBrand::Rise | CpuBrand::SiS | CpuBrand::DMP | CpuBrand::Rdc => RISE_EASTER_EGG_ADDR,
 
             _ => 1,
         };
@@ -582,15 +582,18 @@ impl TCpu for Cpu {
         }
 
         let (raw_model, disp_model) = (Cpu::raw_model_string(), self.display_model_string());
-        if raw_model.eq(UNK) {
-            simple_line("Model (synth)", &disp_model);
-        } else if raw_model.eq(&disp_model) {
-            simple_line("Model", &disp_model);
-        } else {
-            println!("{}{}", label("Model (synth)"), &disp_model);
-            println!("{}{}", label("Model (raw)"), &raw_model);
 
-            newline();
+        if disp_model != UNK {
+            if raw_model.eq(UNK) {
+                simple_line("Model (synth)", &disp_model);
+            } else if raw_model.eq(&disp_model) {
+                simple_line("Model", &disp_model);
+            } else {
+                println!("{}{}", label("Model (synth)"), &disp_model);
+                println!("{}{}", label("Model (raw)"), &raw_model);
+
+                newline();
+            }
         }
 
         if ma != UNK {

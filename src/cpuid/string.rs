@@ -1,3 +1,6 @@
+//! Wrapper object around std::String and heapless::String.
+//!
+//! This helps hide the ugliness of using heapless::String for DOS
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 
