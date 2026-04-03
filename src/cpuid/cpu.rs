@@ -340,10 +340,10 @@ impl Cpu {
                     return model_name;
                 }
             }
-            CpuBrand::Unknown => {
+            CpuBrand::Unknown => 'nocpuid: {
                 // Not a 386 or 486
                 if self.arch.model != UNK || self.signature.family > 4 {
-                    return ();
+                    break 'nocpuid;
                 }
 
                 // 486s without cpuid
