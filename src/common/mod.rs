@@ -50,6 +50,22 @@ impl From<CoreType> for &str {
     }
 }
 
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+impl From<String> for CoreType {
+    fn from(val: String) -> Self {
+        Self::from(val.as_str())
+    }
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+impl From<CoreType> for String {
+    fn from(val: CoreType) -> String {
+        let s: &str = val.into();
+
+        String::from(s)
+    }
+}
+
 #[derive(Debug, Default, PartialEq)]
 pub struct CpuCore {
     pub kind: CoreType,
