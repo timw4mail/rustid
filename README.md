@@ -46,17 +46,18 @@ For other architectures, see the `justfile` for available targets (`just build-a
 Simply run the compiled binary to see your CPU details:
 
 ```bash
+just run
+```
+or
+```bash
 cargo run
 ```
 
 Output varies by architecture. Here is an example for x86_64:
 
 ```text
----------------------
-Rustid version 0.9.0
----------------------
-
-  Architecture: x86_64_v4
+--------------- Rustid 0.9.6 ---------------
+  Architecture: x86_64-v4
 
         Vendor: AuthenticAMD (AMD)
 
@@ -80,7 +81,7 @@ Rustid version 0.9.0
      Signature: Family 19h, Model 61h, Stepping 2h
                 (10, 15, 6, 1, 2)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES VAES AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C SHA
 ```
 
 For ARM and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
