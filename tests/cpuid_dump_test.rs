@@ -50,29 +50,6 @@ fn get_signature() -> (u32, u32, u32, u32, u32) {
     )
 }
 
-fn calculate_cache_size(leaf: u32, subleaf: u32) -> Option<u32> {
-    let res = x86_cpuid_count(leaf, subleaf);
-    let cache_type = res.eax & 0xF;
-    if cache_type == 0 {
-        return None;
-    }
-
-    let cache_sets = res.ecx + 1;
-    let cache_line_size = (res.ebx & 0xFFF) + 1;
-    let cache_partitions = ((res.ebx >> 12) & 0x3FF) + 1;
-    let cache_ways = ((res.ebx >> 22) & 0x3FF) + 1;
-
-    Some(cache_sets * cache_partitions * cache_ways * cache_line_size)
-}
-
-fn calculate_cache_assoc(leaf: u32, subleaf: u32) -> Option<u32> {
-    let res = x86_cpuid_count(leaf, subleaf);
-    if res.eax & 0xF == 0 {
-        return None;
-    }
-    Some(((res.ebx >> 22) & 0x3FF) + 1)
-}
-
 fn count_topology_domains(leaf: u32) -> usize {
     let mut count = 0;
     for subleaf in 0..16 {
@@ -126,6 +103,24 @@ mod tm5700 {
                 "20040614 15:00 official release 4.5.2#1"
             );
         })
+    }
+
+    #[test]
+    fn test_threads() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads, 1);
+        });
+    }
+
+    #[test]
+    fn test_cores() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.cores, 1);
+        });
     }
 }
 
@@ -279,18 +274,48 @@ mod m3_8100y {
     #[test]
     fn test_intel_cache_detection() {
         with_mock_cpu(|| {
-            let cache_sizes: Vec<_> = (0..4)
-                .filter_map(|i| calculate_cache_size(0x4, i))
-                .collect();
-            assert!(!cache_sizes.is_empty());
+            use rustid::common::{TCpu, cache::CacheType};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert_eq!(cache.l1.size(), 65536, "L1 should be 64KB total");
+            assert!(
+                cache.l1.is_split(),
+                "L1 cache should be split (separate I/D)"
+            );
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.assoc(), 4, "L2 should be 4-way");
+            }
         });
     }
 
     #[test]
     fn test_intel_cache_assoc() {
         with_mock_cpu(|| {
-            let l1_assoc = calculate_cache_assoc(0x4, 0);
-            assert!(l1_assoc.is_some(), "Expected L1 cache to exist");
+            use rustid::common::{TCpu, cache::Level1Cache};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 32768, "L1 data cache should be 32KB");
+                    assert_eq!(data.assoc(), 8, "L1 data cache should be 8-way");
+                    assert_eq!(
+                        instruction.size(),
+                        32768,
+                        "L1 instruction cache should be 32KB"
+                    );
+                    assert_eq!(
+                        instruction.assoc(),
+                        8,
+                        "L1 instruction cache should be 8-way"
+                    );
+                }
+                _ => panic!("There's not unified cache here"),
+            }
         });
     }
 
@@ -497,18 +522,46 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cache_detection() {
         with_mock_cpu(|| {
-            let cache_sizes: Vec<_> = (0..4)
-                .filter_map(|i| calculate_cache_size(0x8000001D, i))
-                .collect();
-            assert!(!cache_sizes.is_empty());
+            use rustid::common::{TCpu, cache::CacheType};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert_eq!(
+                cache.l1.size(),
+                65536,
+                "L1 cache should be 64KB total (32KB data + 32KB instruction)"
+            );
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.size(), 524288, "L2 should be 512KB");
+                assert_eq!(l2.assoc(), 8, "L2 should be 8-way");
+            }
+
+            if let Some(l3) = cache.l3 {
+                assert_eq!(l3.kind(), CacheType::Unified);
+                assert_eq!(l3.size(), 33554432, "L3 should be 32MB");
+                assert_eq!(l3.assoc(), 16, "L3 should be 16-way");
+            }
         });
     }
 
     #[test]
     fn test_amd_cache_assoc() {
         with_mock_cpu(|| {
-            let l1_assoc = calculate_cache_assoc(0x8000001D, 0);
-            assert!(l1_assoc.is_some(), "Expected L1 cache to exist");
+            use rustid::common::{TCpu, cache::Level1Cache};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 32768, "L1 data should be 32KB");
+                    assert_eq!(data.assoc(), 8, "L1 data should be 8-way");
+                    assert_eq!(instruction.size(), 32768, "L1 instruction should be 32KB");
+                    assert_eq!(instruction.assoc(), 8, "L1 instruction should be 8-way");
+                }
+                _ => panic!("There's not unified cache here"),
+            }
         });
     }
 
@@ -664,9 +717,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_no_ht() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let ht = (res.edx >> 28) & 1;
-            assert_eq!(ht, 1);
+            assert_eq!(has_ht(), true);
         });
     }
 
@@ -693,10 +744,26 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_cache_detection() {
         with_mock_cpu(|| {
-            let cache_sizes: Vec<_> = (0..4)
-                .filter_map(|i| calculate_cache_size(0x4, i))
-                .collect();
-            assert!(!cache_sizes.is_empty());
+            use rustid::common::{Level1Cache, TCpu, cache::CacheType};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert!(cache.l1.size() > 0, "L1 cache should exist");
+
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 32768, "L1 data should be 32KB");
+                    assert_eq!(data.assoc(), 8, "L1 data should have associativity");
+                    assert_eq!(instruction.size(), 32768);
+                    assert_eq!(instruction.assoc(), 8);
+                }
+                _ => panic!("There's not unified cache here"),
+            }
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.size(), 4194304);
+            }
         });
     }
 
@@ -763,25 +830,37 @@ mod via_c7d {
     #[test]
     fn test_via_max_leaf() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(0, 0);
-            assert_eq!(res.eax, 0x1);
+            assert_eq!(max_leaf(), 0x1);
         });
     }
 
     #[test]
     fn test_via_max_extended_leaf() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(0x80000000, 0);
-            assert_eq!(res.eax, 0x80000006);
+            assert_eq!(max_extended_leaf(), 0x80000006);
         });
     }
 
     #[test]
     fn test_via_no_ht() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let ht = (res.edx >> 28) & 1;
-            assert_eq!(ht, 0);
+            assert_eq!(has_ht(), false);
+        });
+    }
+
+    #[test]
+    fn test_via_cache_detection() {
+        with_mock_cpu(|| {
+            use rustid::common::{TCpu, cache::CacheType};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert!(cache.l1.size() > 0, "L1 cache should exist");
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert!(l2.size() > 0);
+            }
         });
     }
 
@@ -863,6 +942,56 @@ mod vortex86dx3 {
         with_mock_cpu(|| {
             let res = has_ht();
             assert_eq!(res, false);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_threads() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads, 1);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_cores() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.cores, 1);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_cache_detection() {
+        with_mock_cpu(|| {
+            use rustid::common::{Level1Cache, TCpu, cache::CacheType};
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert_eq!(
+                cache.l1.size(),
+                32768,
+                "L1 should be 32KB (16KB data + 16KB instruction)"
+            );
+            assert!(cache.l1.is_split(), "L1 should be split");
+
+            match cache.l1 {
+                Level1Cache::Unified(_) => panic!("Expected split L1 cache"),
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 16384, "L1 data should be 16KB");
+                    assert_eq!(data.assoc(), 4, "L1 data should be 4-way");
+                    assert_eq!(instruction.size(), 16384, "L1 instruction should be 16KB");
+                    assert_eq!(instruction.assoc(), 4, "L1 instruction should be 4-way");
+                }
+            }
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.assoc(), 4, "L2 should be 4-way");
+            }
         });
     }
 

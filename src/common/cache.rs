@@ -41,6 +41,22 @@ impl CacheLevel {
     pub fn new_unified(size: u32, assoc: u32) -> Self {
         Self::new(size, CacheType::Unified, assoc, 0)
     }
+
+    pub fn size(&self) -> u32 {
+        self.size
+    }
+
+    pub fn assoc(&self) -> u32 {
+        self.assoc
+    }
+
+    pub fn kind(&self) -> CacheType {
+        self.kind
+    }
+
+    pub fn share_count(&self) -> u32 {
+        self.share_count
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
