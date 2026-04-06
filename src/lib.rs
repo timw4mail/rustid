@@ -123,6 +123,7 @@ pub fn cli_main() {
                     println!("---");
                     cpu.debug();
                 }
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 "d" | "dump" => cpuid::dump::dump_main(),
                 _ => {
                     version();
