@@ -1,0 +1,15 @@
+--------------- Rustid 0.9.6 ---------------
+  Architecture: i686-SSE
+        Vendor: AuthenticAMD (AMD)
+ Model (synth): AMD Geode NX
+   Model (raw): AMD Athlon(tm) Processor
+     MicroArch: K7
+      Codename: Thoroughbred
+  Process Node: 130nm
+         Cache: L1d: 64 KB, 2-way
+                L1i: 64 KB, 2-way
+                L2:  256 KB, 16-way
+     Frequency: 1.00 GHz
+     Signature: Family 6h, Model 8h, Stepping 1h
+                (0, 6, 0, 8, 1)
+      Features: FPU TSC CMPXCHG8B CMOV MMX 3DNow! 3DNow!+ SSE 
