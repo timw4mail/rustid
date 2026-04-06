@@ -51,6 +51,7 @@ impl Cache {
         }
     }
 
+    /// Detect cache via extended leaves 5 and 6.
     fn detect_ext_5_6() -> Option<Self> {
         if !is_valid_leaf(EXT_LEAF_5) {
             return None;
@@ -128,6 +129,10 @@ impl Cache {
     /// See https://sandpile.org/x86/cpuid.htm#level_0000_0002h
     fn detect_fallback() -> Option<Self> {
         use heapless::Vec;
+
+        if !is_valid_leaf(LEAF_2) {
+            return None;
+        }
 
         let mut c = Cache::default();
 
@@ -620,6 +625,9 @@ impl Cache {
         if c == Cache::default() { None } else { Some(c) }
     }
 
+    /// Cache detection via deterministic cache parameters
+    /// EXT_LEAF_1D for AMD
+    /// LEAF_4 for Intel
     fn detect_general(leaf: u32) -> Option<Self> {
         let mut c = Cache::default();
 
