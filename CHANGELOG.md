@@ -12,6 +12,8 @@
 - Additional feature classes for 686 class processors with SSE and SSE2
 - Qualcomm CPU mappings
 - Codenames for more Apple Silicon CPUs
+- More integration tests with cache, core, and thread count validation
+- Additional output examples (2PPRO, Crusoe, U5S)
 
 ### Changed
 - Improved AMD cache associativity detection
@@ -20,6 +22,9 @@
 - Improved formatting of Apple Silicon CPUs on macOS
 - Various output formatting tweaks
 - Added rough speed detection for DOS
+- Refactored string handling with new String wrapper type
+- Reduced code duplication in topology detection
+- Updated Cyrix MII example
 
 ### Fixed
 - Fix Windsor CPU mapping
