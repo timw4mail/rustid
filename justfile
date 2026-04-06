@@ -56,7 +56,7 @@ _build-dos:
 
 _build-dos-debug:
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug debug.com
 
 _build-dos-dump:
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --bin dump --release

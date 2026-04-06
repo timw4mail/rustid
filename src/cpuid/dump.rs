@@ -1,5 +1,3 @@
-#![cfg_attr(all(not(test), target_os = "none"), no_std)]
-#![cfg_attr(all(not(test), target_os = "none"), no_main)]
 use super::Str;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
 use crate::common::TCpu;
@@ -66,7 +64,7 @@ fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
 
 pub fn dump_main() {
     #[cfg(target_os = "none")]
-    use rustid::print;
+    use crate::print;
 
     let mut output: Str<8192> = Str::new();
 
