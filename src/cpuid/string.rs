@@ -1,7 +1,7 @@
 //! Wrapper object around std::String and heapless::String.
 //!
 //! This helps hide the ugliness of using heapless::String for DOS
-use core::fmt::{self, Display, Formatter};
+use core::fmt::{self, Display, Formatter, Write};
 use core::ops::Deref;
 
 #[cfg(target_os = "none")]
@@ -116,6 +116,13 @@ impl<const N: usize> AsRef<str> for Str<N> {
 impl<const N: usize> Display for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.inner)
+    }
+}
+
+impl<const N: usize> Write for Str<N> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.push_str(s);
+        Ok(())
     }
 }
 

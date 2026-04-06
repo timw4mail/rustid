@@ -51,13 +51,19 @@ _build-dos:
 	# Cleanup old binaries
 	@rm -f rustid.com
 	@rm -f drustid.com
+	@rm -f debug.com
+	@rm -f dump.com
 
 _build-dos-debug:
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
 	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug drustid.com
 
+_build-dos-dump:
+	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --bin dump --release
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.com
+
 # Build for DOS
-build-dos: _build-dos _build-dos-debug
+build-dos: _build-dos _build-dos-debug _build-dos-dump
 	# Build initial binary
 	cargo +nightly build -Zjson-target-spec --target i486-dos.json --release
 	# Convert to proper DOS com binary
@@ -103,6 +109,8 @@ build-486:
 clean:
 	@cargo clean
 	@rm -f drustid.com
+	@rm -f debug.com
+	@rm -f dump.com
 	@rm -f rustid.com
 
 # Build and run the app
@@ -131,7 +139,7 @@ run-dos: build-dos
 
 [linux, unix]
 run-dos-debug: build-dos
-	dosbox-x . -fastlaunch drustid.com
+	dosbox-x . -fastlaunch debug.com
 
 # Run all the (native) tests
 test:

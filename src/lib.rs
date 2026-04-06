@@ -123,6 +123,7 @@ pub fn cli_main() {
                     println!("---");
                     cpu.debug();
                 }
+                "d" | "dump" => cpuid::dump::dump_main(),
                 _ => {
                     version();
                     cpu.display_table()

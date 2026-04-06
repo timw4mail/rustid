@@ -15,20 +15,6 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-/// Entry point for DOS executables.
-/// Called by the DOS loader and invokes the main CLI function.
-#[cfg(not(test))]
-#[unsafe(no_mangle)]
-#[unsafe(link_section = ".startup")]
-pub extern "C" fn _start() -> ! {
-    #[cfg(not(feature = "debug"))]
-    crate::cli_main();
-
-    #[cfg(feature = "debug")]
-    crate::debug_main();
-
-    exit();
-}
 /// Prints a formatted string to the DOS console.
 /// Supports both literal strings and format strings.
 #[macro_export]

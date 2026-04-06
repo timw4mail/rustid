@@ -1,6 +1,6 @@
 [package]
 name = "rustid"
-version = "0.9.6"
+version = "0.10.0"
 edition = "2024"
 authors = ["Timothy J. Warren <tim@timshome.page>"]
 description = "A utility to identify the name and properties of the current cpu"
@@ -30,6 +30,10 @@ core_affinity = "0.8.3"
 [[bin]]
 name = "rustid"
 path="src/rustid.rs"
+
+[[bin]]
+name = "dump"
+path="src/dump.rs"
 
 [[bin]]
 name = "debug"

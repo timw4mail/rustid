@@ -30,4 +30,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create --generate-notes ${{ github.ref }} './rustid.com#DOS binary (rustid.com)' './drustid.com#DOS debug binary (drustid.com)'
+          gh release create --generate-notes ${{ github.ref }} './rustid.com#DOS binary (rustid.com)' './debug.com#DOS debug binary (debug.com)' './dump.com#Raw cpuid dump (dump.com)'
