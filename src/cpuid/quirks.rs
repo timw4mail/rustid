@@ -238,16 +238,13 @@ pub fn debug_quirks() {
     use crate::println;
 
     println!("=== Quirk Detection Debug ===");
-    println!();
 
     println!("CPU Class:");
     println!("  is_386: {}", is_386());
     println!("  is_486: {}", is_486());
-    println!();
 
     println!("Vendor Detection:");
     println!("  has_cyrix_5_2_quirk:  {}", has_cyrix_5_2_quirk());
-    println!();
 
     println!("Result: {}", get_vendor_by_quirk());
 }

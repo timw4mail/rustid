@@ -297,35 +297,102 @@ mod m3_8100y {
     #[test]
     fn test_intel_sse_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let sse = (res.edx >> 25) & 1;
-            let sse2 = (res.edx >> 26) & 1;
-            let sse3 = (res.ecx >> 0) & 1;
-            let sse41 = (res.ecx >> 19) & 1;
-            let sse42 = (res.ecx >> 20) & 1;
-            assert_eq!(sse, 1);
-            assert_eq!(sse2, 1);
-            assert_eq!(sse3, 1);
-            assert_eq!(sse41, 1);
-            assert_eq!(sse42, 1);
+            assert_eq!(has_sse(), true);
+            assert_eq!(has_sse2(), true);
+            assert_eq!(has_sse3(), true);
+            assert_eq!(has_sse41(), true);
+            assert_eq!(has_sse42(), true);
         });
     }
 
     #[test]
     fn test_intel_avx_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let avx = (res.ecx >> 28) & 1;
-            assert_eq!(avx, 1);
+            assert_eq!(has_avx(), true);
         });
     }
 
     #[test]
     fn test_intel_avx2_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(7, 0);
-            let avx2 = (res.ebx >> 5) & 1;
-            assert_eq!(avx2, 1);
+            assert_eq!(has_avx2(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_aes_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_aes(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_fpu_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_fpu(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_tsc_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_tsc(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_mmx_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_mmx(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_ssse3_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_ssse3(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_fma_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_fma(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_cx16_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_cx16(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_rdrand_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_rdrand(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_bmi1_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_bmi1(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_bmi2_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_bmi2(), true);
+        });
+    }
+
+    #[test]
+    fn test_intel_f16c_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_f16c(), true);
         });
     }
 }
@@ -372,34 +439,30 @@ mod amd_5900xt {
     #[test]
     fn test_amd_max_leaf() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(0, 0);
-            assert_eq!(res.eax, 0x10);
+            assert_eq!(max_leaf(), 0x10);
         });
     }
 
     #[test]
     fn test_amd_max_extended_leaf() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(0x80000000, 0);
-            assert_eq!(res.eax, 0x80000023);
+            assert_eq!(max_extended_leaf(), 0x80000023);
         });
     }
 
     #[test]
     fn test_amd_ht_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let ht = (res.edx >> 28) & 1;
-            assert_eq!(ht, 1);
+            assert_eq!(has_ht(), true);
         });
     }
 
     #[test]
     fn test_amd_logical_cores() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let count = (res.ebx >> 16) & 0xFF;
-            assert_eq!(count, 0x20); // 32 logical cores
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads, 32);
         });
     }
 
@@ -452,44 +515,96 @@ mod amd_5900xt {
     #[test]
     fn test_amd_sse_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let sse = (res.edx >> 25) & 1;
-            let sse2 = (res.edx >> 26) & 1;
-            let sse3 = (res.ecx >> 0) & 1;
-            let sse41 = (res.ecx >> 19) & 1;
-            let sse42 = (res.ecx >> 20) & 1;
-            assert_eq!(sse, 1);
-            assert_eq!(sse2, 1);
-            assert_eq!(sse3, 1);
-            assert_eq!(sse41, 1);
-            assert_eq!(sse42, 1);
+            assert_eq!(has_sse(), true);
+            assert_eq!(has_sse2(), true);
+            assert_eq!(has_sse3(), true);
+            assert_eq!(has_sse41(), true);
+            assert_eq!(has_sse42(), true);
         });
     }
 
     #[test]
     fn test_amd_avx_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let avx = (res.ecx >> 28) & 1;
-            assert_eq!(avx, 1);
+            assert_eq!(has_avx(), true);
         });
     }
 
     #[test]
     fn test_amd_avx2_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(7, 0);
-            let avx2 = (res.ebx >> 5) & 1;
-            assert_eq!(avx2, 1);
+            assert_eq!(has_avx2(), true);
         });
     }
 
     #[test]
     fn test_amd_popcnt_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let popcnt = (res.ecx >> 23) & 1;
-            assert_eq!(popcnt, 1);
+            assert_eq!(has_popcnt(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_aes_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_aes(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_mmx_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_mmx(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_ssse3_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_ssse3(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_fma_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_fma(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_sse4a_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_sse4a(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_amd64_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_amd64(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_f16c_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_f16c(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_x2apic_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_x2apic(), true);
+        });
+    }
+
+    #[test]
+    fn test_amd_3dnow_support() {
+        with_mock_cpu(|| {
+            assert_eq!(has_3dnow(), false);
+            assert_eq!(has_3dnow_plus(), false);
         });
     }
 }
@@ -588,20 +703,15 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_sse_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let sse = (res.edx >> 25) & 1;
-            let sse2 = (res.edx >> 26) & 1;
-            assert_eq!(sse, 1);
-            assert_eq!(sse2, 1);
+            assert_eq!(has_sse(), true);
+            assert_eq!(has_sse2(), true);
         });
     }
 
     #[test]
     fn test_zhaoxin_avx_support() {
         with_mock_cpu(|| {
-            let res = x86_cpuid_count(1, 0);
-            let avx = (res.ecx >> 28) & 1;
-            assert_eq!(avx, 1, "Zhaoxin Kaixian has AVX support");
+            assert_eq!(has_avx(), true);
         });
     }
 
@@ -690,6 +800,86 @@ mod via_c7d {
             let res = x86_cpuid_count(0xC000_0000, 0);
             assert_eq!(res.eax, 0xC000_0002);
         });
+    }
+}
+
+#[cfg(target_arch = "x86")]
+mod vortex86dx3 {
+    use rustid::cpuid::{has_ht, has_mmx, max_extended_leaf};
+
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("vortex86dx3.txt");
+        test();
+    }
+
+    #[test]
+    fn test_vortex86_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_DMP);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_brand_string() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+
+            let brand = Cpu::detect().display_model_string();
+            assert!(brand.contains("Vortex86"));
+        });
+    }
+
+    #[test]
+    fn test_vortex86_signature() {
+        with_mock_cpu(|| {
+            let (_xfamily, family, _xmodel, model, stepping) = get_signature();
+            assert_eq!(stepping, 1);
+            assert_eq!(model, 1);
+            assert_eq!(family, 6);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_max_leaf() {
+        with_mock_cpu(|| {
+            let res = max_leaf();
+            assert_eq!(res, 0x3);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_max_extended_leaf() {
+        with_mock_cpu(|| {
+            let res = max_extended_leaf();
+            assert_eq!(res, 0x80000004);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_no_ht() {
+        with_mock_cpu(|| {
+            let res = has_ht();
+            assert_eq!(res, false);
+        });
+    }
+
+    #[test]
+    fn test_vortex86_has_mmx() {
+        with_mock_cpu(|| {
+            let res = has_mmx();
+            assert_eq!(res, true, "Vortex86 has MMX support");
+        });
+    }
+
+    #[test]
+    fn test_vortex86_feature_class() {
+        with_mock_cpu(|| {
+            let fc = FeatureClass::detect();
+            assert!(matches!(fc, FeatureClass::i686_SSE));
+        })
     }
 }
 

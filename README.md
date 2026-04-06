@@ -29,7 +29,7 @@ This application is developed using *some* AI, mostly related to:
 
 **Standard Build:**
 ```bash
-cargo build --release
+just build-release
 ```
 
 **Build for DOS:**
