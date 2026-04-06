@@ -52,23 +52,34 @@ impl Cache {
     }
 
     fn detect_ext_5_6() -> Option<Self> {
-        let res5 = x86_cpuid(EXT_LEAF_5);
-        let res6 = x86_cpuid(EXT_LEAF_6);
+        if !is_valid_leaf(EXT_LEAF_5) {
+            return None;
+        }
 
         let mut c = Cache {
             l1: Level1Cache::default_split(),
-            ..Cache::default()
+            l2: None,
+            l3: None,
         };
+
+        let res5 = x86_cpuid(EXT_LEAF_5);
+        let l1dassoc = Self::assoc((res5.ecx >> 16) & 0x1F);
+        let l1iassoc = Self::assoc((res5.edx >> 16) & 0x1F);
+        c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
+        c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
+
+        // Make sure to check for Extended Leaf 6 separately
+        // Some CPUs only support EXT_LEAF_5
+        if !is_valid_leaf(EXT_LEAF_6) {
+            return Some(c);
+        }
+
+        let res6 = x86_cpuid(EXT_LEAF_6);
 
         let afn = match &*vendor_str() {
             VENDOR_AMD => Self::amd_assoc,
             _ => Self::assoc,
         };
-
-        let l1dassoc = Self::assoc((res5.ecx >> 16) & 0x1F);
-        let l1iassoc = Self::assoc((res5.edx >> 16) & 0x1F);
-        c.l1.set_data((res5.ecx >> 24) * 1024, l1dassoc);
-        c.l1.set_instruction((res5.edx >> 24) * 1024, l1iassoc);
 
         let l2assoc = afn((res6.ecx >> 12) & 0x1F);
         let l2size = (res6.ecx >> 16) * 1024;
