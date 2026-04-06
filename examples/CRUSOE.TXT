@@ -1,0 +1,26 @@
+---------------------
+Rustid version 0.9.2
+---------------------
+
+  Architecture: i686
+
+        Vendor: GenuineTMx86 (Transmeta)
+
+         Model: Transmeta(tm) Crusoe(tm) Processor TM5700
+
+     MicroArch: Crusoe
+
+  Process Node: 130nm
+
+         Cache: L1d: 64 KB, 16-way
+                L1i: 64 KB, 8-way
+                L2:  256 KB, 4-way
+
+     Frequency: 800.00 MHz
+
+     Signature: Family 5h, Model 4h, Stepping 3h
+                (0, 5, 0, 4, 3)
+
+      Features: FPU TSC CMPXCHG8B CMOV MMX 
+
+
