@@ -1,22 +1,11 @@
----------------------
-Rustid version 0.7.6
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: CentaurHauls (IDT)
-
-         Model: IDT Winchip
-
+ Model (synth): IDT Winchip
      MicroArch: Winchip
-
       Codename: C6
-
   Process Node: 350nm
-
+     Frequency: 200.00 MHz
      Signature: Family 5h, Model 4h, Stepping 1h
                 (0, 5, 0, 4, 1)
-
       Features: FPU TSC MMX 
-
-

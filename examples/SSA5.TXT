@@ -1,23 +1,11 @@
----------------------
-Rustid version 0.7.5
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: AuthenticAMD (AMD)
-
-         Model: AMD K5
-
+ Model (synth): AMD K5
      MicroArch: SSA5
-
+      Codename: SSA/5
   Process Node: 350nm
-
-         Cache: L1d: 0 KB, 1-way
-                L1i: 0 KB, 1-way
-
+     Frequency: 75.00 MHz
      Signature: Family 5h, Model 0h, Stepping 0h
                 (0, 5, 0, 0, 0)
-
       Features: FPU TSC CMPXCHG8B 
-
-

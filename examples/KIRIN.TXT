@@ -1,24 +1,12 @@
----------------------
-Rustid version 0.7.6
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: RiseRiseRise (Rise)
-
-         Model: Rise mP6
-
+ Model (synth): Rise mP6
      MicroArch: mP6
-
       Codename: Kirin
-
   Process Node: 250nm
-
     Easter Egg: * Chris Norrie *
-
+     Frequency: 200.00 MHz
      Signature: Family 5h, Model 0h, Stepping 4h
                 (0, 5, 0, 0, 4)
-
       Features: FPU TSC MMX 
-
-

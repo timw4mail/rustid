@@ -1,27 +1,14 @@
----------------------
-Rustid version 0.7.6
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: AuthenticAMD (AMD)
-
          Model: AMD-K6(tm) 3D processor
-
      MicroArch: K6
-
       Codename: Chompers/CXT (K6-2)
-
   Process Node: 250nm
-
     Easter Egg: NexGenerationAMD
-
-         Cache: L1d: 32 KB, 4-way
-                L1i: 32 KB, 4-way
-
-     Signature: Family 5h, Model 8h, Stepping 0h
-                (0, 5, 0, 8, 0)
-
+         Cache: L1d: 32 KB, 2-way
+                L1i: 32 KB, 2-way
+     Frequency: 499.00 MHz
+     Signature: Family 5h, Model 8h, Stepping Ch
+                (0, 5, 0, 8, 12)
       Features: FPU TSC CMPXCHG8B MMX 3DNow! 
-
-

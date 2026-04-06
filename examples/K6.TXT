@@ -1,25 +1,13 @@
----------------------
-Rustid version 0.7.6
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: AuthenticAMD (AMD)
-
          Model: AMD-K6tm w/ multimedia extensions
-
      MicroArch: K6
-
   Process Node: 300nm
-
     Easter Egg: NexGenerationAMD
-
-         Cache: L1d: 32 KB, 4-way
-                L1i: 32 KB, 4-way
-
+         Cache: L1d: 32 KB, 2-way
+                L1i: 32 KB, 2-way
+     Frequency: 233.00 MHz
      Signature: Family 5h, Model 6h, Stepping 2h
                 (0, 5, 0, 6, 2)
-
       Features: FPU TSC CMPXCHG8B MMX 
-
-

@@ -1,23 +1,13 @@
----------------------
-Rustid version 0.7.5
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: CyrixInstead (Cyrix/IBM/ST/TI)
-
-         Model: Cyrix 6x86L
-
+ Model (synth): Cyrix 6x86L
      MicroArch: M1
-
+     Frequency: 455.00 MHz
      Signature: Family 5h, Model 2h, Stepping 0h
                 (0, 5, 0, 2, 0)
-
       Features: FPU CMPXCHG8B 
-
          Cyrix: Model number: 31h
                 Revision: 2h
                 Stepping: 2h
                 Bus Multiplier: 2x
-
-

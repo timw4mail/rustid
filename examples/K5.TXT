@@ -1,25 +1,14 @@
----------------------
-Rustid version 0.7.5
----------------------
-
+--------------- Rustid 0.9.6 ---------------
   Architecture: i586
-
         Vendor: AuthenticAMD (AMD)
-
-         Model: AMD-K5(tm) Processor
-
+ Model (synth): AMD K5
+   Model (raw): AMD-K5(tm) Processor
      MicroArch: K5
-
       Codename: 5k86
-
   Process Node: 350nm
-
-         Cache: L1d: 8 KB, 2053-way
-                L1i: 16 KB, 4101-way
-
+         Cache: L1d: 8 KB, 4-way
+                L1i: 16 KB, 4-way
+     Frequency: 116.00 MHz
      Signature: Family 5h, Model 2h, Stepping 4h
                 (0, 5, 0, 2, 4)
-
       Features: FPU TSC CMPXCHG8B 
-
-
