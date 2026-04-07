@@ -8,8 +8,6 @@
   "env": "musl",
   "has-rpath": false,
   "has-thread-local": true,
-  "linker": "rust-lld",
-  "linker-flavor": "ld.lld",
   "llvm-target": "i486-unknown-linux-musl",
   "max-atomic-width": 32,
   "os": "linux",

@@ -2,7 +2,7 @@
 build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
-[target.i486-unknown-linux-musl]
+[target."i486-linux-musl.json"]
 rustflags = [
 	"-C", "target-cpu=i486",
 	"-C", "opt-level=z"
