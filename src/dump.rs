@@ -1,12 +1,17 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
-#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use rustid::cpuid::dump::dump_main;
 
-#[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn main() {
     dump_main();
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+fn main() {
+    todo!("");
 }
 
 #[cfg(target_os = "none")]
