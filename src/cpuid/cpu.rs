@@ -187,8 +187,22 @@ impl CpuSignature {
         let from_cpuid = super::has_cpuid();
 
         #[cfg(all(target_arch = "x86", target_os = "none"))]
-        if !from_cpuid && let Some(reset_sig) = super::get_reset_signature() {
-            return reset_sig;
+        if !from_cpuid {
+            use super::vendor::cyrix::Cyrix;
+
+            if super::is_cyrix() {
+                let dir0 = Cyrix::detect().dir0;
+                if dir0 > 0x19 {
+                    let sig = Cyrix::get_signature_from_device_id(dir0);
+                    if sig != CpuSignature::default() {
+                        return sig;
+                    }
+                }
+            }
+
+            if let Some(reset_sig) = super::get_reset_signature() {
+                return reset_sig;
+            }
         }
 
         let res = x86_cpuid(LEAF_1);

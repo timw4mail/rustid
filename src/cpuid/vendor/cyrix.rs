@@ -94,6 +94,17 @@ impl Cyrix {
         }
     }
 
+    pub fn get_signature_from_device_id(dir0: u8) -> CpuSignature {
+        match dir0 {
+            0x1A | 0x1B | 0x1F => CpuSignature::new(0, 4, 0, 8, 0, false),
+            0x28..=0x2E => CpuSignature::new(0, 4, 0, 9, 0, false),
+            0x30 | 0x31 | 0x34 | 0x35 => CpuSignature::new(0, 5, 0, 2, 0, false),
+            0x40..=0x47 => CpuSignature::new(0, 5, 0, 4, 0, false),
+            0x50..=0x5F => CpuSignature::new(0, 6, 0, 0, 0, false),
+            _ => CpuSignature::default(),
+        }
+    }
+
     pub fn get_feature_class() -> FeatureClass {
         let (dir0, _) = Self::get_device_ids();
 
@@ -121,9 +132,14 @@ impl Cyrix {
             return false;
         }
 
-        let (dir0, _) = Self::get_device_ids();
+        let (dir0, dir1) = Self::get_device_ids();
+        let stepping = dir1 >> 4;
 
-        // 5x86/6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
+        // 5x86 can toggle cpuid if stepping is 1 or greater
+        if dir0 >= 0x28 && dir0 <= 0x2F && stepping >= 1 {
+            return true;
+        }
+        // 6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
         // MediaGX always has cpuid enabled
         dir0 >= 0x28 && dir0 < 0x40
     }
@@ -136,7 +152,7 @@ impl Cyrix {
             return Str::from(UNK);
         }
 
-        let (dir0, _) = Self::get_device_ids();
+        let (dir0, dir1) = Self::get_device_ids();
 
         let dev_id = dir0;
         let model = match dev_id {
@@ -166,7 +182,7 @@ impl Cyrix {
 
             // 6x86 (M1)
             0x30 | 0x31 | 0x34 | 0x35 => {
-                if has_cx8() {
+                if dir1 > 0x21 || has_cx8() {
                     "6x86L"
                 } else {
                     "6x86"
