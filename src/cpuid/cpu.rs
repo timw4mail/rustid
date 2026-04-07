@@ -376,6 +376,10 @@ impl Cpu {
                 "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
                 _ => "'Classic' 486",
             },
+            MicroArch::Am5x86 => match self.arch.code_name {
+                "Am5x86WB" => "AMD 5x86 with Write-Back Cache",
+                _ => "AMD 5x86",
+            },
             MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
 
             // Centaur
