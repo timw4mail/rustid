@@ -221,10 +221,10 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     let stepping = raw_sig & 0xF;
     let model = (raw_sig >> 4) & 0xF;
     let family = (raw_sig >> 8) & 0xF;
-    let ext_model = (raw_sig >> 16) & 0xF;
-    let ext_family = (raw_sig >> 20) & 0xFF;
+    // let ext_model = (raw_sig >> 16) & 0xF;
+    // let ext_family = (raw_sig >> 20) & 0xFF;
 
-    let sig = CpuSignature::new(ext_family, family, ext_model, model, stepping, false);
+    let sig = CpuSignature::new_synth(family, model, stepping);
 
     unsafe {
         CACHED_SIG = Some(sig.clone());

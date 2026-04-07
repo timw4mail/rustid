@@ -196,9 +196,8 @@ impl CpuSignature {
             use super::vendor::cyrix::Cyrix;
 
             if super::is_cyrix() {
-                let dir0 = Cyrix::detect().dir0;
-                if dir0 >= 0x1A {
-                    let sig = Cyrix::get_signature_from_device_id(dir0);
+                if Cyrix::detect().dir0 > 0x13 {
+                    let sig = Cyrix::get_signature_from_device_id();
                     if sig != CpuSignature::default() {
                         return sig;
                     }

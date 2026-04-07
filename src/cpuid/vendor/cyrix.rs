@@ -1,8 +1,123 @@
 use super::TMicroArch;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8, vendor_str};
+use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
 use crate::sfmt;
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub enum CyrixModel {
+    Slc,
+    Dlc,
+    Slc2,
+    Dlc2,
+    Srx,
+    Drx,
+    Srx2,
+    Drx2,
+    Cx486S,
+    Cx486S2,
+    Cx486Se,
+    Cx486Se2,
+    Cx486DX,
+    Cx486DX2,
+    Cx486DX4,
+    Cx5x86,
+    Cx6x86,
+    Cx6x86L,
+    MediaGx,
+    M2,
+    #[Default]
+    Unknown,
+}
+
+impl CyrixModel {
+    pub fn detect() -> Self {
+        let (dir0, dir1) = Cyrix::get_device_ids();
+
+        match dir0 {
+            // Cx486SLC/DLC/SRx/DRx (M0.5)
+            0x00 => Self::Slc,
+            0x01 => Self::Dlc,
+            0x02 => Self::Slc2,
+            0x03 => Self::Dlc2,
+            0x04 => Self::Srx,
+            0x05 => Self::Drx,
+            0x06 => Self::Srx2,
+            0x07 => Self::Drx2,
+
+            // Cx486S (M0.6)
+            0x10 => Self::Cx486S,
+            0x11 => Self::Cx486S2,
+            0x12 => Self::Cx486Se,
+            0x13 => Self::Cx486Se2,
+
+            // Cx486DX/DX2 (M0.7)
+            0x1A => Self::Cx486DX,
+            0x1B => Self::Cx486DX2,
+            0x81 | 0x1F | 0x81 => Self::Cx486DX4,
+
+            // 5x86 (M0.9)
+            0x28..=0x2F => Self::Cx5x86,
+
+            // 6x86 (M1)
+            0x30 | 0x31 | 0x34 | 0x35 => {
+                if dir1 > 0x21 || has_cx8() {
+                    Self::Cx6x86L
+                } else {
+                    Self::Cx6x86
+                }
+            }
+
+            // MediaGX (GXm)
+            0x40..=0x46 => Self::MediaGx,
+
+            // 6x86MX (M2)
+            0x50..=0x5F => Self::M2,
+
+            _ => Self::Unknown,
+        }
+    }
+
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            // Cx486SLC/DLC/SRx/DRx (M0.5)
+            Self::Slc => "Cx486 SLC",
+            Self::Dlc => "Cx486 DLC",
+            Self::Slc2 => "Cx486 SLC2",
+            Self::Dlc2 => "Cx486 DLC2",
+            Self::Srx => "Cx486SRx",
+            Self::Drx => "Cx486DRx",
+            Self::Srx2 => "Cx486SRx2",
+            Self::Drx2 => "Cx486DRx2",
+
+            // Cx486S (M0.6)
+            Self::Cx486S => "Cx486S (B step)",
+            Self::Cx486S2 => "Cx486S2 (B step)",
+            Self::Cx486Se => "Cx486Se (B step)",
+            Self::Cx486Se2 => "Cx486S2e (B step)",
+
+            // Cx486DX/DX2 (M0.7)
+            Self::Cx486DX => "Cx486DX",
+            Self::Cx486DX2 => "Cx486DX2",
+            Self::Cx486DX4 => "Cx486DX4",
+
+            // 5x86 (M0.9)
+            Self::Cx5x86 => "5x86",
+
+            // 6x86 (M1)
+            Self::Cx6x86 => "6x86",
+            Self::Cx6x86L => "6x86L",
+
+            // MediaGX (GXm)
+            Self::MediaGx => "MediaGX GXm",
+
+            // 6x86MX (M2)
+            Self::M2 => "6x86MX/MII",
+
+            Self::Unknown => UNK,
+        };
+    }
+}
 
 /// Cyrix-specific CPU identification and detection.
 #[derive(Debug, Default, Clone)]
@@ -15,6 +130,8 @@ pub struct Cyrix {
     pub stepping: u8,
     /// Bus multiplier factor
     pub multiplier: Str<4>,
+    /// Model enum
+    pub emodel: CyrixModel,
     /// Model name
     pub model: Str<64>,
     /// Code name
@@ -32,6 +149,7 @@ impl Cyrix {
         let revision = dir1 & 0x0F;
         let stepping = dir1 >> 4;
         let multiplier = Self::multiplier();
+        let emodel = CyrixModel::detect();
         let model = Self::model_string();
         let code_name = Str::from(Self::codename());
 
@@ -40,6 +158,7 @@ impl Cyrix {
             revision,
             stepping,
             multiplier,
+            emodel,
             model,
             code_name,
         }
@@ -94,22 +213,19 @@ impl Cyrix {
         }
     }
 
-    pub fn get_signature_from_device_id(dir0: u8) -> CpuSignature {
+    pub fn get_signature_from_device_id() -> CpuSignature {
         if !crate::cpuid::is_cyrix() {
             return CpuSignature::default();
         }
 
-        match dir0 {
-            // Cx486DX/DX2/DX4
-            0x1A | 0x1B | 0x1F => CpuSignature::new_synth(4, 8, 0),
-            // Cx586
-            0x28..=0x2E => CpuSignature::new_synth(4, 9, 0),
-            // 6x86/6x86L(M1)
-            0x30 | 0x31 | 0x34 | 0x35 => CpuSignature::new_synth(5, 2, 0),
-            // MediaGX/Geode
-            0x40..=0x47 => CpuSignature::new_synth(5, 4, 0),
-            // 6x86MX/MII
-            0x50..=0x5F => CpuSignature::new_synth(6, 0, 0),
+        match CyrixModel::detect() {
+            CyrixModel::Cx486DX | CyrixModel::Cx486DX2 | CyrixModel::Cx486DX4 => {
+                CpuSignature::new_synth(4, 8, 0)
+            }
+            CyrixModel::Cx5x86 => CpuSignature::new_synth(4, 9, 0),
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => CpuSignature::new_synth(5, 2, 0),
+            CyrixModel::MediaGx => CpuSignature::new_synth(5, 4, 0),
+            CyrixModel::M2 => CpuSignature::new_synth(6, 0, 0),
             _ => CpuSignature::default(),
         }
     }
@@ -119,21 +235,10 @@ impl Cyrix {
             return FeatureClass::i386;
         }
 
-        let (dir0, _) = Self::get_device_ids();
-
-        match dir0 {
-            // 5x86 and earlier
-            0x00..=0x2F => FeatureClass::i486,
-
-            // 6x86/6x86L
-            0x30..=0x3F => FeatureClass::i586,
-
-            // MediaGX
-            0x40..=0x4F => FeatureClass::i586,
-
-            // 6x86MX/MII
-            0x50..=0x5F => FeatureClass::i686,
-            _ => FeatureClass::i386,
+        match CyrixModel::detect() {
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L | CyrixModel::MediaGx => FeatureClass::i586,
+            CyrixModel::M2 => FeatureClass::i686,
+            _ => FeatureClass::i486,
         }
     }
 
@@ -145,16 +250,24 @@ impl Cyrix {
             return false;
         }
 
-        let (dir0, dir1) = Self::get_device_ids();
+        let model = CyrixModel::detect();
+        let (_, dir1) = Self::get_device_ids();
         let stepping = dir1 >> 4;
 
         // 5x86 can toggle cpuid if stepping is 1 or greater
-        if dir0 >= 0x28 && dir0 <= 0x2F && stepping >= 1 {
-            return true;
-        }
         // 6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
         // MediaGX always has cpuid enabled
-        dir0 >= 0x30 && dir0 < 0x40
+        match model {
+            CyrixModel::Cx5x86 => {
+                if stepping >= 1 {
+                    true
+                } else {
+                    false
+                }
+            }
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L | CyrixModel::M2 => true,
+            _ => false,
+        }
     }
 
     /// Get Cyrix processor model via registers
@@ -165,51 +278,7 @@ impl Cyrix {
             return Str::from(UNK);
         }
 
-        let (dir0, dir1) = Self::get_device_ids();
-
-        let dev_id = dir0;
-        let model = match dev_id {
-            // Cx486SLC/DLC/SRx/DRx (M0.5)
-            0x00 => "Cx486 SLC",
-            0x01 => "Cx486 DLC",
-            0x02 => "Cx486 SLC2",
-            0x03 => "Cx486 DLC2",
-            0x04 => "Cx486SRx",
-            0x05 => "Cx486DRx",
-            0x06 => "Cx486SRx2",
-            0x07 => "Cx486DRx2",
-
-            // Cx486S (M0.6)
-            0x10 => "Cx486S (B step)",
-            0x11 => "Cx486S2 (B step)",
-            0x12 => "Cx486Se (B step)",
-            0x13 => "Cx486S2e (B step)",
-
-            // Cx486DX/DX2 (M0.7)
-            0x1A => "Cx486DX",
-            0x1B => "Cx486DX2",
-            0x1F => "Cx486DX4",
-
-            // 5x86 (M0.9)
-            0x28..=0x2F => "5x86",
-
-            // 6x86 (M1)
-            0x30 | 0x31 | 0x34 | 0x35 => {
-                if dir1 > 0x21 || has_cx8() {
-                    "6x86L"
-                } else {
-                    "6x86"
-                }
-            }
-
-            // MediaGX (GXm)
-            0x40..=0x46 => "MediaGX GXm",
-
-            // 6x86MX (M2)
-            0x50..=0x5F => "6x86MX/MII",
-
-            _ => UNK,
-        };
+        let model = CyrixModel::detect().to_str();
 
         sfmt!("Cyrix {}", model).into()
     }
@@ -228,7 +297,7 @@ impl Cyrix {
             0x28 | 0x2A | 0x30 | 0x50 | 0x58 => "1",
             0x1B | 0x29 | 0x2B | 0x31 | 0x51 | 0x59 => "2",
             0x52 | 0x5A => "2.5",
-            0x2D | 0x2F | 0x35 | 0x53 | 0x5B => "3",
+            0x2D | 0x2F | 0x35 | 0x53 | 0x5B | 0x81 => "3",
             0x54 | 0x5C => "3.5",
             0x2C | 0x2E | 0x34 | 0x40 | 0x42 | 0x55 | 0x5D => "4",
             0x56 | 0x5E => "4.5",
@@ -246,21 +315,25 @@ impl Cyrix {
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
     pub fn codename() -> &'static str {
-        if !crate::cpuid::is_cyrix() {
-            return UNK;
-        }
-
-        let (dir0, _) = Cyrix::get_device_ids();
-
-        match dir0 {
-            0x01..=0x07 => "M0.5",
-            0x10..=0x13 => "M0.6",
-            0x1A | 0x1B | 0x1F => "M0.7",
-            0x28..=0x2F => "M0.9",
-            0x30 | 0x31 | 0x34 | 0x35 => "M1",
-            0x40..=0x47 => "Gx86/GXm",
-            0x50..=0x59 => "M2",
-            _ => "Unknown",
+        match CyrixModel::detect() {
+            CyrixModel::Slc
+            | CyrixModel::Dlc
+            | CyrixModel::Slc2
+            | CyrixModel::Dlc2
+            | CyrixModel::Srx
+            | CyrixModel::Drx
+            | CryixModel::Srx2
+            | CyrixModel::Drx2 => "M0.5",
+            CyrixModel::Cx486S
+            | CyrixModel::Cx486S2
+            | CyrixModel::Cx486Se
+            | CyrixModel::Cx486Se2 => "M0.6",
+            CyrixModel::Cx486DX | CyrixModel::Cx486DX2 | CyrixModel::Cx486DX4 => "M0.7",
+            CyrixModel::Cx5x86 => "M0.9",
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => "M1",
+            CyrixModel::MediaGx => "Gx86/Gxm",
+            CyrixModel::M2 => "M2",
+            CyrixModel::Unknown => UNK,
         }
     }
 }
