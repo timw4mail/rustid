@@ -26,7 +26,7 @@ pub enum CyrixModel {
     Cx6x86L,
     MediaGx,
     M2,
-    #[Default]
+    #[default]
     Unknown,
 }
 
@@ -54,7 +54,7 @@ impl CyrixModel {
             // Cx486DX/DX2 (M0.7)
             0x1A => Self::Cx486DX,
             0x1B => Self::Cx486DX2,
-            0x81 | 0x1F | 0x81 => Self::Cx486DX4,
+            0x1F | 0x81 => Self::Cx486DX4,
 
             // 5x86 (M0.9)
             0x28..=0x2F => Self::Cx5x86,
@@ -115,7 +115,7 @@ impl CyrixModel {
             Self::M2 => "6x86MX/MII",
 
             Self::Unknown => UNK,
-        };
+        }
     }
 }
 
@@ -322,7 +322,7 @@ impl Cyrix {
             | CyrixModel::Dlc2
             | CyrixModel::Srx
             | CyrixModel::Drx
-            | CryixModel::Srx2
+            | CyrixModel::Srx2
             | CyrixModel::Drx2 => "M0.5",
             CyrixModel::Cx486S
             | CyrixModel::Cx486S2
