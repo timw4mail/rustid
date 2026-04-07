@@ -95,17 +95,30 @@ impl Cyrix {
     }
 
     pub fn get_signature_from_device_id(dir0: u8) -> CpuSignature {
+        if !crate::cpuid::is_cyrix() {
+            return CpuSignature::default();
+        }
+
         match dir0 {
-            0x1A | 0x1B | 0x1F => CpuSignature::new(0, 4, 0, 8, 0, false),
-            0x28..=0x2E => CpuSignature::new(0, 4, 0, 9, 0, false),
-            0x30 | 0x31 | 0x34 | 0x35 => CpuSignature::new(0, 5, 0, 2, 0, false),
-            0x40..=0x47 => CpuSignature::new(0, 5, 0, 4, 0, false),
-            0x50..=0x5F => CpuSignature::new(0, 6, 0, 0, 0, false),
+            // Cx486DX/DX2/DX4
+            0x1A | 0x1B | 0x1F => CpuSignature::new_synth(4, 8, 0),
+            // Cx586
+            0x28..=0x2E => CpuSignature::new_synth(4, 9, 0),
+            // 6x86/6x86L(M1)
+            0x30 | 0x31 | 0x34 | 0x35 => CpuSignature::new_synth(5, 2, 0),
+            // MediaGX/Geode
+            0x40..=0x47 => CpuSignature::new_synth(5, 4, 0),
+            // 6x86MX/MII
+            0x50..=0x5F => CpuSignature::new_synth(6, 0, 0),
             _ => CpuSignature::default(),
         }
     }
 
     pub fn get_feature_class() -> FeatureClass {
+        if !crate::cpuid::is_cyrix() {
+            return FeatureClass::i386;
+        }
+
         let (dir0, _) = Self::get_device_ids();
 
         match dir0 {
@@ -254,7 +267,7 @@ impl Cyrix {
 
 impl TMicroArch for Cyrix {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand = CpuBrand::from(vendor_str());
+        let brand = CpuBrand::Cyrix;
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
             CpuArch::new(
                 model,

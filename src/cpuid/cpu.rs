@@ -182,6 +182,11 @@ impl CpuSignature {
             from_cpuid,
         }
     }
+
+    pub fn new_synth(family: u32, model: u32, stepping: u32) -> Self {
+        Self::new(0, family, 0, model, stepping, false)
+    }
+
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
         let from_cpuid = super::has_cpuid();
@@ -192,7 +197,7 @@ impl CpuSignature {
 
             if super::is_cyrix() {
                 let dir0 = Cyrix::detect().dir0;
-                if dir0 > 0x19 {
+                if dir0 >= 0x1A {
                     let sig = Cyrix::get_signature_from_device_id(dir0);
                     if sig != CpuSignature::default() {
                         return sig;
