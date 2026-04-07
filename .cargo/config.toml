@@ -14,5 +14,6 @@ rustflags = [
 
 [target.i586-unknown-linux-gnu]
 rustflags = [
-	"-C", "target-cpu=i486"
+	"-C", "target-cpu=i486",
+	"-C", "opt-level=z"
 ]
