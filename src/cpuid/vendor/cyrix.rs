@@ -141,7 +141,7 @@ impl Cyrix {
         }
         // 6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
         // MediaGX always has cpuid enabled
-        dir0 >= 0x28 && dir0 < 0x40
+        dir0 >= 0x30 && dir0 < 0x40
     }
 
     /// Get Cyrix processor model via registers
