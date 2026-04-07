@@ -1,0 +1,23 @@
+{
+  "arch": "x86",
+  "cpu": "i486",
+  "crt-static-default": true,
+  "crt-static-respected": true,
+  "data-layout": "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:32-n8:16:32-S128",
+  "dynamic-linking": false,
+  "env": "musl",
+  "has-rpath": false,
+  "has-thread-local": true,
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
+  "llvm-target": "i486-unknown-linux-musl",
+  "max-atomic-width": 32,
+  "os": "linux",
+  "panic-strategy": "abort",
+  "position-independent-executables": true,
+  "relocation-model": "static",
+  "target-family": [
+    "unix"
+  ],
+  "target-pointer-width": 32
+}

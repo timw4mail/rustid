@@ -5,6 +5,7 @@
 use rustid::cpuid::dump::dump_main;
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unused)]
 fn main() {
     dump_main();
 }

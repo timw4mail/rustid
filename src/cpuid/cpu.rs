@@ -94,7 +94,7 @@ impl FeatureClass {
                 return FeatureClass::i686;
             }
 
-            if CpuSignature::detect().family >= 5 {
+            if has_cx8() {
                 return FeatureClass::i586;
             }
 

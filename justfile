@@ -102,8 +102,8 @@ build-mac-arm: _cargo_cross
 
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
-	@if ! rustup target list --installed | grep -q i586-unknown-linux-gnu; then rustup target add i586-unknown-linux-gnu; fi
-	cargo build --target i586-unknown-linux-gnu --release
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
+	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target i486-unknown-linux-musl.json --release
 
 # Remove build files
 clean:

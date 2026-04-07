@@ -2,6 +2,12 @@
 build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
+[target.i486-unknown-linux-musl]
+rustflags = [
+	"-C", "target-cpu=i486",
+	"-C", "opt-level=z"
+]
+
 [target.i486-dos]
 linker = "rust-lld"
 rustflags = [

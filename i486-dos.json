@@ -8,7 +8,7 @@
 	"linker-flavor": "ld.lld",
 	"linker": "rust-lld",
 	"llvm-target": "i486-unknown-none-code16",
-	"max-atomic-width": 64,
+	"max-atomic-width": 32,
 	"os": "none",
 	"relocation-model": "static",
 	"position-independent-executables": false,
