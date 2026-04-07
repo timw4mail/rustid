@@ -1,7 +1,9 @@
+use super::CpuDisplay;
 use super::brand::*;
 use super::micro_arch::*;
+use crate::arm::TArmCpu;
+use crate::common::UNK;
 use crate::common::*;
-use crate::common::{TCpu, UNK};
 use std::collections::BTreeMap;
 use std::process::Command;
 
@@ -125,32 +127,6 @@ pub struct Cpu {
     pub raw: BTreeMap<String, String>,
 }
 
-impl Cpu {
-    fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
-        let str = match (midr.part, kind) {
-            // M1
-            (0x022..=0x029, CoreType::Performance) => "FireStorm",
-            (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
-
-            // M2
-            (0x030..=0x039, CoreType::Performance) => "Avalanche",
-            (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
-
-            // M3+, A18 Pro
-            (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
-            (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
-
-            (_, _) => UNK,
-        };
-
-        if str == UNK {
-            None
-        } else {
-            Some(String::from(str))
-        }
-    }
-}
-
 impl TCpu for Cpu {
     fn detect() -> Self {
         let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
@@ -230,103 +206,68 @@ impl TCpu for Cpu {
             raw: values,
         }
     }
-    fn debug(&self) {
-        crate::println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr);
-        crate::println!(
+
+    fn debug(&self)
+    where
+        Self: std::fmt::Debug,
+    {
+        println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr());
+        println!(
             "Implementer: 0x{:X} ({})",
-            self.midr.implementer,
-            self.vendor
+            self.midr().implementer,
+            self.vendor()
         );
-        crate::println!("Variant: 0x{:X}", self.midr.variant);
-        crate::println!("Part Number: 0x{:X}", self.midr.part);
-        crate::println!("Revision: 0x{:X}", self.midr.revision);
+        println!("Variant: 0x{:X}", self.midr().variant);
+        println!("Part Number: 0x{:X}", self.midr().part);
+        println!("Revision: 0x{:X}", self.midr().revision);
         println!("{:#?}", self);
     }
-    fn display_table(&self) {
-        let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
-        let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
 
-        let simple_line = |l, v: &str| {
-            let l = label(l);
-            println!("{}{}", l, v);
-            println!();
+    fn display_table(&self) {
+        CpuDisplay::display(&self.cpu_arch, &self.cores, Some(&self.model));
+    }
+}
+
+impl TArmCpu for Cpu {
+    fn model(&self) -> Option<&str> {
+        Some(&self.model)
+    }
+
+    fn raw_midr(&self) -> usize {
+        self.raw_midr
+    }
+
+    fn midr(&self) -> &Midr {
+        &self.midr
+    }
+
+    fn vendor(&self) -> &str {
+        &self.vendor
+    }
+}
+
+impl Cpu {
+    fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
+        let str = match (midr.part, kind) {
+            // M1
+            (0x022..=0x029, CoreType::Performance) => "FireStorm",
+            (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
+
+            // M2
+            (0x030..=0x039, CoreType::Performance) => "Avalanche",
+            (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
+
+            // M3+, A18 Pro
+            (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
+            (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
+
+            (_, _) => UNK,
         };
 
-        println!();
-        simple_line("Brand/Implementor", self.cpu_arch.implementer.into());
-        simple_line("Model", &self.model);
-        simple_line("Code Name", &String::from(self.cpu_arch.code_name));
-        if let Some(tech) = self.cpu_arch.technology {
-            simple_line("Process", tech);
+        if str == UNK {
+            None
+        } else {
+            Some(String::from(str))
         }
-
-        [CoreType::Super, CoreType::Performance, CoreType::Efficiency]
-            .iter()
-            .for_each(|k| {
-                if let Some(core) = self.cores.get(k) {
-                    let name = format!("{} Cores", Into::<String>::into(*k));
-                    println!("{}", label(&name));
-
-                    if let Some(name) = core.name.clone() {
-                        println!("{}{}", label("Name"), name);
-                    }
-                    println!("{}{}", label("Count"), core.count);
-
-                    if let Some(cache) = core.cache {
-                        let cache_count = |share_count| {
-                            if share_count == 0u32 || (core.count as u32 / share_count) <= 1 {
-                                String::new()
-                            } else {
-                                format!("{}x ", core.count as u32 / share_count)
-                            }
-                        };
-
-                        match cache.l1 {
-                            Level1Cache::Unified(cache) => {
-                                println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size);
-                            }
-                            Level1Cache::Split { data, instruction } => {
-                                let data_count: String = cache_count(data.share_count);
-                                let instruction_count = cache_count(instruction.share_count);
-
-                                println!("{}L1d: {}{} KB", label("Cache"), &data_count, data.size);
-                                println!(
-                                    "{}{}{} KB",
-                                    sublabel("L1i"),
-                                    &instruction_count,
-                                    instruction.size,
-                                );
-                            }
-                        }
-
-                        if let Some(cache) = cache.l2 {
-                            let count = cache_count(cache.share_count);
-
-                            let mut num = cache.size / 1024;
-                            let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                            if num >= 1024 {
-                                num /= 1024;
-                            }
-
-                            println!("{} {}{} {}", sublabel("L2"), &count, num, unit);
-                        }
-
-                        if let Some(cache) = cache.l3 {
-                            let mut num = cache.size;
-                            let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                            if num >= 1024 {
-                                num /= 1024
-                            }
-
-                            println!("{} {} {}", sublabel("L3"), num, unit);
-                        }
-
-                        println!();
-                    }
-                }
-            });
-        println!();
     }
 }

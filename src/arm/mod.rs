@@ -4,6 +4,141 @@
 mod brand;
 pub mod cpu;
 pub mod micro_arch;
+use crate::common::{CoreType, CpuCore, Level1Cache};
+pub use micro_arch::Midr;
+use std::collections::BTreeMap;
+
+trait TArmCpu {
+    /// Returns the CPU model name, if available
+    #[allow(unused)]
+    fn model(&self) -> Option<&str> {
+        None
+    }
+
+    fn raw_midr(&self) -> usize;
+    fn midr(&self) -> &Midr;
+    fn vendor(&self) -> &str;
+}
+
+pub struct CpuDisplay;
+
+impl CpuDisplay {
+    fn label(s: &str) -> String {
+        format!("{:>17}:{:1}", s, "")
+    }
+
+    fn sublabel(s: &str) -> String {
+        format!("{:>19}{}:{:1}", "", s, "")
+    }
+
+    fn cache_count(share_count: u32, core_count: u32) -> String {
+        if share_count == 0 || (core_count / share_count) <= 1 {
+            String::new()
+        } else {
+            format!("{}x ", core_count / share_count)
+        }
+    }
+
+    pub fn display(
+        cpu_arch: &crate::arm::micro_arch::CpuArch,
+        cores: &BTreeMap<CoreType, CpuCore>,
+        model: Option<&str>,
+    ) {
+        println!();
+        println!(
+            "{}{}",
+            Self::label("Brand/Implementor"),
+            <crate::arm::brand::Vendor as Into<&str>>::into(cpu_arch.implementer)
+        );
+        println!();
+
+        if let Some(model) = model {
+            println!("{}{}", Self::label("Model"), model);
+            println!();
+        }
+
+        println!("{}{}", Self::label("Code Name"), cpu_arch.code_name);
+        println!();
+
+        if let Some(tech) = cpu_arch.technology {
+            println!("{}{}", Self::label("Process"), tech);
+            println!();
+        }
+
+        [CoreType::Super, CoreType::Performance, CoreType::Efficiency]
+            .iter()
+            .for_each(|k| {
+                if let Some(core) = cores.get(k) {
+                    let name = format!("{} Cores", Into::<String>::into(*k));
+                    println!("{}", Self::label(&name));
+
+                    if let Some(name) = core.name.clone() {
+                        println!("{}{}", Self::label("Name"), name);
+                    }
+
+                    println!("{}{}", Self::label("Count"), core.count);
+
+                    if let Some(cache) = core.cache {
+                        match cache.l1 {
+                            Level1Cache::Unified(cache) => {
+                                println!(
+                                    "{}L1: Unified {:>4} KB",
+                                    Self::label("Cache"),
+                                    cache.size
+                                );
+                            }
+                            Level1Cache::Split { data, instruction } => {
+                                let data_count: String =
+                                    Self::cache_count(data.share_count, core.count as u32);
+                                let instruction_count =
+                                    Self::cache_count(instruction.share_count, core.count as u32);
+
+                                println!(
+                                    "{}L1d: {}{} KB",
+                                    Self::label("Cache"),
+                                    &data_count,
+                                    data.size
+                                );
+                                println!(
+                                    "{}{}{} KB",
+                                    Self::sublabel("L1i"),
+                                    &instruction_count,
+                                    instruction.size
+                                );
+                            }
+                        }
+
+                        if let Some(cache) = cache.l2 {
+                            let count = Self::cache_count(cache.share_count, core.count as u32);
+
+                            let mut num = cache.size / 1024;
+                            let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                            if num >= 1024 {
+                                num /= 1024;
+                            }
+
+                            println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
+                        }
+
+                        if let Some(cache) = cache.l3 {
+                            let mut num = cache.size;
+                            let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                            if num >= 1024 {
+                                num /= 1024
+                            }
+
+                            println!("{} {} {}", Self::sublabel("L3"), num, unit);
+                        }
+
+                        println!();
+                    }
+                }
+            });
+        println!();
+    }
+}
 
 #[cfg(not(target_os = "macos"))]
 pub use cpu::*;
