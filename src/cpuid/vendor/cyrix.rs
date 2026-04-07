@@ -283,6 +283,23 @@ impl Cyrix {
         sfmt!("Cyrix {}", model).into()
     }
 
+    pub fn brand_string() -> &'static str {
+        // Some device ids are unique
+        let (dir0, _) = Self::get_device_ids();
+        const DEFAULT: &str = "Cyrix/IBM/ST/TI";
+        match dir0 {
+            0x81 => "TI",
+            // Otherwise, give the possible brands for each set of models
+            _ => match CyrixModel::detect() {
+                CyrixModel::Slc | CyrixModel::Dlc | CyrixModel::Slc2 | CyrixModel::Dlc2 => {
+                    "Cyrix/TI"
+                }
+                CyrixModel::Cx6x86 | CyrixModel::Cx6x86L | CyrixModel::M2 => "Cyrix/IBM/ST",
+                _ => DEFAULT,
+            },
+        }
+    }
+
     /// Get bus multiplier for the current cpu
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf

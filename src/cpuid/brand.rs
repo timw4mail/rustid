@@ -125,7 +125,7 @@ impl CpuBrand {
             CpuBrand::AMD => "AMD",
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::Cyrix => "Cyrix/IBM/ST/TI",
+            CpuBrand::Cyrix => super::vendor::cyrix::Cyrix::brand_string(),
 
             #[cfg(target_arch = "x86")]
             CpuBrand::DMP => "DM&P",
@@ -268,9 +268,6 @@ mod tests {
     #[test]
     fn test_to_brand_name() {
         assert_eq!(CpuBrand::AMD.to_brand_name(), "AMD");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(CpuBrand::Cyrix.to_brand_name(), "Cyrix/IBM/ST/TI");
 
         #[cfg(target_arch = "x86")]
         assert_eq!(CpuBrand::DMP.to_brand_name(), "DM&P");
