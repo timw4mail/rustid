@@ -144,6 +144,9 @@ pub enum MicroArch {
     MP6,
     MP62,
 
+    // SiS
+    SiS55x,
+
     // Transmeta
     Crusoe,
     Efficeon,
@@ -276,6 +279,9 @@ impl From<MicroArch> for Str<64> {
             MicroArch::MP6 => "mP6",
             MicroArch::MP62 => "mP6-II",
 
+            // SiS
+            MicroArch::SiS55x => "SiS55x",
+
             // Transmeta
             MicroArch::Crusoe => "Crusoe",
             MicroArch::Efficeon => "Efficeon",
@@ -399,10 +405,13 @@ impl CpuArch {
 
             // As long as the signature doesn't overlap, might as well match for multiple brands
             #[cfg(target_arch = "x86")]
-            CpuBrand::DMP | CpuBrand::Umc => match (s.family, s.model, s.stepping) {
+            CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => match (s.family, s.model, s.stepping) {
                 // UMC
                 (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
                 (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
+
+                // SiS
+                (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),
 
                 // DM&P
                 (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
@@ -413,7 +422,7 @@ impl CpuArch {
             },
 
             #[cfg(target_arch = "x86")]
-            CpuBrand::NexGen | CpuBrand::SiS => brand_arch(MicroArch::Unknown, UNK, None),
+            CpuBrand::NexGen => brand_arch(MicroArch::Unknown, UNK, None),
 
             #[cfg(target_arch = "x86_64")]
             CpuBrand::Hygon => brand_arch(MicroArch::Unknown, UNK, None),
