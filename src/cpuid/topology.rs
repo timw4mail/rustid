@@ -214,37 +214,30 @@ impl Topology {
                     }
                 }
                 VENDOR_INTEL => {
-                    if threads > 1 {
-                        if has_ht() {
-                            (threads, threads / 2)
-                        } else {
-                            (threads, threads)
-                        }
-                    } else {
+                    if threads < 2 {
                         (1, 1)
+                    } else if has_ht() {
+                        (threads, threads / 2)
+                    } else {
+                        (threads, threads)
                     }
                 }
                 _ => (1, 1),
             };
         }
 
-        // Get the highest count from the domains
-        // We'll assume this is the total thread count
-        let raw_sockets = domains
-            .iter()
-            .find(|d| d.kind == TopologyType::Socket)
-            .map(|d| d.count)
-            .unwrap_or(1);
-        let raw_cores = domains
-            .iter()
-            .find(|d| d.kind == TopologyType::Core)
-            .map(|d| d.count)
-            .unwrap_or(1);
-        let raw_threads = domains
-            .iter()
-            .find(|d| d.kind == TopologyType::Thread)
-            .map(|d| d.count)
-            .unwrap_or(1);
+        // Get domain counts in a single iteration
+        let mut raw_sockets = 1;
+        let mut raw_cores = 1;
+        let mut raw_threads = 1;
+        for d in domains.iter() {
+            match d.kind {
+                TopologyType::Socket => raw_sockets = d.count,
+                TopologyType::Core => raw_cores = d.count,
+                TopologyType::Thread => raw_threads = d.count,
+                _ => {}
+            }
+        }
 
         // Socket/Die/Core/Thread
         if raw_sockets > 1 && raw_threads > 1 && raw_cores > 1 {
