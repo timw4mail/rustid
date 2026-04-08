@@ -9,6 +9,14 @@ const L1: u32 = 1;
 const L2: u32 = 2;
 const L3: u32 = 3;
 
+#[derive(Copy, Clone)]
+enum CacheDescTarget {
+    L1Instruction(u32, u32),
+    L1Data(u32, u32),
+    L2(u32, u32),
+    L3(u32, u32),
+}
+
 impl Cache {
     pub fn new(l1: Level1Cache, l2: Option<CacheLevel>, l3: Option<CacheLevel>) -> Cache {
         Cache { l1, l2, l3 }
@@ -187,440 +195,175 @@ impl Cache {
         }
 
         for desc in desc_list.iter() {
-            match desc {
-                // code L1 cache, 8 KB, 4 ways, 32 byte lines
-                0x06 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_instruction(8 * 1024, 4);
-                }
-                // code L1 cache, 16 KB, 4 ways, 32 byte lines
-                0x08 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_instruction(16 * 1024, 4);
-                }
-                // code L1 cache, 32 KB, 4 ways, 64 byte lines
-                0x09 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_instruction(32 * 1024, 4);
-                }
-                // data L1 cache, 8 KB, 2 ways, 32 byte lines
-                0x0A => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(8 * 1024, 2);
-                }
-                // data L1 cache, 16 KB, 4 ways, 32 byte lines
-                // data L1 cache, 16 KB, 4 ways, 64 byte lines (ECC)
-                0x0C | 0x0D => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 4);
-                }
-                // data L1 cache, 24 KB, 6 ways, 64 byte lines
-                0x0E => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(24 * 1024, 6);
-                }
-                // data L1 cache, 16 KB, 4 ways, 32 byte lines (IA-64)
-                0x10 | 0x15 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 4);
-                }
-                // data L1 cache, 16 KB, 4 ways, 64 byte lines (IA-64)
-                0x12 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 4);
-                }
-                // data L1 cache, 16 KB, 8 ways, 64 byte lines (IA-64)
-                0x13 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 8);
-                }
-                // data L1 cache, 32 KB, 4 ways, 64 byte lines (IA-64)
-                0x14 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(32 * 1024, 4);
-                }
-                // data L1 cache, 32 KB, 8 ways, 64 byte lines (IA-64)
-                0x16 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(32 * 1024, 8);
-                }
-                // data L1 cache, 32 KB, 16 ways, 64 byte lines (IA-64)
-                0x17 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(32 * 1024, 16);
-                }
-                // data L1 cache, 64 KB, 4 ways, 64 byte lines (IA-64)
-                0x18 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(64 * 1024, 4);
-                }
-                // data L1 cache, 64 KB, 8 ways, 64 byte lines (IA-64)
-                0x19 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(64 * 1024, 8);
-                }
-                // code and data L2 cache, 96 KB, 6 ways, 64 byte lines (IA-64)
-                0x1A => {
-                    c.l2 = Some(CacheLevel::no_count(96 * 1024, CacheType::Unified, 6));
-                }
-                // code and data L2 cache, 128 KB, 2 ways, 64 byte lines
-                0x1D => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 2));
-                }
-                // code and data L2 cache, 256 KB, 8 ways, 64 byte lines
-                0x21 => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 512 KB, 4 ways (!), 64 byte lines, dual-sectored
-                0x22 => {
-                    c.l3 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored
-                0x23 => {
-                    c.l3 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 8));
-                }
-                //  code and data L2 cache, 1024 KB, 16 ways, 64 byte lines
-                0x24 => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 2048 KB, 8 ways, 64 byte lines, dual-sectored
-                0x25 => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 4096 KB, 8 ways, 64 byte lines, dual-sectored
-                0x29 => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 8));
-                }
-                // data L1 cache, 32 KB, 8 ways, 64 byte lines
-                0x2C => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(32 * 1024, 8);
-                }
-                // code L1 cache, 32 KB, 8 ways, 64 byte lines
-                0x30 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_instruction(32 * 1024, 8);
-                }
-                // code and data L2 cache, 128 KB, 4 ways, 64 byte lines, sectored
-                0x39 => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 192 KB, 6 ways, 64 byte lines, sectored
-                0x3A => {
-                    c.l2 = Some(CacheLevel::no_count(192 * 1024, CacheType::Unified, 6));
-                }
-                // code and data L2 cache, 128 KB, 2 ways, 64 byte lines, sectored
-                0x3B => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 2));
-                }
-                // code and data L2 cache, 256 KB, 4 ways, 64 byte lines, sectored
-                0x3C => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 384 KB, 6 ways, 64 byte lines, sectored
-                0x3D => {
-                    c.l2 = Some(CacheLevel::no_count(384 * 1024, CacheType::Unified, 6));
-                }
-                // code and data L2 cache, 512 KB, 4 ways, 64 byte lines, sectored
-                0x3E => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 128 KB, 4 ways, 32 byte lines
-                0x41 => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 256 KB, 4 ways, 32 byte lines
-                0x42 => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 512 KB, 4 ways, 32 byte lines
-                0x43 => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 1024 KB, 4 ways, 32 byte lines
-                0x44 => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 2048 KB, 4 ways, 32 byte lines
-                0x45 => {
-                    c.l2 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 4096 KB, 4 ways, 64 byte lines
-                0x46 => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 8192 KB, 8 ways, 64 byte lines
-                0x47 => {
-                    c.l3 = Some(CacheLevel::no_count(8192 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 3072 KB, 12 ways, 64 byte lines
-                0x48 => {
-                    c.l2 = Some(CacheLevel::no_count(3072 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 4096 KB, 16 ways, 64 byte lines (P4) or
-                // code and data L2 cache, 4096 KB, 16 ways, 64 byte lines (Core 2)
-                0x49 => {
-                    let sig = CpuSignature::detect();
-
-                    // Core/Core 2 has signatures like (0, 6, 0, 15, 6) and (0, 6, 1, 7, 0)
-                    match (sig.family, sig.extended_model, sig.model) {
-                        // Core 2
-                        (6, 0, 13..) | (6, 1, 7) => {
-                            c.l2 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
-                        }
-                        // P4
-                        _ => {
-                            c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
-                        }
-                    }
-                }
-                // code and data L3 cache, 6144 KB, 12 ways, 64 byte lines
-                0x4A => {
-                    c.l3 = Some(CacheLevel::no_count(6144 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 8192 KB, 16 ways, 64 byte lines
-                0x4B => {
-                    c.l3 = Some(CacheLevel::no_count(8192 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 12288 KB, 12 ways, 64 byte lines
-                0x4C => {
-                    c.l3 = Some(CacheLevel::no_count(12288 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 16384 KB, 16 ways, 64 byte lines
-                0x4D => {
-                    c.l3 = Some(CacheLevel::no_count(16384 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 2048 KB, 16 ways, 64 byte lines
-                0x4E => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 4096 KB, 16 ways, 64 byte lines
-                0x4F => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
-                }
-                // data L1 cache, 16 KB, 8 ways, 64 byte lines, sectored
-                0x60 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 8);
-                }
-                // data L1 cache, 8 KB, 4 ways, 64 byte lines, sectored
-                0x66 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(8 * 1024, 4);
-                }
-                // data L1 cache, 16 KB, 4 ways, 64 byte lines, sectored
-                0x67 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(16 * 1024, 4);
-                }
-                // data L1 cache, 32 KB, 4 ways, 64 byte lines, sectored
-                0x68 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_data(32 * 1024, 4);
-                }
-                // code L1 cache, 16 KB, 4 ways, 64 byte lines, sectored (IA-64)
-                0x77 => {
-                    if c.l1.is_unified() {
-                        c.l1 = Level1Cache::default_split();
-                    }
-                    c.l1.set_instruction(16 * 1024, 4);
-                }
-                // code and data L2 cache, 1024 KB, 4 ways, 64 byte lines
-                0x78 => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 128 KB, 8 ways, 64 byte lines, dual-sectored
-                0x79 => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 256 KB, 8 ways, 64 byte lines, dual-sectored
-                0x7A => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 512 KB, 8 ways, 64 byte lines, dual-sectored
-                0x7B => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 1024 KB, 8 ways, 64 byte lines, dual-sectored
-                0x7C => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 2048 KB, 8 ways, 64 byte lines
-                0x7D => {
-                    c.l2 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 256 KB, 8 ways, 128 byte lines (IA-64)
-                0x7E => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 512 KB, 2 ways, 64 byte lines
-                0x7F => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 2));
-                }
-                // code and data L2 cache, 512 KB, 8 ways, 64 byte lines
-                0x80 => {
-                    #[cfg(target_arch = "x86")]
-                    if super::is_cyrix() {
-                        // code and data L1 cache, 16 KB, 4 ways, 16 byte lines
-                        c.l1 = Level1Cache::Unified(CacheLevel::no_count(
-                            16 * 1024,
-                            CacheType::Unified,
-                            4,
-                        ));
-                        continue;
-                    }
-
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 128 KB, 8 ways, 32 byte lines
-                0x81 => {
-                    c.l2 = Some(CacheLevel::no_count(128 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 256 KB, 8 ways, 32 byte lines
-                0x82 => {
-                    c.l2 = Some(CacheLevel::no_count(256 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 512 KB, 8 ways, 32 byte lines
-                0x83 => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 1024 KB, 8 ways, 32 byte lines
-                0x84 => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 2048 KB, 8 ways, 32 byte lines
-                0x85 => {
-                    c.l2 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L2 cache, 512 KB, 4 ways, 64 byte lines
-                0x86 => {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L2 cache, 1024 KB, 8 ways, 64 byte lines
-                0x87 => {
-                    c.l2 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 2048 KB, 4 ways, 64 byte lines (IA-64)
-                0x88 => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 4096 KB, 4 ways, 64 byte lines (IA-64)
-                0x89 => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 8192 KB, 4 ways, 64 byte lines (IA-64)
-                0x8A => {
-                    c.l3 = Some(CacheLevel::no_count(8192 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 3072 KB, 12 ways, 128 byte lines (IA-64)
-                0x8D => {
-                    c.l3 = Some(CacheLevel::no_count(3072 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 512 KB, 4 ways, 64 byte lines
-                0xD0 => {
-                    c.l3 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 1024 KB, 4 ways, 64 byte lines
-                0xD1 => {
-                    c.l3 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 2048 KB, 4 ways, 64 byte lines
-                0xD2 => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 4));
-                }
-                // code and data L3 cache, 1024 KB, 8 ways, 64 byte lines
-                0xD6 => {
-                    c.l3 = Some(CacheLevel::no_count(1024 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 2048 KB, 8 ways, 64 byte lines
-                0xD7 => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 4096 KB, 8 ways, 64 byte lines
-                0xD8 => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 8));
-                }
-                // code and data L3 cache, 1536 KB, 12 ways, 64 byte lines
-                0xDC => {
-                    c.l3 = Some(CacheLevel::no_count(1536 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 3072 KB, 12 ways, 64 byte lines
-                0xDD => {
-                    c.l3 = Some(CacheLevel::no_count(3072 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 6144 KB, 12 ways, 64 byte lines
-                0xDE => {
-                    c.l3 = Some(CacheLevel::no_count(6144 * 1024, CacheType::Unified, 12));
-                }
-                // code and data L3 cache, 2048 KB, 16 ways, 64 byte lines
-                0xE2 => {
-                    c.l3 = Some(CacheLevel::no_count(2048 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 4096 KB, 16 ways, 64 byte lines
-                0xE3 => {
-                    c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 8192 KB, 16 ways, 64 byte lines
-                0xE4 => {
-                    c.l3 = Some(CacheLevel::no_count(8192 * 1024, CacheType::Unified, 16));
-                }
-                // code and data L3 cache, 12288 KB, 24 ways, 64 byte lines
-                0xEA => {
-                    c.l3 = Some(CacheLevel::no_count(12288 * 1024, CacheType::Unified, 24));
-                }
-                // code and data L3 cache, 18432 KB, 24 ways, 64 byte lines
-                0xEB => {
-                    c.l3 = Some(CacheLevel::no_count(18432 * 1024, CacheType::Unified, 24));
-                }
-                // code and data L3 cache, 24576 KB, 24 ways, 64 byte lines
-                0xEC => {
-                    c.l3 = Some(CacheLevel::no_count(24576 * 1024, CacheType::Unified, 24));
-                }
-                _ => continue,
-            }
+            Self::apply_descriptor(*desc, &mut c);
         }
 
-        if c == Cache::default() { None } else { Some(c) }
+        if c == Cache::default() {
+            None
+        } else {
+            Some(c)
+        }
+    }
+
+    const fn get_cache_desc_info(desc: u32) -> Option<CacheDescTarget> {
+        match desc {
+            // L1 Instruction cache
+            // 8KB, 4-way
+            0x06 => Some(CacheDescTarget::L1Instruction(8 * 1024, 4)),
+            // 16KB, 4-way
+            0x08 => Some(CacheDescTarget::L1Instruction(16 * 1024, 4)),
+            // 32KB, 4-way
+            0x09 => Some(CacheDescTarget::L1Instruction(32 * 1024, 4)),
+            // 32KB, 8-way
+            0x30 => Some(CacheDescTarget::L1Instruction(32 * 1024, 8)),
+
+            // L1 Data cache
+            // 8KB, 2-way
+            0x0A => Some(CacheDescTarget::L1Data(8 * 1024, 2)),
+            // 8KB, 4-way
+            0x66 => Some(CacheDescTarget::L1Data(8 * 1024, 4)),
+            // 16KB, 4-way
+            0x0C | 0x0D | 0x67 => Some(CacheDescTarget::L1Data(16 * 1024, 4)),
+            // 16KB, 8-way
+            0x60 => Some(CacheDescTarget::L1Data(16 * 1024, 8)),
+            // 24KB, 6-way
+            0x0E => Some(CacheDescTarget::L1Data(24 * 1024, 6)),
+            // 32KB, 4-way
+            0x68 => Some(CacheDescTarget::L1Data(32 * 1024, 4)),
+            // 32KB, 8-way
+            0x2C => Some(CacheDescTarget::L1Data(32 * 1024, 8)),
+
+            // L2 cache
+            // 128KB, 2-way
+            0x1D | 0x3B => Some(CacheDescTarget::L2(128 * 1024, 2)),
+            // 128KB, 4-way
+            0x39 | 0x41 => Some(CacheDescTarget::L2(128 * 1024, 4)),
+            // 128KB, 8-way
+            0x79 | 0x81 => Some(CacheDescTarget::L2(128 * 1024, 8)),
+            // 192KB, 6-way
+            0x3A => Some(CacheDescTarget::L2(192 * 1024, 6)),
+            // 256KB, 2-way
+            0x7F => Some(CacheDescTarget::L2(256 * 1024, 2)),
+            // 256KB, 4-way
+            0x3C | 0x42 => Some(CacheDescTarget::L2(256 * 1024, 4)),
+            // 256KB, 8-way
+            0x21 | 0x7A | 0x82 => Some(CacheDescTarget::L2(256 * 1024, 8)),
+            // 384KB, 6-way
+            0x3D => Some(CacheDescTarget::L2(384 * 1024, 6)),
+            // 512KB, 2-way
+            0x3E => Some(CacheDescTarget::L2(512 * 1024, 2)),
+            // 512KB, 4-way
+            0x43 | 0x78 | 0x86 => Some(CacheDescTarget::L2(512 * 1024, 4)),
+            // 512KB, 8-way
+            0x7B | 0x80 | 0x83 => Some(CacheDescTarget::L2(512 * 1024, 8)),
+            // 1024KB, 4-way
+            0x44 | 0x7C => Some(CacheDescTarget::L2(1024 * 1024, 4)),
+            // 1024KB, 8-way
+            0x84 | 0x87 => Some(CacheDescTarget::L2(1024 * 1024, 8)),
+            // 1024KB, 16-way
+            0x24 => Some(CacheDescTarget::L2(1024 * 1024, 16)),
+            // 2048KB, 4-way
+            0x45 => Some(CacheDescTarget::L2(2048 * 1024, 4)),
+            // 2048KB, 8-way
+            0x7D | 0x85 => Some(CacheDescTarget::L2(2048 * 1024, 8)),
+            // 3072KB, 12-way
+            0x48 => Some(CacheDescTarget::L2(3072 * 1024, 12)),
+
+            // L3 cache
+            // 512KB, 4-way
+            0x22 | 0xD0 => Some(CacheDescTarget::L3(512 * 1024, 4)),
+            // 512KB, 8-way
+            0xD6 => Some(CacheDescTarget::L3(512 * 1024, 8)),
+            // 1024KB, 4-way
+            0x23 | 0xD1 => Some(CacheDescTarget::L3(1024 * 1024, 4)),
+            // 1024KB, 8-way
+            0xD7 => Some(CacheDescTarget::L3(1024 * 1024, 8)),
+            // 1536KB, 12-way
+            0xDC => Some(CacheDescTarget::L3(1536 * 1024, 12)),
+            // 2048KB, 4-way
+            0xD2 => Some(CacheDescTarget::L3(2048 * 1024, 4)),
+            // 2048KB, 8-way
+            0x25 => Some(CacheDescTarget::L3(2048 * 1024, 8)),
+            // 2048KB, 16-way
+            0x4E | 0xE2 => Some(CacheDescTarget::L3(2048 * 1024, 16)),
+            // 3072KB, 12-way
+            0xDD => Some(CacheDescTarget::L3(3072 * 1024, 12)),
+            // 4096KB, 4-way
+            0x29 | 0x46 => Some(CacheDescTarget::L3(4096 * 1024, 4)),
+            // 4096KB, 8-way
+            0xD8 => Some(CacheDescTarget::L3(4096 * 1024, 8)),
+            // 4096KB, 16-way
+            0x4F | 0xE3 => Some(CacheDescTarget::L3(4096 * 1024, 16)),
+            // 6144KB, 12-way
+            0x4A | 0xDE => Some(CacheDescTarget::L3(6144 * 1024, 12)),
+            // 8192KB, 8-way
+            0x47 => Some(CacheDescTarget::L3(8192 * 1024, 8)),
+            // 8192KB, 16-way
+            0x4B | 0xE4 => Some(CacheDescTarget::L3(8192 * 1024, 16)),
+            // 12288KB, 12-way
+            0x4C | 0xEA => Some(CacheDescTarget::L3(12288 * 1024, 12)),
+            // 16384KB, 16-way
+            0x4D => Some(CacheDescTarget::L3(16384 * 1024, 16)),
+            // 18432KB, 24-way
+            0xEB => Some(CacheDescTarget::L3(18432 * 1024, 24)),
+            // 24576KB, 24-way
+            0xEC => Some(CacheDescTarget::L3(24576 * 1024, 24)),
+
+            _ => None,
+        }
+    }
+
+    fn apply_descriptor(desc: u32, c: &mut Cache) {
+        match desc {
+            0x49 => {
+                let sig = CpuSignature::detect();
+                match (sig.family, sig.extended_model, sig.model) {
+                    (6, 0, 13..) | (6, 1, 7) => {
+                        c.l2 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
+                    }
+                    _ => {
+                        c.l3 = Some(CacheLevel::no_count(4096 * 1024, CacheType::Unified, 16));
+                        return;
+                    }
+                }
+            }
+            0x80 => {
+                #[cfg(target_arch = "x86")]
+                if is_cyrix() {
+                    c.l1 = Level1Cache::Unified(CacheLevel::no_count(
+                        16 * 1024,
+                        CacheType::Unified,
+                        4,
+                    ));
+                    return;
+                }
+                c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
+            }
+            _ => {}
+        }
+
+        if let Some(info) = Self::get_cache_desc_info(desc) {
+            match info {
+                CacheDescTarget::L1Instruction(size, assoc) => {
+                    if c.l1.is_unified() {
+                        c.l1 = Level1Cache::default_split();
+                    }
+                    c.l1.set_instruction(size, assoc);
+                }
+                CacheDescTarget::L1Data(size, assoc) => {
+                    if c.l1.is_unified() {
+                        c.l1 = Level1Cache::default_split();
+                    }
+                    c.l1.set_data(size, assoc);
+                }
+                CacheDescTarget::L2(size, assoc) => {
+                    c.l2 = Some(CacheLevel::no_count(size, CacheType::Unified, assoc));
+                }
+                CacheDescTarget::L3(size, assoc) => {
+                    c.l3 = Some(CacheLevel::no_count(size, CacheType::Unified, assoc));
+                }
+            }
+        }
     }
 
     /// Cache detection via deterministic cache parameters
@@ -700,7 +443,11 @@ impl Cache {
             }
         }
 
-        if c == Cache::default() { None } else { Some(c) }
+        if c == Cache::default() {
+            None
+        } else {
+            Some(c)
+        }
     }
 }
 
