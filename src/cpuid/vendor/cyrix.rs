@@ -1,7 +1,7 @@
 use super::TMicroArch;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
+use crate::cpuid::{get_reset_signature, CpuSignature, FeatureClass, Str, UNK, has_cx8};
 use crate::sfmt;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -33,7 +33,10 @@ pub enum CyrixModel {
 impl CyrixModel {
     pub fn detect() -> Self {
         let (dir0, dir1) = Cyrix::get_device_ids();
+        Self::detect_with_ids(dir0, dir1)
+    }
 
+    pub fn detect_with_ids(dir0: u8, dir1: u8) -> Self {
         match dir0 {
             // Cx486SLC/DLC/SRx/DRx (M0.5)
             0x00 => Self::Slc,
@@ -203,14 +206,17 @@ impl Cyrix {
     }
 
     fn get_device_id_from_signature() -> u8 {
-        let signature = CpuSignature::detect();
-
-        match (signature.family, signature.model) {
-            (3, 2) => 0x01,
-            (4, 5) => 0x10,
-            (4, 8) => 0x1B,
-            _ => 0,
+        #[cfg(target_os = "none")]
+        if let Some(signature) = get_reset_signature() {
+            return match (signature.family, signature.model) {
+                (3, 2) => 0x01,
+                (4, 5) => 0x10,
+                (4, 8) => 0x1B,
+                _ => 0,
+            };
         }
+
+        0
     }
 
     pub fn get_signature_from_device_id() -> CpuSignature {
