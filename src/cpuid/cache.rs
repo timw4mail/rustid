@@ -148,7 +148,7 @@ impl Cache {
             for offset in [8u32, 16, 24] {
                 let desc = (res.eax >> offset) & 0xFF;
                 if desc != 0 {
-                    let _ = desc_list.push(desc);
+                    desc_list.push(desc);
                 }
             }
 
@@ -159,7 +159,7 @@ impl Cache {
             for offset in [0u32, 8, 16, 24] {
                 let desc = (res.ebx >> offset) & 0xFF;
                 if desc != 0 {
-                    let _ = desc_list.push(desc);
+                    desc_list.push(desc);
                 }
             }
 
@@ -170,7 +170,7 @@ impl Cache {
             for offset in [0u32, 8, 16, 24] {
                 let desc = (res.ecx >> offset) & 0xFF;
                 if desc != 0 {
-                    let _ = desc_list.push(desc);
+                    desc_list.push(desc);
                 }
             }
 
@@ -181,7 +181,7 @@ impl Cache {
             for offset in [0u32, 8, 16, 24] {
                 let desc = (res.edx >> offset) & 0xFF;
                 if desc != 0 {
-                    let _ = desc_list.push(desc);
+                    desc_list.push(desc);
                 }
             }
         }

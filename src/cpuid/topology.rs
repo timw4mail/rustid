@@ -308,7 +308,7 @@ impl Topology {
             match leaf {
                 // Topology v1
                 LEAF_0B => {
-                    let _ = d.push(TopologyDomain {
+                    d.push(TopologyDomain {
                         level,
                         kind: match domain_type {
                             1 => TopologyType::Thread,
@@ -320,7 +320,7 @@ impl Topology {
                 }
                 // Intel Topology V2
                 LEAF_1F => {
-                    let _ = d.push(TopologyDomain {
+                    d.push(TopologyDomain {
                         level,
                         kind: match domain_type {
                             1 => TopologyType::Thread,
@@ -336,7 +336,7 @@ impl Topology {
                 }
                 // AMD Topology V2
                 EXT_LEAF_26 => {
-                    let _ = d.push(TopologyDomain {
+                    d.push(TopologyDomain {
                         level,
                         kind: match domain_type {
                             1 => TopologyType::Thread,

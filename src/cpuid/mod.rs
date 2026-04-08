@@ -619,7 +619,7 @@ pub fn get_feature_list() -> FeatureList {
     let mut out: FeatureList = FeatureList::new();
     for (name, check) in FEATURES {
         if check() {
-            let _ = out.push(name);
+            out.push(name);
         }
     }
     out
