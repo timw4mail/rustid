@@ -562,7 +562,7 @@ impl TCpu for Cpu {
         #[cfg(target_os = "none")]
         let newline = || {};
 
-        let ma: Str<64> = self.arch.micro_arch.into();
+        let ma: Str<_> = self.arch.micro_arch.into();
         let ma: &str = &ma;
 
         let multi_core = self.topology.cores > 1;

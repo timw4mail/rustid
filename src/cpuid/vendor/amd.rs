@@ -119,7 +119,7 @@ impl TMicroArch for Amd {
             (10, 15, 5, 0, 0) => brand_arch(MicroArch::Zen3, "Cezanne", Some("7nm")),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some("5nm")),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some("4nm")),
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 }

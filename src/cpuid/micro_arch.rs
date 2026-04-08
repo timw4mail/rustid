@@ -156,8 +156,8 @@ pub enum MicroArch {
     U5D,
 }
 
-impl From<MicroArch> for Str<64> {
-    fn from(ma: MicroArch) -> Str<64> {
+impl From<MicroArch> for Str<32> {
+    fn from(ma: MicroArch) -> Str<32> {
         let s = match ma {
             MicroArch::Unknown => UNK,
 
@@ -305,11 +305,11 @@ pub struct CpuArch {
     /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
     /// Brand name (e.g., "Intel", "AMD")
-    pub brand_name: Str<64>,
+    pub brand_name: Str<32>,
     /// Raw vendor string from CPUID
-    pub vendor_string: Str<64>,
+    pub vendor_string: Str<12>,
     /// Process technology node (e.g., "14nm", "7nm")
-    pub technology: Option<Str<32>>,
+    pub technology: Option<Str<8>>,
 }
 
 impl Default for CpuArch {
@@ -329,8 +329,8 @@ impl CpuArch {
         technology: Option<&str>,
     ) -> Self {
         let model_s: Str<64> = Str::from(model);
-        let brand_s: Str<64> = Str::from(brand_name);
-        let vendor_s: Str<64> = Str::from(vendor_string);
+        let brand_s: Str<32> = Str::from(brand_name);
+        let vendor_s: Str<12> = Str::from(vendor_string);
 
         let technology = technology.map(Str::from);
 
@@ -361,35 +361,34 @@ impl CpuArch {
             arch(ma, code_name, brand.to_brand_name(), tech)
         };
 
+        let unknown_model = brand_arch(MicroArch::Unknown, "Unknown", None);
+
         // Brand for Centaur CPUs is by signature, not vendor string
         if is_centaur() || is_zhaoxin() {
             return Centaur::micro_arch(model, s);
         }
 
+        #[cfg(target_arch = "x86")]
         match brand {
             CpuBrand::AMD => Amd::micro_arch(model, s),
 
             CpuBrand::Intel => Intel::micro_arch(model, s),
 
-            #[cfg(target_arch = "x86")]
             CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
 
-            #[cfg(target_arch = "x86")]
             CpuBrand::NationalSemiconductor => match (s.family, s.model, s.stepping) {
                 (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some("180nm")),
                 (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some("180nm")),
                 (5, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
-                _ => brand_arch(MicroArch::Unknown, UNK, None),
+                _ => unknown_model,
             },
 
-            #[cfg(target_arch = "x86")]
             // From sandpile.org
             CpuBrand::Rdc => match (s.family, s.model, s.stepping) {
                 (5, 8, _) => brand_arch(MicroArch::Iad, "Iad", None),
-                _ => brand_arch(MicroArch::Unknown, UNK, None),
+                _ => unknown_model,
             },
 
-            #[cfg(target_arch = "x86")]
             CpuBrand::Rise => match (s.family, s.model, s.stepping) {
                 (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
                 (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some("180nm")),
@@ -397,37 +396,44 @@ impl CpuArch {
                 // These two come from instlatx64
                 (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some("250nm")),
                 (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some("180nm")),
-                _ => brand_arch(MicroArch::Unknown, UNK, None),
+                _ => unknown_model,
             },
 
-            #[cfg(target_arch = "x86")]
             CpuBrand::Transmeta => Transmeta::micro_arch(model, s),
 
             // As long as the signature doesn't overlap, might as well match for multiple brands
-            #[cfg(target_arch = "x86")]
-            CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => match (s.family, s.model, s.stepping) {
-                // UMC
-                (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
-                (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
+            CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => {
+                match (s.family, s.model, s.stepping) {
+                    // UMC
+                    (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
+                    (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
 
-                // SiS
-                (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),
+                    // SiS
+                    (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),
 
-                // DM&P
-                (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
-                (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
-                (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
+                    // DM&P
+                    (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
+                    (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
+                    (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
 
-                _ => brand_arch(MicroArch::Unknown, UNK, None),
-            },
+                    _ => unknown_model,
+                }
+            }
 
-            #[cfg(target_arch = "x86")]
-            CpuBrand::NexGen => brand_arch(MicroArch::Unknown, UNK, None),
+            CpuBrand::NexGen => unknown_model,
 
-            #[cfg(target_arch = "x86_64")]
-            CpuBrand::Hygon => brand_arch(MicroArch::Unknown, UNK, None),
+            _ => unknown_model,
+        }
 
-            _ => brand_arch(MicroArch::Unknown, UNK, None),
+        #[cfg(target_arch = "x86_64")]
+        match brand {
+            CpuBrand::AMD => Amd::micro_arch(model, s),
+
+            CpuBrand::Intel => Intel::micro_arch(model, s),
+
+            CpuBrand::Hygon => unknown_model,
+
+            _ => unknown_model,
         }
     }
 }
@@ -443,28 +449,20 @@ pub(crate) mod tests {
 
     #[test]
     fn test_micro_arch_from_string() {
-        assert_eq!(Str::<64>::from(MicroArch::Am486), "Am486");
-        assert_eq!(Str::<64>::from(MicroArch::ZenPlus), "Zen+");
-
         #[cfg(target_arch = "x86")]
-        assert_eq!(Str::<64>::from(MicroArch::Winchip), "Winchip");
+        {
+            assert_eq!(Str::<_>::from(MicroArch::Winchip), "Winchip");
+            assert_eq!(Str::<_>::from(MicroArch::Cy5x86), "Cx5x86");
+            assert_eq!(Str::<_>::from(MicroArch::VortexDX3), "Vortex86DX3");
+            assert_eq!(Str::<_>::from(MicroArch::Crusoe), "Crusoe");
+            assert_eq!(Str::<_>::from(MicroArch::U5S), "U5S");
+        }
 
-        assert_eq!(Str::<64>::from(MicroArch::Lujiazui), "LuJiaZui");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(Str::<64>::from(MicroArch::Cy5x86), "Cx5x86");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(Str::<64>::from(MicroArch::VortexDX3), "Vortex86DX3");
-        assert_eq!(Str::<64>::from(MicroArch::I486), "i486");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(Str::<64>::from(MicroArch::Crusoe), "Crusoe");
-
-        #[cfg(target_arch = "x86")]
-        assert_eq!(Str::<64>::from(MicroArch::U5S), "U5S");
-
-        assert_eq!(Str::<64>::from(MicroArch::Unknown), UNK);
+        assert_eq!(Str::<_>::from(MicroArch::Am486), "Am486");
+        assert_eq!(Str::<_>::from(MicroArch::ZenPlus), "Zen+");
+        assert_eq!(Str::<_>::from(MicroArch::Lujiazui), "LuJiaZui");
+        assert_eq!(Str::<_>::from(MicroArch::I486), "i486");
+        assert_eq!(Str::<_>::from(MicroArch::Unknown), UNK);
     }
 
     #[test]

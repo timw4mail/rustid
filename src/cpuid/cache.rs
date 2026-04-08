@@ -198,11 +198,7 @@ impl Cache {
             Self::apply_descriptor(*desc, &mut c);
         }
 
-        if c == Cache::default() {
-            None
-        } else {
-            Some(c)
-        }
+        if c == Cache::default() { None } else { Some(c) }
     }
 
     const fn get_cache_desc_info(desc: u32) -> Option<CacheDescTarget> {
@@ -443,11 +439,7 @@ impl Cache {
             }
         }
 
-        if c == Cache::default() {
-            None
-        } else {
-            Some(c)
-        }
+        if c == Cache::default() { None } else { Some(c) }
     }
 }
 
