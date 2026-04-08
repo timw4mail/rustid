@@ -164,12 +164,7 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
         return Cpuid::default();
     }
 
-    // I think the latest version of rust just made this a "safe" function.
-    // For now, so the very latest version isn't required, I'll wrap in the unsafe block
-    #[allow(unused_unsafe)]
-    unsafe {
-        __cpuid_count(leaf, sub_leaf).into()
-    }
+    __cpuid_count(leaf, sub_leaf).into()
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).

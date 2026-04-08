@@ -1,24 +1,23 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct StaticVec<T, const N: usize> {
     data: [T; N],
     len: usize,
 }
 
-impl<T, const N: usize> StaticVec<T, N> {
-    pub const fn new() -> Self {
+impl<T: Default, const N: usize> StaticVec<T, N> {
+    pub fn new() -> Self {
         Self {
-            data: unsafe { core::mem::zeroed() },
+            data: core::array::from_fn(|_| T::default()),
             len: 0,
         }
     }
 
-    pub fn push(&mut self, value: T) -> bool {
+    pub fn push(&mut self, value: T) {
         if self.len >= N {
-            return false;
+            panic!("StaticVec already full");
         }
         self.data[self.len] = value;
         self.len += 1;
-        true
     }
 
     pub const fn len(&self) -> usize {
@@ -50,25 +49,13 @@ impl<T, const N: usize> StaticVec<T, N> {
     }
 }
 
-impl<T: Clone, const N: usize> Clone for StaticVec<T, N> {
-    fn clone(&self) -> Self {
-        let mut new = Self::new();
-        for item in self.iter() {
-            let _ = new.push(item.clone());
-        }
-        new
-    }
-}
-
-impl<T: Copy, const N: usize> Copy for StaticVec<T, N> {}
-
-impl<T, const N: usize> Default for StaticVec<T, N> {
+impl<T: Default, const N: usize> Default for StaticVec<T, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const N: usize> IntoIterator for StaticVec<T, N> {
+impl<T: Default, const N: usize> IntoIterator for StaticVec<T, N> {
     type Item = T;
     type IntoIter = core::array::IntoIter<T, N>;
 
