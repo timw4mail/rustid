@@ -17,9 +17,7 @@ codegen-units = 1
 strip = true
 panic = "abort"
 
-# We only need heapless for x86 builds
-[target.'cfg(all(target_arch = "x86", target_os = "none"))'.dependencies]
-heapless = { version = "0.9.2" }
+# We don't need heapless anymore - we use a fixed-size array implementation
 
 # Windows API for MP table detection
 [target.'cfg(all(any(target_arch = "aarch64", target_arch = "arm64ec"), target_os = "windows"))'.dependencies]

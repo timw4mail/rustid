@@ -1,19 +1,9 @@
-//! Wrapper object around std::String and heapless::String.
+//! Wrapper object around std::String and a minimal fixed-size string implementation.
 //!
-//! This helps hide the ugliness of using heapless::String for DOS
-use core::fmt::{self, Display, Formatter, Write};
+//! This helps hide the ugliness of using a fixed-size array for DOS/no_std
+use crate::cpuid::type_wrappers::static_vec::StaticVec;
+use core::fmt::{self, Debug, Display, Formatter, Write};
 use core::ops::Deref;
-
-#[cfg(target_os = "none")]
-pub use heapless::format;
-
-#[cfg(target_os = "none")]
-#[macro_export]
-macro_rules! sfmt {
-    ($($arg:tt)*) => {
-        Into::<Str<_>>::into(heapless::format!($($arg)*).unwrap())
-    };
-}
 
 #[cfg(not(target_os = "none"))]
 #[macro_export]
@@ -22,7 +12,102 @@ macro_rules! sfmt {
 }
 
 #[cfg(target_os = "none")]
-use heapless::String as HeaplessString;
+#[macro_export]
+macro_rules! sfmt {
+    ($($arg:tt)*) => {
+        {
+            use $crate::cpuid::type_wrappers::String;
+            use core::fmt::Write;
+            let mut buf = String::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }>::new();
+            let _ = buf.write_fmt(core::format_args!($($arg)*));
+            $crate::cpuid::type_wrappers::sfmt_into::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }, _>(buf)
+        }
+    };
+}
+
+#[cfg(target_os = "none")]
+pub fn sfmt_into<const N: usize, const M: usize>(s: String<N>) -> Str<M> {
+    let mut result = Str::<M>::new();
+    result.push_str(s.as_str());
+    result
+}
+
+pub const MAX_FMT_LEN: usize = 256;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct String<const N: usize>(StaticVec<u8, N>);
+
+impl<const N: usize> String<N> {
+    pub fn new() -> Self {
+        Self(StaticVec::new())
+    }
+
+    pub fn push(&mut self, c: char) {
+        let mut buf = [0u8; 4];
+        let bytes = c.encode_utf8(&mut buf);
+        self.push_str(bytes);
+    }
+
+    pub fn push_str(&mut self, s: &str) {
+        let remaining = N - self.0.len();
+        let copy_len = s.len().min(remaining);
+        for byte in &s.as_bytes()[..copy_len] {
+            self.0.push(*byte);
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(self.0.as_slice()).unwrap_or("")
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl<const N: usize> Default for String<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N: usize> Deref for String<N> {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl<const N: usize> AsRef<str> for String<N> {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl<const N: usize> core::fmt::Display for String<N> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl<const N: usize> core::fmt::Write for String<N> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.push_str(s);
+        Ok(())
+    }
+}
+
+impl<const N: usize> From<&str> for String<N> {
+    fn from(s: &str) -> Self {
+        let mut result = Self::new();
+        result.push_str(s);
+        result
+    }
+}
 
 #[cfg(not(target_os = "none"))]
 use std::string::String as StdString;
@@ -33,7 +118,7 @@ pub struct Str<const N: usize> {
     inner: StdString,
 
     #[cfg(target_os = "none")]
-    inner: HeaplessString<N>,
+    inner: String<N>,
 }
 
 impl<const N: usize> Str<N> {
@@ -43,7 +128,7 @@ impl<const N: usize> Str<N> {
             inner: StdString::new(),
 
             #[cfg(target_os = "none")]
-            inner: HeaplessString::new(),
+            inner: String::new(),
         }
     }
     pub fn push(&mut self, c: char) {
@@ -51,23 +136,30 @@ impl<const N: usize> Str<N> {
         self.inner.push(c);
 
         #[cfg(target_os = "none")]
-        match self.inner.push(c) {
-            Ok(_) => (),
-            Err(_) => panic!("String already full"),
-        };
+        self.inner.push(c);
     }
     pub fn push_str(&mut self, s: &str) {
         #[cfg(not(target_os = "none"))]
         self.inner.push_str(s);
 
         #[cfg(target_os = "none")]
-        match self.inner.push_str(s) {
-            Ok(_) => (),
-            Err(_) => panic!("String already full"),
-        }
+        self.inner.push_str(s);
     }
     pub fn trim(&self) -> &str {
-        self.inner.trim()
+        #[cfg(not(target_os = "none"))]
+        return self.inner.trim();
+
+        #[cfg(target_os = "none")]
+        {
+            let s = self.inner.as_str();
+            let start = s.bytes().take_while(|b| b.is_ascii_whitespace()).count();
+            let end = s
+                .bytes()
+                .rposition(|b| b.is_ascii_whitespace())
+                .map(|p| p + 1)
+                .unwrap_or(s.len());
+            &s[start..end.min(s.len())]
+        }
     }
 
     #[cfg(not(target_os = "none"))]
@@ -79,16 +171,18 @@ impl<const N: usize> Str<N> {
 
     #[cfg(target_os = "none")]
     pub fn replace(&self, from: &str, to: &str) -> Self {
-        let s: &str = self.deref();
-        let mut result = HeaplessString::new();
+        let s = self.inner.as_str();
+        let mut result = String::<N>::new();
         let mut last = 0;
         for (idx, _) in s.match_indices(from) {
-            let _ = result.push_str(&s[last..idx]);
-            let _ = result.push_str(to);
+            result.push_str(&s[last..idx]);
+            result.push_str(to);
             last = idx + from.len();
         }
-        let _ = result.push_str(&s[last..]);
-        result.into()
+        result.push_str(&s[last..]);
+        let mut out = Str::new();
+        out.inner = result;
+        out
     }
 }
 
@@ -100,8 +194,8 @@ impl<const N: usize> From<StdString> for Str<N> {
 }
 
 #[cfg(target_os = "none")]
-impl<const N: usize> From<HeaplessString<N>> for Str<N> {
-    fn from(s: HeaplessString<N>) -> Self {
+impl<const N: usize> From<String<N>> for Str<N> {
+    fn from(s: String<N>) -> Self {
         Self { inner: s }
     }
 }
@@ -109,19 +203,59 @@ impl<const N: usize> From<HeaplessString<N>> for Str<N> {
 impl<const N: usize> Deref for Str<N> {
     type Target = str;
     fn deref(&self) -> &str {
-        &self.inner
+        #[cfg(not(target_os = "none"))]
+        return &self.inner;
+
+        #[cfg(target_os = "none")]
+        return self.inner.as_str();
+    }
+}
+
+#[cfg(target_os = "none")]
+impl<const N: usize> Str<N> {
+    pub fn from_str(s: &str) -> Self {
+        let mut result = Str::<N>::new();
+        result.push_str(s);
+        result
+    }
+
+    pub fn from_str_any<M>(s: &str) -> Self
+    where
+        M: AsRef<str> + ?Sized,
+    {
+        let mut result = Str::<N>::new();
+        result.push_str(s);
+        result
+    }
+}
+
+#[cfg(target_os = "none")]
+pub trait FromStr {
+    fn from_str(s: &str) -> Self;
+}
+
+#[cfg(target_os = "none")]
+impl<const N: usize> FromStr for Str<N> {
+    fn from_str(s: &str) -> Self {
+        let mut result = Str::<N>::new();
+        result.push_str(s);
+        result
     }
 }
 
 impl<const N: usize> AsRef<str> for Str<N> {
     fn as_ref(&self) -> &str {
-        &self.inner
+        #[cfg(not(target_os = "none"))]
+        return &self.inner;
+
+        #[cfg(target_os = "none")]
+        return self.inner.as_str();
     }
 }
 
 impl<const N: usize> Display for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.inner)
+        write!(f, "{}", self.deref())
     }
 }
 

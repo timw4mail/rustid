@@ -28,6 +28,10 @@ impl<T: Default, const N: usize> StaticVec<T, N> {
         self.len == 0
     }
 
+    pub fn as_slice(&self) -> &[T] {
+        &self.data[..self.len]
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.data.iter().take(self.len)
     }
