@@ -18,7 +18,7 @@ jobs:
           curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
       - name: Clean build environment
-        run: just clean
+        run: cargo clean && just clean
 
       - name: Build dos
         run: just build-dos
