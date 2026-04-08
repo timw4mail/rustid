@@ -732,17 +732,12 @@ impl TCpu for Cpu {
             let boost = self.topology.speed.boost;
 
             let print_speed = |l: &str, mhz: u32| {
-                let mhz = if mhz == 999 { 1000 } else { mhz };
-
-                let is_ghz = mhz >= 1000;
-                let unit = if is_ghz { "GHz" } else { "MHz" };
-                let whole = if is_ghz { mhz / 1000 } else { mhz };
-                let fract = if is_ghz { (mhz % 1000) / 10 } else { 0 };
-
-                if is_ghz {
-                    println!("{}{}.{:02} {}", l, whole, fract, unit);
+                if mhz >= 1000 {
+                    let whole = mhz / 1000;
+                    let fract = (mhz % 1000) / 10;
+                    println!("{}{}.{:02} GHz", l, whole, fract);
                 } else {
-                    println!("{}{}.00 {}", l, whole, unit);
+                    println!("{}{}.00 MHz", l, mhz);
                 }
             };
 

@@ -122,6 +122,7 @@ impl Speed {
 
     #[cfg(target_os = "none")]
     fn measure_frequency() -> u32 {
+        use super::{is_386, is_cyrix, is_rapid_cad, is_umc};
         use crate::cpuid::dos::peek_u16;
 
         // Use BIOS timer ticks at 0040:006C
@@ -157,16 +158,29 @@ impl Speed {
             freq_mhz as u32
         } else {
             // No TSC (386/486). Use a calibrated instruction loop.
-            // We'll count how many times we can run a loop in 2 ticks.
+            // We'll count how many times we can run a loop in 8 ticks (~440ms).
+            // We also use the PIT Channel 0 for sub-tick precision.
 
             let mut iterations: u32 = 0;
-            let target_ticks = t1.wrapping_add(2);
+            let target_ticks = t1.wrapping_add(8);
+            let mut start_pit: u16 = 0;
+            let mut end_pit: u16 = 0;
 
             unsafe {
                 core::arch::asm!(
                     "push es",
                     "mov ax, 0x40",
                     "mov es, ax",
+
+                    // Latch and read start PIT
+                    "xor al, al",
+                    "out 0x43, al",
+                    "in al, 0x40",
+                    "mov ah, al",
+                    "in al, 0x40",
+                    "xchg al, ah",
+                    "mov {2:x}, ax",
+
                     "2:",
                     "add {0:e}, 1",
                     "push ax", // Extra work to slow down the loop and be more consistent
@@ -174,22 +188,52 @@ impl Speed {
                     "mov ax, es:[0x6C]",
                     "cmp ax, {1:x}",
                     "jne 2b",
+
+                    // Latch and read end PIT
+                    "xor al, al",
+                    "out 0x43, al",
+                    "in al, 0x40",
+                    "mov ah, al",
+                    "in al, 0x40",
+                    "xchg al, ah",
+                    "mov {3:x}, ax",
+
                     "pop es",
                     inout(reg) iterations,
                     in(reg) target_ticks,
+                    out(reg) start_pit,
+                    out(reg) end_pit,
                     out("ax") _,
                 );
             }
 
-            // Calibration:
-            // 486 loop: add(1) + push(1) + pop(4) + mov mem(1) + cmp(1) + jne(3) = 11 cycles
-            // 386 loop: add(2) + push(2) + pop(4) + mov mem(4) + cmp(2) + jne(7) = 21 cycles
-            // Time: 2 ticks = ~0.1098 seconds
-            // freq_mhz = (iterations * cycles_per_loop) / (0.1098 * 1,000,000)
-            // freq_mhz = (iterations * cycles_per_loop) / 109800
+            // PIT runs at 1.193182 MHz. Each tick is 65536 PIT cycles.
+            // Total pulses = (8 * 65536) + (start_pit - end_pit)
+            let elapsed_pulses = (8u64 * 65536) + (start_pit as i32 - end_pit as i32) as u64;
 
-            let factor = if crate::cpuid::is_386() { 24 } else { 12 };
-            (iterations * factor) / 109800
+            // Calibration:
+            // 486 loop: add(2) + push(1) + pop(1) + mov mem(3) + cmp(1) + jne(3) = 11 cycles
+            // 386 loop: add(4) + push(2) + pop(4) + mov mem(6) + cmp(2) + jne(7) = 25 cycles
+            // RapidCAD (486 core in 386 package): ~20 cycles
+            let cycles_per_loop = if is_rapid_cad() {
+                20
+            } else if is_386() {
+                25
+            } else if is_cyrix() {
+                14
+            } else if is_umc() {
+                12
+            } else {
+                11
+            };
+
+            // freq_hz = (iterations * cycles_per_loop * 1193182) / elapsed_pulses
+            // freq_mhz = freq_hz / 1_000_000
+            // We use rounded division: (numerator + denominator / 2) / denominator
+            let denom = elapsed_pulses * 1000000;
+            let freq_mhz =
+                (iterations as u64 * cycles_per_loop as u64 * 1193182 + (denom / 2)) / denom;
+            freq_mhz as u32
         }
     }
 }
@@ -233,10 +277,8 @@ pub struct Topology {
     pub cores: u32,
     /// Number of logical threads (includes SMT)
     pub threads: u32,
-
     /// CPU speed information
     pub speed: Speed,
-
     /// Cache hierarchy information
     pub cache: Option<Cache>,
 

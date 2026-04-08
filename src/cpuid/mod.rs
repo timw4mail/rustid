@@ -329,6 +329,17 @@ pub fn is_intel() -> bool {
     is_vendor(VENDOR_INTEL)
 }
 
+pub fn is_umc() -> bool {
+    is_vendor(VENDOR_UMC)
+}
+
+/// Returns true if the CPU is an Intel RapidCAD.
+#[cfg(target_arch = "x86")]
+pub fn is_rapid_cad() -> bool {
+    let sig = CpuSignature::detect();
+    sig.family == 3 && sig.model == 4
+}
+
 /// Returns true if the CPU is from Zhaoxin.
 pub fn is_zhaoxin() -> bool {
     is_vendor(VENDOR_ZHAOXIN)
