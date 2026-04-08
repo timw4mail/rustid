@@ -565,109 +565,74 @@ pub fn has_3dnow() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 31)
 }
 
-/// Get the full list of detected features.
-pub fn get_feature_list() -> FeatureList {
-    use heapless::Vec;
+    /// Get the full list of detected features.
+    pub fn get_feature_list() -> FeatureList {
+        use heapless::Vec;
 
-    let mut out: Vec<&'static str, 64> = Vec::new();
+        type FeatureFn = fn() -> bool;
 
-    if has_fpu() {
-        let _ = out.push("FPU");
-    };
-    if has_tsc() {
-        let _ = out.push("TSC");
-    }
-    if has_cx8() {
-        let _ = out.push("CMPXCHG8B");
-    };
-    if has_cx16() {
-        let _ = out.push("CMPXCHG16B");
-    }
-    if has_cmov() {
-        let _ = out.push("CMOV");
-    };
-    if has_mmx() {
-        let _ = out.push("MMX");
-    };
-    if has_3dnow() {
-        let _ = out.push("3DNow!");
-    };
-    if has_3dnow_plus() {
-        let _ = out.push("3DNow!+");
-    };
-    if has_ht() {
-        let _ = out.push("HT");
-    };
-    if has_x2apic() {
-        let _ = out.push("x2apic");
-    };
-    if has_amd64() {
-        if is_intel() {
-            let _ = out.push("EM64T");
-        } else {
-            let _ = out.push("AMD64");
+        #[cfg(target_os = "none")]
+        const FEATURES: &[(&str, FeatureFn)] = &[
+            ("FPU", has_fpu),
+            ("TSC", has_tsc),
+            ("CMPXCHG8B", has_cx8),
+            ("CMPXCHG16B", has_cx16),
+            ("CMOV", has_cmov),
+            ("MMX", has_mmx),
+            ("3DNow!", has_3dnow),
+            ("3DNow!+", has_3dnow_plus),
+            ("AMD64", has_amd64),
+            ("SSE", has_sse),
+            ("SSE2", has_sse2),
+            ("SSE3", has_sse3),
+            ("SSE4A", has_sse4a),
+            ("SSE4.1", has_sse41),
+            ("SSE4.2", has_sse42),
+            ("SSSE3", has_ssse3),
+        ];
+        #[cfg(not(target_os = "none"))]
+        const FEATURES: &[(&str, FeatureFn)] = &[
+            #[cfg(target_arch = "x86")]
+            ("FPU", has_fpu),
+            ("TSC", has_tsc),
+            ("CMPXCHG8B", has_cx8),
+            ("CMPXCHG16B", has_cx16),
+            ("CMOV", has_cmov),
+            ("MMX", has_mmx),
+            ("3DNow!", has_3dnow),
+            ("3DNow!+", has_3dnow_plus),
+            ("HT", has_ht),
+            ("x2apic", has_x2apic),
+            ("AMD64", has_amd64),
+            ("SSE", has_sse),
+            ("SSE2", has_sse2),
+            ("SSE3", has_sse3),
+            ("SSE4A", has_sse4a),
+            ("SSE4.1", has_sse41),
+            ("SSE4.2", has_sse42),
+            ("SSSE3", has_ssse3),
+            ("AES", has_aes),
+            ("VAES", has_vaes),
+            ("AVX", has_avx),
+            ("AVX2", has_avx2),
+            ("AVX512F", has_avx512f),
+            ("FMA", has_fma),
+            ("BMI1", has_bmi1),
+            ("BMI2", has_bmi2),
+            ("RDRAND", has_rdrand),
+            ("POPCNT", has_popcnt),
+            ("F16C", has_f16c),
+            ("SHA", has_sha),
+        ];
+
+        let mut out: Vec<&'static str, 64> = Vec::new();
+        for (name, check) in FEATURES {
+            if check() {
+                let _ = out.push(name);
+            }
         }
-    };
-    if has_sse() {
-        let _ = out.push("SSE");
-    };
-    if has_sse2() {
-        let _ = out.push("SSE2");
-    };
-    if has_sse3() {
-        let _ = out.push("SSE3");
-    };
-    if has_sse4a() {
-        let _ = out.push("SSE4A");
-    };
-    if has_sse41() {
-        let _ = out.push("SSE4.1");
-    };
-    if has_sse42() {
-        let _ = out.push("SSE4.2");
-    };
-    if has_ssse3() {
-        let _ = out.push("SSSE3");
-    };
-    if has_aes() {
-        let _ = out.push("AES");
-    };
-    if has_vaes() {
-        let _ = out.push("VAES");
-    };
-    if has_avx() {
-        let _ = out.push("AVX");
-    };
-    if has_avx2() {
-        let _ = out.push("AVX2");
-    };
-    if has_avx512f() {
-        let _ = out.push("AVX512F");
-    };
-    if has_fma() {
-        let _ = out.push("FMA");
-    };
-    if has_bmi1() {
-        let _ = out.push("BMI1");
-    };
-    if has_bmi2() {
-        let _ = out.push("BMI2");
-    };
-    if has_rdrand() {
-        let _ = out.push("RDRAND");
-    };
-    if has_popcnt() {
-        let _ = out.push("POPCNT");
-    };
-    if has_f16c() {
-        let _ = out.push("F16C");
-    };
-    if has_sha() {
-        let _ = out.push("SHA");
-    };
-
-    out
-}
+        out
+    }
 
 #[cfg(test)]
 mod tests {

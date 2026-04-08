@@ -1,6 +1,6 @@
 [package]
 name = "rustid"
-version = "0.10.3"
+version = "0.11.0"
 edition = "2024"
 authors = ["Timothy J. Warren <tim@timshome.page>"]
 description = "A utility to identify the name and properties of the current cpu"
@@ -15,6 +15,7 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+panic = "abort"
 
 # We only need heapless for x86 builds
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
