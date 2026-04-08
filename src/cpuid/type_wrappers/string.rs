@@ -30,7 +30,7 @@ macro_rules! sfmt {
 
 pub const MAX_FMT_LEN: usize = 256;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct String<const N: usize>(StaticVec<u8, N>);
 
 impl<const N: usize> String<N> {
