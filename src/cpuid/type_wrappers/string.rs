@@ -17,19 +17,15 @@ macro_rules! sfmt {
     ($($arg:tt)*) => {
         {
             use $crate::cpuid::type_wrappers::String;
+            use $crate::cpuid::type_wrappers::Str;
             use core::fmt::Write;
             let mut buf = String::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }>::new();
             let _ = buf.write_fmt(core::format_args!($($arg)*));
-            $crate::cpuid::type_wrappers::sfmt_into::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }, _>(buf)
+            let mut result = Str::<_>::new();
+            result.push_str(buf.as_str());
+            result
         }
     };
-}
-
-#[cfg(target_os = "none")]
-pub fn sfmt_into<const N: usize, const M: usize>(s: String<N>) -> Str<M> {
-    let mut result = Str::<M>::new();
-    result.push_str(s.as_str());
-    result
 }
 
 pub const MAX_FMT_LEN: usize = 256;
@@ -138,17 +134,9 @@ impl<const N: usize> Str<N> {
         }
     }
     pub fn push(&mut self, c: char) {
-        #[cfg(not(target_os = "none"))]
-        self.inner.push(c);
-
-        #[cfg(target_os = "none")]
         self.inner.push(c);
     }
     pub fn push_str(&mut self, s: &str) {
-        #[cfg(not(target_os = "none"))]
-        self.inner.push_str(s);
-
-        #[cfg(target_os = "none")]
         self.inner.push_str(s);
     }
     pub fn trim(&self) -> &str {
@@ -209,11 +197,7 @@ impl<const N: usize> From<String<N>> for Str<N> {
 impl<const N: usize> Deref for Str<N> {
     type Target = str;
     fn deref(&self) -> &str {
-        #[cfg(not(target_os = "none"))]
-        return &self.inner;
-
-        #[cfg(target_os = "none")]
-        return self.inner.as_str();
+        self.inner.as_str()
     }
 }
 
@@ -224,38 +208,11 @@ impl<const N: usize> Str<N> {
         result.push_str(s);
         result
     }
-
-    pub fn from_str_any<M>(s: &str) -> Self
-    where
-        M: AsRef<str> + ?Sized,
-    {
-        let mut result = Str::<N>::new();
-        result.push_str(s);
-        result
-    }
-}
-
-#[cfg(target_os = "none")]
-pub trait FromStr {
-    fn from_str(s: &str) -> Self;
-}
-
-#[cfg(target_os = "none")]
-impl<const N: usize> FromStr for Str<N> {
-    fn from_str(s: &str) -> Self {
-        let mut result = Str::<N>::new();
-        result.push_str(s);
-        result
-    }
 }
 
 impl<const N: usize> AsRef<str> for Str<N> {
     fn as_ref(&self) -> &str {
-        #[cfg(not(target_os = "none"))]
-        return &self.inner;
-
-        #[cfg(target_os = "none")]
-        return self.inner.as_str();
+        self.inner.as_str()
     }
 }
 

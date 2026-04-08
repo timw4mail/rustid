@@ -161,7 +161,7 @@ pub struct Topology {
     pub cache: Option<Cache>,
 
     #[allow(unused)]
-    domains: StaticVec<TopologyDomain, 16>,
+    domains: StaticVec<TopologyDomain, 8>,
 }
 
 impl Topology {
@@ -170,7 +170,7 @@ impl Topology {
         let speed = Speed::detect();
 
         let cache = Cache::detect();
-        let domains: StaticVec<TopologyDomain, 16> = Self::detect_domains();
+        let domains: StaticVec<TopologyDomain, 8> = Self::detect_domains();
         let (cores, threads) = Self::count_domains(&domains);
 
         let sockets = {
@@ -194,7 +194,8 @@ impl Topology {
         }
     }
 
-    fn count_domains(domains: &StaticVec<TopologyDomain, 16>) -> (u32, u32) {
+    /// Returns (cores, threads)
+    fn count_domains(domains: &StaticVec<TopologyDomain, 8>) -> (u32, u32) {
         let threads = logical_cores();
 
         // TODO: determine cores/threads for Intel if domains are empty
