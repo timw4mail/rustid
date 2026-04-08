@@ -122,7 +122,7 @@ impl Speed {
 
     #[cfg(target_os = "none")]
     fn measure_frequency() -> u32 {
-        use super::{is_386, is_cyrix, is_rapid_cad, is_umc};
+        use super::is_386;
         use crate::cpuid::dos::peek_u16;
 
         // Use BIOS timer ticks at 0040:006C
@@ -215,16 +215,23 @@ impl Speed {
             // 486 loop: add(2) + push(1) + pop(1) + mov mem(3) + cmp(1) + jne(3) = 11 cycles
             // 386 loop: add(4) + push(2) + pop(4) + mov mem(6) + cmp(2) + jne(7) = 25 cycles
             // RapidCAD (486 core in 386 package): ~20 cycles
-            let cycles_per_loop = if is_rapid_cad() {
-                20
-            } else if is_386() {
-                25
-            } else if is_cyrix() {
-                14
-            } else if is_umc() {
-                12
-            } else {
-                11
+            let cycles_per_loop = match &*vendor_str() {
+                super::brand::VENDOR_CYRIX => 14,
+                super::brand::VENDOR_UMC => 12,
+                _ => {
+                    if is_386() {
+                        let sig = super::cpu::CpuSignature::detect();
+                        match (sig.family, sig.model) {
+                            // RapidCAD
+                            (3, 4) => 20,
+                            // 'Regular' 386 Chips
+                            _ => 25,
+                        }
+                    } else {
+                        // 'Classic' 486
+                        11
+                    }
+                }
             };
 
             // freq_hz = (iterations * cycles_per_loop * 1193182) / elapsed_pulses
