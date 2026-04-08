@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "rustid"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "core_affinity",
  "heapless",
