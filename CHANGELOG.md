@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.10.1]
+
+### Added
+- Synthetic model name for AMD 5x86
+
+### Changed
+- Made DOS speed measurements more accurate
+- Made Cyrix brand list more specific depending on cpu model
+- Improved Cyrix and K6 detection
+- Improved Cyrix detection without CPUID
+- Updated 486 Linux build configuration
+- Excluded core_affinity crate from x86 targets
+- Improved robustness of cache info detection from extended leaves 5 and 6
+- De-duplicated ARM formatting logic
+
+### Fixed
+- Don't show enable cpuid message for 5x86 chips that don't support it
+
 ## [0.9.5]
 
 ### Added
