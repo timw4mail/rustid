@@ -112,13 +112,19 @@ impl<const N: usize> From<&str> for String<N> {
 #[cfg(not(target_os = "none"))]
 use std::string::String as StdString;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Str<const N: usize> {
     #[cfg(not(target_os = "none"))]
     inner: StdString,
 
     #[cfg(target_os = "none")]
     inner: String<N>,
+}
+
+impl<const N: usize> Default for Str<N> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<const N: usize> Str<N> {
@@ -256,6 +262,12 @@ impl<const N: usize> AsRef<str> for Str<N> {
 impl<const N: usize> Display for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.deref())
+    }
+}
+
+impl<const N: usize> Debug for Str<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "\"{}\"", self.deref())
     }
 }
 

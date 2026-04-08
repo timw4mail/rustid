@@ -1,7 +1,33 @@
-#[derive(Debug, PartialEq, Copy, Clone)]
+//! A 'static' Rust array with 'Vec' conveniences
+//!
+//! Loosely based on heapless::Vec
+use core::fmt;
+
+#[derive(PartialEq, Copy, Clone)]
 pub struct StaticVec<T, const N: usize> {
     data: [T; N],
     len: usize,
+}
+
+impl<T: fmt::Debug, const N: usize> fmt::Debug for StaticVec<T, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list()
+            .entries(self.data.iter().take(self.len))
+            .finish()
+    }
+}
+
+impl<T: fmt::Display, const N: usize> fmt::Display for StaticVec<T, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut iter = self.data.iter().take(self.len);
+        if let Some(first) = iter.next() {
+            write!(f, "{}", first)?;
+            for item in iter {
+                write!(f, "{}", item)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<T: Default, const N: usize> StaticVec<T, N> {
