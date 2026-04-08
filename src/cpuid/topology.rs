@@ -146,6 +146,8 @@ pub enum TopologyType {
     DieGroup,
 }
 
+pub type DomainList = StaticVec<TopologyDomain, 8>;
+
 /// Complete CPU topology information including sockets, cores, threads, and cache.
 #[derive(Debug, Default, PartialEq)]
 pub struct Topology {
@@ -161,7 +163,7 @@ pub struct Topology {
     pub cache: Option<Cache>,
 
     #[allow(unused)]
-    domains: StaticVec<TopologyDomain, 8>,
+    domains: DomainList,
 }
 
 impl Topology {
@@ -170,7 +172,7 @@ impl Topology {
         let speed = Speed::detect();
 
         let cache = Cache::detect();
-        let domains: StaticVec<TopologyDomain, 8> = Self::detect_domains();
+        let domains: DomainList = Self::detect_domains();
         let (cores, threads) = Self::count_domains(&domains);
 
         let sockets = {
@@ -195,7 +197,7 @@ impl Topology {
     }
 
     /// Returns (cores, threads)
-    fn count_domains(domains: &StaticVec<TopologyDomain, 8>) -> (u32, u32) {
+    fn count_domains(domains: &DomainList) -> (u32, u32) {
         let threads = logical_cores();
 
         // TODO: determine cores/threads for Intel if domains are empty
@@ -203,7 +205,8 @@ impl Topology {
         if domains.is_empty() {
             return match &*vendor_str() {
                 VENDOR_AMD => {
-                    // Logical cpus = cores before Bulldozer
+                    // Logical cpus = cores before Zen, when
+                    // Topology domains start returning results
                     if threads > 1 {
                         (threads, threads)
                     } else {
@@ -263,8 +266,8 @@ impl Topology {
         }
     }
 
-    fn detect_domains() -> StaticVec<TopologyDomain, 16> {
-        let d: StaticVec<TopologyDomain, 16> = StaticVec::new();
+    fn detect_domains() -> DomainList {
+        let d: DomainList = StaticVec::new();
 
         if !is_valid_leaf(LEAF_0B) {
             return d;
@@ -283,8 +286,8 @@ impl Topology {
         }
     }
 
-    fn detect_domains_leaf(leaf: u32) -> StaticVec<TopologyDomain, 16> {
-        let mut d: StaticVec<TopologyDomain, 16> = StaticVec::new();
+    fn detect_domains_leaf(leaf: u32) -> DomainList {
+        let mut d: DomainList = StaticVec::new();
 
         if !is_valid_leaf(leaf) {
             return d;
