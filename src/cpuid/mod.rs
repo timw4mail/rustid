@@ -32,24 +32,22 @@ pub mod provider;
 
 pub mod topology;
 
+pub mod type_wrappers;
+
 pub mod vendor;
 
 #[cfg(target_arch = "x86")]
 pub mod quirks;
 
-#[macro_use]
-pub mod string;
-
 pub use brand::*;
 pub use cpu::*;
-pub use string::*;
+
+pub use type_wrappers::*;
 
 #[cfg(target_arch = "x86")]
 pub use quirks::*;
 
 pub use crate::common::UNK;
-
-pub type FeatureList = heapless::Vec<&'static str, 64>;
 
 /// CPUID leaf 0x00000000 - Maximum basic leaf
 pub const LEAF_0: u32 = 0x0;
@@ -567,8 +565,6 @@ pub fn has_3dnow() -> bool {
 
 /// Get the full list of detected features.
 pub fn get_feature_list() -> FeatureList {
-    use heapless::Vec;
-
     type FeatureFn = fn() -> bool;
 
     #[cfg(target_os = "none")]
@@ -625,7 +621,7 @@ pub fn get_feature_list() -> FeatureList {
         ("SHA", has_sha),
     ];
 
-    let mut out: Vec<&'static str, 64> = Vec::new();
+    let mut out: FeatureList = FeatureList::new();
     for (name, check) in FEATURES {
         if check() {
             let _ = out.push(name);

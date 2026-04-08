@@ -51,14 +51,20 @@ impl<const N: usize> Str<N> {
         self.inner.push(c);
 
         #[cfg(target_os = "none")]
-        let _ = self.inner.push(c);
+        match self.inner.push(c) {
+            Ok(_) => (),
+            Err(_) => panic!("String already full"),
+        };
     }
     pub fn push_str(&mut self, s: &str) {
         #[cfg(not(target_os = "none"))]
         self.inner.push_str(s);
 
         #[cfg(target_os = "none")]
-        let _ = self.inner.push_str(s);
+        match self.inner.push_str(s) {
+            Ok(_) => (),
+            Err(_) => panic!("String already full"),
+        }
     }
     pub fn trim(&self) -> &str {
         self.inner.trim()

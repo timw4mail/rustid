@@ -1,7 +1,5 @@
-use crate::common::cache::*;
-use crate::cpuid::brand::{VENDOR_AMD, VENDOR_CENTAUR};
-
 use super::*;
+use crate::common::cache::*;
 
 const DATA_CACHE: u32 = 1;
 const INSTRUCTION_CACHE: u32 = 2;
@@ -128,7 +126,7 @@ impl Cache {
     ///
     /// See https://sandpile.org/x86/cpuid.htm#level_0000_0002h
     fn detect_fallback() -> Option<Self> {
-        use heapless::Vec;
+        use super::StaticVec;
 
         if !is_valid_leaf(LEAF_2) {
             return None;
@@ -138,7 +136,7 @@ impl Cache {
 
         let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
-        let mut desc_list: Vec<u32, 32> = Vec::new();
+        let mut desc_list: StaticVec<u32, 32> = StaticVec::new();
 
         for i in 0..=iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);
