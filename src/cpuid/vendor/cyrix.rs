@@ -1,7 +1,7 @@
 use super::TMicroArch;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{get_reset_signature, CpuSignature, FeatureClass, Str, UNK, has_cx8};
+use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
 use crate::sfmt;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -207,7 +207,7 @@ impl Cyrix {
 
     fn get_device_id_from_signature() -> u8 {
         #[cfg(target_os = "none")]
-        if let Some(signature) = get_reset_signature() {
+        if let Some(signature) = crate::cpuid::get_reset_signature() {
             return match (signature.family, signature.model) {
                 (3, 2) => 0x01,
                 (4, 5) => 0x10,

@@ -565,74 +565,74 @@ pub fn has_3dnow() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 31)
 }
 
-    /// Get the full list of detected features.
-    pub fn get_feature_list() -> FeatureList {
-        use heapless::Vec;
+/// Get the full list of detected features.
+pub fn get_feature_list() -> FeatureList {
+    use heapless::Vec;
 
-        type FeatureFn = fn() -> bool;
+    type FeatureFn = fn() -> bool;
 
-        #[cfg(target_os = "none")]
-        const FEATURES: &[(&str, FeatureFn)] = &[
-            ("FPU", has_fpu),
-            ("TSC", has_tsc),
-            ("CMPXCHG8B", has_cx8),
-            ("CMPXCHG16B", has_cx16),
-            ("CMOV", has_cmov),
-            ("MMX", has_mmx),
-            ("3DNow!", has_3dnow),
-            ("3DNow!+", has_3dnow_plus),
-            ("AMD64", has_amd64),
-            ("SSE", has_sse),
-            ("SSE2", has_sse2),
-            ("SSE3", has_sse3),
-            ("SSE4A", has_sse4a),
-            ("SSE4.1", has_sse41),
-            ("SSE4.2", has_sse42),
-            ("SSSE3", has_ssse3),
-        ];
-        #[cfg(not(target_os = "none"))]
-        const FEATURES: &[(&str, FeatureFn)] = &[
-            #[cfg(target_arch = "x86")]
-            ("FPU", has_fpu),
-            ("TSC", has_tsc),
-            ("CMPXCHG8B", has_cx8),
-            ("CMPXCHG16B", has_cx16),
-            ("CMOV", has_cmov),
-            ("MMX", has_mmx),
-            ("3DNow!", has_3dnow),
-            ("3DNow!+", has_3dnow_plus),
-            ("HT", has_ht),
-            ("x2apic", has_x2apic),
-            ("AMD64", has_amd64),
-            ("SSE", has_sse),
-            ("SSE2", has_sse2),
-            ("SSE3", has_sse3),
-            ("SSE4A", has_sse4a),
-            ("SSE4.1", has_sse41),
-            ("SSE4.2", has_sse42),
-            ("SSSE3", has_ssse3),
-            ("AES", has_aes),
-            ("VAES", has_vaes),
-            ("AVX", has_avx),
-            ("AVX2", has_avx2),
-            ("AVX512F", has_avx512f),
-            ("FMA", has_fma),
-            ("BMI1", has_bmi1),
-            ("BMI2", has_bmi2),
-            ("RDRAND", has_rdrand),
-            ("POPCNT", has_popcnt),
-            ("F16C", has_f16c),
-            ("SHA", has_sha),
-        ];
+    #[cfg(target_os = "none")]
+    const FEATURES: &[(&str, FeatureFn)] = &[
+        ("FPU", has_fpu),
+        ("TSC", has_tsc),
+        ("CMPXCHG8B", has_cx8),
+        ("CMPXCHG16B", has_cx16),
+        ("CMOV", has_cmov),
+        ("MMX", has_mmx),
+        ("3DNow!", has_3dnow),
+        ("3DNow!+", has_3dnow_plus),
+        ("AMD64", has_amd64),
+        ("SSE", has_sse),
+        ("SSE2", has_sse2),
+        ("SSE3", has_sse3),
+        ("SSE4A", has_sse4a),
+        ("SSE4.1", has_sse41),
+        ("SSE4.2", has_sse42),
+        ("SSSE3", has_ssse3),
+    ];
+    #[cfg(not(target_os = "none"))]
+    const FEATURES: &[(&str, FeatureFn)] = &[
+        #[cfg(target_arch = "x86")]
+        ("FPU", has_fpu),
+        ("TSC", has_tsc),
+        ("CMPXCHG8B", has_cx8),
+        ("CMPXCHG16B", has_cx16),
+        ("CMOV", has_cmov),
+        ("MMX", has_mmx),
+        ("3DNow!", has_3dnow),
+        ("3DNow!+", has_3dnow_plus),
+        ("HT", has_ht),
+        ("x2apic", has_x2apic),
+        ("AMD64", has_amd64),
+        ("SSE", has_sse),
+        ("SSE2", has_sse2),
+        ("SSE3", has_sse3),
+        ("SSE4A", has_sse4a),
+        ("SSE4.1", has_sse41),
+        ("SSE4.2", has_sse42),
+        ("SSSE3", has_ssse3),
+        ("AES", has_aes),
+        ("VAES", has_vaes),
+        ("AVX", has_avx),
+        ("AVX2", has_avx2),
+        ("AVX512F", has_avx512f),
+        ("FMA", has_fma),
+        ("BMI1", has_bmi1),
+        ("BMI2", has_bmi2),
+        ("RDRAND", has_rdrand),
+        ("POPCNT", has_popcnt),
+        ("F16C", has_f16c),
+        ("SHA", has_sha),
+    ];
 
-        let mut out: Vec<&'static str, 64> = Vec::new();
-        for (name, check) in FEATURES {
-            if check() {
-                let _ = out.push(name);
-            }
+    let mut out: Vec<&'static str, 64> = Vec::new();
+    for (name, check) in FEATURES {
+        if check() {
+            let _ = out.push(name);
         }
-        out
     }
+    out
+}
 
 #[cfg(test)]
 mod tests {
