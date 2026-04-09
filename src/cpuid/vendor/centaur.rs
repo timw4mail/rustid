@@ -53,6 +53,7 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some("130nm")),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", Some("130nm")),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
+            (0, 5, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some("90nm")), // OLPC XO 1.5
 
             // From instlatx64
             (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
