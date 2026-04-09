@@ -93,6 +93,7 @@ impl Intel {
             (0, 6, 3, 12, _) => brand_arch(MicroArch::Haswell, "Haswell", Some("22nm")),
             (0, 6, 3, 15, _) => brand_arch(MicroArch::Haswell, "Haswell-EP 4S", Some("22nm")),
             (0, 6, 4, 12, 4) => brand_arch(MicroArch::Airmont, "Braswell", Some("14nm")),
+            (0, 6, 5, 14, 3) => brand_arch(MicroArch::Skylake, "Skylake-S", Some("14nm")),
             (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some("14nm")),
             (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some("14nm")),
             (0, 6, 11, 14, _) => brand_arch(MicroArch::AlderLake, "Alder Lake-N", Some("10nm")),
