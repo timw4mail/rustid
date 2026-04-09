@@ -43,3 +43,4 @@ path="src/debug.rs"
 default = []
 debug = []
 file_mock = []
+dos-build = []

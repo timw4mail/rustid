@@ -49,10 +49,7 @@ _build-dos:
 	@if ! rustup component list --installed | grep -q llvm-tools-preview; then rustup component add llvm-tools-preview; fi
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 	# Cleanup old binaries
-	@rm -f rustid.com
-	@rm -f drustid.com
-	@rm -f debug.com
-	@rm -f dump.com
+	@rm -f *.com
 
 _build-dos-debug:
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
@@ -64,10 +61,11 @@ _build-dos-dump:
 
 # Build for DOS
 build-dos: _build-dos _build-dos-debug _build-dos-dump
-	# Build initial binary
-	cargo +nightly build -Zjson-target-spec --target i486-dos.json --release
-	# Convert to proper DOS com binary
-	rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
+	# Build initial binary and convert to COM
+	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --release --features dos-build
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
+	# Verify that the binary size is below the 64K limit
+	@cargo test --test dos_binary_size_test --features dos-build
 
 # Build for modern windows (cli),  requires visual studio to be installed
 [windows]
