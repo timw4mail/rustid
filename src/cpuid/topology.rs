@@ -152,7 +152,7 @@ pub type DomainList = StaticVec<TopologyDomain, 8>;
 #[derive(Debug, Default, PartialEq)]
 pub struct Topology {
     /// Number of processor sockets
-    pub sockets: usize,
+    pub sockets: u32,
     /// Number of physical cores
     pub cores: u32,
     /// Number of logical threads (includes SMT)
@@ -173,37 +173,37 @@ impl Topology {
 
         let cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
-        let (cores, threads) = Self::count_domains(&domains);
-
-        let sockets = {
-            #[cfg(any(target_os = "none", target_os = "linux"))]
-            {
-                super::mp::MpTable::detect().socket_count()
-            }
-            #[cfg(not(any(target_os = "none", target_os = "linux")))]
-            {
-                1usize
-            }
-        };
+        let (sockets, cores, threads) = Self::count_domains(&domains);
 
         Topology {
             sockets,
-            cores,
-            threads,
+            cores: cores * sockets,
+            threads: threads * sockets,
             speed,
             cache,
             domains,
         }
     }
 
-    /// Returns (cores, threads)
-    fn count_domains(domains: &DomainList) -> (u32, u32) {
+    /// Returns (sockets, cores, threads)
+    // TODO: verify socket count from domains
+    fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
         let threads = logical_cores();
 
-        // TODO: determine cores/threads for Intel if domains are empty
-        // Perhaps via x2APIC?
+        // Old school socket counts
+        let sockets: u32 = {
+            #[cfg(any(target_os = "none", target_os = "linux"))]
+            {
+                super::mp::MpTable::detect().socket_count()
+            }
+            #[cfg(not(any(target_os = "none", target_os = "linux")))]
+            {
+                1
+            }
+        };
+
         if domains.is_empty() {
-            return match &*vendor_str() {
+            let (cores, threads) = match &*vendor_str() {
                 VENDOR_AMD => {
                     // Logical cpus = cores before Zen, when
                     // Topology domains start returning results
@@ -224,6 +224,8 @@ impl Topology {
                 }
                 _ => (1, 1),
             };
+
+            return (sockets, cores, threads);
         }
 
         // Get domain counts in a single iteration
@@ -239,23 +241,20 @@ impl Topology {
             }
         }
 
-        // Socket/Die/Core/Thread
-        if raw_sockets > 1 && raw_threads > 1 && raw_cores > 1 {
-            return (raw_sockets / raw_threads, raw_sockets);
-        }
+        // TODO: Socket/Die/Core/Thread
 
         // Thread/core
         if raw_sockets == 1 && raw_cores > raw_threads {
-            return (raw_cores / raw_threads, raw_cores);
+            return (raw_sockets, raw_cores / raw_threads, raw_cores);
         }
 
         // AMD has literal core count for 'Core' type domain
         // other have Cores * Threads
         match &*vendor_str() {
             // AMD has literal core count
-            VENDOR_AMD => (raw_cores, raw_threads * raw_cores),
+            VENDOR_AMD => (sockets, raw_cores, raw_threads * raw_cores),
             // Others have 'Core' as Threads * Cores
-            _ => (raw_cores / raw_threads, raw_cores),
+            _ => (sockets, raw_cores / raw_threads, raw_cores),
         }
     }
 

@@ -508,7 +508,7 @@ impl TCpu for Cpu {
         let ma: Str<_> = self.arch.micro_arch.into();
         let ma: &str = &ma;
 
-        let multi_core = self.topology.cores > 1;
+        let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
 
         let cache_count = |share_count| -> Str<_> {
             if (!multi_core) || share_count == 0 || (self.topology.threads / share_count) <= 1 {
@@ -582,23 +582,21 @@ impl TCpu for Cpu {
             simple_line("Easter Egg", easter_egg);
         }
 
-        // Sockets
-        if self.topology.sockets > 1 {
-            println!("{}{}", label("Sockets"), self.topology.sockets);
-            newline();
-        }
-
-        // Cores / Threads
+        // Sockets / Cores / Threads
         if multi_core {
-            if self.topology.cores != self.topology.threads {
+            let lbl = label("Cores");
+            if self.topology.sockets > 1 {
+                println!(
+                    "{}{} sockets, {} cores, {} threads",
+                    lbl, self.topology.sockets, self.topology.cores, self.topology.threads
+                );
+            } else if self.topology.cores != self.topology.threads {
                 println!(
                     "{}{} cores ({} threads)",
-                    label("Cores"),
-                    self.topology.cores,
-                    self.topology.threads
+                    lbl, self.topology.cores, self.topology.threads
                 );
             } else {
-                println!("{}{} cores", label("Cores"), self.topology.cores);
+                println!("{}{} cores", lbl, self.topology.cores);
             }
 
             newline();
@@ -655,7 +653,16 @@ impl TCpu for Cpu {
                 );
             }
 
+            // TODO: Determine reliable cache count for L3,
+            // especially for single-socket, multiple die CPUs, like Ryzen 9.
+            // Share count for L3 cache always seems to be 8??
             if let Some(l3) = cache.l3 {
+                let cache_count: Str<4> = if self.topology.sockets < 2 {
+                    sfmt!("")
+                } else {
+                    sfmt!("{}x ", self.topology.sockets)
+                };
+
                 let mut num = l3.size / 1024;
                 let unit = if num >= 1024 { "MB" } else { "KB" };
 
@@ -663,7 +670,14 @@ impl TCpu for Cpu {
                     num /= 1024
                 }
 
-                println!("{} {} {}, {}-way", sublabel("L3"), num, unit, l3.assoc);
+                println!(
+                    "{} {}{} {}, {}-way",
+                    sublabel("L3"),
+                    &cache_count,
+                    num,
+                    unit,
+                    l3.assoc
+                );
             }
 
             newline();

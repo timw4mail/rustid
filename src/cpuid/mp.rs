@@ -7,12 +7,12 @@
 #[derive(Debug, Default)]
 pub struct MpTable {
     /// Number of processor sockets
-    pub sockets: usize,
+    pub sockets: u32,
 }
 
 impl MpTable {
     /// Returns the number of processor sockets.
-    pub fn socket_count(&self) -> usize {
+    pub fn socket_count(&self) -> u32 {
         self.sockets
     }
 
@@ -49,7 +49,7 @@ impl MpTable {
             if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
                 table.sockets = entries;
             } else {
-                table.sockets = physical_ids.len();
+                table.sockets = physical_ids.len() as u32;
             }
         }
 
@@ -59,7 +59,6 @@ impl MpTable {
 
 #[cfg(not(any(target_os = "none", target_os = "linux")))]
 impl MpTable {
-    /// Detects the number of sockets (returns 1 on unsupported platforms).
     pub fn detect() -> MpTable {
         MpTable { sockets: 1 }
     }
@@ -141,7 +140,7 @@ impl MpTable {
     }
 
     #[inline(never)]
-    fn parse_config_table(config_ptr: u32) -> Option<usize> {
+    fn parse_config_table(config_ptr: u32) -> Option<u32> {
         use crate::cpuid::dos::{peek_u8, peek_u16};
 
         if config_ptr == 0 || config_ptr > 0xFFF00 {
