@@ -3,12 +3,14 @@ pub mod cache;
 #[cfg(not(target_os = "none"))]
 pub mod cores;
 
+pub mod constants;
+
 pub use cache::*;
 
 #[cfg(not(target_os = "none"))]
 pub use cores::*;
 
-pub const UNK: &str = "Unknown";
+pub use constants::*;
 
 pub trait TCpu {
     /// Detect the CPU

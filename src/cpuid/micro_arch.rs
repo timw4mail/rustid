@@ -3,14 +3,12 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-#[allow(unused_imports)]
-use super::brand::{
-    CpuBrand, VENDOR_AMD, VENDOR_CENTAUR, VENDOR_CYRIX, VENDOR_INTEL, VENDOR_ZHAOXIN,
-};
-use super::vendor::{Amd, Centaur, Intel, TMicroArch};
-#[cfg(target_arch = "x86")]
-use super::vendor::{Cyrix, Transmeta};
+use super::brand::*;
+use super::vendor::TMicroArch;
+use super::vendor::*;
 use super::{CpuSignature, Str, UNK, is_centaur, is_zhaoxin};
+#[allow(unused)]
+use crate::common::constants::*;
 
 /// CPU Microarchitecture enumeration.
 ///
@@ -361,7 +359,7 @@ impl CpuArch {
             arch(ma, code_name, brand.to_brand_name(), tech)
         };
 
-        let unknown_model = brand_arch(MicroArch::Unknown, "Unknown", None);
+        let unknown_model = brand_arch(MicroArch::Unknown, UNK, None);
 
         // Brand for Centaur CPUs is by signature, not vendor string
         if is_centaur() || is_zhaoxin() {
@@ -377,8 +375,8 @@ impl CpuArch {
             CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
 
             CpuBrand::NationalSemiconductor => match (s.family, s.model, s.stepping) {
-                (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some("180nm")),
-                (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some("180nm")),
+                (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some(N180)),
+                (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some(N180)),
                 (5, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
                 _ => unknown_model,
             },
@@ -390,12 +388,12 @@ impl CpuArch {
             },
 
             CpuBrand::Rise => match (s.family, s.model, s.stepping) {
-                (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some("250nm")),
-                (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some("180nm")),
+                (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some(N250)),
+                (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some(N180)),
 
                 // These two come from instlatx64
-                (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some("250nm")),
-                (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some("180nm")),
+                (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some(N250)),
+                (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some(N180)),
                 _ => unknown_model,
             },
 
@@ -405,8 +403,8 @@ impl CpuArch {
             CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => {
                 match (s.family, s.model, s.stepping) {
                     // UMC
-                    (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some("600nm")),
-                    (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some("600nm")),
+                    (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some(N600)),
+                    (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some(N600)),
 
                     // SiS
                     (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),

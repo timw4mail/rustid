@@ -1,4 +1,4 @@
-pub const UNK: &str = "Unknown";
+use crate::common::constants::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
@@ -98,48 +98,18 @@ impl CpuArch {
             // IBM/Motorola PowerPC
             0x0001 => Self::new("PowerPC 601", MicroArch::Ppc601, "601", 0x01, Some("0.6μm")),
             0x0003 => Self::new("PowerPC 603", MicroArch::Ppc603, "603", 0x03, Some("0.5μm")),
-            0x0004 => Self::new(
-                "PowerPC 603e",
-                MicroArch::Ppc603e,
-                "603e",
-                0x04,
-                Some("0.35μm"),
-            ),
+            0x0004 => Self::new("PowerPC 603e", MicroArch::Ppc603e, "603e", 0x04, Some(N350)),
             0x0006 => Self::new(
                 "PowerPC 603eV",
                 MicroArch::Ppc603ev,
                 "603eV",
                 0x06,
-                Some("0.25μm"),
+                Some(N250),
             ),
-            0x0007 => Self::new(
-                "PowerPC 604",
-                MicroArch::Ppc604,
-                "604",
-                0x07,
-                Some("0.35μm"),
-            ),
-            0x0009 => Self::new(
-                "PowerPC 604e",
-                MicroArch::Ppc604e,
-                "604e",
-                0x09,
-                Some("0.25μm"),
-            ),
-            0x000A => Self::new(
-                "PowerPC 604r",
-                MicroArch::Ppc604r,
-                "604r",
-                0x0A,
-                Some("0.25μm"),
-            ),
-            0x0013 => Self::new(
-                "PowerPC 620",
-                MicroArch::Ppc620,
-                "620",
-                0x13,
-                Some("0.35μm"),
-            ),
+            0x0007 => Self::new("PowerPC 604", MicroArch::Ppc604, "604", 0x07, Some(N350)),
+            0x0009 => Self::new("PowerPC 604e", MicroArch::Ppc604e, "604e", 0x09, Some(N250)),
+            0x000A => Self::new("PowerPC 604r", MicroArch::Ppc604r, "604r", 0x0A, Some(N250)),
+            0x0013 => Self::new("PowerPC 620", MicroArch::Ppc620, "620", 0x13, Some(N350)),
 
             // PowerPC 750 (G3)
             0x0200 => Self::new(
@@ -147,149 +117,89 @@ impl CpuArch {
                 MicroArch::Ppc750,
                 "Arthur",
                 0x200,
-                Some("0.26μm"),
+                Some(N260),
             ),
-            0x0201 => Self::new(
-                "PowerPC 750CX",
-                MicroArch::Ppc750,
-                "G3",
-                0x201,
-                Some("0.18μm"),
-            ),
-            0x0202 => Self::new(
-                "PowerPC 750CXe",
-                MicroArch::Ppc750,
-                "G3",
-                0x202,
-                Some("0.18μm"),
-            ),
-            0x0203 => Self::new(
-                "PowerPC 750FX",
-                MicroArch::Ppc750,
-                "G3",
-                0x203,
-                Some("0.18μm"),
-            ),
-            0x0204 => Self::new(
-                "PowerPC 750GX",
-                MicroArch::Ppc750,
-                "G3",
-                0x204,
-                Some("90nm"),
-            ),
-            0x0205 => Self::new(
-                "PowerPC 750L",
-                MicroArch::Ppc750,
-                "G3",
-                0x205,
-                Some("0.18μm"),
-            ),
+            0x0201 => Self::new("PowerPC 750CX", MicroArch::Ppc750, "G3", 0x201, Some(N180)),
+            0x0202 => Self::new("PowerPC 750CXe", MicroArch::Ppc750, "G3", 0x202, Some(N180)),
+            0x0203 => Self::new("PowerPC 750FX", MicroArch::Ppc750, "G3", 0x203, Some(N180)),
+            0x0204 => Self::new("PowerPC 750GX", MicroArch::Ppc750, "G3", 0x204, Some(N90)),
+            0x0205 => Self::new("PowerPC 750L", MicroArch::Ppc750, "G3", 0x205, Some(N180)),
 
             // PowerPC 7400 (G4)
-            0x0308 => Self::new(
-                "PowerPC 7400",
-                MicroArch::Ppc7400,
-                "Max",
-                0x308,
-                Some("0.22μm"),
-            ),
+            0x0308 => Self::new("PowerPC 7400", MicroArch::Ppc7400, "Max", 0x308, Some(N220)),
             0x0309 => Self::new(
                 "PowerPC 7410",
                 MicroArch::Ppc7410,
                 "Nitro",
                 0x309,
-                Some("0.18μm"),
+                Some(N180),
             ),
             0x030C => Self::new(
                 "PowerPC 7447",
                 MicroArch::Ppc7447,
                 "Apollo 6",
                 0x30C,
-                Some("0.13μm"),
+                Some(N130),
             ),
             0x030D => Self::new(
                 "PowerPC 7447A",
                 MicroArch::Ppc7447a,
                 "Apollo 7",
                 0x30D,
-                Some("90nm"),
+                Some(N90),
             ),
-            0x0351 => Self::new(
-                "PowerPC 7450",
-                MicroArch::Ppc7450,
-                "Max",
-                0x351,
-                Some("0.18μm"),
-            ),
+            0x0351 => Self::new("PowerPC 7450", MicroArch::Ppc7450, "Max", 0x351, Some(N180)),
             0x0352 => Self::new(
                 "PowerPC 7455",
                 MicroArch::Ppc7455,
                 "Apollo",
                 0x352,
-                Some("0.15μm"),
+                Some(N150),
             ),
             0x0353 => Self::new(
                 "PowerPC 7457",
                 MicroArch::Ppc7457,
                 "Apollo",
                 0x353,
-                Some("0.13μm"),
+                Some(N130),
             ),
             0x0354 => Self::new(
                 "PowerPC 7460",
                 MicroArch::Ppc7460,
                 "Apollo Pro",
                 0x354,
-                Some("0.13μm"),
+                Some(N130),
             ),
 
             // PowerPC 970 / G5
-            0x0039 => Self::new("PowerPC 970", MicroArch::Ppc970, "G5", 0x39, Some("0.15μm")),
-            0x003C => Self::new(
-                "PowerPC 970FX",
-                MicroArch::Ppc970fx,
-                "G5",
-                0x3C,
-                Some("90nm"),
-            ),
-            0x0044 => Self::new("PowerPC 970MP", MicroArch::Ppc970, "G5", 0x44, Some("90nm")),
+            0x0039 => Self::new("PowerPC 970", MicroArch::Ppc970, "G5", 0x39, Some(N150)),
+            0x003C => Self::new("PowerPC 970FX", MicroArch::Ppc970fx, "G5", 0x3C, Some(N90)),
+            0x0044 => Self::new("PowerPC 970MP", MicroArch::Ppc970, "G5", 0x44, Some(N90)),
 
             // Apple PowerPC variants (based on IBM 7400/7410)
             // Apple uses version 0x0033 for some G4 chips
-            0x0033 => Self::new(
-                "Apple G4",
-                MicroArch::Ppc7400,
-                "Apollo",
-                0x33,
-                Some("0.18μm"),
-            ),
+            0x0033 => Self::new("Apple G4", MicroArch::Ppc7400, "Apollo", 0x33, Some(N180)),
 
             // Apple G5 variants
-            0x0045 => Self::new("Apple G5", MicroArch::Ppc970, "G5", 0x45, Some("65nm")),
-            0x0052 => Self::new("Apple G5", MicroArch::Ppc970fx, "G5", 0x52, Some("65nm")),
+            0x0045 => Self::new("Apple G5", MicroArch::Ppc970, "G5", 0x45, Some(N65)),
+            0x0052 => Self::new("Apple G5", MicroArch::Ppc970fx, "G5", 0x52, Some(N65)),
 
             // Apple "Scream" chips - these are actually G4 derivatives
             // Version 0x8000 series used by Apple for some custom chips
-            0x8000 => Self::new(
-                "Apple G4",
-                MicroArch::Ppc7400,
-                "Scream",
-                0x8000,
-                Some("0.18μm"),
-            ),
+            0x8000 => Self::new("Apple G4", MicroArch::Ppc7400, "Scream", 0x8000, Some(N180)),
             0x8001 => Self::new(
                 "Apple G4+",
                 MicroArch::Ppc7447,
                 "Scream",
                 0x8001,
-                Some("0.13μm"),
+                Some(N130),
             ),
             0x8002 => Self::new(
                 "Apple G4+",
                 MicroArch::Ppc7447a,
                 "Scream",
                 0x8002,
-                Some("90nm"),
+                Some(N90),
             ),
 
             _ => Self::default(),

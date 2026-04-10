@@ -1,4 +1,5 @@
 use super::TMicroArch;
+use crate::common::constants::*;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
@@ -381,7 +382,7 @@ impl TMicroArch for Cyrix {
             (4, 8, _) => brand_arch(MicroArch::Cx486DX, Cyrix::codename(), None),
             (4, 9, _) => brand_arch(MicroArch::Cy5x86, Cyrix::codename(), None),
             (5, 2 | 3, _) => brand_arch(MicroArch::M1, Cyrix::codename(), None),
-            (5, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some("350nm")),
+            (5, 4, _) => brand_arch(MicroArch::MediaGx, Cyrix::codename(), Some(N350)),
             (6, 0, _) => brand_arch(MicroArch::M2, Cyrix::codename(), None),
             _ => brand_arch(MicroArch::Unknown, Cyrix::codename(), None),
         }

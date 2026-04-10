@@ -1,4 +1,5 @@
 use crate::common::UNK;
+use crate::common::constants::*;
 use crate::cpuid::brand::{CpuBrand, VENDOR_CENTAUR};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
@@ -38,37 +39,36 @@ impl TMicroArch for Centaur {
             s.stepping,
         ) {
             // IDT
-            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6", Some("350nm")),
-            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "C2", Some("350nm")),
-            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "W2A", Some("250nm")),
-            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "W2B", Some("250nm")),
-            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "C3", Some("250nm")),
+            (0, 5, 0, 4, _) => brand_arch(MicroArch::Winchip, "C6", Some(N350)),
+            (0, 5, 0, 8, 5) => brand_arch(MicroArch::Winchip2, "C2", Some(N350)),
+            (0, 5, 0, 8, 7) => brand_arch(MicroArch::Winchip2A, "W2A", Some(N250)),
+            (0, 5, 0, 8, 10) => brand_arch(MicroArch::Winchip2B, "W2B", Some(N250)),
+            (0, 5, 0, 9, _) => brand_arch(MicroArch::Winchip3, "C3", Some(N250)),
 
             // VIA
-            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "C5A", Some("180nm")),
-            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "C5B", Some("150nm")),
-            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "C5C", Some("130nm")),
-            (0, 6, 0, 8, 0..=7) => brand_arch(MicroArch::EzraT, "C5N", Some("130nm")), // per sandpile.org
-            (0, 6, 0, 8, 8..=15) => brand_arch(MicroArch::Nehemiah, "C5X", Some("130nm")), // per sandpile.org
-            (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some("130nm")),
-            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", Some("130nm")),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some("90nm")),
-            (0, 5, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some("90nm")), // OLPC XO 1.5
+            (0, 6, 0, 6, _) => brand_arch(MicroArch::Samuel, "C5A", Some(N180)),
+            (0, 6, 0, 7, 0..=7) => brand_arch(MicroArch::Samuel2, "C5B", Some(N150)),
+            (0, 6, 0, 7, 8..=15) => brand_arch(MicroArch::Ezra, "C5C", Some(N130)),
+            (0, 6, 0, 8, 0..=7) => brand_arch(MicroArch::EzraT, "C5N", Some(N130)), // per sandpile.org
+            (0, 6, 0, 8, 8..=15) => brand_arch(MicroArch::Nehemiah, "C5X", Some(N130)), // per sandpile.org
+            (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some(N130)),
+            (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", Some(N130)),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some(N90)),
+            (0, 5, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some(N90)), // OLPC XO 1.5
 
             // From instlatx64
-            (0, 6, 0, 15, 1 | 2) => brand_arch(MicroArch::Isaiah, "CN", None),
-            (0, 6, 0, 15, 0..8) => brand_arch(MicroArch::Isaiah, "CNA", Some("65nm")),
+            (0, 6, 0, 15, 0..8) => brand_arch(MicroArch::Isaiah, "CNA", Some(N65)),
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB A1", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNB A2", None),
             (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ", None),
-            (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNQ A2", Some("40nm")), // My hardware
+            (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNQ A2", Some(N40)), // My hardware
             (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
-            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some("65nm")),
+            (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some(N65)),
 
             // Zhaoxin
-            (0, 6, 1, 9, _) => brand_arch(MicroArch::ZhangJiang, "ZhangJiang", Some("28nm")),
-            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some("28nm")),
-            (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some("16nm")),
+            (0, 6, 1, 9, _) => brand_arch(MicroArch::ZhangJiang, "ZhangJiang", Some(N28)),
+            (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some(N28)),
+            (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some(N16)),
 
             // Anything else
             (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),

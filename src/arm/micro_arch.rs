@@ -1,4 +1,5 @@
 use crate::arm::brand::*;
+use crate::common::constants::*;
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -477,7 +478,7 @@ impl CpuArch {
                 MicroArch::AppleIcestorm,
                 "Tonga",
                 0x022,
-                Some("5nm"),
+                Some(N5),
             ),
             0x023 => Self::new(
                 Implementer::Apple,
@@ -485,7 +486,7 @@ impl CpuArch {
                 MicroArch::AppleFirestorm,
                 "Tonga",
                 0x023,
-                Some("5nm"),
+                Some(N5),
             ),
             0x024 => Self::new(
                 Implementer::Apple,
@@ -493,7 +494,7 @@ impl CpuArch {
                 MicroArch::AppleIcestorm,
                 "Jade Chop",
                 0x024,
-                Some("5nm"),
+                Some(N5),
             ),
             0x025 => Self::new(
                 Implementer::Apple,
@@ -501,7 +502,7 @@ impl CpuArch {
                 MicroArch::AppleFirestorm,
                 "Jade Chop",
                 0x025,
-                Some("5nm"),
+                Some(N5),
             ),
             0x028 => Self::new(
                 Implementer::Apple,
@@ -509,7 +510,7 @@ impl CpuArch {
                 MicroArch::AppleIcestorm,
                 "Jade 1C",
                 0x028,
-                Some("5nm"),
+                Some(N5),
             ),
             0x029 => Self::new(
                 Implementer::Apple,
@@ -517,7 +518,7 @@ impl CpuArch {
                 MicroArch::AppleFirestorm,
                 "Jade 1C",
                 0x029,
-                Some("5nm"),
+                Some(N5),
             ),
 
             // M2
@@ -527,7 +528,7 @@ impl CpuArch {
                 MicroArch::AppleBlizzard,
                 "Staten",
                 0x32,
-                Some("5nm"),
+                Some(N5),
             ),
             0x33 => Self::new(
                 Implementer::Apple,
@@ -535,7 +536,7 @@ impl CpuArch {
                 MicroArch::AppleAvalanche,
                 "Staten",
                 0x33,
-                Some("5nm"),
+                Some(N5),
             ),
             0x34 => Self::new(
                 Implementer::Apple,
@@ -543,7 +544,7 @@ impl CpuArch {
                 MicroArch::AppleBlizzard,
                 "Rhodes Chop",
                 0x34,
-                Some("5nm"),
+                Some(N5),
             ),
             0x35 => Self::new(
                 Implementer::Apple,
@@ -551,7 +552,7 @@ impl CpuArch {
                 MicroArch::AppleAvalanche,
                 "Rhodes Chop",
                 0x35,
-                Some("5nm"),
+                Some(N5),
             ),
             0x38 => Self::new(
                 Implementer::Apple,
@@ -559,7 +560,7 @@ impl CpuArch {
                 MicroArch::AppleBlizzard,
                 "Rhodes 1C",
                 0x38,
-                Some("5nm"),
+                Some(N5),
             ),
             0x39 => Self::new(
                 Implementer::Apple,
@@ -567,7 +568,7 @@ impl CpuArch {
                 MicroArch::AppleAvalanche,
                 "Rhodes 1C",
                 0x39,
-                Some("5nm"),
+                Some(N5),
             ),
 
             // M3
@@ -577,7 +578,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Ibiza",
                 0x42,
-                Some("3nm"),
+                Some(N3),
             ),
             0x43 => Self::new(
                 Implementer::Apple,
@@ -585,7 +586,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Ibiza",
                 0x43,
-                Some("3nm"),
+                Some(N3),
             ),
             0x44 => Self::new(
                 Implementer::Apple,
@@ -593,7 +594,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Lobos",
                 0x44,
-                Some("3nm"),
+                Some(N3),
             ),
             0x45 => Self::new(
                 Implementer::Apple,
@@ -601,7 +602,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Lobos",
                 0x45,
-                Some("3nm"),
+                Some(N3),
             ),
             0x48 => Self::new(
                 Implementer::Apple,
@@ -609,7 +610,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Palma",
                 0x48,
-                Some("3nm"),
+                Some(N3),
             ),
             0x49 => Self::new(
                 Implementer::Apple,
@@ -617,7 +618,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Palma",
                 0x49,
-                Some("3nm"),
+                Some(N3),
             ),
 
             // M4
@@ -627,7 +628,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Donan",
                 0x052,
-                Some("3nm"),
+                Some(N3),
             ),
             0x053 => Self::new(
                 Implementer::Apple,
@@ -635,7 +636,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Donan",
                 0x053,
-                Some("3nm"),
+                Some(N3),
             ),
             0x54 => Self::new(
                 Implementer::Apple,
@@ -643,7 +644,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Brava Chop",
                 0x54,
-                Some("3nm"),
+                Some(N3),
             ),
             0x55 => Self::new(
                 Implementer::Apple,
@@ -651,7 +652,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Brava Chop",
                 0x55,
-                Some("3nm"),
+                Some(N3),
             ),
             0x58 => Self::new(
                 Implementer::Apple,
@@ -659,7 +660,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Brava",
                 0x58,
-                Some("3nm"),
+                Some(N3),
             ),
             0x59 => Self::new(
                 Implementer::Apple,
@@ -667,7 +668,7 @@ impl CpuArch {
                 MicroArch::AppleSawtooth,
                 "Brava",
                 0x59,
-                Some("3nm"),
+                Some(N3),
             ),
 
             // A18 Pro
@@ -677,7 +678,7 @@ impl CpuArch {
                 MicroArch::AppleEverest,
                 "Tahiti",
                 0x101,
-                Some("3nm"),
+                Some(N3),
             ),
 
             _ => Self {
@@ -695,7 +696,7 @@ impl CpuArch {
                 MicroArch::QCOryon,
                 "Oryon",
                 0x001,
-                Some("4nm"),
+                Some(N4),
             ),
             0x00F => Self::new(
                 Implementer::Qualcomm,
@@ -711,7 +712,7 @@ impl CpuArch {
                 MicroArch::QCScorpion,
                 "Scorpion",
                 0x02D,
-                Some("28nm"),
+                Some(N28),
             ),
             0x04D => Self::new(
                 Implementer::Qualcomm,
@@ -719,7 +720,7 @@ impl CpuArch {
                 MicroArch::QCKrait,
                 "Krait",
                 0x04D,
-                Some("28nm"),
+                Some(N28),
             ),
             0x06F => Self::new(
                 Implementer::Qualcomm,
@@ -727,7 +728,7 @@ impl CpuArch {
                 MicroArch::QCKrait,
                 "Krait 400",
                 0x06F,
-                Some("28nm"),
+                Some(N28),
             ),
             0x201 | 0x205 | 0x211 => Self::new(
                 Implementer::Qualcomm,
@@ -735,7 +736,7 @@ impl CpuArch {
                 MicroArch::QCKryo,
                 "Kryo",
                 part,
-                Some("14nm"),
+                Some(N14),
             ),
             0x800 => Self::new(
                 Implementer::Qualcomm,
@@ -743,7 +744,7 @@ impl CpuArch {
                 MicroArch::QCFalkor,
                 "Kryo 280 Gold",
                 0x800,
-                Some("10nm"),
+                Some(N10),
             ),
             0x801 => Self::new(
                 Implementer::Qualcomm,
@@ -751,7 +752,7 @@ impl CpuArch {
                 MicroArch::ArmCortexA53,
                 "Kryo 280 Silver",
                 0x801,
-                Some("10nm"),
+                Some(N10),
             ),
             0x802 => Self::new(
                 Implementer::Qualcomm,
@@ -759,7 +760,7 @@ impl CpuArch {
                 MicroArch::ArmCortexA75,
                 "Kryo 385 Gold",
                 0x802,
-                Some("10nm"),
+                Some(N10),
             ),
             0x803 => Self::new(
                 Implementer::Qualcomm,
@@ -767,7 +768,7 @@ impl CpuArch {
                 MicroArch::ArmCortexA55,
                 "Kryo 385 Silver",
                 0x803,
-                Some("10nm"),
+                Some(N10),
             ),
             0x804 => Self::new(
                 Implementer::Qualcomm,
@@ -775,7 +776,7 @@ impl CpuArch {
                 MicroArch::ArmCortexA76,
                 "Kryo 485 Gold",
                 0x804,
-                Some("7nm"),
+                Some(N7),
             ),
             0x805 => Self::new(
                 Implementer::Qualcomm,
@@ -783,7 +784,7 @@ impl CpuArch {
                 MicroArch::ArmCortexA55,
                 "Kryo 485 Silver",
                 0x805,
-                Some("7nm"),
+                Some(N7),
             ),
             0xC00 => Self::new(
                 Implementer::Qualcomm,
@@ -791,7 +792,7 @@ impl CpuArch {
                 MicroArch::QCFalkor,
                 "Falkor",
                 0xC00,
-                Some("10nm"),
+                Some(N10),
             ),
             0xC01 => Self::new(
                 Implementer::Qualcomm,

@@ -1,9 +1,8 @@
+use crate::common::constants::*;
 use crate::cpuid::brand::{CpuBrand, VENDOR_TRANSMETA};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{
-    CpuSignature, Str, TRANSMETA_LEAF_3, TRANSMETA_LEAF_6, UNK, read_multi_leaf_str,
-};
+use crate::cpuid::{CpuSignature, Str, TRANSMETA_LEAF_3, TRANSMETA_LEAF_6, read_multi_leaf_str};
 
 /// Transmeta-specific microarchitecture detection.
 #[derive(Debug, Default, PartialEq)]
@@ -26,36 +25,30 @@ impl Transmeta {
 impl TMicroArch for Transmeta {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand = CpuBrand::from(VENDOR_TRANSMETA);
+        let brand = brand.to_brand_name();
 
-        match (
-            s.extended_family,
-            s.family,
-            s.extended_model,
-            s.model,
-            s.stepping,
-        ) {
-            (0, 5, 0, 4, _) => CpuArch::new(
+        match (s.family, s.model, s.stepping) {
+            (5, 4, _) => CpuArch::new(
                 model,
                 MicroArch::Crusoe,
                 "Crusoe",
-                brand.to_brand_name(),
+                brand,
                 VENDOR_TRANSMETA,
-                Some("130nm"),
+                Some(N130),
             ),
-            (0, 15, 0, 2 | 3, _) => CpuArch::new(
+            (15, 2 | 3, _) => CpuArch::new(
                 model,
                 MicroArch::Efficeon,
                 "Efficeon",
-                brand.to_brand_name(),
+                brand,
                 VENDOR_TRANSMETA,
-                Some("130nm"),
+                Some(N130),
             ),
-
-            (_, _, _, _, _) => CpuArch::new(
+            _ => CpuArch::new(
                 model,
                 MicroArch::Unknown,
                 UNK,
-                brand.to_brand_name(),
+                brand,
                 VENDOR_TRANSMETA,
                 None,
             ),

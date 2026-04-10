@@ -165,7 +165,9 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     }
 
     #[allow(unused_unsafe)]
-    unsafe { __cpuid_count(leaf, sub_leaf).into() }
+    unsafe {
+        __cpuid_count(leaf, sub_leaf).into()
+    }
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).

@@ -181,6 +181,13 @@ impl Speed {
             return Self::measure_frequency_tsc(t1);
         }
 
+        // If the Cryix cpu supports enabling cpuid, this
+        // fallback method is going to be wildly inaccurate,
+        // so just skip it
+        if super::vendor::cyrix::Cyrix::can_enable_cpuid() {
+            return 0;
+        }
+
         // No TSC (386/486). Use a calibrated instruction loop.
         // We'll count how many times we can run a loop in 8 ticks (~440ms).
         // We also use the PIT Channel 0 for sub-tick precision.
