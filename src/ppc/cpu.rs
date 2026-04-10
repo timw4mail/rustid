@@ -71,7 +71,6 @@ impl Cpu {
             let name = parts[0];
             let size_str = parts[1];
             let ways_str = parts[2];
-            let cache_type = if parts.len() >= 4 { parts[3] } else { "" };
 
             // Parse size (e.g., "32K", "256K", "4M")
             let size_kb: u32 = if size_str.ends_with('K') {
@@ -138,7 +137,6 @@ impl Cpu {
         let mut cache = Cache::default();
         let mut found_cache = false;
         let mut l1_size: u32 = 0;
-        let mut l1_assoc: u32 = 0;
         let mut l2_size: u32 = 0;
         let mut l2_assoc: u32 = 0;
         let mut l3_size: u32 = 0;
@@ -154,7 +152,7 @@ impl Cpu {
                     continue;
                 }
 
-                let key = parts[0].trim();
+                // let key = parts[0].trim();
                 let value = parts[1].trim().trim_end_matches(" KB");
 
                 // Try to parse as L2 or L3 based on typicalPowerPC conventions
@@ -514,8 +512,6 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        let newline = || println!();
-
         let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
         let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
         let simple_line = |l, v: &str| {
@@ -555,11 +551,6 @@ impl TCpu for Cpu {
                 (num, unit)
             }
 
-            let cache_label = |l: &str| {
-                let l = label(l);
-                print!("{}{}", l, "");
-            };
-
             println!("{}", label("Cache"));
 
             match &cache.l1 {
@@ -568,13 +559,13 @@ impl TCpu for Cpu {
                     if l1.assoc > 0 {
                         println!(
                             "{}L1: Unified {} {}, {}-way",
-                            cache_label(""),
+                            label("Cache"),
                             num,
                             unit,
                             l1.assoc
                         );
                     } else {
-                        println!("{}L1: Unified {} {}", cache_label(""), num, unit);
+                        println!("{}L1: Unified {} {}", label("Cache"), num, unit);
                     }
                 }
                 Level1Cache::Split { data, instruction } => {
@@ -583,13 +574,13 @@ impl TCpu for Cpu {
                         if data.assoc > 0 {
                             println!(
                                 "{}L1d: {} {}, {}-way",
-                                cache_label(""),
+                                label("Cache"),
                                 num,
                                 unit,
                                 data.assoc
                             );
                         } else {
-                            println!("{}L1d: {} {}", cache_label(""), num, unit);
+                            println!("{}L1d: {} {}", label("Cache"), num, unit);
                         }
                     }
 
