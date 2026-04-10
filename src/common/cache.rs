@@ -241,15 +241,18 @@ impl Cache {
         let mut cache = Cache::default();
         let mut found_cache = false;
 
-        for line in output_str.lines().skip(1) {
+        let lines: Vec<&str> = output_str.lines().collect();
+        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
+
+        for line in lines.into_iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() < 3 {
                 continue;
             }
 
-            let name = parts[0];
-            let size_str = parts[1];
-            let ways_str = parts[2];
+            let name = parts[table_keys.binary_search(&"NAME").ok()?];
+            let size_str = parts[table_keys.binary_search(&"ONE-SIZE").ok()?];
+            let ways_str = parts[table_keys.binary_search(&"WAYS").ok()?];
 
             // Parse size (e.g., "32K", "256K", "4M")
             let size_kb: u32 = if size_str.ends_with('K') {
