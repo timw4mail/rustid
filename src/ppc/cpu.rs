@@ -12,7 +12,7 @@ pub struct Cpu {
     pub version: u16,
     pub revision: u16,
     pub cpu_arch: CpuArch,
-    pub cache: Option<crate::common::cache::Cache>,
+    pub cache: Option<Cache>,
     pub clock_speed: Option<u64>,
 }
 
@@ -29,8 +29,215 @@ impl Cpu {
             return Some(cache);
         }
 
+        // Try lscpu and /proc/cpuinfo
+        if let Some(cache) = Self::detect_cache_from_lscpu() {
+            return Some(cache);
+        }
+
         // Fallback to hardcoded values based on PVR
         Self::detect_cache_from_pvr(pvr)
+    }
+
+    fn detect_cache_from_lscpu() -> Option<Cache> {
+        // Try lscpu -C first for detailed cache info
+        if let Some(cache) = Self::detect_cache_from_lscpu_command() {
+            return Some(cache);
+        }
+
+        // Fallback to /proc/cpuinfo parsing
+        Self::detect_cache_from_cpuinfo()
+    }
+
+    fn detect_cache_from_lscpu_command() -> Option<Cache> {
+        let output = match std::process::Command::new("lscpu").arg("-C").output() {
+            Ok(o) => o.stdout,
+            Err(_) => return None,
+        };
+
+        let output_str = match String::from_utf8(output) {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
+
+        let mut cache = Cache::default();
+        let mut found_cache = false;
+
+        for line in output_str.lines().skip(1) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() < 3 {
+                continue;
+            }
+
+            let name = parts[0];
+            let size_str = parts[1];
+            let ways_str = parts[2];
+            let cache_type = if parts.len() >= 4 { parts[3] } else { "" };
+
+            // Parse size (e.g., "32K", "256K", "4M")
+            let size_kb: u32 = if size_str.ends_with('K') {
+                size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024
+            } else if size_str.ends_with('M') {
+                size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024 * 1024
+            } else {
+                size_str.parse::<u32>().ok()? * 1024
+            };
+
+            let ways: u32 = ways_str.parse().unwrap_or(0);
+
+            match name {
+                "L1d" => {
+                    cache.l1 = Level1Cache::Split {
+                        data: CacheLevel::new(size_kb, CacheType::Data, ways, 0),
+                        instruction: CacheLevel::default(),
+                    };
+                    found_cache = true;
+                }
+                "L1i" => {
+                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
+                        instruction.size = size_kb;
+                        instruction.kind = CacheType::Instruction;
+                        instruction.assoc = ways;
+                    }
+                }
+                "L1" => {
+                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_kb, ways));
+                    found_cache = true;
+                }
+                "L2" => {
+                    cache.l2 = Some(CacheLevel::new(size_kb, CacheType::Unified, ways, 0));
+                    found_cache = true;
+                }
+                "L3" => {
+                    cache.l3 = Some(CacheLevel::new(size_kb, CacheType::Unified, ways, 0));
+                    found_cache = true;
+                }
+                _ => {}
+            }
+        }
+
+        // Handle case where L1 is split but L1i wasn't in the output
+        if let Level1Cache::Split { data, instruction } = &cache.l1 {
+            if instruction.size == 0 && data.size > 0 {
+                // Copy data settings to instruction
+                cache.l1 = Level1Cache::Split {
+                    data: *data,
+                    instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
+                };
+            }
+        }
+
+        if found_cache { Some(cache) } else { None }
+    }
+
+    fn detect_cache_from_cpuinfo() -> Option<Cache> {
+        let output = match fs::read_to_string("/proc/cpuinfo") {
+            Ok(o) => o,
+            Err(_) => return None,
+        };
+
+        let mut cache = Cache::default();
+        let mut found_cache = false;
+        let mut l1_size: u32 = 0;
+        let mut l1_assoc: u32 = 0;
+        let mut l2_size: u32 = 0;
+        let mut l2_assoc: u32 = 0;
+        let mut l3_size: u32 = 0;
+        let mut l3_assoc: u32 = 0;
+
+        for line in output.lines() {
+            let line = line.trim();
+
+            // Look for cache size (typically reports L2 cache size in KB)
+            if line.starts_with("cache") && line.contains("cache") {
+                let parts: Vec<&str> = line.split(':').collect();
+                if parts.len() != 2 {
+                    continue;
+                }
+
+                let key = parts[0].trim();
+                let value = parts[1].trim().trim_end_matches(" KB");
+
+                // Try to parse as L2 or L3 based on typicalPowerPC conventions
+                // PowerPC /proc/cpuinfo often uses "cache size" for L2
+                if let Ok(size) = value.parse::<u32>() {
+                    let size_bytes = size * 1024;
+                    if l2_size == 0 {
+                        l2_size = size_bytes;
+                        l2_assoc = 8; // Default assumption for PowerPC
+                        found_cache = true;
+                    } else if l3_size == 0 {
+                        l3_size = size_bytes;
+                        l3_assoc = 8;
+                    }
+                }
+            }
+
+            // Try to parse more specific cache info lines if available
+            if line.starts_with("l1-dcache-size") || line.starts_with("L1-dcache-size") {
+                if let Some(size) = Self::parse_cache_value(line) {
+                    l1_size = size;
+                    if let Level1Cache::Split { data, .. } = &mut cache.l1 {
+                        data.size = size;
+                        found_cache = true;
+                    }
+                }
+            }
+            if line.starts_with("l1-icache-size") || line.starts_with("L1-icache-size") {
+                if let Some(size) = Self::parse_cache_value(line) {
+                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
+                        instruction.size = size;
+                        instruction.kind = CacheType::Instruction;
+                        found_cache = true;
+                    }
+                }
+            }
+            if line.starts_with("l2-cache-size") || line.starts_with("L2-cache-size") {
+                if let Some(size) = Self::parse_cache_value(line) {
+                    l2_size = size;
+                    cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
+                    found_cache = true;
+                }
+            }
+            if line.starts_with("l3-cache-size") || line.starts_with("L3-cache-size") {
+                if let Some(size) = Self::parse_cache_value(line) {
+                    l3_size = size;
+                    cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
+                    found_cache = true;
+                }
+            }
+        }
+
+        // If we found cache info from generic "cache size" but no structured info
+        if found_cache && l1_size == 0 && l2_size > 0 {
+            let l1_size = 32 * 1024; // Assume 32KB L1 for most PowerPC
+            cache.l1 = Level1Cache::Split {
+                data: CacheLevel::new(l1_size, CacheType::Data, 8, 0),
+                instruction: CacheLevel::new(l1_size, CacheType::Instruction, 8, 0),
+            };
+
+            if l2_size > 0 {
+                cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, l2_assoc, 0));
+            }
+            if l3_size > 0 {
+                cache.l3 = Some(CacheLevel::new(l3_size, CacheType::Unified, l3_assoc, 0));
+            }
+        }
+
+        if found_cache { Some(cache) } else { None }
+    }
+
+    fn parse_cache_value(line: &str) -> Option<u32> {
+        let parts: Vec<&str> = line.split(':').collect();
+        if parts.len() != 2 {
+            return None;
+        }
+
+        let value = parts[1]
+            .trim()
+            .trim_end_matches(" KB")
+            .trim_end_matches("K");
+        let size: u32 = value.parse().ok()?;
+        Some(size * 1024)
     }
 
     fn detect_cache_from_device_tree() -> Option<Cache> {
@@ -184,27 +391,102 @@ impl Cpu {
     }
 
     fn detect_clock_speed() -> Option<u64> {
-        // Try to get clock speed from device tree
-        let dt_root = Path::new("/proc/device-tree");
-        if dt_root.exists() {
-            // Try clock-frequency property
-            if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency")) {
-                if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
-                    return Some(freq_hz / 1_000_000); // Convert to MHz
-                }
-            }
+        // Try to get clock speed from device tree first
+        if let Some(speed) = Self::detect_clock_speed_from_device_tree() {
+            return Some(speed);
+        }
 
-            // Try timebase-frequency property (alternative on some systems)
-            if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency")) {
-                if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
-                    // Timebase frequency is often different from CPU clock
-                    // This is just an approximation - real implementation would need to check CPU specific registers
-                    return Some(freq_hz / 1_000_000); // Convert to MHz
+        // Try lscpu for clock speed
+        if let Some(speed) = Self::detect_clock_speed_from_lscpu() {
+            return Some(speed);
+        }
+
+        // Fallback to /proc/cpuinfo
+        Self::detect_clock_speed_from_cpuinfo()
+    }
+
+    fn detect_clock_speed_from_device_tree() -> Option<u64> {
+        let dt_root = Path::new("/proc/device-tree");
+        if !dt_root.exists() {
+            return None;
+        }
+
+        if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency")) {
+            if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
+                return Some(freq_hz / 1_000_000);
+            }
+        }
+
+        if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency")) {
+            if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
+                return Some(freq_hz / 1_000_000);
+            }
+        }
+
+        None
+    }
+
+    fn detect_clock_speed_from_lscpu() -> Option<u64> {
+        let output = match std::process::Command::new("lscpu").output() {
+            Ok(o) => o.stdout,
+            Err(_) => return None,
+        };
+
+        let output_str = match String::from_utf8(output) {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
+
+        for line in output_str.lines() {
+            if line.starts_with("CPU max MHz") || line.starts_with("CPU MHz") {
+                if let Some(freq) = Self::parse_mhz(line) {
+                    return Some(freq);
                 }
             }
         }
 
         None
+    }
+
+    fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
+        let output = match fs::read_to_string("/proc/cpuinfo") {
+            Ok(o) => o,
+            Err(_) => return None,
+        };
+
+        for line in output.lines() {
+            let line = line.trim();
+            if line.starts_with("cpu MHz") || line.starts_with("clock") {
+                if let Some(freq) = Self::parse_mhz(line) {
+                    return Some(freq as u64);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn parse_mhz(line: &str) -> Option<u64> {
+        let parts: Vec<&str> = line.split(':').collect();
+        if parts.len() != 2 {
+            return None;
+        }
+
+        let value = parts[1].trim();
+        let value = value.trim_end_matches("MHz").trim().trim_end_matches("MHz");
+        let value = value.trim_end_matches("GHz");
+
+        if value.contains('.') {
+            let parts: Vec<&str> = value.split('.').collect();
+            if let Ok(mhz) = parts[0].parse::<u64>() {
+                if value.ends_with("GHz") {
+                    return Some(mhz * 1000);
+                }
+                return Some(mhz);
+            }
+        }
+
+        value.parse::<u64>().ok()
     }
 }
 
@@ -232,7 +514,10 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
+        let newline = || println!();
+
         let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
+        let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
         let simple_line = |l, v: &str| {
             let l = label(l);
             println!("{}{}", l, v);
@@ -247,13 +532,29 @@ impl TCpu for Cpu {
             simple_line("Process", tech);
         }
 
-        // Display clock speed if available
         if let Some(clock_mhz) = self.clock_speed {
-            simple_line("Clock Speed", &format!("{} MHz", clock_mhz));
+            if clock_mhz >= 1000 {
+                let whole = clock_mhz / 1000;
+                let fract = (clock_mhz % 1000) / 10;
+                println!("{}{}.{:02} GHz", label("Frequency"), whole, fract);
+            } else {
+                println!("{}{}.00 MHz", label("Frequency"), clock_mhz);
+            }
+            println!();
         }
 
-        // Display cache information if available
         if let Some(ref cache) = self.cache {
+            fn cache_size(raw_size: u32) -> (u32, &'static str) {
+                let mut num = raw_size / 1024;
+                let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                if num >= 1024 {
+                    num /= 1024;
+                }
+
+                (num, unit)
+            }
+
             let cache_label = |l: &str| {
                 let l = label(l);
                 print!("{}{}", l, "");
@@ -261,31 +562,73 @@ impl TCpu for Cpu {
 
             println!("{}", label("Cache"));
 
-            // L1 Cache
             match &cache.l1 {
                 Level1Cache::Unified(l1) => {
-                    cache_label("L1:");
-                    println!("Unified {:>4} KB", l1.size / 1024);
+                    let (num, unit) = cache_size(l1.size);
+                    if l1.assoc > 0 {
+                        println!(
+                            "{}L1: Unified {} {}, {}-way",
+                            cache_label(""),
+                            num,
+                            unit,
+                            l1.assoc
+                        );
+                    } else {
+                        println!("{}L1: Unified {} {}", cache_label(""), num, unit);
+                    }
                 }
                 Level1Cache::Split { data, instruction } => {
-                    cache_label("L1d");
-                    println!("{:>4} KB", data.size / 1024);
-                    cache_label("L1i");
-                    println!("{:>4} KB", instruction.size / 1024);
+                    if data.size > 0 {
+                        let (num, unit) = cache_size(data.size);
+                        if data.assoc > 0 {
+                            println!(
+                                "{}L1d: {} {}, {}-way",
+                                cache_label(""),
+                                num,
+                                unit,
+                                data.assoc
+                            );
+                        } else {
+                            println!("{}L1d: {} {}", cache_label(""), num, unit);
+                        }
+                    }
+
+                    if instruction.size > 0 {
+                        let (num, unit) = cache_size(instruction.size);
+                        if instruction.assoc > 0 {
+                            println!(
+                                "{}{} {}, {}-way",
+                                sublabel("L1i"),
+                                num,
+                                unit,
+                                instruction.assoc
+                            );
+                        } else {
+                            println!("{}{} {}", sublabel("L1i"), num, unit);
+                        }
+                    }
                 }
             }
 
-            // L2 Cache
             if let Some(l2) = &cache.l2 {
-                cache_label("L2");
-                println!("{:>4} KB", l2.size / 1024);
+                let (num, unit) = cache_size(l2.size);
+                if l2.assoc > 0 {
+                    println!("{}{} {}, {}-way", sublabel("L2"), num, unit, l2.assoc);
+                } else {
+                    println!("{}{} {}", sublabel("L2"), num, unit);
+                }
             }
 
-            // L3 Cache
             if let Some(l3) = &cache.l3 {
-                cache_label("L3");
-                println!("{:>4} KB", l3.size / 1024);
+                let (num, unit) = cache_size(l3.size);
+                if l3.assoc > 0 {
+                    println!("{}{} {}, {}-way", sublabel("L3"), num, unit, l3.assoc);
+                } else {
+                    println!("{}{} {}", sublabel("L3"), num, unit);
+                }
             }
+
+            println!();
         }
 
         crate::println!();
