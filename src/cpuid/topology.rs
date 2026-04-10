@@ -3,18 +3,7 @@ use super::{
     EXT_LEAF_26, LEAF_0B, LEAF_1F, StaticVec, has_ht, is_valid_leaf, logical_cores, vendor_str,
     x86_cpuid_count,
 };
-use crate::common::cache::Cache;
-
-/// CPU speed information (base and boost frequencies).
-#[derive(Debug, Default, PartialEq)]
-pub struct Speed {
-    /// Base frequency in MHz
-    pub base: u32,
-    /// Boost frequency in MHz
-    pub boost: u32,
-    /// Whether the frequency was measured (vs reported by CPU)
-    pub measured: bool,
-}
+use crate::common::{Cache, Speed};
 
 impl Speed {
     /// Detects the CPU speed from available sources.

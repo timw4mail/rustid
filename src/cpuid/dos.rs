@@ -4,7 +4,7 @@
 //! This module provides DOS-specific implementations including console output
 //! via DOS INT 21h interrupts and a custom panic handler for bare-metal environments.
 
-use super::topology::Speed;
+use crate::common::Speed;
 use core::arch::asm;
 use core::fmt::Write;
 

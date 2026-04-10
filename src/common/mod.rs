@@ -81,3 +81,14 @@ pub struct CpuCore {
 
     pub count: usize,
 }
+
+/// CPU speed information (base and boost frequencies).
+#[derive(Debug, Default, PartialEq)]
+pub struct Speed {
+    /// Base frequency in MHz
+    pub base: u32,
+    /// Boost frequency in MHz
+    pub boost: u32,
+    /// Whether the frequency was measured (vs reported by CPU)
+    pub measured: bool,
+}
