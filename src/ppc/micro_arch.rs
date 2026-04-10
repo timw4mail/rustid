@@ -30,9 +30,9 @@ pub enum MicroArch {
     Ppc970fx,
 }
 
-impl From<MicroArch> for String {
-    fn from(ma: MicroArch) -> String {
-        let s = match ma {
+impl From<MicroArch> for &'static str {
+    fn from(ma: MicroArch) -> &'static str {
+        match ma {
             MicroArch::Unknown => UNK,
             MicroArch::Ppc601 => "PowerPC 601",
             MicroArch::Ppc603 => "PowerPC 603",
@@ -53,15 +53,13 @@ impl From<MicroArch> for String {
             MicroArch::Ppc7460 => "PowerPC 7460 (G4)",
             MicroArch::Ppc970 => "PowerPC 970 (G5)",
             MicroArch::Ppc970fx => "PowerPC 970FX (G5)",
-        };
-
-        String::from(s)
+        }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
-    pub marketing_name: String,
+    pub marketing_name: &'static str,
     pub micro_arch: MicroArch,
     pub code_name: &'static str,
     pub pvr_version: u16,
@@ -76,14 +74,14 @@ impl Default for CpuArch {
 
 impl CpuArch {
     pub fn new(
-        marketing_name: &str,
+        marketing_name: &'static str,
         micro_arch: MicroArch,
         code_name: &'static str,
         pvr_version: u16,
         technology: Option<&'static str>,
     ) -> Self {
         CpuArch {
-            marketing_name: String::from(marketing_name),
+            marketing_name,
             micro_arch,
             code_name,
             pvr_version,
@@ -214,7 +212,7 @@ mod tests {
     #[test]
     fn test_ppc750_lookup() {
         let cpu = CpuArch::find(0x0200);
-        assert_eq!(cpu.marketing_name.as_str(), "PowerPC 750");
+        assert_eq!(cpu.marketing_name, "PowerPC 750");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc750);
         assert_eq!(cpu.code_name, "Arthur");
     }
@@ -222,28 +220,28 @@ mod tests {
     #[test]
     fn test_apple_g5_lookup() {
         let cpu = CpuArch::find(0x0045);
-        assert_eq!(cpu.marketing_name.as_str(), "Apple G5");
+        assert_eq!(cpu.marketing_name, "Apple G5");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc970);
     }
 
     #[test]
     fn test_unknown_lookup() {
         let cpu = CpuArch::find(0xFFFF);
-        assert_eq!(cpu.marketing_name.as_str(), UNK);
+        assert_eq!(cpu.marketing_name, UNK);
         assert_eq!(cpu.micro_arch, MicroArch::Unknown);
     }
 
     #[test]
     fn test_ppc970fx_lookup() {
         let cpu = CpuArch::find(0x003C);
-        assert_eq!(cpu.marketing_name.as_str(), "PowerPC 970FX");
+        assert_eq!(cpu.marketing_name, "PowerPC 970FX");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc970fx);
     }
 
     #[test]
-    fn test_micro_arch_to_string() {
-        assert_eq!(String::from(MicroArch::Ppc750), "PowerPC 750 (G3)");
-        assert_eq!(String::from(MicroArch::AppleApollo), "Apple Apollo");
-        assert_eq!(String::from(MicroArch::Unknown), UNK);
+    fn test_micro_arch_to_str() {
+        assert_eq!(MicroArch::Ppc750.into(), "PowerPC 750 (G3)");
+        assert_eq!(MicroArch::AppleApollo.into(), "Apple Apollo");
+        assert_eq!(MicroArch::Unknown.into(), UNK);
     }
 }
