@@ -320,6 +320,11 @@ pub fn is_cyrix() -> bool {
     is_vendor(VENDOR_CYRIX)
 }
 
+/// Is the CPU a Vortex86 or very similar RDC chip?
+pub fn is_vortex() -> bool {
+    is_vendor(VENDOR_DMP) || is_vendor(VENDOR_RDC)
+}
+
 /// Returns true if the CPU is from Intel.
 pub fn is_intel() -> bool {
     is_vendor(VENDOR_INTEL)

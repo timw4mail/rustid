@@ -79,62 +79,29 @@ const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
 /// MP Floating Pointer Structure from the Intel MP Specification.
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[cfg(target_os = "none")]
-pub struct MpFloatingPointer {
+struct MpFloatingPointer {
     /// Structure signature ("_MP_")
-    pub signature: [u8; 4],
+    signature: [u8; 4],
     /// Physical address of the configuration table
-    pub config_table_ptr: u32,
+    config_table_ptr: u32,
     /// Length of this structure (in bytes)
-    pub length: u8,
+    length: u8,
     /// MP specification revision
-    pub spec_rev: u8,
+    spec_rev: u8,
     /// Checksum of this structure
-    pub checksum: u8,
+    checksum: u8,
     /// MP feature byte 1
-    pub mp_feature1: u8,
+    mp_feature1: u8,
     /// MP feature byte 2
-    pub mp_feature2: u8,
+    mp_feature2: u8,
     /// MP feature byte 3
-    pub mp_feature3: u8,
+    mp_feature3: u8,
     /// MP feature byte 4
-    pub mp_feature4: u8,
+    mp_feature4: u8,
     /// MP feature byte 5
-    pub mp_feature5: u8,
-}
-
-/// MP Configuration Table Header from the Intel MP Specification.
-#[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
-#[cfg(target_os = "none")]
-pub struct MpTableHeader {
-    /// Table signature ("PCMP")
-    pub signature: [u8; 4],
-    /// Table length in bytes
-    pub length: u16,
-    /// Specification revision
-    pub spec_rev: u8,
-    /// Checksum of the table
-    pub checksum: u8,
-    /// OEM identifier string
-    pub oem_id: [u8; 8],
-    /// OEM product identifier string
-    pub product_id: [u8; 12],
-    /// OEM table pointer
-    pub oem_table_ptr: u32,
-    /// OEM table size
-    pub oem_table_size: u16,
-    /// Number of entries in the table
-    pub entry_count: u16,
-    /// Local APIC address
-    pub lapic_addr: u32,
-    /// Extended table length
-    pub extended_table_length: u16,
-    /// Extended table checksum
-    pub extended_table_checksum: u8,
-    /// Reserved
-    pub reserved: u8,
+    mp_feature5: u8,
 }
 
 #[cfg(target_os = "none")]
@@ -143,19 +110,9 @@ impl MpTable {
     pub fn detect() -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
-        // MP Table lookup is only applicable to Intel CPUs
-        if !super::is_intel() {
+        // MP Table lookup is only applicable to certain CPUs
+        if !(super::is_intel() || super::is_vortex()) {
             return table;
-        }
-
-        // Try BIOS interrupt first (Intel MP Spec BIOS extensions)
-        if let Some((_fp_ptr, config_ptr)) = Self::get_config_via_bios() {
-            if config_ptr != 0
-                && let Some(count) = Self::parse_config_table(config_ptr)
-            {
-                table.sockets = count;
-                return table;
-            }
         }
 
         // Fallback: Scan memory ranges safely
@@ -171,45 +128,6 @@ impl MpTable {
         }
 
         table
-    }
-
-    /// Uses INT 15h, AX=D100h to get MP configuration pointers.
-    /// This is supported by many MP-compliant BIOSes.
-    #[inline(never)]
-    fn get_config_via_bios() -> Option<(u32, u32)> {
-        use core::arch::asm;
-
-        let fp_ptr: u32;
-        let config_ptr: u32;
-        let flags: u16;
-
-        unsafe {
-            asm!(
-                "push ds",
-                "push es",
-                "push esi",
-                "push edi",
-                "mov eax, 0xD100",
-                "int 0x15",
-                "pushf",
-                "pop {0:x}",
-                "pop edi",
-                "pop esi",
-                "pop es",
-                "pop ds",
-                out(reg) flags,
-                lateout("ebx") fp_ptr,
-                lateout("ecx") config_ptr,
-                out("eax") _,
-                out("edx") _,
-            );
-        }
-
-        if (flags & 1) == 0 {
-            Some((fp_ptr, config_ptr))
-        } else {
-            None
-        }
     }
 
     #[inline(never)]
