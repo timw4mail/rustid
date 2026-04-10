@@ -11,6 +11,7 @@ const CPUFAMILY_ARM_FIRESTORM_ICESTORM: usize = 0x1b588bb3;
 const CPUFAMILY_ARM_BLIZZARD_AVALANCHE: usize = 0xda33d83d;
 const CPUFAMILY_ARM_EVEREST_SAWTOOTH: usize = 0x8765edea;
 
+/// Get all the juicy cpu details from sysctl
 fn get_sysctl_map() -> BTreeMap<String, String> {
     let mut values: BTreeMap<String, String> = BTreeMap::new();
     TryInto::<String>::try_into(
