@@ -511,10 +511,16 @@ impl TCpu for Cpu {
         let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
 
         let cache_count = |share_count| -> Str<_> {
-            if (!multi_core) || share_count == 0 || (self.topology.threads / share_count) <= 1 {
+            let count = if share_count == 0 {
+                self.topology.sockets
+            } else {
+                self.topology.threads / share_count
+            };
+
+            if count < 2 {
                 sfmt!("")
             } else {
-                sfmt!("{}x ", self.topology.threads / share_count)
+                sfmt!("{}x ", count)
             }
         };
 
@@ -584,7 +590,7 @@ impl TCpu for Cpu {
 
         // Sockets / Cores / Threads
         if multi_core {
-            let lbl = label("Cores");
+            let lbl = label("Topology");
             if self.topology.sockets > 1 {
                 println!(
                     "{}{} sockets, {} cores, {} threads",
@@ -603,9 +609,21 @@ impl TCpu for Cpu {
         }
 
         if let Some(cache) = self.topology.cache {
+            #[inline]
+            fn cache_size(raw_size: u32) -> (u32, &'static str) {
+                let mut num = raw_size / 1024;
+                let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                if num >= 1024 {
+                    num /= 1024;
+                }
+
+                (num, unit)
+            }
+
             match cache.l1 {
                 Level1Cache::Unified(cache) => {
-                    println!("{}L1: Unified {:>4} KB", label("Cache"), cache.size / 1024);
+                    println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
                     let data_count: Str<4> = cache_count(data.share_count);
@@ -635,13 +653,7 @@ impl TCpu for Cpu {
 
             if let Some(l2) = cache.l2 {
                 let count = cache_count(l2.share_count);
-
-                let mut num = l2.size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                if num >= 1024 {
-                    num /= 1024;
-                }
+                let (num, unit) = cache_size(l2.size);
 
                 println!(
                     "{} {}{} {}, {}-way",
@@ -663,12 +675,7 @@ impl TCpu for Cpu {
                     sfmt!("{}x ", self.topology.sockets)
                 };
 
-                let mut num = l3.size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                if num >= 1024 {
-                    num /= 1024
-                }
+                let (num, unit) = cache_size(l3.size);
 
                 println!(
                     "{} {}{} {}, {}-way",
