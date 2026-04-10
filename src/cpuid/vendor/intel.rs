@@ -90,6 +90,7 @@ impl Intel {
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some("45nm")),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some("32nm")),
             (0, 6, 2, 12, 0) => brand_arch(MicroArch::Westmere, "Arrandale", Some("32nm")),
+            (0, 6, 3, 7, 3) => brand_arch(MicroArch::Silvermont, "Bay Trail-M", Some("22nm")),
             (0, 6, 3, 12, _) => brand_arch(MicroArch::Haswell, "Haswell", Some("22nm")),
             (0, 6, 3, 15, _) => brand_arch(MicroArch::Haswell, "Haswell-EP 4S", Some("22nm")),
             (0, 6, 4, 12, 4) => brand_arch(MicroArch::Airmont, "Braswell", Some("14nm")),
