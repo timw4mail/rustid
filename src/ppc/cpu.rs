@@ -140,7 +140,27 @@ impl Cpu {
             }),
 
             // PowerPC 7400 (G4) series
-            0x0308 | 0x0309 | 0x030C | 0x030D | 0x0351..=0x0354 => Some(Cache {
+            0x0308 | 0x0309 | 0x030C | 0x0351..=0x0354 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32 * 1024, CacheType::Data, 8, 0), // 32KB data, 8-way
+                    instruction: CacheLevel::new(32 * 1024, CacheType::Instruction, 8, 0), // 32KB instruction, 8-way
+                },
+                l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
+                l3: None,
+            }),
+
+            // G4s with more cache
+            0x030D => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32 * 1024, CacheType::Data, 8, 0), // 32KB data, 8-way
+                    instruction: CacheLevel::new(32 * 1024, CacheType::Instruction, 8, 0), // 32KB instruction, 8-way
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 0)),
+                l3: None,
+            }),
+
+            // Apple G4 variants
+            0x0033 | 0x8000..=0x8002 => Some(Cache {
                 l1: Level1Cache::Split {
                     data: CacheLevel::new(32 * 1024, CacheType::Data, 8, 0), // 32KB data, 8-way
                     instruction: CacheLevel::new(32 * 1024, CacheType::Instruction, 8, 0), // 32KB instruction, 8-way
@@ -156,16 +176,6 @@ impl Cpu {
                     instruction: CacheLevel::new(64 * 1024, CacheType::Instruction, 8, 0), // 64KB instruction, 8-way
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 0)), // 512KB unified L2, 8-way
-                l3: None,
-            }),
-
-            // Apple G4 variants
-            0x0033 | 0x8000..=0x8002 => Some(Cache {
-                l1: Level1Cache::Split {
-                    data: CacheLevel::new(32 * 1024, CacheType::Data, 8, 0), // 32KB data, 8-way
-                    instruction: CacheLevel::new(32 * 1024, CacheType::Instruction, 8, 0), // 32KB instruction, 8-way
-                },
-                l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
                 l3: None,
             }),
 
