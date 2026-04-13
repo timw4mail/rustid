@@ -279,6 +279,57 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
+    #[cfg(target_arch = "x86")]
+    fn intel_brand_index(&self) -> Option<Str<64>> {
+        let brand_id = super::get_brand_id();
+
+        const CELERON: &str = "Intel® Celeron® processor";
+        const XEON: &str = "Intel® Xeon® processor";
+        const XEON_MP: &str = "Intel® Xeon® processor MP";
+
+        let (family, model, stepping) = (
+            self.signature.family,
+            self.signature.model,
+            self.signature.stepping,
+        );
+
+        // If the family and model are greater than (0xF, 0x3),
+        // (Prescott, or 64-bit), this table dos not apply
+        if family == 15 && model >= 3 {
+            return None;
+        }
+
+        let str = match brand_id {
+            0x01 | 0x0A | 0x14 => CELERON,
+            0x02 | 0x04 => "Intel® Pentium® III processor",
+            0x03 => match (family, model, stepping) {
+                (0x6, 0xB, 0x1) => CELERON,
+                _ => "Intel® Pentium® III Xeon",
+            },
+            0x06 => "Mobile Intel® Pentium® III processor-M",
+            0x07 | 0x0F | 0x13 | 0x17 => "Mobile Intel® Celeron® processor",
+            0x08 | 0x09 => "Intel® Pentium® 4 processor",
+            0x0B => match (family, model, stepping) {
+                (0xF, 0x1, 0x3) => XEON_MP,
+                _ => XEON,
+            },
+            0x0C => XEON_MP,
+            0x0E => match (family, model, stepping) {
+                (0xF, 0x1, 0x3) => XEON,
+                _ => "Mobile Intel® Pentium® 4 processor-M",
+            },
+            0x11 | 0x15 => "Mobile Genuine Intel® processor",
+            0x12 => "Intel® Celeron® M processor",
+            0x16 => "Intel® Pentium® M processor",
+            _ => UNK,
+        };
+
+        match str {
+            UNK => None,
+            _ => Some(Str::from(str)),
+        }
+    }
+
     /// Returns a human-readable display name for the CPU model.
     ///
     /// This attempts to produce a marketing-style name based on the
@@ -300,6 +351,12 @@ impl Cpu {
             CpuBrand::Cyrix => {
                 // Cyrix MSR model lookup is more accurate than the 'generic' way
                 return super::vendor::Cyrix::model_string();
+            }
+            CpuBrand::Intel => {
+                // Check the Intel model lookup table
+                if let Some(model_name) = self.intel_brand_index() {
+                    return model_name;
+                }
             }
             CpuBrand::Unknown => 'nocpuid: {
                 // Not a 386 or 486
