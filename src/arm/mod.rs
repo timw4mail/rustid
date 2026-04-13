@@ -6,7 +6,7 @@ pub mod cpu;
 pub mod micro_arch;
 use crate::common::{CoreType, CpuCore, Level1Cache};
 pub use micro_arch::Midr;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 trait TArmCpu {
     /// Returns the CPU model name, if available
@@ -15,7 +15,7 @@ trait TArmCpu {
         None
     }
 
-    fn raw_midr(&self) -> usize;
+    fn raw_midr(&self) -> HashSet<usize>;
     fn midr(&self) -> &Midr;
     fn vendor(&self) -> &str;
 }

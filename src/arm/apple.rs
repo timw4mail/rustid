@@ -4,7 +4,7 @@ use super::micro_arch::*;
 use crate::arm::TArmCpu;
 use crate::common::UNK;
 use crate::common::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::process::Command;
 
 const CPUFAMILY_ARM_FIRESTORM_ICESTORM: usize = 0x1b588bb3;
@@ -119,8 +119,8 @@ fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
-    pub raw_midr: usize,
-    pub midr: Midr,
+    pub raw_midr: HashSet<usize>,
+    pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
     pub model: String,
@@ -130,10 +130,14 @@ pub struct Cpu {
 
 impl TCpu for Cpu {
     fn detect() -> Self {
-        let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
+        let mut raw_midr: HashSet<usize> = HashSet::new();
+        let mut midrs: HashSet<Midr> = HashSet::new();
 
-        let raw_midr = get_synth_midr();
-        let midr = Midr::new(raw_midr);
+        let midr_val = get_synth_midr();
+        raw_midr.insert(midr_val);
+        let midr = Midr::new(midr_val);
+        midrs.insert(midr);
+
         let vendor = Vendor::from(midr.implementer);
         let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
         let values = get_sysctl_map();
@@ -200,7 +204,7 @@ impl TCpu for Cpu {
         Self {
             model: values.get("machdep.cpu.brand_string").unwrap().to_string(),
             raw_midr,
-            midr,
+            midrs,
             vendor: vendor.into(),
             cpu_arch,
             cores,
@@ -212,7 +216,10 @@ impl TCpu for Cpu {
     where
         Self: std::fmt::Debug,
     {
-        println!("Main ID Register (MIDR): 0x{:X}", self.raw_midr());
+        println!(
+            "Main ID Register (MIDR): 0x{:X}",
+            self.raw_midr().iter().next().unwrap_or(&0)
+        );
         println!(
             "Implementer: 0x{:X} ({})",
             self.midr().implementer,
@@ -234,12 +241,12 @@ impl TArmCpu for Cpu {
         Some(&self.model)
     }
 
-    fn raw_midr(&self) -> usize {
-        self.raw_midr
+    fn raw_midr(&self) -> HashSet<usize> {
+        self.raw_midr.clone()
     }
 
     fn midr(&self) -> &Midr {
-        &self.midr
+        self.midrs.iter().next().unwrap_or(&Midr::default())
     }
 
     fn vendor(&self) -> &str {
