@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.11.3]
+
+### Added
+- Intel brand ID lookup table (DOS build excluded due to space constraints)
+- License file
+
+### Changed
+- Use key names instead of blind indexes for lscpu cache information
+- Move Speed struct to common module
+- Use fewer String objects in PPC module
+- Relabel "Cores" display to "Topology"
+- Streamline MP table lookup for DOS
+- Improved information display for PowerPC
+
+### Fixed
+- Fix cache detection for PPC
+- Fix detection of cache share-count using correct bit mask
+- Fix entry for Geode LX
+- Fix PPC display code
+- Show L3 cache count for multiple sockets
+
 ## [0.10.1]
 
 ### Added
