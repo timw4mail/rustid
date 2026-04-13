@@ -12,7 +12,7 @@ pub struct Cpu {
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
-    pub cores: BTreeMap<CoreType, CpuCore>,
+    pub cores: BTreeMap<(CoreType, Option<String>), CpuCore>,
 }
 
 impl TCpu for Cpu {
@@ -234,24 +234,26 @@ impl Cpu {
         midrs
     }
 
-    fn detect_cores(midrs: &[Midr]) -> BTreeMap<CoreType, CpuCore> {
-        let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
+    fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>), CpuCore> {
+        let mut cores: BTreeMap<(CoreType, Option<String>), CpuCore> = BTreeMap::new();
 
         for midr in midrs {
             let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
             let core_type = arch.micro_arch.core_type();
             let core_name: String = arch.micro_arch.into();
 
+            let name = if core_name != micro_arch::UNK {
+                Some(core_name)
+            } else {
+                None
+            };
+
             cores
-                .entry(core_type)
+                .entry((core_type, name.clone()))
                 .and_modify(|c| c.count += 1)
                 .or_insert(CpuCore {
                     kind: core_type,
-                    name: if core_name != micro_arch::UNK {
-                        Some(core_name)
-                    } else {
-                        None
-                    },
+                    name,
                     cache: None,
                     count: 1,
                 });

@@ -124,7 +124,7 @@ pub struct Cpu {
     pub vendor: String,
     pub cpu_arch: CpuArch,
     pub model: String,
-    pub cores: BTreeMap<CoreType, CpuCore>,
+    pub cores: BTreeMap<(CoreType, Option<String>), CpuCore>,
     pub raw: BTreeMap<String, String>,
 }
 
@@ -141,7 +141,7 @@ impl TCpu for Cpu {
         let vendor = Vendor::from(midr.implementer);
         let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
         let values = get_sysctl_map();
-        let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
+        let mut cores: BTreeMap<(CoreType, Option<String>), CpuCore> = BTreeMap::new();
 
         let perf_levels: usize = values.get("hw.nperflevels").unwrap().parse().unwrap();
 
@@ -192,7 +192,7 @@ impl TCpu for Cpu {
             let name = Self::find_core_codename(&midr, kind);
 
             cores.insert(
-                kind,
+                (kind, name.clone()),
                 CpuCore {
                     kind,
                     name,

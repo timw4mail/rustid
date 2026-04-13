@@ -429,6 +429,66 @@ impl CpuArch {
                 None,
             ),
 
+            // Cortex-A510 series
+            0xD46 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A510",
+                MicroArch::ArmCortexA510,
+                "Cortex-A510",
+                0xD46,
+                None,
+            ),
+
+            // Cortex-A520 series
+            0xD80 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A520",
+                MicroArch::ArmCortexA520,
+                "Cortex-A520",
+                0xD80,
+                None,
+            ),
+
+            // Cortex-A710 series
+            0xD47 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A710",
+                MicroArch::ArmCortexA710,
+                "Cortex-A710",
+                0xD47,
+                None,
+            ),
+
+            // Cortex-A715 series
+            0xD4D => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A715",
+                MicroArch::ArmCortexA715,
+                "Cortex-A715",
+                0xD4D,
+                None,
+            ),
+
+            // Cortex-A720 series
+            0xD81 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A720",
+                MicroArch::ArmCortexA720,
+                "Cortex-A720",
+                0xD81,
+                None,
+            ),
+
+            // Cortex-A725 series
+            0xD87 => Self::new(
+                Implementer::Arm,
+                "ARM Cortex-A725",
+                MicroArch::ArmCortexA725,
+                "Cortex-A725",
+                0xD87,
+                None,
+            ),
+
             // Cortex-X1 series
             0xD13 => Self::new(
                 Implementer::Arm,
@@ -440,32 +500,32 @@ impl CpuArch {
             ),
 
             // Cortex-X2 series
-            0xD20 => Self::new(
+            0xD48 => Self::new(
                 Implementer::Arm,
                 "ARM Cortex-X2",
                 MicroArch::ArmCortexX2,
                 "Cortex-X2",
-                0xD20,
+                0xD48,
                 None,
             ),
 
             // Cortex-X3 series
-            0xD21 => Self::new(
+            0xD4E => Self::new(
                 Implementer::Arm,
                 "ARM Cortex-X3",
                 MicroArch::ArmCortexX3,
                 "Cortex-X3",
-                0xD21,
+                0xD4E,
                 None,
             ),
 
             // Cortex-X4 series
-            0xD22 => Self::new(
+            0xD82 => Self::new(
                 Implementer::Arm,
                 "ARM Cortex-X4",
                 MicroArch::ArmCortexX4,
                 "Cortex-X4",
-                0xD22,
+                0xD82,
                 None,
             ),
 
@@ -490,32 +550,32 @@ impl CpuArch {
             ),
 
             // Neoverse N2
-            0xD42 => Self::new(
+            0xD49 => Self::new(
                 Implementer::Arm,
                 "ARM Neoverse N2",
                 MicroArch::ArmNeoverseN2,
                 "Neoverse N2",
-                0xD42,
+                0xD49,
                 None,
             ),
 
             // Neoverse V1
-            0xD60 => Self::new(
+            0xD44 => Self::new(
                 Implementer::Arm,
                 "ARM Neoverse V1",
                 MicroArch::ArmNeoverseV1,
                 "Neoverse V1",
-                0xD60,
+                0xD44,
                 None,
             ),
 
             // Neoverse V2
-            0xD61 => Self::new(
+            0xD4F => Self::new(
                 Implementer::Arm,
                 "ARM Neoverse V2",
                 MicroArch::ArmNeoverseV2,
                 "Neoverse V2",
-                0xD61,
+                0xD4F,
                 None,
             ),
 

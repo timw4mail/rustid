@@ -41,7 +41,7 @@ impl CpuDisplay {
 
     pub fn display(
         cpu_arch: &crate::arm::micro_arch::CpuArch,
-        cores: &BTreeMap<CoreType, CpuCore>,
+        cores: &BTreeMap<(CoreType, Option<String>), CpuCore>,
     ) {
         println!();
         println!(
@@ -62,76 +62,68 @@ impl CpuDisplay {
             println!();
         }
 
-        [CoreType::Super, CoreType::Performance, CoreType::Efficiency]
-            .iter()
-            .for_each(|k| {
-                if let Some(core) = cores.get(k) {
-                    let name = format!("{} Cores", Into::<String>::into(*k));
-                    println!("{}", Self::label(&name));
+        for ((kind, _), core) in cores {
+            let name = format!("{} Cores", Into::<String>::into(*kind));
+            println!("{}", Self::label(&name));
 
-                    if let Some(name) = core.name.clone() {
-                        println!("{}{}", Self::label("Name"), name);
+            if let Some(name) = core.name.clone() {
+                println!("{}{}", Self::label("Name"), name);
+            }
+
+            println!("{}{}", Self::label("Count"), core.count);
+
+            if let Some(cache) = core.cache {
+                match cache.l1 {
+                    Level1Cache::Unified(cache) => {
+                        println!("{}L1: Unified {:>4} KB", Self::label("Cache"), cache.size);
                     }
+                    Level1Cache::Split { data, instruction } => {
+                        let data_count: String =
+                            Self::cache_count(data.share_count, core.count as u32);
+                        let instruction_count =
+                            Self::cache_count(instruction.share_count, core.count as u32);
 
-                    println!("{}{}", Self::label("Count"), core.count);
-
-                    if let Some(cache) = core.cache {
-                        match cache.l1 {
-                            Level1Cache::Unified(cache) => {
-                                println!(
-                                    "{}L1: Unified {:>4} KB",
-                                    Self::label("Cache"),
-                                    cache.size
-                                );
-                            }
-                            Level1Cache::Split { data, instruction } => {
-                                let data_count: String =
-                                    Self::cache_count(data.share_count, core.count as u32);
-                                let instruction_count =
-                                    Self::cache_count(instruction.share_count, core.count as u32);
-
-                                println!(
-                                    "{}L1d: {}{} KB",
-                                    Self::label("Cache"),
-                                    &data_count,
-                                    data.size
-                                );
-                                println!(
-                                    "{}{}{} KB",
-                                    Self::sublabel("L1i"),
-                                    &instruction_count,
-                                    instruction.size
-                                );
-                            }
-                        }
-
-                        if let Some(cache) = cache.l2 {
-                            let count = Self::cache_count(cache.share_count, core.count as u32);
-
-                            let mut num = cache.size / 1024;
-                            let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                            if num >= 1024 {
-                                num /= 1024;
-                            }
-
-                            println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
-                        }
-
-                        if let Some(cache) = cache.l3 {
-                            let mut num = cache.size;
-                            let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                            if num >= 1024 {
-                                num /= 1024
-                            }
-
-                            println!("{} {} {}", Self::sublabel("L3"), num, unit);
-                        }
+                        println!(
+                            "{}L1d: {}{} KB",
+                            Self::label("Cache"),
+                            &data_count,
+                            data.size
+                        );
+                        println!(
+                            "{}{}{} KB",
+                            Self::sublabel("L1i"),
+                            &instruction_count,
+                            instruction.size
+                        );
                     }
-                    println!();
                 }
-            });
+
+                if let Some(cache) = cache.l2 {
+                    let count = Self::cache_count(cache.share_count, core.count as u32);
+
+                    let mut num = cache.size / 1024;
+                    let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                    if num >= 1024 {
+                        num /= 1024;
+                    }
+
+                    println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
+                }
+
+                if let Some(cache) = cache.l3 {
+                    let mut num = cache.size;
+                    let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                    if num >= 1024 {
+                        num /= 1024
+                    }
+
+                    println!("{} {} {}", Self::sublabel("L3"), num, unit);
+                }
+            }
+            println!();
+        }
     }
 }
 
