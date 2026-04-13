@@ -91,6 +91,9 @@ pub const EXT_LEAF_5: u32 = 0x8000_0005;
 /// AMD L2/L3 cache parameters
 pub const EXT_LEAF_6: u32 = 0x8000_0006;
 
+/// AMD address size and core count
+pub const EXT_LEAF_8: u32 = 0x8000_0008;
+
 /// AMD deterministic cache parameters
 pub const EXT_LEAF_1D: u32 = 0x8000_001D;
 
@@ -350,11 +353,21 @@ pub fn is_overdrive() -> bool {
 pub fn logical_cores() -> u32 {
     // Since AMD has a handy flag for getting logical cores,
     // try that first
-    if is_amd() && max_leaf() > 0 {
-        let res = x86_cpuid(1);
-        let count = (res.ebx >> 16) & 0xFF;
-        if count != 0 {
-            return count;
+    if is_amd() {
+        if is_valid_leaf(EXT_LEAF_8) {
+            let res = x86_cpuid(EXT_LEAF_8);
+            let count = (res.ecx & 0xFF) + 1;
+            if count > 1 {
+                return count;
+            }
+        }
+
+        if max_leaf() > 0 {
+            let res = x86_cpuid(1);
+            let count = (res.ebx >> 16) & 0xFF;
+            if count != 0 {
+                return count;
+            }
         }
     }
 

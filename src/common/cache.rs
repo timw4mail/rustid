@@ -250,12 +250,12 @@ impl Cache {
                 continue;
             }
 
-            let name = parts[table_keys.binary_search(&"NAME").ok()?];
-            let size_str = parts[table_keys.binary_search(&"ONE-SIZE").ok()?];
-            let ways_str = parts[table_keys.binary_search(&"WAYS").ok()?];
+            let name = parts[table_keys.iter().position(|&x| x == "NAME")?];
+            let size_str = parts[table_keys.iter().position(|&x| x == "ONE-SIZE")?];
+            let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
 
             // Parse size (e.g., "32K", "256K", "4M")
-            let size_kb: u32 = if size_str.ends_with('K') {
+            let size_bytes: u32 = if size_str.ends_with('K') {
                 size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024
             } else if size_str.ends_with('M') {
                 size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024 * 1024
@@ -268,28 +268,28 @@ impl Cache {
             match name {
                 "L1d" => {
                     cache.l1 = Level1Cache::Split {
-                        data: CacheLevel::new(size_kb, CacheType::Data, ways, 0),
+                        data: CacheLevel::new(size_bytes, CacheType::Data, ways, 0),
                         instruction: CacheLevel::default(),
                     };
                     found_cache = true;
                 }
                 "L1i" => {
                     if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
-                        instruction.size = size_kb;
+                        instruction.size = size_bytes;
                         instruction.kind = CacheType::Instruction;
                         instruction.assoc = ways;
                     }
                 }
                 "L1" => {
-                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_kb, ways));
+                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_bytes, ways));
                     found_cache = true;
                 }
                 "L2" => {
-                    cache.l2 = Some(CacheLevel::new(size_kb, CacheType::Unified, ways, 0));
+                    cache.l2 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
                     found_cache = true;
                 }
                 "L3" => {
-                    cache.l3 = Some(CacheLevel::new(size_kb, CacheType::Unified, ways, 0));
+                    cache.l3 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
                     found_cache = true;
                 }
                 _ => {}
