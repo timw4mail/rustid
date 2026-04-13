@@ -280,6 +280,7 @@ impl Cpu {
     }
 
     #[cfg(target_arch = "x86")]
+    #[cfg(not(target_os = "none"))]
     fn intel_brand_index(&self) -> Option<Str<64>> {
         let brand_id = super::get_brand_id();
 
@@ -352,6 +353,7 @@ impl Cpu {
                 // Cyrix MSR model lookup is more accurate than the 'generic' way
                 return super::vendor::Cyrix::model_string();
             }
+            #[cfg(not(target_os = "none"))]
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
                 if let Some(model_name) = self.intel_brand_index() {

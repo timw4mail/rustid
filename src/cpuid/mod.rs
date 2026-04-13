@@ -396,12 +396,12 @@ fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 // ! Leaf 0000_0001h
 // ------------------------------------------------------------------------
 
-/// Returns the CPU brand ID from extended leaf 0x80000001.
+/// Returns the CPU brand ID from basic leaf 0x00000001.
 ///
 /// The brand ID is a value that identifies the specific CPU brand variant.
 pub fn get_brand_id() -> u32 {
-    let res = x86_cpuid(EXT_LEAF_1);
-    res.ebx >> 8
+    let res = x86_cpuid(LEAF_1);
+    res.ebx & 0xFF
 }
 
 pub fn has_aes() -> bool {
