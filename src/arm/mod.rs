@@ -52,10 +52,8 @@ impl CpuDisplay {
         );
         println!();
 
-        if let Some(model) = model {
-            println!("{}{}", Self::label("Model"), model);
-            println!();
-        }
+        println!("{}{}", Self::label("Model"), cpu_arch.model);
+        println!();
 
         println!("{}{}", Self::label("Code Name"), cpu_arch.code_name);
         println!();
