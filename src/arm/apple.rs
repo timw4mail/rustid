@@ -231,7 +231,7 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, Some(&self.model));
+        CpuDisplay::display(&self.cpu_arch, &self.cores);
     }
 }
 
