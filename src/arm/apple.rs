@@ -141,6 +141,7 @@ impl TCpu for Cpu {
         let vendor = Vendor::from(midr.implementer);
         let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
         let values = get_sysctl_map();
+        let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
 
         let perf_levels: usize = values.get("hw.nperflevels").unwrap().parse().unwrap();
 
@@ -220,14 +221,16 @@ impl TCpu for Cpu {
             "Main ID Register (MIDR): 0x{:X}",
             self.raw_midr().iter().next().unwrap_or(&0)
         );
-        println!(
-            "Implementer: 0x{:X} ({})",
-            self.midr().implementer,
-            self.vendor()
-        );
-        println!("Variant: 0x{:X}", self.midr().variant);
-        println!("Part Number: 0x{:X}", self.midr().part);
-        println!("Revision: 0x{:X}", self.midr().revision);
+        if let Some(midr) = self.midr() {
+            println!(
+                "Implementer: 0x{:X} ({})",
+                midr.implementer,
+                self.vendor()
+            );
+            println!("Variant: 0x{:X}", midr.variant);
+            println!("Part Number: 0x{:X}", midr.part);
+            println!("Revision: 0x{:X}", midr.revision);
+        }
         println!("{:#?}", self);
     }
 
@@ -245,8 +248,8 @@ impl TArmCpu for Cpu {
         self.raw_midr.clone()
     }
 
-    fn midr(&self) -> &Midr {
-        self.midrs.iter().next().unwrap_or(&Midr::default())
+    fn midr(&self) -> Option<&Midr> {
+        self.midrs.iter().next().map(|m| m)
     }
 
     fn vendor(&self) -> &str {

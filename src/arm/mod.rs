@@ -16,7 +16,7 @@ trait TArmCpu {
     }
 
     fn raw_midr(&self) -> HashSet<usize>;
-    fn midr(&self) -> &Midr;
+    fn midr(&self) -> Option<&Midr>;
     fn vendor(&self) -> &str;
 }
 
