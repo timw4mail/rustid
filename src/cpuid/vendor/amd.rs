@@ -41,7 +41,7 @@ impl TMicroArch for Amd {
             (0, 5, 0, 7, _) => brand_arch(MicroArch::K6, "Little Foot", Some(N250)),
             (0, 5, 0, 8, _) => brand_arch(MicroArch::K6, "Chompers/CXT", Some(N250)), // K6-2
             (0, 5, 0, 9, _) => brand_arch(MicroArch::K6, "Sharptooth", Some(N250)),   // K6-III
-            (0, 5, 0, 10, _) => brand_arch(MicroArch::K7, "Thoroughbred (Geode NX)", Some(N130)), // Per instlatx64
+            (0, 5, 0, 10, _) => brand_arch(MicroArch::Geode, "Geode LX", Some(N130)),
             (0, 5, 0, 12 | 13, _) => {
                 // K6-2+/K6-III+
                 // per sandpile.org
