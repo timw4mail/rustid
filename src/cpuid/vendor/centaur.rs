@@ -53,7 +53,7 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 8, 8..=15) => brand_arch(MicroArch::Nehemiah, "C5X", Some(N130)), // per sandpile.org
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some(N130)),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", Some(N130)),
-            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J", Some(N90)),
+            (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J Model A", Some(N90)),
             (0, 5, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some(N90)), // OLPC XO 1.5
 
             // From instlatx64
@@ -61,7 +61,7 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB A1", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNB A2", None),
             (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ", None),
-            (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNQ A2", Some(N40)), // My hardware
+            (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNC/CNQ A2", Some(N40)), // My hardware
             (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
             (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some(N65)),
 

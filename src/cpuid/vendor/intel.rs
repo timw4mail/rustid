@@ -52,7 +52,7 @@ impl Intel {
 
             // Pentium 2
             (0, 6, 0, 0..=2, _) => brand_arch(MicroArch::PentiumII, UNK, None),
-            (0, 6, 0, 3, _) => brand_arch(MicroArch::PentiumII, "Klamath", Some(N350)),
+            (0, 6, 0, 3, _) => brand_arch(MicroArch::PentiumII, "Klamath", Some(N280)),
             (0, 6, 0, 4, _) => brand_arch(MicroArch::PentiumIII, UNK, None),
             (0, 6, 0, 5, 1) => brand_arch(MicroArch::PentiumII, "Deschutes", Some(N250)),
             (0, 6, 0, 6, _) => brand_arch(MicroArch::PentiumII, "Dixon / Mendocino", None),

@@ -4,6 +4,7 @@ pub const N800: &str = "800nm";
 pub const N600: &str = "600nm";
 pub const N350: &str = "350nm";
 pub const N300: &str = "300nm";
+pub const N280: &str = "280nm";
 pub const N260: &str = "260nm";
 pub const N250: &str = "250nm";
 pub const N220: &str = "220nm";
