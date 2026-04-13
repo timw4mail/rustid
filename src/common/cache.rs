@@ -434,6 +434,10 @@ impl Cache {
 
     #[cfg(target_os = "windows")]
     fn from_windows() -> Option<Cache> {
+        let mut cache = Cache::default();
+        let mut found_l1d = false;
+        let mut found_l1i = false;
+
         use windows::Win32::System::SystemInformation::{
             GetLogicalProcessorInformationEx, LOGICAL_PROCESSOR_RELATIONSHIP,
         };
@@ -460,82 +464,88 @@ impl Cache {
             return None;
         }
 
-        let mut cache = Cache::default();
-        let mut found_l1d: u32 = 0;
-        let mut found_l1i: u32 = 0;
-        let mut found_l2: u32 = 0;
-        let mut found_l3: u32 = 0;
+        #[repr(C, packed)]
+        struct CacheInfo {
+            level: u8,
+            cache_type: u8,
+            line_size: u32,
+            num_lines: u32,
+            page_size: u32,
+            associativity: u8,
+            _reserved: [u8; 3],
+            cache_size: u32,
+        }
 
         let mut offset = 0usize;
+        let mut l1d_sz: u32 = 0;
+        let mut l1i_sz: u32 = 0;
+        let mut l2_sz: u32 = 0;
+        let mut l3_sz: u32 = 0;
+
         unsafe {
             while offset < buffer.len() {
                 let size = *(buffer.as_ptr().add(offset) as *const u32);
-                if size == 0 {
+                if size == 0 || size < 8 {
                     break;
                 }
 
-                let relationship_type = *(buffer.as_ptr().add(offset + 4) as *const u32);
+                let relation = *(buffer.as_ptr().add(offset + 4) as *const u32);
+                if relation != 1 {
+                    offset += size as usize;
+                    continue;
+                }
 
-                if relationship_type == 1 {
-                    let cache_offset = offset + 8;
+                let cache_offset = offset + 8;
+                if cache_offset + size_of::<CacheInfo>() > buffer.len() {
+                    offset += size as usize;
+                    continue;
+                }
 
-                    let level = *(cache_offset as *const u8);
-                    let cache_type = *((cache_offset + 1) as *const u8);
-                    let _line_size = *((cache_offset + 2) as *const u32);
-                    let _num_lines = *((cache_offset + 6) as *const u32);
-                    let _associativity = *((cache_offset + 10) as *const u8);
-                    let cache_size = *((cache_offset + 12) as *const u32);
+                let info = &*(buffer.as_ptr().add(cache_offset) as *const CacheInfo);
 
-                    if cache_size > 0 {
-                        match level {
-                            1 => {
-                                if cache_type == 1 {
-                                    found_l1i = cache_size;
-                                } else if cache_type == 2 {
-                                    found_l1d = cache_size;
-                                } else {
-                                    if found_l1d == 0 {
-                                        found_l1d = cache_size;
-                                    }
-                                }
+                if info.cache_size > 0 {
+                    match info.level {
+                        1 => {
+                            if info.cache_type == 2 {
+                                l1d_sz = info.cache_size;
+                                found_l1d = true;
+                            } else if info.cache_type == 1 {
+                                l1i_sz = info.cache_size;
+                                found_l1i = true;
+                            } else if !found_l1d {
+                                l1d_sz = info.cache_size;
+                                found_l1d = true;
                             }
-                            2 => found_l2 = cache_size,
-                            3 => found_l3 = cache_size,
-                            _ => {}
                         }
+                        2 => l2_sz = info.cache_size,
+                        3 => l3_sz = info.cache_size,
+                        _ => {}
                     }
                 }
 
-                let new_offset = offset + size as usize;
-                if new_offset <= offset {
-                    break;
-                }
-                offset = new_offset;
+                offset += size as usize;
             }
         };
 
-        if found_l1d > 0 || found_l1i > 0 {
-            if found_l1d > 0 && found_l1i > 0 && found_l1d != found_l1i {
-                cache.l1 = Level1Cache::Split {
-                    data: CacheLevel::new(found_l1d, CacheType::Data, 0, 0),
-                    instruction: CacheLevel::new(found_l1i, CacheType::Instruction, 0, 0),
-                };
-            } else if found_l1d > 0 {
-                cache.l1 = Level1Cache::Unified(CacheLevel::new(found_l1d, CacheType::Data, 0, 0));
-            } else {
-                cache.l1 = Level1Cache::Unified(CacheLevel::new(found_l1i, CacheType::Instruction, 0, 0));
-            }
+        if found_l1d && found_l1i {
+            cache.l1 = Level1Cache::Split {
+                data: CacheLevel::new(l1d_sz, CacheType::Data, 8, 4),
+                instruction: CacheLevel::new(l1i_sz, CacheType::Instruction, 8, 4),
+            };
+        } else if found_l1d {
+            cache.l1 = Level1Cache::Unified(CacheLevel::new(l1d_sz, CacheType::Data, 8, 4));
+        } else if found_l1i {
+            cache.l1 = Level1Cache::Unified(CacheLevel::new(l1i_sz, CacheType::Instruction, 8, 4));
         }
 
-        if found_l2 > 0 {
-            cache.l2 = Some(CacheLevel::new(found_l2, CacheType::Unified, 0, 0));
+        if l2_sz > 0 {
+            cache.l2 = Some(CacheLevel::new(l2_sz, CacheType::Unified, 8, 4));
+        }
+        if l3_sz > 0 {
+            cache.l3 = Some(CacheLevel::new(l3_sz, CacheType::Unified, 16, 4));
         }
 
-        if found_l3 > 0 {
-            cache.l3 = Some(CacheLevel::new(found_l3, CacheType::Unified, 0, 0));
-        }
-
-        if found_l1d > 0 || found_l1i > 0 || found_l2 > 0 || found_l3 > 0 {
+        if found_l1d || found_l1i || l2_sz > 0 || l3_sz > 0 {
             Some(cache)
         } else {
             None
