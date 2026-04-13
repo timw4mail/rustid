@@ -150,26 +150,35 @@ pub struct Cache {
 }
 
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-#[cfg(any(target_os = "linux", target_family = "unix"))]
+#[cfg(any(target_os = "linux", target_os = "windows", target_family = "unix"))]
 impl Cache {
     pub fn detect() -> Option<Cache> {
-        // Try to get cache info from device tree first
-        if let Some(cache) = Self::from_device_tree() {
-            return Some(cache);
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(cache) = Self::from_windows() {
+                return Some(cache);
+            }
         }
 
-        // Try lscpu and /proc/cpuinfo
-        if let Some(cache) = Self::from_lscpu_command() {
-            return Some(cache);
-        }
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(cache) = Self::from_device_tree() {
+                return Some(cache);
+            }
 
-        if let Some(cache) = Self::from_cpuinfo() {
-            return Some(cache);
+            if let Some(cache) = Self::from_lscpu_command() {
+                return Some(cache);
+            }
+
+            if let Some(cache) = Self::from_cpuinfo() {
+                return Some(cache);
+            }
         }
 
         None
     }
 
+    #[cfg(target_os = "linux")]
     fn from_device_tree() -> Option<Cache> {
         use std::fs;
         use std::path::Path;
@@ -225,6 +234,7 @@ impl Cache {
         if found_cache { Some(cache) } else { None }
     }
 
+    #[cfg(target_os = "linux")]
     fn from_lscpu_command() -> Option<Cache> {
         let output = match std::process::Command::new("lscpu").arg("-C").output() {
             Ok(o) => o.stdout,
@@ -309,6 +319,7 @@ impl Cache {
         if found_cache { Some(cache) } else { None }
     }
 
+    #[cfg(target_os = "linux")]
     fn from_cpuinfo() -> Option<Cache> {
         use std::fs;
 
@@ -418,5 +429,110 @@ impl Cache {
             .trim_end_matches("K");
         let size: u32 = value.parse().ok()?;
         Some(size * 1024)
+    }
+
+    #[cfg(target_os = "windows")]
+    fn from_windows() -> Option<Cache> {
+        use std::mem::size_of;
+        use windows::Win32::System::SystemInformation::{
+            GetLogicalProcessorInformationEx, LOGICAL_PROCESSOR_RELATIONSHIP, PROCESSOR_CACHE_DESCRIPTOR,
+        };
+
+        let mut buffer_size = 0;
+        let _ = unsafe {
+            GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP(0), None, &mut buffer_size)
+        };
+
+        if buffer_size == 0 {
+            return None;
+        }
+
+        let mut buffer: Vec<u8> = vec![0; buffer_size];
+        let result = unsafe {
+            GetLogicalProcessorInformationEx(
+                LOGICAL_PROCESSOR_RELATIONSHIP(0),
+                Some(buffer.as_mut_ptr() as *mut _),
+                &mut buffer_size,
+            )
+        };
+
+        if result.is_err() {
+            return None;
+        }
+
+        let mut cache = Cache::default();
+        let mut found_l1d: u32 = 0;
+        let mut found_l1i: u32 = 0;
+        let mut found_l2: u32 = 0;
+        let mut found_l3: u32 = 0;
+
+        let mut offset = 0;
+        unsafe {
+            while offset < buffer_size {
+                let relationship = &*(buffer.as_ptr().add(offset) as *const LOGICAL_PROCESSOR_RELATIONSHIP);
+                if relationship.Relationship == LOGICAL_PROCESSOR_RELATIONSHIP(1) {
+                    let size = std::ptr::read_volatile(&relationship.Size) as isize;
+                    let byte_offset = std::ptr::addr_of!(relationship.Size) as isize;
+                    let cache_offset = byte_offset + size_of::<u32>() as isize;
+
+                    if cache_offset as usize + size_of::<PROCESSOR_CACHE_DESCRIPTOR>() > buffer_size as isize {
+                        break;
+                    }
+
+                    let cache_desc = &*(buffer.as_ptr().add(cache_offset as usize) as *const PROCESSOR_CACHE_DESCRIPTOR);
+
+                    let cache_size = cache_desc.LineSize * cache_desc.associativity * cache_desc.NumLines as u32;
+
+                    match cache_desc.Level {
+                        1 => {
+                            if cache_desc.Type.0 & 1 != 0 {
+                                found_l1d = cache_size;
+                            }
+                            if cache_desc.Type.0 & 2 != 0 {
+                                found_l1i = cache_size;
+                            }
+                        }
+                        2 => found_l2 = cache_size,
+                        3 => found_l3 = cache_size,
+                        _ => {}
+                    }
+                }
+
+                offset += relationship.Size as usize;
+            }
+        };
+
+        if found_l1d > 0 || found_l1i > 0 {
+            if found_l1d > 0 && found_l1i > 0 && found_l1d != found_l1i {
+                cache.l1 = Level1Cache::Split {
+                    data: CacheLevel::new(found_l1d, CacheType::Data, 0, 0),
+                    instruction: CacheLevel::new(found_l1i, CacheType::Instruction, 0, 0),
+                };
+            } else if found_l1d > 0 {
+                cache.l1 = Level1Cache::Unified(CacheLevel::new(found_l1d, CacheType::Data, 0, 0));
+            } else {
+                cache.l1 = Level1Cache::Unified(CacheLevel::new(found_l1i, CacheType::Instruction, 0, 0));
+            }
+        }
+
+        if found_l2 > 0 {
+            cache.l2 = Some(CacheLevel::new(found_l2, CacheType::Unified, 0, 0));
+        }
+
+        if found_l3 > 0 {
+            cache.l3 = Some(CacheLevel::new(found_l3, CacheType::Unified, 0, 0));
+        }
+
+        if found_l1d > 0 || found_l1i > 0 || found_l2 > 0 || found_l3 > 0 {
+            Some(cache)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[inline]
+    fn from_windows() -> Option<Cache> {
+        None
     }
 }
