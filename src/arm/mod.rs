@@ -152,18 +152,34 @@ pub use apple::*;
 // ----------------------------------------------------------------------------
 
 #[cfg(target_os = "windows")]
-fn get_synth_midr() -> usize {
-    use std::mem::{size_of, zeroed};
+pub fn get_windows_midrs() -> Vec<usize> {
+    use std::mem::size_of;
     use windows::Win32::System::Registry::*;
-    use windows::Win32::System::SystemInformation::*;
-    use windows::core::w;
+    use windows::core::{HSTRING, w};
 
-    // Try registry first: 'CP 4000' is the standard for ARM64 MIDR on Windows
-    let mut hkey = HKEY::default();
-    let subkey = w!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
-    let result = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &mut hkey) };
+    let mut midrs = Vec::new();
+    let mut i = 0;
 
-    if result.is_ok() {
+    loop {
+        let subkey_str = format!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\{}", i);
+        let subkey = HSTRING::from(&subkey_str);
+        let mut hkey = HKEY::default();
+        let result = unsafe {
+            RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE,
+                windows::core::PCWSTR(subkey.as_ptr()),
+                0,
+                KEY_READ,
+                &mut hkey,
+            )
+        };
+
+        if result.is_err() {
+            break;
+        }
+
+        let mut midr = None;
+
         // 1. Try 'CP 4000' (REG_QWORD)
         let mut cpu_id_qword: u64 = 0;
         let mut size_qword = size_of::<u64>() as u32;
@@ -181,32 +197,55 @@ fn get_synth_midr() -> usize {
         };
 
         if query_4000.is_ok() && dw_type == REG_QWORD {
-            let _ = unsafe { RegCloseKey(hkey) };
-            return cpu_id_qword as usize;
+            midr = Some(cpu_id_qword as usize);
+        } else {
+            // 2. Fallback to 'CPUID' (REG_DWORD)
+            let mut cpu_id_dword: u32 = 0;
+            let mut size_dword = size_of::<u32>() as u32;
+            let value_name_cpuid = w!("CPUID");
+            let query_cpuid = unsafe {
+                RegQueryValueExW(
+                    hkey,
+                    value_name_cpuid,
+                    None,
+                    Some(&mut dw_type),
+                    Some(&mut cpu_id_dword as *mut u32 as *mut u8),
+                    Some(&mut size_dword),
+                )
+            };
+
+            if query_cpuid.is_ok() && dw_type == REG_DWORD {
+                midr = Some(cpu_id_dword as usize);
+            }
         }
 
-        // 2. Fallback to 'CPUID' (REG_DWORD)
-        let mut cpu_id_dword: u32 = 0;
-        let mut size_dword = size_of::<u32>() as u32;
-        let value_name_cpuid = w!("CPUID");
-        let query_cpuid = unsafe {
-            RegQueryValueExW(
-                hkey,
-                value_name_cpuid,
-                None,
-                Some(&mut dw_type),
-                Some(&mut cpu_id_dword as *mut u32 as *mut u8),
-                Some(&mut size_dword),
-            )
-        };
         let _ = unsafe { RegCloseKey(hkey) };
 
-        if query_cpuid.is_ok() && dw_type == REG_DWORD {
-            return cpu_id_dword as usize;
+        if let Some(m) = midr {
+            midrs.push(m);
+        } else {
+            // If we can't find MIDR for this core, but it exists in registry,
+            // we might have reached the end of useful info or just missing one.
+            // For now, continue to see if others exist.
         }
+
+        i += 1;
+    }
+
+    midrs
+}
+
+#[cfg(target_os = "windows")]
+fn get_synth_midr() -> usize {
+    let midrs = get_windows_midrs();
+    if !midrs.is_empty() {
+        return midrs[0];
     }
 
     // Fallback to GetNativeSystemInfo if registry fails
+    use std::mem::zeroed;
+    use windows::Win32::System::SystemInformation::*;
+
     let mut sys_info: SYSTEM_INFO = unsafe { zeroed() };
     unsafe {
         GetNativeSystemInfo(&mut sys_info);

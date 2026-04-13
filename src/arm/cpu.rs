@@ -58,6 +58,24 @@ impl TCpu for Cpu {
                     }
                 }
             }
+
+            // On Windows, MRS is also emulated and might return uniform MIDR.
+            // Try to get more accurate info from the registry.
+            #[cfg(target_os = "windows")]
+            {
+                let windows_midrs = super::get_windows_midrs();
+                if !windows_midrs.is_empty() {
+                    all_midrs.clear();
+                    midrs.clear();
+                    raw_midr.clear();
+                    for m_val in windows_midrs {
+                        raw_midr.insert(m_val);
+                        let midr = Midr::new(m_val);
+                        midrs.insert(midr);
+                        all_midrs.push(midr);
+                    }
+                }
+            }
         }
 
         #[cfg(target_os = "macos")]
