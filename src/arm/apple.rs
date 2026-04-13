@@ -177,13 +177,13 @@ impl TCpu for Cpu {
                 .parse()
                 .unwrap();
 
-            l1.set_data(l1d_size / 1024, 0);
+            l1.set_data(l1d_size, 0);
             l1.set_data_share_count(1);
-            l1.set_instruction(l1i_size / 1024, 0);
+            l1.set_instruction(l1i_size, 0);
             l1.set_instruction_share_count(1);
             cache.l1 = l1;
             cache.l2 = Some(CacheLevel::new(
-                l2_size / 1024,
+                l2_size,
                 CacheType::Unified,
                 0,
                 cpus_per_l2,
