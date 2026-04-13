@@ -90,6 +90,64 @@ pub enum MicroArch {
     QCOryon,
 }
 
+impl MicroArch {
+    pub fn core_type(&self) -> crate::common::CoreType {
+        use crate::common::CoreType;
+        match self {
+            MicroArch::Unknown => CoreType::Performance,
+
+            MicroArch::AppleFirestorm
+            | MicroArch::AppleAvalanche
+            | MicroArch::AppleEverest
+            | MicroArch::AppleSawtooth => CoreType::Performance,
+
+            MicroArch::AppleIcestorm | MicroArch::AppleBlizzard => CoreType::Efficiency,
+
+            MicroArch::ArmCortexA7
+            | MicroArch::ArmCortexA32
+            | MicroArch::ArmCortexA35
+            | MicroArch::ArmCortexA53
+            | MicroArch::ArmCortexA55
+            | MicroArch::ArmCortexA510
+            | MicroArch::ArmCortexA520 => CoreType::Efficiency,
+
+            MicroArch::ArmCortexA8
+            | MicroArch::ArmCortexA9
+            | MicroArch::ArmCortexA12
+            | MicroArch::ArmCortexA15
+            | MicroArch::ArmCortexA17
+            | MicroArch::ArmCortexA65
+            | MicroArch::ArmCortexA72
+            | MicroArch::ArmCortexA73
+            | MicroArch::ArmCortexA75
+            | MicroArch::ArmCortexA76
+            | MicroArch::ArmCortexA77
+            | MicroArch::ArmCortexA78
+            | MicroArch::ArmCortexA710
+            | MicroArch::ArmCortexA715
+            | MicroArch::ArmCortexA720
+            | MicroArch::ArmCortexA725
+            | MicroArch::ArmNeoverseE1
+            | MicroArch::ArmNeoverseN1
+            | MicroArch::ArmNeoverseN2
+            | MicroArch::ArmNeoverseV1
+            | MicroArch::ArmNeoverseV2 => CoreType::Performance,
+
+            MicroArch::ArmCortexX1
+            | MicroArch::ArmCortexX2
+            | MicroArch::ArmCortexX3
+            | MicroArch::ArmCortexX4 => CoreType::Super,
+
+            MicroArch::QCScorpion
+            | MicroArch::QCKrait
+            | MicroArch::QCKryo
+            | MicroArch::QCFalkor
+            | MicroArch::QCSaphira
+            | MicroArch::QCOryon => CoreType::Performance,
+        }
+    }
+}
+
 impl From<MicroArch> for String {
     fn from(ma: MicroArch) -> String {
         let s = match ma {

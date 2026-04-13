@@ -253,10 +253,10 @@ impl Cache {
             let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
 
             // Parse size (e.g., "32K", "256K", "4M")
-            let size_bytes: u32 = if size_str.ends_with('K') {
-                size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024
-            } else if size_str.ends_with('M') {
-                size_str[..size_str.len() - 1].parse::<u32>().ok()? * 1024 * 1024
+            let size_bytes: u32 = if let Some(stripped) = size_str.strip_suffix('K') {
+                stripped.parse::<u32>().ok()? * 1024
+            } else if let Some(stripped) = size_str.strip_suffix('M') {
+                stripped.parse::<u32>().ok()? * 1024 * 1024
             } else {
                 size_str.parse::<u32>().ok()? * 1024
             };
