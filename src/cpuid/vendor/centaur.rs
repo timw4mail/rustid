@@ -60,7 +60,7 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 15, 0..8) => brand_arch(MicroArch::Isaiah, "CNA", Some(N65)),
             (0, 6, 0, 15, 8) => brand_arch(MicroArch::Isaiah, "CNB A1", None),
             (0, 6, 0, 15, 10) => brand_arch(MicroArch::Isaiah, "CNB A2", None),
-            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ", None),
+            (0, 6, 0, 15, 12) => brand_arch(MicroArch::Isaiah, "CNC/CNQ A1", None),
             (0, 6, 0, 15, 13) => brand_arch(MicroArch::Isaiah, "CNC/CNQ A2", Some(N40)), // My hardware
             (0, 6, 0, 15, 14) => brand_arch(MicroArch::Isaiah, "CNR", None),
             (0, 6, 1, 15, _) => brand_arch(MicroArch::Isaiah, "CN", Some(N65)),
@@ -71,7 +71,7 @@ impl TMicroArch for Centaur {
             (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some(N16)),
 
             // Anything else
-            (_, _, _, _, _) => brand_arch(MicroArch::Unknown, UNK, None),
+            _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
 }

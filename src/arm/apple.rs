@@ -182,12 +182,7 @@ impl TCpu for Cpu {
             l1.set_instruction(l1i_size, 0);
             l1.set_instruction_share_count(1);
             cache.l1 = l1;
-            cache.l2 = Some(CacheLevel::new(
-                l2_size,
-                CacheType::Unified,
-                0,
-                cpus_per_l2,
-            ));
+            cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, 0, cpus_per_l2));
 
             let name = Self::find_core_codename(&midr, kind);
 
