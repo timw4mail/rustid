@@ -527,7 +527,7 @@ impl Cache {
             }
         };
 
-        if found_l1d && found_l1i {
+        if found_l1d && found_l1i && l1d_sz >= 32768 && l1i_sz >= 32768 {
             cache.l1 = Level1Cache::Split {
                 data: CacheLevel::new(l1d_sz, CacheType::Data, 8, 4),
                 instruction: CacheLevel::new(l1i_sz, CacheType::Instruction, 8, 4),
@@ -545,7 +545,7 @@ impl Cache {
             cache.l3 = Some(CacheLevel::new(l3_sz, CacheType::Unified, 16, 4));
         }
 
-        if found_l1d || found_l1i || l2_sz > 0 || l3_sz > 0 {
+        if (found_l1d && l1d_sz >= 32768) || (found_l1i && l1i_sz >= 32768) || l2_sz >= 65536 || l3_sz >= 65536 {
             Some(cache)
         } else {
             None
