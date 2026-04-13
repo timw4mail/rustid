@@ -3,8 +3,11 @@
 ## [0.11.3]
 
 ### Added
+- AMD Elan processor mapping
 - Intel brand ID lookup table (DOS build excluded due to space constraints)
 - License file
+- Multiple core type support for ARM processors
+- DOS binary size test to verify 64K limit
 
 ### Changed
 - Use key names instead of blind indexes for lscpu cache information
