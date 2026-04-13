@@ -222,14 +222,15 @@ impl Cpu {
         for midr in midrs {
             let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
             let core_type = arch.micro_arch.core_type();
+            let core_name: String = arch.micro_arch.into();
 
             cores
                 .entry(core_type)
                 .and_modify(|c| c.count += 1)
                 .or_insert(CpuCore {
                     kind: core_type,
-                    name: if arch.model != micro_arch::UNK {
-                        Some(arch.model)
+                    name: if core_name != micro_arch::UNK {
+                        Some(core_name)
                     } else {
                         None
                     },
