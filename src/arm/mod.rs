@@ -87,13 +87,13 @@ impl CpuDisplay {
                             "{}L1d: {}{} KB",
                             Self::label("Cache"),
                             &data_count,
-                            data.size
+                            data.size / 1024
                         );
                         println!(
                             "{}{}{} KB",
                             Self::sublabel("L1i"),
                             &instruction_count,
-                            instruction.size
+                            instruction.size / 1024
                         );
                     }
                 }
@@ -112,7 +112,7 @@ impl CpuDisplay {
                 }
 
                 if let Some(cache) = cache.l3 {
-                    let mut num = cache.size;
+                    let mut num = cache.size / 1024;
                     let unit = if num >= 1024 { "MB" } else { "KB" };
 
                     if num >= 1024 {
