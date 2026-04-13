@@ -417,6 +417,7 @@ impl Cache {
         if found_cache { Some(cache) } else { None }
     }
 
+    #[cfg(target_os = "linux")]
     fn parse_cache_value(line: &str) -> Option<u32> {
         let parts: Vec<&str> = line.split(':').collect();
         if parts.len() != 2 {
@@ -433,12 +434,11 @@ impl Cache {
 
     #[cfg(target_os = "windows")]
     fn from_windows() -> Option<Cache> {
-        use std::mem::size_of;
         use windows::Win32::System::SystemInformation::{
-            GetLogicalProcessorInformationEx, LOGICAL_PROCESSOR_RELATIONSHIP, PROCESSOR_CACHE_DESCRIPTOR,
+            GetLogicalProcessorInformationEx, LOGICAL_PROCESSOR_RELATIONSHIP,
         };
 
-        let mut buffer_size = 0;
+        let mut buffer_size = 0u32;
         let _ = unsafe {
             GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP(0), None, &mut buffer_size)
         };
@@ -447,7 +447,7 @@ impl Cache {
             return None;
         }
 
-        let mut buffer: Vec<u8> = vec![0; buffer_size];
+        let mut buffer: Vec<u8> = vec![0; buffer_size as usize];
         let result = unsafe {
             GetLogicalProcessorInformationEx(
                 LOGICAL_PROCESSOR_RELATIONSHIP(0),
@@ -466,39 +466,55 @@ impl Cache {
         let mut found_l2: u32 = 0;
         let mut found_l3: u32 = 0;
 
-        let mut offset = 0;
+        #[repr(C)]
+        struct CacheInfo {
+            level: u8,
+            associativity: u8,
+            line_size: u32,
+            num_lines: u32,
+            cache_size: u32,
+            cache_type: u32,
+        }
+
+        let mut offset = 0usize;
         unsafe {
-            while offset < buffer_size {
+            while offset < buffer.len() {
                 let relationship = &*(buffer.as_ptr().add(offset) as *const LOGICAL_PROCESSOR_RELATIONSHIP);
-                if relationship.Relationship == LOGICAL_PROCESSOR_RELATIONSHIP(1) {
-                    let size = std::ptr::read_volatile(&relationship.Size) as isize;
-                    let byte_offset = std::ptr::addr_of!(relationship.Size) as isize;
-                    let cache_offset = byte_offset + size_of::<u32>() as isize;
+                let size = *(buffer.as_ptr().add(offset) as *const u32);
 
-                    if cache_offset as usize + size_of::<PROCESSOR_CACHE_DESCRIPTOR>() > buffer_size as isize {
-                        break;
-                    }
+                if size == 0 {
+                    break;
+                }
 
-                    let cache_desc = &*(buffer.as_ptr().add(cache_offset as usize) as *const PROCESSOR_CACHE_DESCRIPTOR);
-
-                    let cache_size = cache_desc.LineSize * cache_desc.associativity * cache_desc.NumLines as u32;
-
-                    match cache_desc.Level {
-                        1 => {
-                            if cache_desc.Type.0 & 1 != 0 {
-                                found_l1d = cache_size;
-                            }
-                            if cache_desc.Type.0 & 2 != 0 {
-                                found_l1i = cache_size;
-                            }
+                if relationship.0 as u32 == 1 {
+                    let cache_offset = offset + size_of::<u32>();
+                    while cache_offset + size_of::<CacheInfo>() <= buffer.len() {
+                        let cache_info = &*(buffer.as_ptr().add(cache_offset) as *const CacheInfo);
+                        if cache_info.level == 0 && cache_info.cache_size == 0 {
+                            break;
                         }
-                        2 => found_l2 = cache_size,
-                        3 => found_l3 = cache_size,
-                        _ => {}
+
+                        let cache_size = cache_info.cache_size;
+
+                        match cache_info.level {
+                            1 => {
+                                if cache_info.cache_type & 1 != 0 {
+                                    found_l1d = cache_size;
+                                }
+                                if cache_info.cache_type & 2 != 0 {
+                                    found_l1i = cache_size;
+                                }
+                            }
+                            2 => found_l2 = cache_size,
+                            3 => found_l3 = cache_size,
+                            _ => {}
+                        }
+
+                        break;
                     }
                 }
 
-                offset += relationship.Size as usize;
+                offset += size as usize;
             }
         };
 
@@ -528,11 +544,5 @@ impl Cache {
         } else {
             None
         }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    #[inline]
-    fn from_windows() -> Option<Cache> {
-        None
     }
 }

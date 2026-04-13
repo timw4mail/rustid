@@ -73,6 +73,10 @@ build-windows:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-msvc; then rustup target add x86_64-pc-windows-msvc; fi
 	cargo build --target x86_64-pc-windows-msvc --release
 
+build-windows-arm:
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
+	cargo build --target aarch64-pc-windows-msvc --release
+
 # Build for modern windows (cli), can be easier than msvc build
 build-windows-gnu: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
