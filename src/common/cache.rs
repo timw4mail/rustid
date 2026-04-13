@@ -447,7 +447,7 @@ impl Cache {
             return None;
         }
 
-        let mut buffer: Vec<u8> = vec![0; buffer_size as usize];
+        let mut buffer: Vec<u8> = vec![0u8; buffer_size as usize];
         let result = unsafe {
             GetLogicalProcessorInformationEx(
                 LOGICAL_PROCESSOR_RELATIONSHIP(0),
@@ -466,55 +466,51 @@ impl Cache {
         let mut found_l2: u32 = 0;
         let mut found_l3: u32 = 0;
 
-        #[repr(C)]
-        struct CacheInfo {
-            level: u8,
-            associativity: u8,
-            line_size: u32,
-            num_lines: u32,
-            cache_size: u32,
-            cache_type: u32,
-        }
-
         let mut offset = 0usize;
         unsafe {
             while offset < buffer.len() {
-                let relationship = &*(buffer.as_ptr().add(offset) as *const LOGICAL_PROCESSOR_RELATIONSHIP);
                 let size = *(buffer.as_ptr().add(offset) as *const u32);
-
                 if size == 0 {
                     break;
                 }
 
-                if relationship.0 as u32 == 1 {
-                    let cache_offset = offset + size_of::<u32>();
-                    while cache_offset + size_of::<CacheInfo>() <= buffer.len() {
-                        let cache_info = &*(buffer.as_ptr().add(cache_offset) as *const CacheInfo);
-                        if cache_info.level == 0 && cache_info.cache_size == 0 {
-                            break;
-                        }
+                let relationship_type = *(buffer.as_ptr().add(offset + 4) as *const u32);
 
-                        let cache_size = cache_info.cache_size;
+                if relationship_type == 1 {
+                    let cache_offset = offset + 8;
 
-                        match cache_info.level {
+                    let level = *(cache_offset as *const u8);
+                    let cache_type = *((cache_offset + 1) as *const u8);
+                    let _line_size = *((cache_offset + 2) as *const u32);
+                    let _num_lines = *((cache_offset + 6) as *const u32);
+                    let _associativity = *((cache_offset + 10) as *const u8);
+                    let cache_size = *((cache_offset + 12) as *const u32);
+
+                    if cache_size > 0 {
+                        match level {
                             1 => {
-                                if cache_info.cache_type & 1 != 0 {
-                                    found_l1d = cache_size;
-                                }
-                                if cache_info.cache_type & 2 != 0 {
+                                if cache_type == 1 {
                                     found_l1i = cache_size;
+                                } else if cache_type == 2 {
+                                    found_l1d = cache_size;
+                                } else {
+                                    if found_l1d == 0 {
+                                        found_l1d = cache_size;
+                                    }
                                 }
                             }
                             2 => found_l2 = cache_size,
                             3 => found_l3 = cache_size,
                             _ => {}
                         }
-
-                        break;
                     }
                 }
 
-                offset += size as usize;
+                let new_offset = offset + size as usize;
+                if new_offset <= offset {
+                    break;
+                }
+                offset = new_offset;
             }
         };
 
