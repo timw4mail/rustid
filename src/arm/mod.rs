@@ -41,7 +41,7 @@ impl CpuDisplay {
 
     pub fn display(
         cpu_arch: &crate::arm::micro_arch::CpuArch,
-        cores: &BTreeMap<(CoreType, Option<String>), CpuCore>,
+        cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
     ) {
         println!();
         println!(
@@ -62,7 +62,7 @@ impl CpuDisplay {
             println!();
         }
 
-        for ((kind, _), core) in cores {
+        for ((kind, _, _), core) in cores {
             let name = format!("{} Cores", Into::<String>::into(*kind));
             println!("{}", Self::label(&name));
 
