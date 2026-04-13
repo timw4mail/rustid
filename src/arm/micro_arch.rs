@@ -1,5 +1,6 @@
 use crate::arm::brand::*;
 use crate::common::constants::*;
+use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -31,6 +32,14 @@ impl Midr {
             part: (midr & PART_MASK) >> PART_OFFSET,
             revision: midr & REVISION_MASK,
         }
+    }
+
+    pub fn to_bits(&self) -> usize {
+        (self.implementer << IMPLEMENTER_OFFSET)
+            | (self.variant << VARIANT_OFFSET)
+            | (self.architecture << ARCHITECTURE_OFFSET)
+            | (self.part << PART_OFFSET)
+            | self.revision
     }
 }
 
@@ -144,6 +153,399 @@ impl MicroArch {
             | MicroArch::QCFalkor
             | MicroArch::QCSaphira
             | MicroArch::QCOryon => CoreType::Performance,
+        }
+    }
+
+    pub fn cache(&self) -> Option<Cache> {
+        match self {
+            MicroArch::Unknown => None,
+
+            MicroArch::AppleFirestorm => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(131072, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(131072, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(12 * 1024 * 1024, CacheType::Unified, 8, 8)),
+                l3: Some(CacheLevel::new(24 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::AppleIcestorm => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::AppleAvalanche => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(131072, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(131072, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(16 * 1024 * 1024, CacheType::Unified, 8, 8)),
+                l3: Some(CacheLevel::new(32 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::AppleBlizzard => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::AppleEverest => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(131072, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(131072, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(16 * 1024 * 1024, CacheType::Unified, 8, 8)),
+                l3: Some(CacheLevel::new(32 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::AppleSawtooth => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA7 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA8 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(4096, CacheType::Data, 4, 1),
+                    instruction: CacheLevel::new(4096, CacheType::Instruction, 4, 1),
+                },
+                l2: None,
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA9 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA12 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA15 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA17 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA32 | MicroArch::ArmCortexA35 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA53 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA55 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA65 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA72 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA73 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmCortexA75 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA76 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmCortexA77 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmCortexA78 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA510 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
+                l3: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA520 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
+                l3: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA710 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA715 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA720 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexA725 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::ArmCortexX1 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmCortexX2 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmCortexX3 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmCortexX4 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmNeoverseE1 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::ArmNeoverseN1 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmNeoverseN2 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmNeoverseV1 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 16, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::ArmNeoverseV2 => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 16, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+            }),
+
+            MicroArch::QCScorpion => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(4096, CacheType::Data, 4, 1),
+                    instruction: CacheLevel::new(4096, CacheType::Instruction, 4, 1),
+                },
+                l2: None,
+                l3: None,
+            }),
+
+            MicroArch::QCKrait => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(4096, CacheType::Data, 4, 1),
+                    instruction: CacheLevel::new(4096, CacheType::Instruction, 4, 1),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::QCKryo => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
+                l3: None,
+            }),
+
+            MicroArch::QCFalkor => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: None,
+            }),
+
+            MicroArch::QCSaphira => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 4, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 4, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
+
+            MicroArch::QCOryon => Some(Cache {
+                l1: Level1Cache::Split {
+                    data: CacheLevel::new(65536, CacheType::Data, 8, 4),
+                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                },
+                l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
+                l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+            }),
         }
     }
 }

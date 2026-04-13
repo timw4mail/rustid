@@ -237,6 +237,19 @@ impl Cpu {
     fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>, Midr), CpuCore> {
         let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
 
+        let runtime_cache = Cache::detect();
+        let mut core_cache_map: BTreeMap<usize, Option<Cache>> = BTreeMap::new();
+
+        let mut unique_midrs: Vec<Midr> = midrs.to_vec();
+        unique_midrs.sort();
+        unique_midrs.dedup();
+
+        for midr in &unique_midrs {
+            let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
+            let cache = runtime_cache.or_else(|| arch.micro_arch.cache());
+            core_cache_map.insert(midr.to_bits(), cache);
+        }
+
         for midr in midrs {
             let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
             let core_type = arch.micro_arch.core_type();
@@ -248,13 +261,15 @@ impl Cpu {
                 None
             };
 
+            let cache = core_cache_map.get(&midr.to_bits()).cloned().flatten();
+
             cores
                 .entry((core_type, name.clone(), *midr))
                 .and_modify(|c| c.count += 1)
                 .or_insert(CpuCore {
                     kind: core_type,
                     name,
-                    cache: None,
+                    cache,
                     count: 1,
                 });
         }
