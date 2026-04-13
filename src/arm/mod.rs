@@ -131,12 +131,10 @@ impl CpuDisplay {
 
                             println!("{} {} {}", Self::sublabel("L3"), num, unit);
                         }
-
-                        println!();
                     }
+                    println!();
                 }
             });
-        println!();
     }
 }
 
