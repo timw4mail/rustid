@@ -222,11 +222,7 @@ impl TCpu for Cpu {
             self.raw_midr().iter().next().unwrap_or(&0)
         );
         if let Some(midr) = self.midr() {
-            println!(
-                "Implementer: 0x{:X} ({})",
-                midr.implementer,
-                self.vendor()
-            );
+            println!("Implementer: 0x{:X} ({})", midr.implementer, self.vendor());
             println!("Variant: 0x{:X}", midr.variant);
             println!("Part Number: 0x{:X}", midr.part);
             println!("Revision: 0x{:X}", midr.revision);
@@ -249,7 +245,7 @@ impl TArmCpu for Cpu {
     }
 
     fn midr(&self) -> Option<&Midr> {
-        self.midrs.iter().next().map(|m| m)
+        self.midrs.iter().next()
     }
 
     fn vendor(&self) -> &str {

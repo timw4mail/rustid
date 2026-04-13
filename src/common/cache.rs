@@ -185,43 +185,41 @@ impl Cache {
         let mut found_cache = false;
 
         // Try to read L1 cache
-        if let Ok(l1_size) = fs::read_to_string(dt_root.join("l1-cache-size")) {
-            if let Ok(size) = l1_size.trim().parse::<u32>() {
-                if let Ok(l1_assoc) = fs::read_to_string(dt_root.join("l1-cache-associativity")) {
-                    if let Ok(assoc) = l1_assoc.trim().parse::<u32>() {
-                        cache.l1 = Level1Cache::new_unified(size, assoc);
-                        found_cache = true;
-                    }
-                }
-            }
+        if let Ok(l1_size) = fs::read_to_string(dt_root.join("l1-cache-size"))
+            && let Ok(size) = l1_size.trim().parse::<u32>()
+            && let Ok(l1_assoc) = fs::read_to_string(dt_root.join("l1-cache-associativity"))
+            && let Ok(assoc) = l1_assoc.trim().parse::<u32>()
+        {
+            cache.l1 = Level1Cache::new_unified(size, assoc);
+            found_cache = true;
         }
 
         // Try to read L2 cache
-        if let Ok(l2_size) = fs::read_to_string(dt_root.join("l2-cache-size")) {
-            if let Ok(size) = l2_size.trim().parse::<u32>() {
-                let mut l2_assoc = 0;
-                if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l2-cache-associativity")) {
-                    if let Ok(assoc) = assoc_str.trim().parse::<u32>() {
-                        l2_assoc = assoc;
-                    }
-                }
-                cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, l2_assoc, 0));
-                found_cache = true;
+        if let Ok(l2_size) = fs::read_to_string(dt_root.join("l2-cache-size"))
+            && let Ok(size) = l2_size.trim().parse::<u32>()
+        {
+            let mut l2_assoc = 0;
+            if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l2-cache-associativity"))
+                && let Ok(assoc) = assoc_str.trim().parse::<u32>()
+            {
+                l2_assoc = assoc;
             }
+            cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, l2_assoc, 0));
+            found_cache = true;
         }
 
         // Try to read L3 cache
-        if let Ok(l3_size) = fs::read_to_string(dt_root.join("l3-cache-size")) {
-            if let Ok(size) = l3_size.trim().parse::<u32>() {
-                let mut l3_assoc = 0;
-                if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l3-cache-associativity")) {
-                    if let Ok(assoc) = assoc_str.trim().parse::<u32>() {
-                        l3_assoc = assoc;
-                    }
-                }
-                cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, l3_assoc, 0));
-                found_cache = true;
+        if let Ok(l3_size) = fs::read_to_string(dt_root.join("l3-cache-size"))
+            && let Ok(size) = l3_size.trim().parse::<u32>()
+        {
+            let mut l3_assoc = 0;
+            if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l3-cache-associativity"))
+                && let Ok(assoc) = assoc_str.trim().parse::<u32>()
+            {
+                l3_assoc = assoc;
             }
+            cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, l3_assoc, 0));
+            found_cache = true;
         }
 
         if found_cache { Some(cache) } else { None }
@@ -297,14 +295,15 @@ impl Cache {
         }
 
         // Handle case where L1 is split but L1i wasn't in the output
-        if let Level1Cache::Split { data, instruction } = &cache.l1 {
-            if instruction.size == 0 && data.size > 0 {
-                // Copy data settings to instruction
-                cache.l1 = Level1Cache::Split {
-                    data: *data,
-                    instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
-                };
-            }
+        if let Level1Cache::Split { data, instruction } = &cache.l1
+            && instruction.size == 0
+            && data.size > 0
+        {
+            // Copy data settings to instruction
+            cache.l1 = Level1Cache::Split {
+                data: *data,
+                instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
+            };
         }
 
         if found_cache { Some(cache) } else { None }
@@ -355,37 +354,36 @@ impl Cache {
             }
 
             // Try to parse more specific cache info lines if available
-            if line.starts_with("l1-dcache-size") || line.starts_with("L1-dcache-size") {
-                if let Some(size) = Self::parse_cache_value(line) {
-                    l1_size = size;
-                    if let Level1Cache::Split { data, .. } = &mut cache.l1 {
-                        data.size = size;
-                        found_cache = true;
-                    }
-                }
-            }
-            if line.starts_with("l1-icache-size") || line.starts_with("L1-icache-size") {
-                if let Some(size) = Self::parse_cache_value(line) {
-                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
-                        instruction.size = size;
-                        instruction.kind = CacheType::Instruction;
-                        found_cache = true;
-                    }
-                }
-            }
-            if line.starts_with("l2-cache-size") || line.starts_with("L2-cache-size") {
-                if let Some(size) = Self::parse_cache_value(line) {
-                    l2_size = size;
-                    cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
+            if (line.starts_with("l1-dcache-size") || line.starts_with("L1-dcache-size"))
+                && let Some(size) = Self::parse_cache_value(line)
+            {
+                l1_size = size;
+                if let Level1Cache::Split { data, .. } = &mut cache.l1 {
+                    data.size = size;
                     found_cache = true;
                 }
             }
-            if line.starts_with("l3-cache-size") || line.starts_with("L3-cache-size") {
-                if let Some(size) = Self::parse_cache_value(line) {
-                    l3_size = size;
-                    cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
-                    found_cache = true;
-                }
+            if (line.starts_with("l1-icache-size") || line.starts_with("L1-icache-size"))
+                && let Some(size) = Self::parse_cache_value(line)
+                && let Level1Cache::Split { instruction, .. } = &mut cache.l1
+            {
+                instruction.size = size;
+                instruction.kind = CacheType::Instruction;
+                found_cache = true;
+            }
+            if (line.starts_with("l2-cache-size") || line.starts_with("L2-cache-size"))
+                && let Some(size) = Self::parse_cache_value(line)
+            {
+                l2_size = size;
+                cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
+                found_cache = true;
+            }
+            if (line.starts_with("l3-cache-size") || line.starts_with("L3-cache-size"))
+                && let Some(size) = Self::parse_cache_value(line)
+            {
+                l3_size = size;
+                cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
+                found_cache = true;
             }
         }
 

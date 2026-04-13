@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for ARM.
+use super::CpuDisplay;
 use super::brand::Vendor;
 use super::micro_arch::*;
-use super::CpuDisplay;
 use super::*;
 use crate::common::*;
 use std::collections::{BTreeMap, HashSet};
@@ -19,6 +19,7 @@ impl TCpu for Cpu {
     fn detect() -> Self {
         let mut raw_midr: HashSet<usize> = HashSet::new();
         let mut midrs: HashSet<Midr> = HashSet::new();
+        let mut all_midrs: Vec<Midr> = Vec::new();
 
         #[cfg(not(target_os = "macos"))]
         {
@@ -27,7 +28,32 @@ impl TCpu for Cpu {
                     core_affinity::set_for_current(core_id);
                     let midr_val = super::get_midr();
                     raw_midr.insert(midr_val);
-                    midrs.insert(Midr::new(midr_val));
+                    let midr = Midr::new(midr_val);
+                    midrs.insert(midr);
+                    all_midrs.push(midr);
+                }
+            } else {
+                let midr_val = super::get_midr();
+                raw_midr.insert(midr_val);
+                let midr = Midr::new(midr_val);
+                midrs.insert(midr);
+                all_midrs.push(midr);
+            }
+
+            // On Linux, if we only found one type of core but there are multiple logical cores,
+            // the kernel might be emulating a uniform MIDR for MRS.
+            // Try to get more accurate info from /proc/cpuinfo or /sys
+            #[cfg(target_os = "linux")]
+            if midrs.len() == 1 && all_midrs.len() > 1 {
+                let linux_midrs = Self::detect_linux_midrs();
+                if !linux_midrs.is_empty() {
+                    all_midrs.clear();
+                    for m_val in linux_midrs {
+                        raw_midr.insert(m_val);
+                        let midr = Midr::new(m_val);
+                        midrs.insert(midr);
+                        all_midrs.push(midr);
+                    }
                 }
             }
         }
@@ -37,6 +63,8 @@ impl TCpu for Cpu {
             let midr_val = super::get_midr();
             raw_midr.insert(midr_val);
             midrs.insert(Midr::new(midr_val));
+            // macOS core count is handled in apple.rs, but we'll fill all_midrs for consistency
+            all_midrs.push(Midr::new(midr_val));
         }
 
         let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
@@ -47,7 +75,7 @@ impl TCpu for Cpu {
             primary_midr.variant,
         );
 
-        let cores = Self::detect_cores(&midrs);
+        let cores = Self::detect_cores(&all_midrs);
 
         Self {
             raw_midr,
@@ -86,7 +114,7 @@ impl TArmCpu for Cpu {
     }
 
     fn midr(&self) -> Option<&Midr> {
-        self.midrs.iter().next().map(|m| m)
+        self.midrs.iter().next()
     }
 
     fn vendor(&self) -> &str {
@@ -95,53 +123,115 @@ impl TArmCpu for Cpu {
 }
 
 impl Cpu {
-    fn detect_cores(midrs: &HashSet<Midr>) -> BTreeMap<CoreType, CpuCore> {
+    #[cfg(target_os = "linux")]
+    fn detect_linux_midrs() -> Vec<usize> {
+        let mut midrs = Vec::new();
+
+        // 1. Try /sys/devices/system/cpu/cpu*/regs/identification/midr_el1
+        let mut i = 0;
+        loop {
+            let path = format!(
+                "/sys/devices/system/cpu/cpu{}/regs/identification/midr_el1",
+                i
+            );
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16)
+                {
+                    midrs.push(midr);
+                }
+            } else {
+                break;
+            }
+            i += 1;
+        }
+
+        if !midrs.is_empty() {
+            return midrs;
+        }
+
+        // 2. Fallback to /proc/cpuinfo
+        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+            let mut impl_ = None;
+            let mut var = None;
+            let mut arch = None;
+            let mut part = None;
+            let mut rev = None;
+
+            for line in content.lines() {
+                if line.trim().is_empty() {
+                    if let (Some(i), Some(p)) = (impl_, part) {
+                        let m = (i << 24)
+                            | (var.unwrap_or(0) << 20)
+                            | (arch.unwrap_or(0) << 16)
+                            | (p << 4)
+                            | rev.unwrap_or(0);
+                        midrs.push(m);
+                    }
+                    impl_ = None;
+                    var = None;
+                    arch = None;
+                    part = None;
+                    rev = None;
+                    continue;
+                }
+
+                let parts: Vec<&str> = line.split(':').collect();
+                if parts.len() != 2 {
+                    continue;
+                }
+                let key = parts[0].trim();
+                let val = parts[1].trim();
+
+                match key {
+                    "CPU implementer" => {
+                        impl_ = usize::from_str_radix(val.trim_start_matches("0x"), 16).ok()
+                    }
+                    "CPU variant" => {
+                        var = usize::from_str_radix(val.trim_start_matches("0x"), 16).ok()
+                    }
+                    "CPU architecture" => arch = val.parse().ok(),
+                    "CPU part" => {
+                        part = usize::from_str_radix(val.trim_start_matches("0x"), 16).ok()
+                    }
+                    "CPU revision" => rev = val.parse().ok(),
+                    _ => {}
+                }
+            }
+            // Handle last entry if it doesn't end with a blank line
+            if let (Some(i), Some(p)) = (impl_, part) {
+                let m = (i << 24)
+                    | (var.unwrap_or(0) << 20)
+                    | (arch.unwrap_or(0) << 16)
+                    | (p << 4)
+                    | rev.unwrap_or(0);
+                midrs.push(m);
+            }
+        }
+
+        midrs
+    }
+
+    fn detect_cores(midrs: &[Midr]) -> BTreeMap<CoreType, CpuCore> {
         let mut cores: BTreeMap<CoreType, CpuCore> = BTreeMap::new();
 
         for midr in midrs {
             let part = midr.part;
             let core_type = match part {
-                0xD05 | 0xD13 | 0xD14 | 0xD15 | 0xD16 | 0xD17 => CoreType::Performance,
-                0xD03 | 0xD04 => CoreType::Performance,
-                0xD01 | 0xD02 | 0xD06 | 0xD07 | 0xD08 | 0xD09 | 0xD0A | 0xD0B => {
-                    CoreType::Performance
-                }
-                0xD4A | 0xD4B | 0xD4C | 0xD4D | 0xD4E => CoreType::Efficiency,
-                0xD4F => CoreType::Efficiency,
-                0xD0C | 0xD0D | 0xD0E | 0xD0F | 0xD11 | 0xD12 => CoreType::Efficiency,
-                0xA10 | 0xA11 | 0xA12 | 0xA13 | 0xA14 | 0xA15 | 0xA16 | 0xA17 => {
-                    CoreType::Performance
-                }
-                0xA20 | 0xA21 | 0xA22 | 0xA23 | 0xA24 | 0xA25 | 0xA26 | 0xA27 => {
-                    CoreType::Performance
-                }
-                0xA30 | 0xA31 | 0xA32 | 0xA33 | 0xA34 | 0xA35 | 0xA36 | 0xA37 => {
-                    CoreType::Efficiency
-                }
-                0xA40 | 0xA41 | 0xA42 | 0xA43 | 0xA44 | 0xA45 | 0xA46 | 0xA47 => {
-                    CoreType::Efficiency
-                }
-                0xA50 | 0xA51 | 0xA52 | 0xA53 | 0xA54 | 0xA55 | 0xA56 | 0xA57 => {
-                    CoreType::Efficiency
-                }
-                0xA60 | 0xA61 | 0xA62 | 0xA63 | 0xA64 | 0xA65 | 0xA66 | 0xA67 => {
-                    CoreType::Efficiency
-                }
-                0xA70 | 0xA71 | 0xA72 | 0xA73 | 0xA74 | 0xA75 | 0xA76 | 0xA77 => {
-                    CoreType::Performance
-                }
-                0xA80 | 0xA81 | 0xA82 | 0xA83 | 0xA84 | 0xA85 | 0xA86 | 0xA87 => {
-                    CoreType::Performance
-                }
-                0xAA0 | 0xAA1 | 0xAA2 | 0xAA3 | 0xAA4 | 0xAA5 | 0xAA6 | 0xAA7 => {
-                    CoreType::Performance
-                }
-                0xAB0 | 0xAB1 | 0xAB2 | 0xAB3 | 0xAB4 | 0xAB5 | 0xAB6 | 0xAB7 => {
-                    CoreType::Performance
-                }
-                0xAC0 | 0xAC1 | 0xAC2 | 0xAC3 | 0xAC4 | 0xAC5 | 0xAC6 | 0xAC7 => {
-                    CoreType::Performance
-                }
+                // Super Cores
+                0xD13 | 0xD20 | 0xD21 | 0xD22 => CoreType::Super,
+
+                // Performance Cores
+                0xD07 | 0xD08 | 0xD09 | 0xD0A | 0xD0B | 0xD0C | 0xD0D | 0xD0E | 0xD0F | 0xD11
+                | 0xD12 | 0xD15 | 0xD16 | 0xD17 | 0xD18 => CoreType::Performance,
+
+                // Efficiency Cores
+                0xD01 | 0xD02 | 0xD03 | 0xD04 | 0xD05 | 0xD06 | 0xC07 | 0xC20 | 0xC23 | 0xA30
+                | 0xA31 | 0xA32 | 0xA33 | 0xA34 | 0xA35 | 0xA36 | 0xA37 | 0xA40 | 0xA41 | 0xA42
+                | 0xA43 | 0xA44 | 0xA45 | 0xA46 | 0xA47 | 0xA50 | 0xA51 | 0xA52 | 0xA53 | 0xA54
+                | 0xA55 | 0xA56 | 0xA57 | 0xA60 | 0xA61 | 0xA62 | 0xA63 | 0xA64 | 0xA65 | 0xA66
+                | 0xA67 => CoreType::Efficiency,
+
+                // Default to Performance for unknown parts
                 _ => CoreType::Performance,
             };
 
