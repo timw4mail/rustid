@@ -670,7 +670,7 @@ impl TCpu for Cpu {
             // Share count for L3 cache always seems to be 8??
             if let Some(l3) = cache.l3 {
                 let cache_count: Str<4> = if self.topology.sockets < 2 {
-                    sfmt!("")
+                    cache_count(l3.share_count)
                 } else {
                     sfmt!("{}x ", self.topology.sockets)
                 };

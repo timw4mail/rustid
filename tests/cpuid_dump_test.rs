@@ -534,12 +534,14 @@ mod amd_5900xt {
 
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.share_count(), 2);
                 assert_eq!(l2.size(), 524288, "L2 should be 512KB");
                 assert_eq!(l2.assoc(), 8, "L2 should be 8-way");
             }
 
             if let Some(l3) = cache.l3 {
                 assert_eq!(l3.kind(), CacheType::Unified);
+                assert_eq!(l3.share_count(), 16);
                 assert_eq!(l3.size(), 33554432, "L3 should be 32MB");
                 assert_eq!(l3.assoc(), 16, "L3 should be 16-way");
             }

@@ -370,7 +370,7 @@ impl Cache {
 
         for level in 0u32..32 {
             let res = x86_cpuid_count(leaf, level);
-            let cache_type = res.eax & 0xF;
+            let cache_type = res.eax & 0x1F;
 
             // If cache_type is 0, the cache type is invalid
             if cache_type == 0 {
@@ -378,7 +378,7 @@ impl Cache {
             }
 
             let cache_level = (res.eax >> 5) & 0x7;
-            let share_count = ((res.eax >> 14) & 0x7) + 1;
+            let share_count = ((res.eax >> 14) & 0xFFF) + 1;
             let cache_sets = res.ecx + 1;
             let cache_line_size = (res.ebx & 0xFFF) + 1;
             let cache_partitions = ((res.ebx >> 12) & 0x3FF) + 1;

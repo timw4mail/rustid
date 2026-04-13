@@ -279,8 +279,8 @@ impl Topology {
 
             // let x2apic_id_shift = res.eax & 0b1111;
             let domain_lcpus = res.ebx;
-            let level = res.ecx & 0x7;
-            let domain_type = res.ecx >> 8;
+            let level = res.ecx & 0xFF;
+            let domain_type = (res.ecx >> 8) & 0xFF;
 
             if domain_type == 0 {
                 break;

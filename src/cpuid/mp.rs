@@ -110,7 +110,7 @@ impl MpTable {
         let mut table = MpTable { sockets: 1 };
 
         // MP Table lookup is only applicable to certain CPUs
-        if !(super::is_intel() || super::is_vortex()) {
+        if !(super::is_intel() || super::is_vortex() || super::is_centaur()) {
             return table;
         }
 
