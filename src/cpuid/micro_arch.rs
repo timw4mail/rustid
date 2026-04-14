@@ -3,13 +3,10 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-use super::brand::CpuBrand;
 use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
-use super::{CpuSignature, Str, is_centaur, is_zhaoxin};
-#[allow(unused)]
-use crate::common::constants::*;
+use super::{CpuBrand, CpuSignature, Str, is_centaur, is_zhaoxin};
 
 /// CPU Microarchitecture enumeration.
 ///
