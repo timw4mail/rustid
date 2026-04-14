@@ -145,7 +145,7 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
 ///
 /// Returns a 12-character vendor string from CPUID leaf 0.
-pub fn vendor_str() -> Str<12> {
+pub fn vendor_str() -> Str<20> {
     #[cfg(target_arch = "x86")]
     if !has_cpuid() {
         let v = get_vendor_by_quirk();
@@ -153,7 +153,7 @@ pub fn vendor_str() -> Str<12> {
         return Str::from(v);
     }
 
-    let mut s = Str::new();
+    let mut s: Str<20> = Str::new();
 
     let res = x86_cpuid(0);
     let mut bytes = [0u8; 12];
@@ -171,8 +171,8 @@ pub fn vendor_str() -> Str<12> {
     s
 }
 
-pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<64> {
-    let mut model: Str<64> = Str::new();
+pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<70> {
+    let mut model: Str<70> = Str::new();
     if !is_valid_leaf(max_leaf) {
         return Str::from(UNK);
     }

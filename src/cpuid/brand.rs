@@ -196,8 +196,8 @@ impl From<&str> for CpuBrand {
     }
 }
 
-impl From<Str<12>> for CpuBrand {
-    fn from(brand: Str<12>) -> Self {
+impl From<Str<20>> for CpuBrand {
+    fn from(brand: Str<20>) -> Self {
         Self::from(&*brand)
     }
 }
@@ -330,10 +330,10 @@ mod tests {
 
     #[test]
     fn test_from_cpuid_str_for_cpu_brand() {
-        let amd_string: Str<12> = Str::from(VENDOR_AMD);
+        let amd_string: Str<20> = Str::from(VENDOR_AMD);
         assert_eq!(CpuBrand::from(amd_string), CpuBrand::AMD);
 
-        let unknown_string: Str<12> = Str::from("UNKNOWN_VEN");
+        let unknown_string: Str<20> = Str::from("UNKNOWN_VEN");
         assert_eq!(CpuBrand::from(unknown_string), CpuBrand::Unknown);
     }
 }

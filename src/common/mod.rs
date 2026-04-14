@@ -75,7 +75,7 @@ pub struct CpuCore {
     #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
     pub name: Option<String>,
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    pub name: Option<crate::cpuid::Str<64>>,
+    pub name: Option<crate::cpuid::Str<70>>,
 
     pub cache: Option<Cache>,
 

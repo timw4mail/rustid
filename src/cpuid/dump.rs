@@ -69,7 +69,7 @@ pub fn dump_main() {
     #[cfg(target_os = "none")]
     use crate::print;
 
-    let mut output: Str<8192> = Str::new();
+    let mut output: Str<8200> = Str::new();
 
     let logical_cores = logical_cores() as usize;
     for i in 0..logical_cores {

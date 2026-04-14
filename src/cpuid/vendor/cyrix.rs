@@ -133,13 +133,13 @@ pub struct Cyrix {
     /// CPU stepping
     pub stepping: u8,
     /// Bus multiplier factor
-    pub multiplier: Str<4>,
+    pub multiplier: Str<10>,
     /// Model enum
     pub emodel: CyrixModel,
     /// Model name
-    pub model: Str<64>,
+    pub model: Str<70>,
     /// Code name
-    pub code_name: Str<64>,
+    pub code_name: Str<70>,
 }
 
 impl Cyrix {
@@ -280,7 +280,7 @@ impl Cyrix {
     /// Get Cyrix processor model via registers
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
-    pub fn model_string() -> Str<64> {
+    pub fn model_string() -> Str<70> {
         if !crate::cpuid::is_cyrix() {
             return Str::from(UNK);
         }
@@ -310,7 +310,7 @@ impl Cyrix {
     /// Get bus multiplier for the current cpu
     ///
     /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
-    fn multiplier() -> Str<4> {
+    fn multiplier() -> Str<10> {
         if !crate::cpuid::is_cyrix() {
             return Str::from("0");
         }

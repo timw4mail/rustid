@@ -28,7 +28,7 @@ macro_rules! sfmt {
     };
 }
 
-pub const MAX_FMT_LEN: usize = 256;
+pub const MAX_FMT_LEN: usize = 260;
 
 #[derive(Clone, PartialEq)]
 pub struct String<const N: usize>(StaticVec<u8, N>);
@@ -149,10 +149,10 @@ impl<const N: usize> Str<N> {
             let start = s.bytes().take_while(|b| b.is_ascii_whitespace()).count();
             let end = s
                 .bytes()
-                .rposition(|b| b.is_ascii_whitespace())
+                .rposition(|b| !b.is_ascii_whitespace())
                 .map(|p| p + 1)
-                .unwrap_or(s.len());
-            &s[start..end.min(s.len())]
+                .unwrap_or(0);
+            if end < start { "" } else { &s[start..end] }
         }
     }
 

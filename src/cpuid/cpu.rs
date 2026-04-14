@@ -261,7 +261,7 @@ pub struct Cpu {
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
-    pub easter_egg: Option<Str<64>>,
+    pub easter_egg: Option<Str<70>>,
     /// Model brand id
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
@@ -276,13 +276,13 @@ pub struct Cpu {
 
 impl Cpu {
     /// Gets the CPU model string.
-    pub fn raw_model_string() -> Str<64> {
+    pub fn raw_model_string() -> Str<70> {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
     #[cfg(target_arch = "x86")]
     #[cfg(not(target_os = "none"))]
-    fn intel_brand_index(&self) -> Option<Str<64>> {
+    fn intel_brand_index(&self) -> Option<Str<70>> {
         let brand_id = super::get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
@@ -337,7 +337,7 @@ impl Cpu {
     /// This attempts to produce a marketing-style name based on the
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
-    pub fn display_model_string(&self) -> Str<64> {
+    pub fn display_model_string(&self) -> Str<70> {
         #[cfg(target_arch = "x86")]
         match CpuBrand::detect() {
             CpuBrand::AMD => {
@@ -474,8 +474,8 @@ impl Cpu {
         Str::from(s)
     }
 
-    fn easter_egg() -> Option<Str<64>> {
-        let mut out: Str<64> = Str::new();
+    fn easter_egg() -> Option<Str<70>> {
+        let mut out: Str<70> = Str::new();
         let brand = CpuBrand::detect();
 
         let addr = match brand {
@@ -580,8 +580,8 @@ impl TCpu for Cpu {
             }
         };
 
-        let label: fn(&str) -> Str<32> = |label| sfmt!("{:>14}:{:1}", label, "");
-        let sublabel: fn(&str) -> Str<32> = |label| sfmt!("{:>16}{}:{:1}", "", label, "");
+        let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}:{:1}", label, "");
+        let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}:{:1}", "", label, "");
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -682,8 +682,8 @@ impl TCpu for Cpu {
                     println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: Str<4> = cache_count(data.share_count);
-                    let instruction_count: Str<4> = cache_count(instruction.share_count);
+                    let data_count: Str<10> = cache_count(data.share_count);
+                    let instruction_count: Str<10> = cache_count(instruction.share_count);
 
                     if data.assoc > 0 {
                         println!(
@@ -725,7 +725,7 @@ impl TCpu for Cpu {
             // especially for single-socket, multiple die CPUs, like Ryzen 9.
             // Share count for L3 cache always seems to be 8??
             if let Some(l3) = cache.l3 {
-                let cache_count: Str<4> = if self.topology.sockets < 2 {
+                let cache_count: Str<10> = if self.topology.sockets < 2 {
                     cache_count(l3.share_count)
                 } else {
                     sfmt!("{}x ", self.topology.sockets)
@@ -799,10 +799,10 @@ impl TCpu for Cpu {
         // CPU Features
         if !self.features.is_empty() {
             #[cfg(target_os = "none")]
-            let mut features: Str<128> = Str::new();
+            let mut features: Str<130> = Str::new();
 
             #[cfg(not(target_os = "none"))]
-            let mut features: Str<512> = Str::new();
+            let mut features: Str<520> = Str::new();
 
             self.features.iter().for_each(|feature| {
                 features.push_str(feature);

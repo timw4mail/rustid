@@ -7,7 +7,7 @@ use crate::cpuid::{CpuSignature, Str, read_multi_leaf_str};
 /// Transmeta-specific microarchitecture detection.
 #[derive(Debug, Default, PartialEq)]
 pub struct Transmeta {
-    pub version_str: Str<64>,
+    pub version_str: Str<70>,
 }
 
 impl Transmeta {
@@ -17,7 +17,7 @@ impl Transmeta {
         }
     }
 
-    fn version_str() -> Str<64> {
+    fn version_str() -> Str<70> {
         read_multi_leaf_str(TRANSMETA_LEAF_3, TRANSMETA_LEAF_6)
     }
 }

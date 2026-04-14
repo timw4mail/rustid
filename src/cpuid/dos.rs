@@ -247,8 +247,8 @@ impl Speed {
         // 386 loop: add(4) + push(2) + pop(4) + mov mem(6) + cmp(2) + jne(7) = 25 cycles
         // RapidCAD (486 core in 386 package): ~20 cycles
         let cycles_per_loop = match &*super::vendor_str() {
-            super::brand::VENDOR_CYRIX => 14,
-            super::brand::VENDOR_UMC => 12,
+            super::constants::VENDOR_CYRIX => 14,
+            super::constants::VENDOR_UMC => 12,
             _ => {
                 if is_386() {
                     let sig = super::cpu::CpuSignature::detect();

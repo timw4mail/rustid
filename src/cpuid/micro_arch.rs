@@ -152,8 +152,8 @@ pub enum MicroArch {
     U5D,
 }
 
-impl From<MicroArch> for Str<32> {
-    fn from(ma: MicroArch) -> Str<32> {
+impl From<MicroArch> for Str<40> {
+    fn from(ma: MicroArch) -> Str<40> {
         let s = match ma {
             MicroArch::Unknown => UNK,
 
@@ -295,17 +295,17 @@ impl From<MicroArch> for Str<32> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     /// CPU model string
-    pub model: Str<64>,
+    pub model: Str<70>,
     /// Microarchitecture family
     pub micro_arch: MicroArch,
     /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
     /// Brand name (e.g., "Intel", "AMD")
-    pub brand_name: Str<32>,
+    pub brand_name: Str<40>,
     /// Raw vendor string from CPUID
-    pub vendor_string: Str<12>,
+    pub vendor_string: Str<20>,
     /// Process technology node (e.g., "14nm", "7nm")
-    pub technology: Option<Str<8>>,
+    pub technology: Option<Str<10>>,
 }
 
 impl Default for CpuArch {
@@ -324,9 +324,9 @@ impl CpuArch {
         vendor_string: &str,
         technology: Option<&str>,
     ) -> Self {
-        let model_s: Str<64> = Str::from(model);
-        let brand_s: Str<32> = Str::from(brand_name);
-        let vendor_s: Str<12> = Str::from(vendor_string);
+        let model_s: Str<70> = Str::from(model);
+        let brand_s: Str<40> = Str::from(brand_name);
+        let vendor_s: Str<20> = Str::from(vendor_string);
 
         let technology = technology.map(Str::from);
 
