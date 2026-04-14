@@ -3,10 +3,11 @@
 //! This module provides microarchitecture detection and identification
 //! for x86/x86_64 processors based on CPU signature and vendor information.
 
-use super::brand::*;
+use super::brand::CpuBrand;
+use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
-use super::{CpuSignature, Str, UNK, is_centaur, is_zhaoxin};
+use super::{CpuSignature, Str, is_centaur, is_zhaoxin};
 #[allow(unused)]
 use crate::common::constants::*;
 
@@ -439,11 +440,6 @@ impl CpuArch {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-
-    #[allow(unused_imports)]
-    use crate::cpuid::brand::{
-        VENDOR_CYRIX, VENDOR_DMP, VENDOR_RISE, VENDOR_TRANSMETA, VENDOR_UMC,
-    };
 
     #[test]
     fn test_micro_arch_from_string() {

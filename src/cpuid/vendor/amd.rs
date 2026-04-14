@@ -1,5 +1,4 @@
-use crate::common::constants::*;
-use crate::cpuid::brand::VENDOR_AMD;
+use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, logical_cores};

@@ -3,22 +3,8 @@
 //! This module provides CPU vendor detection for x86/x86_64 processors
 //! using the CPUID instruction.
 
+use super::constants::*;
 use super::{Str, UNK};
-
-pub const VENDOR_AMD: &str = "AuthenticAMD";
-pub const VENDOR_CENTAUR: &str = "CentaurHauls";
-pub const VENDOR_CYRIX: &str = "CyrixInstead";
-pub const VENDOR_DMP: &str = "Vortex86 SoC";
-pub const VENDOR_HYGON: &str = "HygonGenuine";
-pub const VENDOR_INTEL: &str = "GenuineIntel";
-pub const VENDOR_NEXGEN: &str = "NexGenDriven";
-pub const VENDOR_NSC: &str = "Geode by NSC";
-pub const VENDOR_RDC: &str = "Genuine  RDC";
-pub const VENDOR_RISE: &str = "RiseRiseRise";
-pub const VENDOR_SIS: &str = "SiS SiS SiS ";
-pub const VENDOR_TRANSMETA: &str = "GenuineTMx86";
-pub const VENDOR_UMC: &str = "UMC UMC UMC ";
-pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
 /// CPU brand/vendor enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

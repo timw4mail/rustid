@@ -1,8 +1,8 @@
-use crate::common::constants::*;
-use crate::cpuid::brand::{CpuBrand, VENDOR_TRANSMETA};
+use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, Str, TRANSMETA_LEAF_3, TRANSMETA_LEAF_6, read_multi_leaf_str};
+use crate::cpuid::{CpuSignature, Str, read_multi_leaf_str};
 
 /// Transmeta-specific microarchitecture detection.
 #[derive(Debug, Default, PartialEq)]

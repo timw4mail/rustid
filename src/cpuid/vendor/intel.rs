@@ -1,7 +1,5 @@
-use crate::common::UNK;
-use crate::common::constants::*;
 use crate::cpuid::CpuSignature;
-use crate::cpuid::brand::VENDOR_INTEL;
+use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 
 /// Intel-specific microarchitecture detection.

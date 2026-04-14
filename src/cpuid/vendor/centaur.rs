@@ -1,6 +1,5 @@
-use crate::common::UNK;
-use crate::common::constants::*;
-use crate::cpuid::brand::{CpuBrand, VENDOR_CENTAUR};
+use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, is_zhaoxin};

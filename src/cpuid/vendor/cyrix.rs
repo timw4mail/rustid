@@ -1,6 +1,6 @@
 use super::TMicroArch;
-use crate::common::constants::*;
-use crate::cpuid::brand::{CpuBrand, VENDOR_CYRIX};
+use crate::cpuid::brand::CpuBrand;
+use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
 use crate::sfmt;

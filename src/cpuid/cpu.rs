@@ -3,6 +3,7 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
+use super::*;
 use super::{
     EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, LEAF_1, Str, read_multi_leaf_str, x86_cpuid,
 };
@@ -474,10 +475,6 @@ impl Cpu {
     }
 
     fn easter_egg() -> Option<Str<64>> {
-        const AMD_EASTER_EGG_ADDR: u32 = 0x8FFF_FFFF;
-        #[cfg(target_arch = "x86")]
-        const RISE_EASTER_EGG_ADDR: u32 = 0x0000_5A4E;
-
         let mut out: Str<64> = Str::new();
         let brand = CpuBrand::detect();
 

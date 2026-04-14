@@ -1,4 +1,5 @@
 use super::Str;
+use super::*;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
 use crate::common::TCpu;
 use crate::cpuid;
@@ -14,7 +15,7 @@ fn repeat_spaces(n: usize) -> &'static str {
 }
 
 fn dump_leaf(f: &mut impl Write, leaf: u32, sub_leaf: u32, indent: usize) {
-    let result = cpuid::x86_cpuid_count(leaf, sub_leaf);
+    let result = x86_cpuid_count(leaf, sub_leaf);
     let prefix = repeat_spaces(indent);
     let _ = writeln!(
         f,
@@ -26,25 +27,27 @@ fn dump_leaf(f: &mut impl Write, leaf: u32, sub_leaf: u32, indent: usize) {
 fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     let _ = writeln!(f, "CPU {}:", cpu_idx);
 
-    let max_leaf = cpuid::max_leaf();
+    let max_leaf = max_leaf();
     for leaf in 0..=max_leaf {
         dump_leaf(f, leaf, 0, 4);
     }
 
-    let max_ext_leaf = cpuid::max_extended_leaf();
+    let max_ext_leaf = max_extended_leaf();
     for leaf in EXT_LEAF_0..=max_ext_leaf {
         dump_leaf(f, leaf, 0, 4);
     }
 
-    let vendor = cpuid::vendor_str();
+    let vendor = vendor_str();
 
-    let easter_egg = cpuid::Cpu::detect().easter_egg;
+    let easter_egg = Cpu::detect().easter_egg;
     if easter_egg.is_some() {
         #[allow(unreachable_patterns)]
         match &*vendor {
-            VENDOR_AMD => dump_leaf(f, 0x8FFF_FFFF, 0, 4),
+            VENDOR_AMD => dump_leaf(f, AMD_EASTER_EGG_ADDR, 0, 4),
             #[cfg(target_arch = "x86")]
-            _ => (),
+            VENDOR_RISE | VENDOR_SIS | VENDOR_DMP | VENDOR_RDC => {
+                dump_leaf(f, RISE_EASTER_EGG_ADDR, 0, 4)
+            }
             _ => (),
         }
     }
@@ -68,7 +71,7 @@ pub fn dump_main() {
 
     let mut output: Str<8192> = Str::new();
 
-    let logical_cores = cpuid::logical_cores() as usize;
+    let logical_cores = logical_cores() as usize;
     for i in 0..logical_cores {
         dump_cpu(&mut output, i);
     }
