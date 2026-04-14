@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.11.3]
+## [0.11.4]
 
 ### Added
+- OS and CPU Architecture in version string
 - AMD Elan processor mapping
 - Intel brand ID lookup table (DOS build excluded due to space constraints)
 - License file

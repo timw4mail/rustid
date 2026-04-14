@@ -35,6 +35,16 @@
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(not(target_os = "none"))]
+const ARCH: &str = std::env::consts::ARCH;
+#[cfg(target_os = "none")]
+const ARCH: &str = "x86";
+
+#[cfg(not(target_os = "none"))]
+const OS: &str = std::env::consts::OS;
+#[cfg(target_os = "none")]
+const OS: &str = "DOS";
+
+#[cfg(not(target_os = "none"))]
 extern crate std;
 
 pub mod common;
@@ -61,7 +71,10 @@ pub use cpuid::dos::*;
 pub use std::println;
 
 fn version() {
-    println!("--------------- Rustid {} ---------------", VERSION);
+    println!(
+        "--------------- Rustid {} ({}-{}) ---------------",
+        VERSION, ARCH, OS
+    );
 }
 
 #[cfg(target_arch = "x86")]
