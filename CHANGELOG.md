@@ -9,6 +9,7 @@
 - License file
 - Multiple core type support for ARM processors
 - DOS binary size test to verify 64K limit
+- Option to render output from raw CPUID dump files
 
 ### Changed
 - Use key names instead of blind indexes for lscpu cache information
@@ -17,6 +18,9 @@
 - Relabel "Cores" display to "Topology"
 - Streamline MP table lookup for DOS
 - Improved information display for PowerPC
+- Optimize DOS binary size further
+- Favor AMD-style cache lookup for Centaur CPUs with fallback
+- Improve accuracy of CPUID dump display
 
 ### Fixed
 - Fix cache detection for PPC
@@ -24,6 +28,7 @@
 - Fix entry for Geode LX
 - Fix PPC display code
 - Show L3 cache count for multiple sockets
+- Fix string truncation bug in DOS, increase fixed string sizes for multi-byte characters
 
 ## [0.10.1]
 

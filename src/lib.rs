@@ -77,6 +77,7 @@ fn version() {
     );
 }
 
+#[cfg(not(target_os = "none"))]
 fn help() {
     println!("Usage: rustid [COMMAND]");
     println!();
@@ -86,8 +87,10 @@ fn help() {
     println!("  v, version       Display version info");
     println!("  h, help          Show this help message");
     println!("  e, everything    Show CPU information and debug information");
-    println!("  d, dump          Dump raw CPUID values (x86/x86_64 only)");
-    println!("  f, file          Load CPUID dump from file and display CPU information (x86/x86_64 only)");
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    println!("  d, dump          Dump raw CPUID values");
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    println!("  f, file          Load CPUID dump from file and display CPU information");
     println!();
     println!("All commands accept optional leading dashes.");
 }
