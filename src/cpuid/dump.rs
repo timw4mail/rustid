@@ -126,7 +126,9 @@ pub fn dump_main() {
 
     let mut output: Str<16384> = Str::new();
 
-    let logical_cores = logical_cores() as usize;
+    let topo = super::topology::Topology::detect();
+
+    let logical_cores = topo.threads as usize;
     for i in 0..logical_cores {
         dump_cpu(&mut output, i);
     }

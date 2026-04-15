@@ -18,11 +18,11 @@ check:
 
 # More in-depth code style checking
 lint:
-	cargo clippy --all-targets
+	cargo clippy --all-targets --all-features
 
 # Fix linting erros
 fix:
-	cargo fix --all-targets
+	cargo fix --all-targets --all-features
 
 # Automatic code formatting
 fmt:

@@ -137,7 +137,7 @@ mod ppro {
         with_mock_cpu(|| {
             let vendor = vendor_str();
             assert_eq!(&*vendor, VENDOR_INTEL);
-            assert_eq!(is_intel(), true);
+            assert!(is_intel());
         });
     }
 
@@ -225,7 +225,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_ht_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_ht(), true);
+            assert!(has_ht());
         });
     }
 
@@ -321,102 +321,102 @@ mod m3_8100y {
     #[test]
     fn test_intel_sse_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_sse(), true);
-            assert_eq!(has_sse2(), true);
-            assert_eq!(has_sse3(), true);
-            assert_eq!(has_sse41(), true);
-            assert_eq!(has_sse42(), true);
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
+            assert!(has_sse41());
+            assert!(has_sse42());
         });
     }
 
     #[test]
     fn test_intel_avx_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_avx(), true);
+            assert!(has_avx());
         });
     }
 
     #[test]
     fn test_intel_avx2_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_avx2(), true);
+            assert!(has_avx2());
         });
     }
 
     #[test]
     fn test_intel_aes_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_aes(), true);
+            assert!(has_aes());
         });
     }
 
     #[test]
     fn test_intel_fpu_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_fpu(), true);
+            assert!(has_fpu());
         });
     }
 
     #[test]
     fn test_intel_tsc_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_tsc(), true);
+            assert!(has_tsc());
         });
     }
 
     #[test]
     fn test_intel_mmx_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_mmx(), true);
+            assert!(has_mmx());
         });
     }
 
     #[test]
     fn test_intel_ssse3_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_ssse3(), true);
+            assert!(has_ssse3());
         });
     }
 
     #[test]
     fn test_intel_fma_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_fma(), true);
+            assert!(has_fma());
         });
     }
 
     #[test]
     fn test_intel_cx16_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_cx16(), true);
+            assert!(has_cx16());
         });
     }
 
     #[test]
     fn test_intel_rdrand_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_rdrand(), true);
+            assert!(has_rdrand());
         });
     }
 
     #[test]
     fn test_intel_bmi1_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_bmi1(), true);
+            assert!(has_bmi1());
         });
     }
 
     #[test]
     fn test_intel_bmi2_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_bmi2(), true);
+            assert!(has_bmi2());
         });
     }
 
     #[test]
     fn test_intel_f16c_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_f16c(), true);
+            assert!(has_f16c());
         });
     }
 }
@@ -428,7 +428,6 @@ mod amd_7950x3d {
         set_file_cpuid_provider("7950x3d.txt");
         test();
     }
-
 
     #[test]
     fn test_dies() {
@@ -527,7 +526,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_ht_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_ht(), true);
+            assert!(has_ht());
         });
     }
 
@@ -619,96 +618,96 @@ mod amd_5900xt {
     #[test]
     fn test_amd_sse_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_sse(), true);
-            assert_eq!(has_sse2(), true);
-            assert_eq!(has_sse3(), true);
-            assert_eq!(has_sse41(), true);
-            assert_eq!(has_sse42(), true);
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
+            assert!(has_sse41());
+            assert!(has_sse42());
         });
     }
 
     #[test]
     fn test_amd_avx_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_avx(), true);
+            assert!(has_avx());
         });
     }
 
     #[test]
     fn test_amd_avx2_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_avx2(), true);
+            assert!(has_avx2());
         });
     }
 
     #[test]
     fn test_amd_popcnt_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_popcnt(), true);
+            assert!(has_popcnt());
         });
     }
 
     #[test]
     fn test_amd_aes_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_aes(), true);
+            assert!(has_aes());
         });
     }
 
     #[test]
     fn test_amd_mmx_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_mmx(), true);
+            assert!(has_mmx());
         });
     }
 
     #[test]
     fn test_amd_ssse3_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_ssse3(), true);
+            assert!(has_ssse3());
         });
     }
 
     #[test]
     fn test_amd_fma_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_fma(), true);
+            assert!(has_fma());
         });
     }
 
     #[test]
     fn test_amd_sse4a_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_sse4a(), true);
+            assert!(has_sse4a());
         });
     }
 
     #[test]
     fn test_amd_amd64_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_amd64(), true);
+            assert!(has_amd64());
         });
     }
 
     #[test]
     fn test_amd_f16c_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_f16c(), true);
+            assert!(has_f16c());
         });
     }
 
     #[test]
     fn test_amd_x2apic_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_x2apic(), true);
+            assert!(has_x2apic());
         });
     }
 
     #[test]
     fn test_amd_3dnow_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_3dnow(), false);
-            assert_eq!(has_3dnow_plus(), false);
+            assert!(!has_3dnow());
+            assert!(!has_3dnow_plus());
         });
     }
 }
@@ -768,7 +767,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_no_ht() {
         with_mock_cpu(|| {
-            assert_eq!(has_ht(), true);
+            assert!(has_ht());
         });
     }
 
@@ -821,15 +820,15 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_sse_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_sse(), true);
-            assert_eq!(has_sse2(), true);
+            assert!(has_sse());
+            assert!(has_sse2());
         });
     }
 
     #[test]
     fn test_zhaoxin_avx_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_avx(), true);
+            assert!(has_avx());
         });
     }
 
@@ -895,7 +894,7 @@ mod via_c7d {
     #[test]
     fn test_via_no_ht() {
         with_mock_cpu(|| {
-            assert_eq!(has_ht(), false);
+            assert!(!has_ht());
         });
     }
 
@@ -918,9 +917,9 @@ mod via_c7d {
     #[test]
     fn test_via_sse_support() {
         with_mock_cpu(|| {
-            assert_eq!(has_sse(), true);
-            assert_eq!(has_sse2(), true);
-            assert_eq!(has_sse3(), true);
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
         });
     }
 

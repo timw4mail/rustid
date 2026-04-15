@@ -163,18 +163,29 @@ impl Topology {
         let domains: DomainList = Self::detect_domains();
         let (sockets, cores, threads) = Self::count_domains(&domains);
 
-        let mut dies = 1;
+        let mut threads_per_socket = 0;
+        let mut threads_per_die = 0;
+
         for d in domains.iter() {
+            if d.count > threads_per_socket {
+                threads_per_socket = d.count;
+            }
             if d.kind == TopologyType::Die {
-                dies = d.count;
+                threads_per_die = d.count;
             }
         }
+
+        let dies = if threads_per_die > 0 && threads_per_socket > 0 {
+            (threads_per_socket / threads_per_die).max(1)
+        } else {
+            1
+        };
 
         Topology {
             sockets,
             dies,
-            cores: cores * sockets,
-            threads: threads * sockets,
+            cores,
+            threads,
             speed,
             cache,
             domains,
@@ -187,7 +198,7 @@ impl Topology {
         }
 
         // 1. Try modern V2 topology leaves
-        for &leaf in &[LEAF_1F, EXT_LEAF_26] {
+        for &leaf in &[EXT_LEAF_26, LEAF_1F] {
             if is_valid_leaf(leaf) {
                 let mut subleaf = 0;
                 let mut max_lcpus = 0;
@@ -245,15 +256,15 @@ impl Topology {
         1
     }
 
-    /// Returns (sockets, cores, threads)
+    /// Returns (sockets, total_cores, total_threads)
     fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
-        let threads_total = Self::amd_threads();
+        let threads_total_fallback = Self::amd_threads();
 
         // 1. Initial socket count detection (Platform-specific fallbacks)
-        let mut sockets_detected: u32 = {
+        let sockets_detected: u32 = {
             #[cfg(any(target_os = "none", target_os = "linux"))]
             {
-                super::mp::MpTable::detect().socket_count()
+                super::mp::MpTable::detect().socket_count().max(1)
             }
             #[cfg(not(any(target_os = "none", target_os = "linux")))]
             {
@@ -264,78 +275,57 @@ impl Topology {
         if domains.is_empty() {
             let (cores, threads) = match &*vendor_str() {
                 VENDOR_AMD => {
-                    // Logical cpus = cores before Zen, when
-                    // Topology domains start returning results
-                    if threads_total > 1 {
-                        (threads_total, threads_total)
+                    if threads_total_fallback > 1 {
+                        (threads_total_fallback, threads_total_fallback)
                     } else {
                         (1, 1)
                     }
                 }
                 VENDOR_INTEL => {
-                    if threads_total < 2 {
+                    if threads_total_fallback < 2 {
                         (1, 1)
                     } else if has_ht() {
-                        (threads_total / 2, threads_total)
+                        (threads_total_fallback / 2, threads_total_fallback)
                     } else {
-                        (threads_total, threads_total)
+                        (threads_total_fallback, threads_total_fallback)
                     }
                 }
                 _ => (1, 1),
             };
 
-            return (sockets_detected, cores, threads);
+            return (
+                sockets_detected,
+                cores * sockets_detected,
+                threads * sockets_detected,
+            );
         }
 
         // 2. Extract domain counts
-        let mut domain_socket_count = 0;
         let mut threads_per_core = 1;
-        let mut threads_per_package = threads_total;
+        let mut threads_per_package = 0;
 
         for d in domains.iter() {
-            match d.kind {
-                TopologyType::Thread => threads_per_core = d.count,
-                TopologyType::Core => {
-                    // Intel: EBX is threads per package at this level
-                    // AMD: EBX is threads per package at this level
-                    threads_per_package = d.count;
-                }
-                TopologyType::Socket => {
-                    domain_socket_count = d.count;
-                }
-                _ => {}
+            if d.kind == TopologyType::Thread {
+                threads_per_core = d.count;
+            }
+            if d.count > threads_per_package {
+                threads_per_package = d.count;
             }
         }
 
-        // If domains reported a socket count, use it as a hint/validation
-        if domain_socket_count > 0 {
-            sockets_detected = sockets_detected.max(domain_socket_count);
+        if threads_per_package == 0 {
+            threads_per_package = threads_total_fallback;
         }
 
-        let vendor = vendor_str();
-        match &*vendor {
-            VENDOR_AMD | VENDOR_INTEL => {
-                // For both modern AMD (8000_0026h) and Intel (0Bh/1Fh):
-                // EBX is cumulative logical processors at this level.
-                // Thread level EBX = threads per core.
-                // Core level EBX = threads per package.
-                let t_per_core = threads_per_core.max(1);
-                let t_per_pkg = if threads_per_package > 0 {
-                    threads_per_package
-                } else {
-                    threads_total
-                };
-                let c_per_pkg = t_per_pkg / t_per_core;
+        let t_per_core = threads_per_core.max(1);
+        let t_per_pkg = threads_per_package.max(1);
+        let c_per_pkg = t_per_pkg / t_per_core;
 
-                (sockets_detected, c_per_pkg, t_per_pkg)
-            }
-            _ => {
-                let t_per_core = threads_per_core.max(1);
-                let t_per_pkg = threads_per_package.max(threads_total);
-                let c_per_pkg = (t_per_pkg / t_per_core).max(1);
-                (sockets_detected, c_per_pkg, t_per_pkg)
-            }
-        }
+        (
+            sockets_detected,
+            c_per_pkg * sockets_detected,
+            t_per_pkg * sockets_detected,
+        )
     }
 
     fn detect_domains() -> DomainList {
