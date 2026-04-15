@@ -48,8 +48,20 @@ pub const LEAF_7: u32 = 0x7;
 /// CPU extended topology v1
 pub const LEAF_0B: u32 = 0xB;
 
+/// CPUID leaf 0x0000000D - Processor Extended State
+pub const LEAF_0D: u32 = 0xD;
+
+/// CPUID leaf 0x00000014 - Intel Processor Trace
+pub const LEAF_14: u32 = 0x14;
+
 /// CPUID leaf 0x00000016 - Intel Processor Frequency
 pub const LEAF_16: u32 = 0x16;
+
+/// CPUID leaf 0x00000017 - System-On-Chip Vendor Attribute
+pub const LEAF_17: u32 = 0x17;
+
+/// CPUID leaf 0x00000018 - Deterministic Address Translation Parameters
+pub const LEAF_18: u32 = 0x18;
 
 /// Intel extended topology v2
 pub const LEAF_1F: u32 = 0x1F;
