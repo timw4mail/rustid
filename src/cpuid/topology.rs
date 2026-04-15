@@ -261,18 +261,21 @@ impl Topology {
         let threads_total_fallback = Self::amd_threads();
 
         // 1. Initial socket count detection (Platform-specific fallbacks)
-        let sockets_detected: u32 = {
-            #[cfg(any(target_os = "none", target_os = "linux"))]
-            {
-                super::mp::MpTable::detect().socket_count().max(1)
-            }
-            #[cfg(not(any(target_os = "none", target_os = "linux")))]
-            {
-                1
-            }
-        };
+        // TODO: detect socket count from domains
+        let sockets_detected: u32 = 1;
 
         if domains.is_empty() {
+            let sockets_detected: u32 = {
+                #[cfg(any(target_os = "none", target_os = "linux"))]
+                {
+                    super::mp::MpTable::detect().socket_count().max(1)
+                }
+                #[cfg(not(any(target_os = "none", target_os = "linux")))]
+                {
+                    1
+                }
+            };
+
             let (cores, threads) = match &*vendor_str() {
                 VENDOR_AMD => {
                     if threads_total_fallback > 1 {
