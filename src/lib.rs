@@ -114,10 +114,9 @@ pub fn cli_main() {
     #[cfg(target_arch = "x86")]
     cyrix_cpuid_check();
 
-    let cpu = Cpu::detect();
-
     #[cfg(target_os = "none")]
     {
+        let cpu = Cpu::detect();
         version();
         cpu.display_table();
     }
@@ -128,24 +127,41 @@ pub fn cli_main() {
             Some(arg) => match arg.as_str() {
                 "debug" => {
                     version();
-                    cpu.debug();
+                    Cpu::detect().debug();
                 }
                 "e" | "everything" => {
                     version();
+                    let cpu = Cpu::detect();
                     cpu.display_table();
                     println!("---");
                     cpu.debug();
                 }
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 "d" | "dump" => cpuid::dump::dump_main(),
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                "f" | "file" => {
+                    use cpuid::provider::{self, CpuDump};
+
+                    version();
+                    let path = std::env::args().nth(2);
+                    if let Some(path) = path {
+                        let dump = CpuDump::parse_file(&path);
+                        provider::set_cpuid_provider(dump);
+                        let cpu = Cpu::detect();
+                        cpu.display_table();
+                        provider::reset_cpuid_provider();
+                    } else {
+                        println!("Usage: rustid load <dump_file>");
+                    }
+                }
                 _ => {
                     version();
-                    cpu.display_table()
+                    Cpu::detect().display_table()
                 }
             },
             None => {
                 version();
-                cpu.display_table();
+                Cpu::detect().display_table();
             }
         }
     }

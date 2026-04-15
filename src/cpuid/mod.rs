@@ -25,7 +25,7 @@ pub mod micro_arch;
 
 pub mod mp;
 
-#[cfg(feature = "file_mock")]
+#[cfg(not(target_os = "none"))]
 pub mod provider;
 
 pub mod topology;

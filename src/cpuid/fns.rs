@@ -13,7 +13,6 @@ use super::constants::*;
 #[cfg(target_arch = "x86")]
 use super::quirks::get_vendor_by_quirk;
 
-#[cfg(feature = "file_mock")]
 use super::provider;
 
 use crate::cpuid::{CpuBrand, FeatureList, Str};
@@ -64,10 +63,10 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
-    #[cfg(not(feature = "file_mock"))]
+    #[cfg(target_os = "none")]
     return real_x86_cpuid_count(leaf, sub_leaf);
 
-    #[cfg(feature = "file_mock")]
+    #[cfg(not(target_os = "none"))]
     provider::PROVIDER
         .read()
         .unwrap()
@@ -260,10 +259,10 @@ pub fn logical_cores() -> u32 {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
-    return crate::common::logical_cores() as u32;
-
-    #[cfg(target_os = "none")]
+//     #[cfg(not(target_os = "none"))]
+//     return crate::common::logical_cores() as u32;
+//
+//     #[cfg(target_os = "none")]
     1
 }
 

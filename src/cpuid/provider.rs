@@ -103,3 +103,9 @@ impl CpuDump {
             .unwrap_or_default()
     }
 }
+
+impl CpuidProvider for CpuDump {
+    fn cpuid_count(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
+        self.get(leaf, sub_leaf)
+    }
+}
