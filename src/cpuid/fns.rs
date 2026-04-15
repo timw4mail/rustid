@@ -13,8 +13,6 @@ use super::constants::*;
 #[cfg(target_arch = "x86")]
 use super::quirks::get_vendor_by_quirk;
 
-use super::provider;
-
 use crate::cpuid::{CpuBrand, FeatureList, Str};
 
 /// Represents the result of a CPUID instruction call.
@@ -67,7 +65,7 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     return real_x86_cpuid_count(leaf, sub_leaf);
 
     #[cfg(not(target_os = "none"))]
-    provider::PROVIDER
+    super::provider::PROVIDER
         .read()
         .unwrap()
         .cpuid_count(leaf, sub_leaf)
@@ -259,10 +257,10 @@ pub fn logical_cores() -> u32 {
         }
     }
 
-//     #[cfg(not(target_os = "none"))]
-//     return crate::common::logical_cores() as u32;
-//
-//     #[cfg(target_os = "none")]
+    //     #[cfg(not(target_os = "none"))]
+    //     return crate::common::logical_cores() as u32;
+    //
+    //     #[cfg(target_os = "none")]
     1
 }
 

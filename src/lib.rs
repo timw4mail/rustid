@@ -77,6 +77,14 @@ fn version() {
     );
 }
 
+#[cfg(not(target_os = "none"))]
+fn file_version() {
+    println!(
+        "--------------- Rustid {} ({}-{}:from-cpuid-dump) ---------------",
+        VERSION, ARCH, OS
+    );
+}
+
 #[cfg(target_arch = "x86")]
 pub fn cyrix_cpuid_check() {
     use crate::println;
@@ -142,7 +150,7 @@ pub fn cli_main() {
                 "f" | "file" => {
                     use cpuid::provider::{self, CpuDump};
 
-                    version();
+                    file_version();
                     let path = std::env::args().nth(2);
                     if let Some(path) = path {
                         let dump = CpuDump::parse_file(&path);

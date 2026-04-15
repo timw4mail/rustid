@@ -119,6 +119,10 @@ clean:
 run arg="":
 	@{{base_run}} {{arg}}
 
+# Run rustid, but pull cpu information from a cpuid dump
+from-file arg="":
+	@{{base_run}} file {{arg}}
+
 # Build and run the debug app
 run-debug arg="":
 	@{{base_run}} --features debug --bin debug {{arg}}
