@@ -96,6 +96,7 @@ fn help() {
 }
 
 #[cfg(not(target_os = "none"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 fn file_version() {
     println!(
         "--------------- Rustid {} ({}-{}:from-cpuid-dump) ---------------",
