@@ -421,6 +421,56 @@ mod m3_8100y {
     }
 }
 
+mod amd_7950x3d {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("7950x3d.txt");
+        test();
+    }
+
+
+    #[test]
+    fn test_dies() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+
+            assert_eq!(cpu.topology.dies, 2);
+        });
+    }
+
+    #[test]
+    fn test_threads() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads, 32);
+        });
+    }
+
+    #[test]
+    fn test_cores() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.cores, 16);
+        });
+    }
+
+    #[test]
+    fn test_sockets() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+            let cpu = Cpu::detect();
+
+            assert_eq!(cpu.topology.sockets, 1);
+        })
+    }
+}
+
 mod amd_5900xt {
     use super::*;
 
