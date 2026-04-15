@@ -35,9 +35,15 @@ impl Cache {
                 true => Cache::detect_general(EXT_LEAF_1D),
                 false => Cache::detect_ext_5_6(),
             },
-            VENDOR_CENTAUR => match is_valid_leaf(LEAF_4) {
-                true => Cache::detect_general(LEAF_4),
-                false => Cache::detect_ext_5_6(),
+            VENDOR_CENTAUR => match is_valid_leaf(EXT_LEAF_6) {
+                true => Cache::detect_ext_5_6(),
+                false => {
+                    if is_valid_leaf(LEAF_4) {
+                        Cache::detect_general(LEAF_4)
+                    } else {
+                        Cache::detect_fallback()
+                    }
+                }
             },
             VENDOR_TRANSMETA => match is_valid_leaf(EXT_LEAF_6) {
                 true => Cache::detect_ext_5_6(),
