@@ -77,6 +77,21 @@ fn version() {
     );
 }
 
+fn help() {
+    println!("Usage: rustid [COMMAND]");
+    println!();
+    println!("Commands:");
+    println!("  (no args)     Display CPU information");
+    println!("  debug         Display detailed debug information");
+    println!("  v, version       Display version info");
+    println!("  h, help          Show this help message");
+    println!("  e, everything    Show CPU information and debug information");
+    println!("  d, dump          Dump raw CPUID values (x86/x86_64 only)");
+    println!("  f, file          Load CPUID dump from file and display CPU information (x86/x86_64 only)");
+    println!();
+    println!("All commands accept optional leading dashes.");
+}
+
 #[cfg(not(target_os = "none"))]
 fn file_version() {
     println!(
@@ -90,7 +105,7 @@ pub fn cyrix_cpuid_check() {
     use crate::println;
 
     if cpuid::vendor::Cyrix::can_enable_cpuid() {
-        println!("This CPU has CPUID support, but it is disabled.");
+        println!("This CPU has CPUID support, but it is disabled by default.");
         println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
         println!("For DOS, you can download a utility from ");
         println!("  https://www.deinmeister.de/e_cy6x86cr.htm");
@@ -131,8 +146,15 @@ pub fn cli_main() {
 
     #[cfg(not(target_os = "none"))]
     {
-        match std::env::args().nth(1) {
-            Some(arg) => match arg.as_str() {
+        let cmd = std::env::args().nth(1);
+        let cmd_stripped = cmd.as_ref().map(|a| {
+            // One dash
+            let s = a.strip_prefix('-').unwrap_or(a);
+            // Two dashes
+            s.strip_prefix("-").unwrap_or(s)
+        });
+        match cmd_stripped {
+            Some(cmd) => match cmd {
                 "debug" => {
                     version();
                     Cpu::detect().debug();
@@ -159,12 +181,14 @@ pub fn cli_main() {
                         cpu.display_table();
                         provider::reset_cpuid_provider();
                     } else {
-                        println!("Usage: rustid load <dump_file>");
+                        println!("Usage: rustid file <dump_file>");
                     }
                 }
+                "h" | "help" => help(),
+                "v" | "version" => version(),
                 _ => {
-                    version();
-                    Cpu::detect().display_table()
+                    eprintln!("Unknown command: {}", std::env::args().nth(1).unwrap());
+                    help();
                 }
             },
             None => {

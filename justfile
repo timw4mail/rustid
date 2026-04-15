@@ -59,7 +59,7 @@ _build-dos-dump:
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --bin dump --release
 	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.com
 
-# Build for DOS
+# Build for DOS - subcommands are split into separate binaries
 build-dos: _build-dos _build-dos-debug _build-dos-dump
 	# Build initial binary and convert to COM
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --release --features dos-build
@@ -117,7 +117,7 @@ clean:
 
 # Build and run the app
 run arg="":
-	@{{base_run}} {{arg}}
+	@{{base_run}} -- {{arg}}
 
 # Run rustid, but pull cpu information from a cpuid dump
 from-file arg="":
@@ -143,41 +143,39 @@ run-dos: build-dos
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.com
 
-[linux, unix]
-run-dos-debug: build-dos
-	dosbox-x . -fastlaunch debug.com
-
 # Run all the (native) tests
 test:
-	cargo test --features file_mock -- --test-threads=1
+	cargo test -- --test-threads=1
 
 # Run tests and generate code coverage
 coverage:
-	cargo llvm-cov --open --features file_mock -- --test-threads=1
+	cargo llvm-cov --open -- --test-threads=1
 
 # Run 64 and 32 bit tests (on 64bit platform)
 test-all: test test-x86 test-arm
 
+# Run linux aarch64 tests
 [linux, unix]
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo cross test --target aarch64-unknown-linux-musl --features file_mock -- --test-threads=1
+	cargo cross test --target aarch64-unknown-linux-musl -- --test-threads=1
 
+# Run windwos arm tests
 [windows]
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
-	cargo cross test --target aarch64-pc-windows-gnu --features file_mock -- --test-threads=1
+	cargo cross test --target aarch64-pc-windows-gnu -- --test-threads=1
 
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]
 test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo cross test --target i686-unknown-linux-musl --features file_mock -- --test-threads=1
+	cargo cross test --target i686-unknown-linux-musl -- --test-threads=1
 
 # Run tests for 32-bit x86
 [windows]
 test-x86:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
-	cargo test --target i686-pc-windows-msvc --features file_mock -- --test-threads=1
+	cargo test --target i686-pc-windows-msvc -- --test-threads=1
 

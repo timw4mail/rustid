@@ -49,62 +49,57 @@ impl FeatureClass {
     pub fn detect() -> FeatureClass {
         use super::*;
 
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            if has_avx512f() {
-                return FeatureClass::x86_64_v4;
-            }
+        if has_avx512f() {
+            return FeatureClass::x86_64_v4;
+        }
 
-            if has_avx() && has_avx2() && has_bmi1() && has_bmi2() && has_f16c() && has_fma() {
-                return FeatureClass::x86_64_v3;
-            }
+        if has_avx() && has_avx2() && has_bmi1() && has_bmi2() && has_f16c() && has_fma() {
+            return FeatureClass::x86_64_v3;
+        }
 
-            if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3()
-            {
-                return FeatureClass::x86_64_v2;
-            }
+        if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3() {
+            return FeatureClass::x86_64_v2;
+        }
 
-            #[cfg(target_arch = "x86")]
-            if has_amd64() {
-                return FeatureClass::x86_64_v1;
-            }
-
-            #[cfg(target_arch = "x86_64")]
-            FeatureClass::x86_64_v1
+        if has_amd64() {
+            return FeatureClass::x86_64_v1;
         }
 
         #[cfg(target_arch = "x86")]
-        {
-            if is_cyrix() {
-                return vendor::Cyrix::get_feature_class();
-            }
-
-            if has_sse3() {
-                return FeatureClass::i686_SSE3;
-            }
-
-            if has_sse2() {
-                return FeatureClass::i686_SSE2;
-            }
-
-            if has_sse() {
-                return FeatureClass::i686_SSE;
-            }
-
-            if has_cmov() {
-                return FeatureClass::i686;
-            }
-
-            if has_cx8() {
-                return FeatureClass::i586;
-            }
-
-            if is_486() || (has_cpuid() && CpuSignature::detect().family == 4) {
-                return FeatureClass::i486;
-            }
-
-            FeatureClass::i386
+        if is_cyrix() {
+            return vendor::Cyrix::get_feature_class();
         }
+
+        if has_sse3() {
+            return FeatureClass::i686_SSE3;
+        }
+
+        if has_sse2() {
+            return FeatureClass::i686_SSE2;
+        }
+
+        if has_sse() {
+            return FeatureClass::i686_SSE;
+        }
+
+        if has_cmov() {
+            return FeatureClass::i686;
+        }
+
+        if has_cx8() {
+            return FeatureClass::i586;
+        }
+
+        if has_cpuid() && CpuSignature::detect().family == 4 {
+            return FeatureClass::i486;
+        }
+
+        #[cfg(target_arch = "x86")]
+        if is_486() {
+            return FeatureClass::i486;
+        }
+
+        FeatureClass::i386
     }
 
     /// Returns a string representation of the feature class.

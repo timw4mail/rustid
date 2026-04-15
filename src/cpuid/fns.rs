@@ -444,10 +444,6 @@ pub fn has_sse4a() -> bool {
 
 /// Returns true if the CPU supports AMD64 (x86-64) instructions.
 pub fn has_amd64() -> bool {
-    #[cfg(target_arch = "x86_64")]
-    return true;
-
-    #[cfg(target_arch = "x86")]
     has_feature(EXT_LEAF_1, Reg::Edx, 29)
 }
 
