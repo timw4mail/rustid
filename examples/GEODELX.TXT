@@ -1,0 +1,14 @@
+--------------- Rustid 0.11.4 (x86-DOS) ---------------
+  Architecture: i686
+        Vendor: AuthenticAMD (AMD)
+         Model: Geode(TM) Integrated Processor by AMD PCS
+     MicroArch: Geode
+      Codename: Geode LX
+  Process Node: 130nm
+         Cache: L1d: 64 KB, 16-way
+                L1i: 64 KB, 16-way
+                L2:  128 KB, 4-way
+     Frequency: 498.00 MHz
+     Signature: Family 5h, Model Ah, Stepping 2h
+                (0, 5, 0, 10, 2)
+      Features: FPU TSC CMPXCHG8B CMOV MMX 3DNow! 3DNow!+ 

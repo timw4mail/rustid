@@ -1,0 +1,22 @@
+--------------- Rustid 0.11.4 (x86-haiku) ---------------
+  Architecture: x86_64-v1
+
+        Vendor: CentaurHauls (Via)
+
+         Model: VIA Nano U3300@1200MHz
+
+     MicroArch: Isaiah
+
+      Codename: CNB A2
+
+         Cache: L1d: 64 KB, 16-way
+                L1i: 64 KB, 16-way
+                L2:  1 MB, 8-way
+
+     Frequency: 1.20 GHz
+
+     Signature: Family 6h, Model Fh, Stepping Ah
+                (0, 6, 0, 15, 10)
+
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX AMD64 SSE SSE2 SSE3 SSE4.1 SSSE3 POPCNT 
+

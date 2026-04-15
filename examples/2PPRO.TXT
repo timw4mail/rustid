@@ -1,13 +1,13 @@
---------------- Rustid 0.9.6 ---------------
+--------------- Rustid 0.11.4 (x86-DOS) ---------------
   Architecture: i686
         Vendor: GenuineIntel (Intel)
  Model (synth): Intel Pentium Pro
      MicroArch: P6
   Process Node: 350nm
-       Sockets: 2
-         Cache: L1d: 8 KB, 2-way
-                L1i: 8 KB, 4-way
-                L2:  1 MB, 4-way
+      Topology: 2 sockets, 2 cores, 2 threads
+         Cache: L1d: 2x 8 KB, 2-way
+                L1i: 2x 8 KB, 4-way
+                L2:  2x 1 MB, 4-way
      Frequency: 199.00 MHz
      Signature: Family 6h, Model 1h, Stepping 9h
                 (0, 6, 0, 1, 9)

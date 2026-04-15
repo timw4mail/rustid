@@ -1,5 +1,5 @@
---------------- Rustid 0.9.6 ---------------
-  Architecture: i586
+--------------- Rustid 0.11.4 (x86-DOS) ---------------
+  Architecture: i486
         Vendor: CentaurHauls (IDT)
  Model (synth): IDT Winchip 2
    Model (raw): IDT WinChip 2-3D
@@ -8,7 +8,6 @@
   Process Node: 350nm
          Cache: L1d: 32 KB, 4-way
                 L1i: 32 KB, 2-way
-                L3:  1024 MB, 0-way
      Frequency: 200.00 MHz
      Signature: Family 5h, Model 8h, Stepping 5h
                 (0, 5, 0, 8, 5)

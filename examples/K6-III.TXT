@@ -1,9 +1,9 @@
---------------- Rustid 0.9.6 ---------------
+--------------- Rustid 0.11.4 (x86-DOS) ---------------
   Architecture: i586
         Vendor: AuthenticAMD (AMD)
          Model: AMD-K6(tm) 3D+ Processor
      MicroArch: K6
-      Codename: Sharptooth (K6-III)
+      Codename: Sharptooth
   Process Node: 250nm
     Easter Egg: NexGenerationAMD
          Cache: L1d: 32 KB, 2-way
