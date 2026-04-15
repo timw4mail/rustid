@@ -1,5 +1,5 @@
 use super::constants::*;
-use super::{StaticVec, has_ht, is_valid_leaf, logical_cores, vendor_str, x86_cpuid_count};
+use super::{StaticVec, has_ht, is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, Speed};
 
 impl Speed {
@@ -139,6 +139,8 @@ pub type DomainList = StaticVec<TopologyDomain, 8>;
 pub struct Topology {
     /// Number of processor sockets
     pub sockets: u32,
+    /// Number of dies per socket
+    pub dies: u32,
     /// Number of physical cores
     pub cores: u32,
     /// Number of logical threads (includes SMT)
@@ -161,8 +163,16 @@ impl Topology {
         let domains: DomainList = Self::detect_domains();
         let (sockets, cores, threads) = Self::count_domains(&domains);
 
+        let mut dies = 1;
+        for d in domains.iter() {
+            if d.kind == TopologyType::Die {
+                dies = d.count;
+            }
+        }
+
         Topology {
             sockets,
+            dies,
             cores: cores * sockets,
             threads: threads * sockets,
             speed,
@@ -171,13 +181,76 @@ impl Topology {
         }
     }
 
-    /// Returns (sockets, cores, threads)
-    // TODO: verify socket count from domains
-    fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
-        let threads = logical_cores();
+    fn amd_threads() -> u32 {
+        if vendor_str() != VENDOR_AMD {
+            return 1;
+        }
 
-        // Old school socket counts
-        let sockets: u32 = {
+        // 1. Try modern V2 topology leaves
+        for &leaf in &[LEAF_1F, EXT_LEAF_26] {
+            if is_valid_leaf(leaf) {
+                let mut subleaf = 0;
+                let mut max_lcpus = 0;
+                loop {
+                    let res = x86_cpuid_count(leaf, subleaf);
+                    let domain_type = (res.ecx >> 8) & 0xFF;
+                    if domain_type == 0 {
+                        break;
+                    }
+                    max_lcpus = res.ebx;
+                    subleaf += 1;
+                }
+                if max_lcpus > 0 {
+                    return max_lcpus;
+                }
+            }
+        }
+
+        // 2. Try V1 topology leaf
+        if is_valid_leaf(LEAF_0B) {
+            let mut subleaf = 0;
+            let mut max_lcpus = 0;
+            loop {
+                let res = x86_cpuid_count(LEAF_0B, subleaf);
+                let domain_type = (res.ecx >> 8) & 0xFF;
+                if domain_type == 0 {
+                    break;
+                }
+                max_lcpus = res.ebx;
+                subleaf += 1;
+            }
+            if max_lcpus > 0 {
+                return max_lcpus;
+            }
+        }
+
+        // 3. Fallback for AMD
+        if is_valid_leaf(EXT_LEAF_8) {
+            let res = super::x86_cpuid(EXT_LEAF_8);
+            let count = (res.ecx & 0xFF) + 1;
+            if count > 1 {
+                return count;
+            }
+        }
+
+        // 4. Fallback for Leaf 1
+        if is_valid_leaf(LEAF_1) {
+            let res = super::x86_cpuid(LEAF_1);
+            let count = (res.ebx >> 16) & 0xFF;
+            if count > 0 {
+                return count;
+            }
+        }
+
+        1
+    }
+
+    /// Returns (sockets, cores, threads)
+    fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
+        let threads_total = Self::amd_threads();
+
+        // 1. Initial socket count detection (Platform-specific fallbacks)
+        let mut sockets_detected: u32 = {
             #[cfg(any(target_os = "none", target_os = "linux"))]
             {
                 super::mp::MpTable::detect().socket_count()
@@ -193,54 +266,75 @@ impl Topology {
                 VENDOR_AMD => {
                     // Logical cpus = cores before Zen, when
                     // Topology domains start returning results
-                    if threads > 1 {
-                        (threads, threads)
+                    if threads_total > 1 {
+                        (threads_total, threads_total)
                     } else {
                         (1, 1)
                     }
                 }
                 VENDOR_INTEL => {
-                    if threads < 2 {
+                    if threads_total < 2 {
                         (1, 1)
                     } else if has_ht() {
-                        (threads, threads / 2)
+                        (threads_total / 2, threads_total)
                     } else {
-                        (threads, threads)
+                        (threads_total, threads_total)
                     }
                 }
                 _ => (1, 1),
             };
 
-            return (sockets, cores, threads);
+            return (sockets_detected, cores, threads);
         }
 
-        // Get domain counts in a single iteration
-        let mut raw_sockets = 1;
-        let mut raw_cores = 1;
-        let mut raw_threads = 1;
+        // 2. Extract domain counts
+        let mut domain_socket_count = 0;
+        let mut threads_per_core = 1;
+        let mut threads_per_package = threads_total;
+
         for d in domains.iter() {
             match d.kind {
-                TopologyType::Socket => raw_sockets = d.count,
-                TopologyType::Core => raw_cores = d.count,
-                TopologyType::Thread => raw_threads = d.count,
+                TopologyType::Thread => threads_per_core = d.count,
+                TopologyType::Core => {
+                    // Intel: EBX is threads per package at this level
+                    // AMD: EBX is threads per package at this level
+                    threads_per_package = d.count;
+                }
+                TopologyType::Socket => {
+                    domain_socket_count = d.count;
+                }
                 _ => {}
             }
         }
 
-        // TODO: Socket/Die/Core/Thread
-
-        // Thread/core
-        if raw_sockets == 1 && raw_cores > raw_threads {
-            return (raw_sockets, raw_cores / raw_threads, raw_cores);
+        // If domains reported a socket count, use it as a hint/validation
+        if domain_socket_count > 0 {
+            sockets_detected = sockets_detected.max(domain_socket_count);
         }
 
-        // AMD has literal core count for 'Core' type domain
-        // other have Cores * Threads
-        match &*vendor_str() {
-            // AMD has literal core count
-            VENDOR_AMD => (sockets, raw_cores, raw_threads * raw_cores),
-            // Others have 'Core' as Threads * Cores
-            _ => (sockets, raw_cores / raw_threads, raw_cores),
+        let vendor = vendor_str();
+        match &*vendor {
+            VENDOR_AMD | VENDOR_INTEL => {
+                // For both modern AMD (8000_0026h) and Intel (0Bh/1Fh):
+                // EBX is cumulative logical processors at this level.
+                // Thread level EBX = threads per core.
+                // Core level EBX = threads per package.
+                let t_per_core = threads_per_core.max(1);
+                let t_per_pkg = if threads_per_package > 0 {
+                    threads_per_package
+                } else {
+                    threads_total
+                };
+                let c_per_pkg = t_per_pkg / t_per_core;
+
+                (sockets_detected, c_per_pkg, t_per_pkg)
+            }
+            _ => {
+                let t_per_core = threads_per_core.max(1);
+                let t_per_pkg = threads_per_package.max(threads_total);
+                let c_per_pkg = (t_per_pkg / t_per_core).max(1);
+                (sockets_detected, c_per_pkg, t_per_pkg)
+            }
         }
     }
 

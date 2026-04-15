@@ -90,6 +90,9 @@ pub const EXT_LEAF_8: u32 = 0x8000_0008;
 /// AMD deterministic cache parameters
 pub const EXT_LEAF_1D: u32 = 0x8000_001D;
 
+/// AMD CPU topology
+pub const EXT_LEAF_1E: u32 = 0x8000_001E;
+
 /// AMD extended CPU topology
 pub const EXT_LEAF_26: u32 = 0x8000_0026;
 
