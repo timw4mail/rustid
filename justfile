@@ -145,7 +145,7 @@ run-dos: build-dos
 
 # Run all the (native) tests
 test:
-	cargo test --all-features -- --test-threads=1
+	cargo test -- --test-threads=1
 
 # Run tests and generate code coverage
 coverage:
