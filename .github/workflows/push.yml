@@ -15,6 +15,10 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            - name: Install just
+              run: |
+                    curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
             - uses: actions/checkout@v6
             - name: Run tests
-              run: cargo test --verbose
+              run: just test
