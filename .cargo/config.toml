@@ -5,21 +5,22 @@ build-std-features = ["compiler-builtins-mem"]
 [target."i486-linux-musl.json"]
 rustflags = [
 	"-C", "target-cpu=i486",
-	"-C", "opt-level=z"
 ]
 
 [target.i486-dos]
 linker = "rust-lld"
 rustflags = [
+	"-C", "codegen-units=1",
 	"-C", "link-arg=-Tlink.x",
 	"-C", "link-arg=--gc-sections",
 	"-C", "panic=abort",
 	"-C", "target-cpu=i486",
-	"-C", "opt-level=z"
+	"-C", "lto=y",
+	"-C", "linker-plugin-lto=y",
+	"-C", "strip=symbols"
 ]
 
 [target.i586-unknown-linux-gnu]
 rustflags = [
 	"-C", "target-cpu=i486",
-	"-C", "opt-level=z"
 ]
