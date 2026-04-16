@@ -75,9 +75,7 @@ impl Write for DosWriter {
 fn printc(ch: u8) {
     unsafe {
         asm!(
-            "push ds",
             "int 0x21",
-            "pop ds",
             in("ah") 0x02_u8,
             in("dl") ch,
             out("al") _,

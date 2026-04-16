@@ -1,13 +1,8 @@
-use super::Str;
 use super::*;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
 use crate::common::TCpu;
 use crate::cpuid;
 use core::fmt::Write;
-use core::writeln;
-
-#[cfg(target_os = "none")]
-use crate::print;
 
 fn repeat_spaces(n: usize) -> &'static str {
     const SPACES: &str = "                                        ";
@@ -83,7 +78,7 @@ fn dump_leaf_maybe_subleaves(f: &mut impl Write, leaf: u32, indent: usize) {
     }
 }
 
-fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
+pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     let _ = writeln!(f, "CPU {}:", cpu_idx);
 
     let max_leaf = max_leaf();
@@ -121,17 +116,4 @@ fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
             dump_leaf_maybe_subleaves(f, leaf, 4);
         }
     }
-}
-
-pub fn dump_main() {
-    let mut output: Str<16384> = Str::new();
-
-    let topo = super::topology::Topology::detect();
-
-    let logical_cores = topo.threads as usize;
-    for i in 0..logical_cores {
-        dump_cpu(&mut output, i);
-    }
-
-    print!("{}", output);
 }

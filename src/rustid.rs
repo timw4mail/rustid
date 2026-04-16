@@ -69,7 +69,19 @@ fn main() {
                 cpu.debug();
             }
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-            "d" | "dump" => cpuid::dump::dump_main(),
+            "d" | "dump" => {
+                use rustid::cpuid::{Str, dump::dump_cpu, topology::Topology};
+
+                let mut output: Str<16384> = Str::new();
+                let topo = Topology::detect();
+
+                let logical_cores = topo.threads as usize;
+                for i in 0..logical_cores {
+                    dump_cpu(&mut output, i);
+                }
+
+                print!("{}", output);
+            }
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             "f" | "file" => {
                 use cpuid::provider::{self, CpuDump};
