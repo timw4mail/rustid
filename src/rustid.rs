@@ -42,6 +42,7 @@ pub extern "C" fn _start() -> ! {
 
 #[cfg(not(target_os = "none"))]
 fn main() {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     use rustid::cpuid;
 
     #[cfg(target_arch = "x86")]
