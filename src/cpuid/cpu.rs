@@ -433,7 +433,7 @@ impl Cpu {
                 _ => "'Classic' 486",
             },
             MicroArch::P5 => {
-                if super::has_mmx() {
+                if has_mmx() {
                     "Intel Pentium with MMX"
                 } else {
                     match self.arch.code_name {
