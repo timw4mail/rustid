@@ -562,6 +562,7 @@ impl TCpu for Cpu {
         let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
 
         let cache_count = |share_count| -> Str<_> {
+            #[allow(clippy::manual_checked_ops)]
             let count = if share_count == 0 {
                 self.topology.sockets
             } else {

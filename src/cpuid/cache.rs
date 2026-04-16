@@ -399,25 +399,21 @@ impl Cache {
             }
 
             match cache_type {
-                DATA_CACHE => {
-                    if cache_level == 1 {
-                        if c.l1.is_unified() {
-                            c.l1 = Level1Cache::default_split();
-                        }
-
-                        c.l1.set_data(cache_size, cache_ways_of_associativity);
-                        c.l1.set_data_share_count(share_count)
+                DATA_CACHE if cache_level == 1 => {
+                    if c.l1.is_unified() {
+                        c.l1 = Level1Cache::default_split();
                     }
+
+                    c.l1.set_data(cache_size, cache_ways_of_associativity);
+                    c.l1.set_data_share_count(share_count)
                 }
-                INSTRUCTION_CACHE => {
-                    if cache_level == 1 {
-                        if c.l1.is_unified() {
-                            c.l1 = Level1Cache::default_split();
-                        }
-
-                        c.l1.set_instruction(cache_size, cache_ways_of_associativity);
-                        c.l1.set_instruction_share_count(share_count);
+                INSTRUCTION_CACHE if cache_level == 1 => {
+                    if c.l1.is_unified() {
+                        c.l1 = Level1Cache::default_split();
                     }
+
+                    c.l1.set_instruction(cache_size, cache_ways_of_associativity);
+                    c.l1.set_instruction_share_count(share_count);
                 }
                 UNIFIED_CACHE => match cache_level {
                     L1 => {

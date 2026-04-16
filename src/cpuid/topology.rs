@@ -158,7 +158,6 @@ impl Topology {
     /// Detects and returns the CPU topology.
     pub fn detect() -> Self {
         let speed = Speed::detect();
-
         let cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
         let (sockets, cores, threads) = Self::count_domains(&domains);
@@ -277,12 +276,8 @@ impl Topology {
             };
 
             let (cores, threads) = match &*vendor_str() {
-                VENDOR_AMD => {
-                    if threads_total_fallback > 1 {
-                        (threads_total_fallback, threads_total_fallback)
-                    } else {
-                        (1, 1)
-                    }
+                VENDOR_AMD if threads_total_fallback > 1 => {
+                    (threads_total_fallback, threads_total_fallback)
                 }
                 VENDOR_INTEL => {
                     if threads_total_fallback < 2 {
@@ -361,7 +356,6 @@ impl Topology {
         for subleaf in 0..16 {
             let res = x86_cpuid_count(leaf, subleaf);
 
-            // let x2apic_id_shift = res.eax & 0b1111;
             let domain_lcpus = res.ebx;
             let level = res.ecx & 0xFF;
             let domain_type = (res.ecx >> 8) & 0xFF;
