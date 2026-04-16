@@ -240,8 +240,11 @@ pub fn debug_quirks() {
     println!("=== Quirk Detection Debug ===");
 
     println!("CPU Class:");
+    println!("  has_cpuid: {}", has_cpuid());
     println!("  is_386: {}", is_386());
     println!("  is_486: {}", is_486());
+
+    println!("Signature: {:?}", CpuSignature::detect());
 
     println!("Vendor Detection:");
     println!("  has_cyrix_5_2_quirk:  {}", has_cyrix_5_2_quirk());

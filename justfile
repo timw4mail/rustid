@@ -52,11 +52,11 @@ _build-dos:
 	@rm -f *.com
 
 _build-dos-debug:
-	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features debug --bin debug --release
+	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features="debug dos-build" --bin debug --release
 	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug debug.com
 
 _build-dos-dump:
-	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --bin dump --release
+	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features dos-build --bin dump --release
 	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.com
 
 # Build for DOS - subcommands are split into separate binaries

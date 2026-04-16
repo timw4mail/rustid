@@ -1,25 +1,25 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use rustid::cpuid::dump::dump_main;
-
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[allow(unused)]
-fn main() {
-    dump_main();
-}
-
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-fn main() {
-    todo!("");
-}
-
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 pub extern "C" fn _start() -> ! {
-    dump_main();
+    use rustid::cpuid::dos::exit;
+    use rustid::cpuid::dump::dump_main;
+    use rustid::cpuid::has_cpuid;
+    use rustid::println;
+    use rustid::version;
 
-    rustid::cpuid::dos::exit();
+    if has_cpuid() {
+        dump_main();
+    } else {
+        version();
+        println!("This cpu does not support cpuid. Cpuid info cannot be dumped.");
+    }
+
+    exit();
 }
+
+#[cfg(not(all(target_os = "none", target_arch = "x86")))]
+pub fn main() {}

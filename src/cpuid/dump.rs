@@ -4,6 +4,10 @@ use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
 use crate::common::TCpu;
 use crate::cpuid;
 use core::fmt::Write;
+use core::writeln;
+
+#[cfg(target_os = "none")]
+use crate::print;
 
 fn repeat_spaces(n: usize) -> &'static str {
     const SPACES: &str = "                                        ";
@@ -96,7 +100,6 @@ fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
 
     let easter_egg = Cpu::detect().easter_egg;
     if easter_egg.is_some() {
-        #[allow(unreachable_patterns)]
         match &*vendor {
             VENDOR_AMD => dump_leaf(f, AMD_EASTER_EGG_ADDR, 0, 4),
             #[cfg(target_arch = "x86")]
@@ -121,9 +124,6 @@ fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
 }
 
 pub fn dump_main() {
-    #[cfg(target_os = "none")]
-    use crate::print;
-
     let mut output: Str<16384> = Str::new();
 
     let topo = super::topology::Topology::detect();
