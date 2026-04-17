@@ -279,7 +279,7 @@ impl Cyrix {
 
     /// Get Cyrix processor model via registers
     ///
-    /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
+    /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
     pub fn model_string() -> Str<70> {
         if !crate::cpuid::is_cyrix() {
             return Str::from(UNK);
@@ -309,7 +309,7 @@ impl Cyrix {
 
     /// Get bus multiplier for the current cpu
     ///
-    /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
+    /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
     fn multiplier() -> Str<10> {
         if !crate::cpuid::is_cyrix() {
             return Str::from("0");
@@ -337,7 +337,7 @@ impl Cyrix {
 
     /// Get Cyrix processor model via registers
     ///
-    /// See: https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf
+    /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
     pub fn codename() -> &'static str {
         match CyrixModel::detect() {
             CyrixModel::Slc

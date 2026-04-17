@@ -117,7 +117,7 @@ impl Cache {
         }
     }
 
-    /// See https://www.amd.com/content/dam/amd/en/documents/archived-tech-docs/design-guides/25481.pdf
+    /// See <https://www.amd.com/content/dam/amd/en/documents/archived-tech-docs/design-guides/25481.pdf>
     fn amd_assoc(reg: u32) -> u32 {
         match reg {
             2 => 2,
@@ -138,7 +138,7 @@ impl Cache {
 
     /// Get cache information via 1-bit descriptors
     ///
-    /// See https://sandpile.org/x86/cpuid.htm#level_0000_0002h
+    /// See <https://sandpile.org/x86/cpuid.htm#level_0000_0002h>
     fn detect_fallback() -> Option<Self> {
         use super::StaticVec;
 
