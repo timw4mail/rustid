@@ -23,15 +23,17 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading sysinfo -cpu
-    pub fn detect_sysinfo(file: &str) -> MpTable {
+    pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
-        if let Ok(content) = std::fs::read_to_string(file) {
-            for line in content.lines() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if let Ok(num) = parts[0].parse::<u32>() {
-                    table.sockets = num;
-                    return table;
+        if let Ok(o) = std::process::Command::new(cmd).output() {
+            if let Ok(s) = String::from_utf8(o.stdout) {
+                for line in s.lines() {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if let Ok(num) = parts[0].parse::<u32>() {
+                        table.sockets = num;
+                        return table;
+                    }
                 }
             }
         }
@@ -87,7 +89,7 @@ impl MpTable {
         return Self::detect_cpuinfo("/proc/cpuinfo");
 
         #[cfg(target_os = "haiku")]
-        return Self::detect_sysinfo("sysinfo -cpu");
+        return Self::detect_sysinfo("sysinfo");
 
         #[allow(unreachable_code)]
         MpTable::default()
