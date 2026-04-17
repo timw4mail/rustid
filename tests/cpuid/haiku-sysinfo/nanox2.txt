@@ -1,0 +1,48 @@
+2 VIA Nano, revision 06fd running at 1000MHz
+
+CPU #0: "VIA Eden X2 U4200 @ 1.0+ GHz"
+	Frequency: 1000.050
+	Signature: 0x0006fd; 	Features: 0xbfc9fbff
+		FPU, VME, DE, PSE, TSC, MSR, PAE, MCE, CX8, APIC, SEP, MTRR, PGE, MCA, CMOV, PAT
+		CFLUSH, ACPI, MMX, FXSTR, SSE, SSE2, SS, HTT, TM, PBE
+	Extended Features (0x00000001): 0x008863a9
+		SSE3, MONITOR, VMX, EST, TM2, SSSE3, CX16, xTPR, SSE4.1, POPCNT
+	Extended Features (0x00000007): 0x00000000 0x00000000 0x00000000
+
+	Inst TLB: 128 entries, 8-way set associative
+	Data TLB: 128 entries, 8-way set associative
+	L1 inst cache: 64 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+	L1 data cache: 64 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+	L2 cache: 1024 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+
+	Inst TLB: 4K-bytes pages, 4-way set associative, 128 entries
+	Data TLB: 4K-bytes pages, 4-way set associative, 128 entries
+	Instruction TLB: 4M-byte pages, fully associative, 2 entries
+	L2 cache: 2048 KB, 8-way set associative, 64 bytes/line
+	L1 inst cache: 32 KB, 8-way set associative, 64 bytes/line
+	Data TLB: 4M-byte pages, 4-way set associative, 8 entries
+	L1 data cache: 32 KB, 8-way set associative, 64 bytes/line
+
+CPU #1: "VIA Eden X2 U4200 @ 1.0+ GHz"
+	Frequency: 1000.050
+	Signature: 0x0006fd; 	Features: 0xbfc9fbff
+		FPU, VME, DE, PSE, TSC, MSR, PAE, MCE, CX8, APIC, SEP, MTRR, PGE, MCA, CMOV, PAT
+		CFLUSH, ACPI, MMX, FXSTR, SSE, SSE2, SS, HTT, TM, PBE
+	Extended Features (0x00000001): 0x008863a9
+		SSE3, MONITOR, VMX, EST, TM2, SSSE3, CX16, xTPR, SSE4.1, POPCNT
+	Extended Features (0x00000007): 0x00000000 0x00000000 0x00000000
+
+	Inst TLB: 128 entries, 8-way set associative
+	Data TLB: 128 entries, 8-way set associative
+	L1 inst cache: 64 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+	L1 data cache: 64 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+	L2 cache: 1024 KB, 16-way set associative, 1 lines/tag, 64 bytes/line
+
+	Inst TLB: 4K-bytes pages, 4-way set associative, 128 entries
+	Data TLB: 4K-bytes pages, 4-way set associative, 128 entries
+	Instruction TLB: 4M-byte pages, fully associative, 2 entries
+	L2 cache: 2048 KB, 8-way set associative, 64 bytes/line
+	L1 inst cache: 32 KB, 8-way set associative, 64 bytes/line
+	Data TLB: 4M-byte pages, 4-way set associative, 8 entries
+	L1 data cache: 32 KB, 8-way set associative, 64 bytes/line
+

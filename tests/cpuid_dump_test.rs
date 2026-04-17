@@ -22,7 +22,7 @@ impl CpuidProvider for MockCpuidProvider {
 fn raw_path(segment: &str) -> PathBuf {
     let mut path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     path.push("tests");
-    path.push("raw");
+    path.push("cpuid");
     path.push(segment);
 
     path
@@ -67,7 +67,7 @@ mod tm5700 {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("tm5700.txt");
+        set_file_cpuid_provider("dump/tm5700.txt");
         test();
     }
 
@@ -128,7 +128,7 @@ mod ppro {
     use rustid::cpuid::mp::MpTable;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("p6x2.txt");
+        set_file_cpuid_provider("dump/p6x2.txt");
         test();
     }
 
@@ -161,8 +161,8 @@ mod ppro {
 
     #[test]
     fn test_socket_count() {
-        let file = raw_path("p6x2cpuinfo.txt");
-        let mp = MpTable::detect_file(file.to_str().unwrap());
+        let file = raw_path("linux-cpuinfo/p6x2.txt");
+        let mp = MpTable::detect_cpuinfo(file.to_str().unwrap());
         assert_eq!(mp.socket_count(), 2);
     }
 }
@@ -171,7 +171,7 @@ mod m3_8100y {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("m3-8100y.txt");
+        set_file_cpuid_provider("dump/m3-8100y.txt");
         test();
     }
 
@@ -424,49 +424,16 @@ mod m3_8100y {
 mod amd_7950x3d {
     use super::*;
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("7950x3d.txt");
-        test();
-    }
-
     #[test]
-    fn test_dies() {
-        with_mock_cpu(|| {
-            use rustid::common::TCpu;
-            let cpu = Cpu::detect();
+    fn test_topology() {
+        set_file_cpuid_provider("dump/7950x3d.txt");
+        use rustid::common::TCpu;
+        let cpu = Cpu::detect();
 
-            assert_eq!(cpu.topology.dies, 2);
-        });
-    }
-
-    #[test]
-    fn test_threads() {
-        with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 32);
-        });
-    }
-
-    #[test]
-    fn test_cores() {
-        with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 16);
-        });
-    }
-
-    #[test]
-    fn test_sockets() {
-        with_mock_cpu(|| {
-            use rustid::common::TCpu;
-            let cpu = Cpu::detect();
-
-            assert_eq!(cpu.topology.sockets, 1);
-        })
+        assert_eq!(cpu.topology.dies, 2);
+        assert_eq!(cpu.topology.threads, 32);
+        assert_eq!(cpu.topology.cores, 16);
+        assert_eq!(cpu.topology.sockets, 1);
     }
 }
 
@@ -474,7 +441,7 @@ mod amd_5900xt {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("5900XT.txt");
+        set_file_cpuid_provider("dump/5900XT.txt");
         test();
     }
 
@@ -716,7 +683,7 @@ mod zhaoxin_kx5640 {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("kx5640.txt");
+        set_file_cpuid_provider("dump/kx5640.txt");
         test();
     }
 
@@ -845,7 +812,7 @@ mod via_c7d {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("c7d.txt");
+        set_file_cpuid_provider("dump/c7d.txt");
         test();
     }
 
@@ -932,6 +899,19 @@ mod via_c7d {
     }
 }
 
+mod via_nano_x2 {
+    use super::*;
+
+    #[test]
+    fn get_cpu_count_haiku() {
+        use rustid::cpuid::mp::MpTable;
+
+        let file = raw_path("haiku-sysinfo/nanox2.txt");
+        let table = MpTable::detect_sysinfo(file.to_str().unwrap());
+        assert_eq!(table.socket_count(), 2u32);
+    }
+}
+
 #[cfg(target_arch = "x86")]
 mod vortex86dx3 {
     use rustid::cpuid::{has_ht, has_mmx, max_extended_leaf};
@@ -939,7 +919,7 @@ mod vortex86dx3 {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("vortex86dx3.txt");
+        set_file_cpuid_provider("dump/vortex86dx3.txt");
         test();
     }
 
