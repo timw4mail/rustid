@@ -1,4 +1,5 @@
 use super::*;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -25,16 +26,43 @@ impl CpuidProvider for RealCpuid {
 pub(crate) static PROVIDER: LazyLock<RwLock<Box<dyn CpuidProvider + Send + Sync>>> =
     LazyLock::new(|| RwLock::new(Box::new(RealCpuid) as Box<dyn CpuidProvider + Send + Sync>));
 
-/// Sets a custom CPUID provider (used primarily for testing).
+thread_local! {
+    static THREAD_PROVIDER: RefCell<Option<Box<dyn CpuidProvider>>> = const { RefCell::new(None) };
+}
+
+/// Sets a custom CPUID provider for the current thread (used primarily for testing).
 pub fn set_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P) {
+    THREAD_PROVIDER.with(|p| {
+        *p.borrow_mut() = Some(Box::new(provider));
+    });
+}
+
+/// Resets the CPUID provider for the current thread.
+pub fn reset_cpuid_provider() {
+    THREAD_PROVIDER.with(|p| {
+        *p.borrow_mut() = None;
+    });
+}
+
+/// Sets a custom global CPUID provider.
+pub fn set_global_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P) {
     let mut p = PROVIDER.write().unwrap();
     *p = Box::new(provider);
 }
 
-/// Resets the CPUID provider to the real implementation.
-pub fn reset_cpuid_provider() {
+/// Resets the global CPUID provider to the real implementation.
+pub fn reset_global_cpuid_provider() {
     let mut p = PROVIDER.write().unwrap();
     *p = Box::new(RealCpuid);
+}
+
+pub(crate) fn cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
+    THREAD_PROVIDER.with(|tp| {
+        if let Some(p) = tp.borrow().as_ref() {
+            return p.cpuid_count(leaf, sub_leaf);
+        }
+        PROVIDER.read().unwrap().cpuid_count(leaf, sub_leaf)
+    })
 }
 
 // ----------------------------------------------------------------------------

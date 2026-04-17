@@ -145,11 +145,11 @@ run-dos: build-dos
 
 # Run all the (native) tests
 test:
-	cargo test -- --test-threads=1
+	cargo test
 
 # Run tests and generate code coverage
 coverage:
-	cargo llvm-cov --open -- --test-threads=1
+	cargo llvm-cov --open
 
 # Run 64 and 32 bit tests (on 64bit platform)
 test-all: test test-x86 test-arm
@@ -158,24 +158,24 @@ test-all: test test-x86 test-arm
 [linux, unix]
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo cross test --target aarch64-unknown-linux-musl -- --test-threads=1
+	cargo cross test --target aarch64-unknown-linux-musl
 
 # Run windwos arm tests
 [windows]
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
-	cargo cross test --target aarch64-pc-windows-gnu -- --test-threads=1
+	cargo cross test --target aarch64-pc-windows-gnu
 
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]
 test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo cross test --target i686-unknown-linux-musl -- --test-threads=1
+	cargo cross test --target i686-unknown-linux-musl
 
 # Run tests for 32-bit x86
 [windows]
 test-x86:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
-	cargo test --target i686-pc-windows-msvc -- --test-threads=1
+	cargo test --target i686-pc-windows-msvc
 
