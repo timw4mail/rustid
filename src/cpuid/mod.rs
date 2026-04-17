@@ -6,36 +6,32 @@
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 compile_error!("This crate only supports x86 and x86_64 architectures.");
 
+// ----------------------------------------------------------------------------
+
 pub mod brand;
-
 pub mod cache;
-
 pub mod constants;
-
 pub mod cpu;
 
 #[cfg(target_os = "none")]
 pub mod dos;
 
 pub mod dump;
-
 pub mod fns;
-
 pub mod micro_arch;
-
 pub mod mp;
 
 #[cfg(not(target_os = "none"))]
 pub mod provider;
 
 pub mod topology;
-
 pub mod type_wrappers;
-
 pub mod vendor;
 
 #[cfg(target_arch = "x86")]
 pub mod quirks;
+
+// ----------------------------------------------------------------------------
 
 pub use brand::*;
 pub use constants::*;

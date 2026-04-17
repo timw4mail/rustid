@@ -988,7 +988,7 @@ impl CpuArch {
         }
     }
 
-    /// See https://github.com/freebsd/freebsd-src/blob/main/sys/arm64/include/cpu.h
+    /// See <https://github.com/freebsd/freebsd-src/blob/main/sys/arm64/include/cpu.h>
     fn find_apple(part: usize) -> Self {
         match part {
             // M1
