@@ -4,10 +4,16 @@
 //! tables to determine multi-processor topology (sockets, cores).
 
 /// MultiProcessor (MP) table information for multi-socket systems.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MpTable {
     /// Number of processor sockets
     pub sockets: u32,
+}
+
+impl Default for MpTable {
+    fn default() -> MpTable {
+        MpTable { sockets: 1 }
+    }
 }
 
 impl MpTable {
@@ -16,9 +22,25 @@ impl MpTable {
         self.sockets
     }
 
-    /// Detects the number of sockets by reading the specified file.
-    #[cfg(not(target_os = "none"))]
-    pub fn detect_file(file: &str) -> MpTable {
+    /// Detects the number of sockets by reading sysinfo -cpu
+    pub fn detect_sysinfo(file: &str) -> MpTable {
+        let mut table = MpTable { sockets: 1 };
+
+        if let Ok(content) = std::fs::read_to_string(file) {
+            for line in content.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if let Ok(num) = parts[0].parse::<u32>() {
+                    table.sockets = num;
+                    return table;
+                }
+            }
+        }
+
+        table
+    }
+
+    /// Detects the number of sockets by reading /proc/cpuinfo
+    pub fn detect_cpuinfo(file: &str) -> MpTable {
         use std::collections::HashSet;
 
         let mut table = MpTable { sockets: 1 };
@@ -57,18 +79,18 @@ impl MpTable {
     }
 }
 
-#[cfg(not(any(target_os = "none", target_os = "linux")))]
+#[cfg(not(target_os = "none"))]
 impl MpTable {
+    /// Detects the number of sockets via platform-specific means
     pub fn detect() -> MpTable {
-        MpTable { sockets: 1 }
-    }
-}
+        #[cfg(target_os = "linux")]
+        return Self::detect_cpuinfo("/proc/cpuinfo");
 
-#[cfg(target_os = "linux")]
-impl MpTable {
-    /// Detects the number of sockets on Linux by parsing /proc/cpuinfo.
-    pub fn detect() -> MpTable {
-        Self::detect_file("/proc/cpuinfo")
+        #[cfg(target_os = "haiku")]
+        return Self::detect_sysinfo("sysinfo -cpu");
+
+        #[allow(unreachable_code)]
+        MpTable::default()
     }
 }
 

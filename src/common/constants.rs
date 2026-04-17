@@ -1,3 +1,5 @@
+//! Constants for all architectures
+
 pub const UNK: &str = "Unknown";
 
 pub const N800: &str = "800nm";
