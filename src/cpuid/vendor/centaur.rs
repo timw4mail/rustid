@@ -15,7 +15,8 @@ impl TMicroArch for Centaur {
                 #[cfg(target_arch = "x86")]
                 5 => CpuBrand::IDT,
                 6 => CpuBrand::Via,
-                _ => CpuBrand::Zhaoxin,
+                7 => CpuBrand::Zhaoxin,
+                _ => CpuBrand::Unknown,
             }
         };
 

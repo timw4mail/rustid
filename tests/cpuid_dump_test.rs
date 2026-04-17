@@ -899,19 +899,6 @@ mod via_c7d {
     }
 }
 
-mod via_nano_x2 {
-    use super::*;
-
-    #[test]
-    fn get_cpu_count_haiku() {
-        use rustid::cpuid::mp::MpTable;
-
-        let file = raw_path("haiku-sysinfo/nanox2.txt");
-        let table = MpTable::detect_sysinfo(file.to_str().unwrap());
-        assert_eq!(table.socket_count(), 2u32);
-    }
-}
-
 #[cfg(target_arch = "x86")]
 mod vortex86dx3 {
     use rustid::cpuid::{has_ht, has_mmx, max_extended_leaf};

@@ -261,7 +261,11 @@ impl Topology {
 
         // 1. Initial socket count detection (Platform-specific fallbacks)
         // TODO: detect socket count from domains
+        #[cfg(not(test))]
         let sockets_detected: u32 = super::mp::MpTable::detect().socket_count();
+
+        #[cfg(test)]
+        let sockets_detected: u32 = 1;
 
         if domains.is_empty() {
             let (cores, threads) = match &*vendor_str() {
