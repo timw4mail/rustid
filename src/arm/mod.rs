@@ -4,8 +4,8 @@
 mod brand;
 pub mod cpu;
 pub mod micro_arch;
-use crate::common::{CoreType, CpuCore, Level1Cache};
-pub use micro_arch::Midr;
+use crate::common::{CoreType, Level1Cache};
+pub use micro_arch::{CpuCore, Midr};
 use std::collections::{BTreeMap, HashSet};
 
 trait TArmCpu {

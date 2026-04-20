@@ -1,5 +1,6 @@
 use super::CpuDisplay;
 use super::brand::*;
+use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use crate::arm::TArmCpu;
 use crate::common::UNK;
@@ -171,7 +172,7 @@ impl TCpu for Cpu {
                 .unwrap()
                 .parse()
                 .unwrap();
-            let count: usize = values
+            let count: u32 = values
                 .get(&format!("hw.perflevel{}.physicalcpu", i))
                 .unwrap()
                 .parse()

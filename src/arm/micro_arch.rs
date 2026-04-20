@@ -1,3 +1,4 @@
+use crate::arm::CoreType;
 use crate::arm::brand::*;
 use crate::common::constants::*;
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
@@ -41,6 +42,14 @@ impl Midr {
             | (self.part << PART_OFFSET)
             | self.revision
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CpuCore {
+    pub kind: CoreType,
+    pub name: Option<String>,
+    pub cache: Option<Cache>,
+    pub count: u32,
 }
 
 pub const UNK: &str = "Unknown";

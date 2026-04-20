@@ -1,6 +1,7 @@
 //! Contains the Cpu struct for ARM.
 use super::CpuDisplay;
 use super::brand::Vendor;
+use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
 use crate::common::*;
