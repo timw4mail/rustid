@@ -33,12 +33,6 @@ pub extern "C" fn _start() -> ! {
 
     cyrix_cpuid_check();
 
-    #[cfg(feature = "debug")]
-    {
-        use rustid::cpuid::quirks::debug_quirks;
-        debug_quirks();
-    }
-
     let cpu = Cpu::detect();
     version();
     cpu.display_table();
