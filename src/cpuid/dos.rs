@@ -172,7 +172,7 @@ impl Speed {
         let tsc_delta = end_tsc - start_tsc;
 
         // freq_mhz = (tsc_delta * 1193182) / (2 * 65536 * 1_000_000)
-        let freq_mhz = (tsc_delta * 1193182) / 131072000000u64;
+        let freq_mhz = (tsc_delta * 1_193_182) / 131_072_000_000u64;
         freq_mhz as u32
     }
 
@@ -254,7 +254,7 @@ impl Speed {
 
         // PIT runs at 1.193182 MHz. Each tick is 65536 PIT cycles.
         // Total pulses = (8 * 65536) + (start_pit - end_pit)
-        let elapsed_pulses = (8u64 * 65536) + (start_pit as i32 - end_pit as i32) as u64;
+        let elapsed_pulses = (8u64 * 65_536) + (start_pit as i32 - end_pit as i32) as u64;
 
         // Calibration:
         // 486 loop: add(2) + push(1) + pop(1) + mov mem(3) + cmp(1) + jne(3) = 11 cycles
@@ -282,8 +282,9 @@ impl Speed {
         // freq_hz = (iterations * cycles_per_loop * 1193182) / elapsed_pulses
         // freq_mhz = freq_hz / 1_000_000
         // We use rounded division: (numerator + denominator / 2) / denominator
-        let denom = elapsed_pulses * 1000000;
-        let freq_mhz = (iterations as u64 * cycles_per_loop as u64 * 1193182 + (denom / 2)) / denom;
+        let denom = elapsed_pulses * 1_000_000;
+        let freq_mhz =
+            (iterations as u64 * cycles_per_loop as u64 * 1_193_182 + (denom / 2)) / denom;
         freq_mhz as u32
     }
 }

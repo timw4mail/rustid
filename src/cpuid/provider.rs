@@ -24,7 +24,7 @@ impl CpuidProvider for RealCpuid {
 }
 
 pub(crate) static PROVIDER: LazyLock<RwLock<Box<dyn CpuidProvider + Send + Sync>>> =
-    LazyLock::new(|| RwLock::new(Box::new(RealCpuid) as Box<dyn CpuidProvider + Send + Sync>));
+    LazyLock::new(|| RwLock::new(Box::new(RealCpuid)));
 
 thread_local! {
     static THREAD_PROVIDER: RefCell<Option<Box<dyn CpuidProvider>>> = const { RefCell::new(None) };
