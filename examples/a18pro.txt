@@ -1,0 +1,24 @@
+--------------- Rustid 1.0.0 (aarch64-macos) ---------------
+
+Brand/Implementor: Apple
+
+            Model: Apple A18 Pro
+
+        Code Name: Tahiti
+
+          Process: 3nm
+
+Performance Cores: 
+             Name: Everest
+            Count: 2
+            Cache: L1d: 2x 128 KB
+                   L1i: 2x 192 KB
+                   L2:  16 MB
+
+ Efficiency Cores: 
+             Name: Sawtooth
+            Count: 4
+            Cache: L1d: 4x 64 KB
+                   L1i: 4x 128 KB
+                   L2:  4 MB
+
