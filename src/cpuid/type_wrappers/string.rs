@@ -2,30 +2,15 @@
 //!
 //! This helps hide the ugliness of using a fixed-size array for DOS/no_std
 use crate::cpuid::type_wrappers::static_vec::StaticVec;
-use core::fmt::{self, Debug, Display, Formatter, Write};
+#[cfg(any(feature = "debug", not(target_os = "none")))]
+use core::fmt::Debug;
+use core::fmt::{self, Display, Formatter, Write};
 use core::ops::Deref;
 
 #[cfg(not(target_os = "none"))]
 #[macro_export]
 macro_rules! sfmt {
     ($($arg:tt)*) => { Into::<Str<_>>::into(std::format!($($arg)*)) };
-}
-
-#[cfg(target_os = "none")]
-#[macro_export]
-macro_rules! sfmt {
-    ($($arg:tt)*) => {
-        {
-            use $crate::cpuid::type_wrappers::String;
-            use $crate::cpuid::type_wrappers::Str;
-            use core::fmt::Write;
-            let mut buf = String::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }>::new();
-            let _ = buf.write_fmt(core::format_args!($($arg)*));
-            let mut result = Str::<_>::new();
-            result.push_str(buf.as_str());
-            result
-        }
-    };
 }
 
 pub const MAX_FMT_LEN: usize = 260;
@@ -84,7 +69,6 @@ impl<const N: usize> AsRef<str> for String<N> {
     }
 }
 
-#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<const N: usize> core::fmt::Display for String<N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -217,7 +201,6 @@ impl<const N: usize> AsRef<str> for Str<N> {
     }
 }
 
-#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<const N: usize> Display for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.deref())

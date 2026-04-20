@@ -27,14 +27,14 @@ impl MpTable {
     pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
-        if let Ok(o) = std::process::Command::new(cmd).output() {
-            if let Ok(s) = String::from_utf8(o.stdout) {
-                for line in s.lines() {
-                    let parts: Vec<&str> = line.split_whitespace().collect();
-                    if let Ok(num) = parts[0].parse::<u32>() {
-                        table.sockets = num;
-                        return table;
-                    }
+        if let Ok(o) = std::process::Command::new(cmd).output()
+            && let Ok(s) = String::from_utf8(o.stdout)
+        {
+            for line in s.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if let Ok(num) = parts[0].parse::<u32>() {
+                    table.sockets = num;
+                    return table;
                 }
             }
         }

@@ -1,6 +1,7 @@
 //! A 'static' Rust array with 'Vec' conveniences
 //!
 //! Loosely based on heapless::Vec
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 use core::fmt;
 
 #[derive(PartialEq, Copy, Clone)]
