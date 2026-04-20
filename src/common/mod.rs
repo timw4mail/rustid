@@ -23,7 +23,14 @@ pub trait TCpu {
     fn display_table(&self);
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)
+)]
 pub enum CoreType {
     Super,
     #[default]
@@ -90,7 +97,14 @@ pub struct CpuArch {
 }
 
 /// CPU speed information (base and boost frequencies).
-#[derive(Debug, Default, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq)
+)]
 pub struct Speed {
     /// Base frequency in MHz
     pub base: u32,

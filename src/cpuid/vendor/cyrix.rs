@@ -5,7 +5,14 @@ use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
 use crate::sfmt;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Clone, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Clone, PartialEq)
+)]
 pub enum CyrixModel {
     Slc,
     Dlc,

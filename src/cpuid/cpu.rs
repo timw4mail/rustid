@@ -16,7 +16,14 @@ use crate::println;
 /// Represents the instruction set and feature level of an x86 processor,
 /// roughly based on x86-64 microarchitecture levels.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Copy, Clone, PartialEq, Eq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Copy, Clone, PartialEq, Eq)
+)]
 pub enum FeatureClass {
     /// 80386-class processor
     i386,
@@ -121,7 +128,14 @@ impl FeatureClass {
 }
 
 /// CPU signature containing family, model, and stepping information.
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Copy, Clone, PartialEq, Eq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Copy, Clone, PartialEq, Eq)
+)]
 pub struct CpuSignature {
     /// Extended family value from CPUID
     pub extended_family: u32,
@@ -227,7 +241,14 @@ impl CpuSignature {
 ///
 /// Contains additional CPU identification data available on AMD processors
 /// via the extended CPUID leaf 0x80000001.
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Copy, Clone, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Copy, Clone, PartialEq)
+)]
 pub struct ExtendedSignature {
     pub base_brand_id: u32,
     pub brand_id: u32,

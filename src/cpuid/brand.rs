@@ -7,7 +7,14 @@ use super::constants::*;
 use super::{Str, UNK};
 
 /// CPU brand/vendor enumeration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Clone, Copy, PartialEq, Eq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Clone, Copy, PartialEq, Eq)
+)]
 pub enum CpuBrand {
     AMD,
 

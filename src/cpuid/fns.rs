@@ -19,7 +19,14 @@ use crate::cpuid::{CpuBrand, FeatureList, Str};
 ///
 /// The CPUID instruction returns processor identification and feature information
 /// in the EAX, EBX, ECX, and EDX registers.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Copy, Clone, PartialEq, Eq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Copy, Clone, PartialEq, Eq)
+)]
 pub struct Cpuid {
     /// EAX register value
     pub eax: u32,

@@ -12,7 +12,14 @@ use super::{CpuBrand, CpuSignature, Str, is_centaur, is_zhaoxin};
 ///
 /// Lists all known x86/x86_64 microarchitectures from various vendors
 /// including Intel, AMD, VIA/Centaur, Cyrix, and others.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Copy, Clone, PartialEq, Eq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Copy, Clone, PartialEq, Eq)
+)]
 pub enum MicroArch {
     Unknown,
 

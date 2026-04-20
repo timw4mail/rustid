@@ -103,7 +103,14 @@ impl Speed {
 }
 
 /// Represents a topology domain (thread, core, die, socket, etc.).
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Copy, Clone, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Copy, Clone, PartialEq)
+)]
 pub struct TopologyDomain {
     level: u32,
     kind: TopologyType,
@@ -111,7 +118,14 @@ pub struct TopologyDomain {
 }
 
 /// CPU topology domain type.
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq, Copy, Clone)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq, Copy, Clone)
+)]
 pub enum TopologyType {
     /// Invalid or unknown topology level
     #[default]
