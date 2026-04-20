@@ -87,11 +87,42 @@ impl<T: Default, const N: usize> Default for StaticVec<T, N> {
 
 impl<T: Default, const N: usize> IntoIterator for StaticVec<T, N> {
     type Item = T;
-    type IntoIter = core::array::IntoIter<T, N>;
+    type IntoIter = IntoIter<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.data.into_iter()
+        IntoIter {
+            data: self.data,
+            len: self.len,
+            pos: 0,
+        }
     }
 }
+
+pub struct IntoIter<T, const N: usize> {
+    data: [T; N],
+    len: usize,
+    pos: usize,
+}
+
+impl<T: Default, const N: usize> Iterator for IntoIter<T, N> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos < self.len {
+            let item = core::mem::take(&mut self.data[self.pos]);
+            self.pos += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len - self.pos;
+        (remaining, Some(remaining))
+    }
+}
+
+impl<T: Default, const N: usize> ExactSizeIterator for IntoIter<T, N> {}
 
 pub type FeatureList = StaticVec<&'static str, 64>;
