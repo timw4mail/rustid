@@ -23,6 +23,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading sysinfo -cpu
+    #[cfg(not(target_os = "none"))]
     pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
@@ -42,6 +43,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading /proc/cpuinfo
+    #[cfg(not(target_os = "none"))]
     pub fn detect_cpuinfo(file: &str) -> MpTable {
         use std::collections::HashSet;
 

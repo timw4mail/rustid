@@ -129,6 +129,12 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
         return false;
     }
 
+    // Optimization: Leaf 1 is always valid if CPUID is present.
+    // This avoids redundant max_leaf() -> x86_cpuid(0) calls for common features.
+    if leaf == LEAF_1 {
+        return true;
+    }
+
     match leaf {
         0..EXT_LEAF_0 => leaf <= max_leaf(),
         EXT_LEAF_0..=EXT_LEAF_MAX => leaf <= max_extended_leaf(),
@@ -142,49 +148,37 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
 pub fn vendor_str() -> Str<20> {
     #[cfg(target_arch = "x86")]
     if !has_cpuid() {
-        let v = get_vendor_by_quirk();
-
-        return Str::from(v);
+        return Str::from(get_vendor_by_quirk());
     }
 
-    let mut s: Str<20> = Str::new();
-
-    let res = x86_cpuid(0);
+    let res = x86_cpuid(LEAF_0);
     let mut bytes = [0u8; 12];
 
     bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
     bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
     bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
 
-    for &b in &bytes {
-        if b != 0 {
-            s.push(b as char);
-        }
-    }
+    let s = core::str::from_utf8(&bytes).unwrap_or(UNK).trim_matches('\0');
 
-    s
+    Str::from(s)
 }
 
 pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<70> {
-    let mut model: Str<70> = Str::new();
     if !is_valid_leaf(max_leaf) {
         return Str::from(UNK);
     }
 
+    let mut model = Str::<70>::new();
     for leaf in min_leaf..=max_leaf {
         let res = x86_cpuid(leaf);
-        for reg in &[res.eax, res.ebx, res.ecx, res.edx] {
-            for &b in &reg.to_le_bytes() {
-                if b != 0 {
-                    model.push(b as char);
-                }
-            }
+        for reg in [res.eax, res.ebx, res.ecx, res.edx] {
+            let bytes = reg.to_le_bytes();
+            let s = core::str::from_utf8(&bytes).unwrap_or("");
+            model.push_str(s);
         }
     }
 
-    let trimmed = model.trim();
-
-    Str::from(trimmed)
+    Str::from(model.trim().trim_matches('\0'))
 }
 
 fn is_vendor(v: &str) -> bool {
@@ -254,10 +248,6 @@ pub fn logical_cores() -> u32 {
         }
     }
 
-    //     #[cfg(not(target_os = "none"))]
-    //     return crate::common::logical_cores() as u32;
-    //
-    //     #[cfg(target_os = "none")]
     1
 }
 
@@ -479,7 +469,6 @@ pub fn get_feature_list() -> FeatureList {
     ];
     #[cfg(not(target_os = "none"))]
     const FEATURES: &[(&str, FeatureFn)] = &[
-        #[cfg(target_arch = "x86")]
         ("FPU", has_fpu),
         ("TSC", has_tsc),
         ("CMPXCHG8B", has_cx8),

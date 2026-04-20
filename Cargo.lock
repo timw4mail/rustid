@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "rustid"
-version = "0.11.4"
+version = "1.0.0"
 dependencies = [
  "core_affinity",
  "windows",
