@@ -68,8 +68,15 @@ impl From<CoreType> for String {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-pub struct CpuCore {
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq)
+)]
+pub struct CpuArch {
     pub kind: CoreType,
 
     #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]

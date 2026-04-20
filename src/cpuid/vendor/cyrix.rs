@@ -124,7 +124,14 @@ impl CyrixModel {
 }
 
 /// Cyrix-specific CPU identification and detection.
-#[derive(Debug, Default, Clone)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, Clone)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, Clone)
+)]
 pub struct Cyrix {
     /// Device ID register 0
     pub dir0: u8,

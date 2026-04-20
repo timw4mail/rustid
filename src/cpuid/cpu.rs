@@ -251,7 +251,14 @@ impl ExtendedSignature {
 }
 
 /// Represents a complete x86/x86_64 CPU with all detected information.
-#[derive(Debug, Default, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq)
+)]
 pub struct Cpu {
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
@@ -537,7 +544,7 @@ impl TCpu for Cpu {
         #[cfg(not(target_os = "none"))]
         println!("{:#?}", self);
 
-        #[cfg(target_os = "none")]
+        #[cfg(all(target_os = "none", feature = "debug"))]
         {
             use super::is_cyrix;
 

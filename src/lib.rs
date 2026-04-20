@@ -67,7 +67,7 @@ pub use arm::Cpu;
 pub use cpuid::dos::*;
 
 #[cfg(not(target_os = "none"))]
-pub use std::println;
+pub use std::{print, println};
 
 pub fn version() {
     println!(

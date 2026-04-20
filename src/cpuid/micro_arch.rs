@@ -292,7 +292,14 @@ impl From<MicroArch> for Str<40> {
 }
 
 /// Complete CPU architecture information.
-#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Clone, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Clone, PartialEq)
+)]
 pub struct CpuArch {
     /// CPU model string
     pub model: Str<70>,

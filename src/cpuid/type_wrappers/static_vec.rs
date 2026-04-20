@@ -9,6 +9,7 @@ pub struct StaticVec<T, const N: usize> {
     len: usize,
 }
 
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<T: fmt::Debug, const N: usize> fmt::Debug for StaticVec<T, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list()
@@ -17,6 +18,7 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for StaticVec<T, N> {
     }
 }
 
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<T: fmt::Display, const N: usize> fmt::Display for StaticVec<T, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut iter = self.data.iter().take(self.len);

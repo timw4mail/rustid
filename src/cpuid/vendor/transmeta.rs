@@ -5,7 +5,14 @@ use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, Str, read_multi_leaf_str};
 
 /// Transmeta-specific microarchitecture detection.
-#[derive(Debug, Default, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq)
+)]
 pub struct Transmeta {
     pub version_str: Str<70>,
 }

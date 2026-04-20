@@ -84,6 +84,7 @@ impl<const N: usize> AsRef<str> for String<N> {
     }
 }
 
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<const N: usize> core::fmt::Display for String<N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -216,12 +217,14 @@ impl<const N: usize> AsRef<str> for Str<N> {
     }
 }
 
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<const N: usize> Display for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.deref())
     }
 }
 
+#[cfg(any(not(target_os = "none"), feature = "debug"))]
 impl<const N: usize> Debug for Str<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "\"{}\"", self.deref())

@@ -135,7 +135,14 @@ pub enum TopologyType {
 pub type DomainList = StaticVec<TopologyDomain, 8>;
 
 /// Complete CPU topology information including sockets, cores, threads, and cache.
-#[derive(Debug, Default, PartialEq)]
+#[cfg_attr(
+    all(target_os = "none", not(feature = "debug")),
+    derive(Default, PartialEq)
+)]
+#[cfg_attr(
+    any(not(target_os = "none"), feature = "debug"),
+    derive(Debug, Default, PartialEq)
+)]
 pub struct Topology {
     /// Number of processor sockets
     pub sockets: u32,

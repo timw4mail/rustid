@@ -158,7 +158,9 @@ pub fn vendor_str() -> Str<20> {
     bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
     bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
 
-    let s = core::str::from_utf8(&bytes).unwrap_or(UNK).trim_matches('\0');
+    let s = core::str::from_utf8(&bytes)
+        .unwrap_or(UNK)
+        .trim_matches('\0');
 
     Str::from(s)
 }
