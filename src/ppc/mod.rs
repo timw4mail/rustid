@@ -11,7 +11,7 @@ pub mod micro_arch;
 /// The PVR contains information about the CPU version and revision.
 pub fn get_pvr() -> u32 {
     let mut pvr: u32 = 0;
-    #[cfg(target_arch = "powerpc")]
+    #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
     {
         // PVR is SPR 287 on classic PowerPC
         unsafe {

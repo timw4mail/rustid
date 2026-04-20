@@ -30,7 +30,6 @@
 //! - `rustid help` - Show help message
 //! - `rustid everything` - Show all information
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
-#![cfg_attr(target_arch = "powerpc", feature(asm_experimental_arch))]
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
