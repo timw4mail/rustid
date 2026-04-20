@@ -264,7 +264,7 @@ impl Cpu {
             (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
             (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
 
-            (_, _) => UNK,
+            _ => UNK,
         };
 
         if str == UNK {

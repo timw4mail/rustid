@@ -172,7 +172,7 @@ impl MicroArch {
             MicroArch::AppleFirestorm => Some(Cache {
                 l1: Level1Cache::Split {
                     data: CacheLevel::new(131072, CacheType::Data, 8, 4),
-                    instruction: CacheLevel::new(131072, CacheType::Instruction, 8, 4),
+                    instruction: CacheLevel::new(192 * 1024, CacheType::Instruction, 8, 4),
                 },
                 l2: Some(CacheLevel::new(12 * 1024 * 1024, CacheType::Unified, 8, 8)),
                 l3: Some(CacheLevel::new(24 * 1024 * 1024, CacheType::Unified, 16, 0)),
@@ -181,7 +181,7 @@ impl MicroArch {
             MicroArch::AppleIcestorm => Some(Cache {
                 l1: Level1Cache::Split {
                     data: CacheLevel::new(65536, CacheType::Data, 8, 4),
-                    instruction: CacheLevel::new(65536, CacheType::Instruction, 8, 4),
+                    instruction: CacheLevel::new(131072, CacheType::Instruction, 8, 4),
                 },
                 l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
