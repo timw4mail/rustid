@@ -494,7 +494,13 @@ impl Cpu {
             }
         };
 
-        Str::from(s)
+        // Split off speed in model string
+        if s.contains("@") {
+            let mut parts = s.split("@");
+            Str::from(parts.next().unwrap().trim())
+        } else {
+            Str::from(s)
+        }
     }
 
     fn easter_egg() -> Option<Str<70>> {
