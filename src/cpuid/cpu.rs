@@ -646,7 +646,7 @@ impl TCpu for Cpu {
             } else if raw_model.eq(&disp_model) {
                 simple_line("Model", &disp_model);
             } else {
-                println!("{}{}", label("Model (synth)"), &disp_model);
+                println!("{}{}", label("Model"), &disp_model);
                 println!("{}{}", label("Model (raw)"), &raw_model);
 
                 newline();
