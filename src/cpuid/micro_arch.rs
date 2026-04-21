@@ -422,9 +422,10 @@ impl CpuArch {
                     (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),
 
                     // DM&P
-                    (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", None),
-                    (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", None),
-                    (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", None),
+                    // See: <https://www.vortex86.com/compare>
+                    (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", Some(N90)),
+                    (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", Some(N90)),
+                    (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", Some(N40)),
 
                     _ => unknown_model,
                 }
