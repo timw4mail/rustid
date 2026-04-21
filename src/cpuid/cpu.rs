@@ -355,6 +355,21 @@ impl Cpu {
         }
     }
 
+    #[cfg(not(target_os = "none"))]
+    fn cleanup_model_string(s: &str) -> Str<70> {
+        let filtered: Vec<&str> = s
+            .split_ascii_whitespace()
+            .filter(|p| !p.is_empty())
+            .collect();
+        let t: String<70> = filtered.join(" ").as_str().into();
+
+        if let Some(idx) = t.find('@') {
+            Str::from(t[..idx].trim())
+        } else {
+            Str::from(t.as_str())
+        }
+    }
+
     /// Returns a human-readable display name for the CPU model.
     ///
     /// This attempts to produce a marketing-style name based on the
@@ -494,13 +509,11 @@ impl Cpu {
             }
         };
 
-        // Split off speed in model string
-        if s.contains("@") {
-            let mut parts = s.split("@");
-            Str::from(parts.next().unwrap().trim())
-        } else {
-            Str::from(s)
-        }
+        #[cfg(not(target_os = "none"))]
+        return Self::cleanup_model_string(s);
+
+        #[cfg(target_os = "none")]
+        Str::from(s)
     }
 
     fn easter_egg() -> Option<Str<70>> {
