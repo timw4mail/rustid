@@ -357,14 +357,16 @@ impl Cpu {
 
     #[cfg(not(target_os = "none"))]
     fn cleanup_model_string(s: &str) -> Str<70> {
-        let filtered: Vec<&str> = s
+        let str = s.replace("CPU", "");
+
+        // Remove excess whitespace
+        let filtered: Vec<&str> = str
             .split_ascii_whitespace()
             .filter(|p| !p.is_empty())
             .collect();
         let str: Str<70> = filtered.join(" ").as_str().into();
 
-        let str = str.replace("CPU", "");
-
+        // Remove speed
         if let Some(idx) = str.find('@') {
             Str::from(str[..idx].trim())
         } else {
