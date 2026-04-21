@@ -361,12 +361,14 @@ impl Cpu {
             .split_ascii_whitespace()
             .filter(|p| !p.is_empty())
             .collect();
-        let t: String<70> = filtered.join(" ").as_str().into();
+        let str: Str<70> = filtered.join(" ").as_str().into();
 
-        if let Some(idx) = t.find('@') {
-            Str::from(t[..idx].trim())
+        let str = str.replace("CPU", "");
+
+        if let Some(idx) = str.find('@') {
+            Str::from(str[..idx].trim())
         } else {
-            Str::from(t.as_str())
+            str
         }
     }
 
