@@ -122,6 +122,12 @@ fn main() {
 
     // Display the version header
     if action != "dump" {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        if file_path.is_none() {
+            version();
+        }
+
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
         version();
     }
 
