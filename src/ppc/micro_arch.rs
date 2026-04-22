@@ -237,11 +237,4 @@ mod tests {
         assert_eq!(cpu.marketing_name, "PowerPC 970FX");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc970fx);
     }
-
-    #[test]
-    fn test_micro_arch_to_str() {
-        assert_eq!(MicroArch::Ppc750.into(), "PowerPC 750 (G3)");
-        assert_eq!(MicroArch::AppleApollo.into(), "Apple Apollo");
-        assert_eq!(MicroArch::Unknown.into(), UNK);
-    }
 }

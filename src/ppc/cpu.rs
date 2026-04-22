@@ -253,8 +253,21 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        let label: fn(&str) -> String = |label| format!("{:>17}:{:1}", label, "");
-        let sublabel: fn(&str) -> String = |label| format!("{:>19}{}:{:1}", "", label, "");
+        #[cfg(not(target_family = "unix"))]
+        let label: fn(&str) -> String = |label| format!("{:>17}: ", label);
+        #[cfg(target_family = "unix")]
+        let label: fn(&str) -> String = |label| format!("\x1b[32m{:>17}\x1b[0m: ", label);
+        #[cfg(not(target_family = "unix"))]
+        let sublabel: fn(&str) -> String = |label| format!("{:>19}{}: ", "", label);
+        #[cfg(target_family = "unix")]
+        let sublabel: fn(&str) -> String =
+            |label| format!("\x1b[94m{:>19}{}\x1b[0m:{:1}", "", label, "");
+        #[cfg(not(target_family = "unix"))]
+        let inline_sublabel: fn(&str, &str) -> String =
+            |label, sub| format!("{:>17}: {:1}: ", label, sub);
+        #[cfg(target_family = "unix")]
+        let inline_sublabel: fn(&str, &str) -> String =
+            |label, sub| format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
         let simple_line = |l, v: &str| {
             let l = label(l);
             println!("{}{}", l, v);
@@ -312,14 +325,14 @@ impl TCpu for Cpu {
                         let (num, unit) = cache_size(data.size);
                         if data.assoc > 0 {
                             println!(
-                                "{}L1d: {} {}, {}-way",
-                                label("Cache"),
+                                "{}{} {}, {}-way",
+                                inline_sublabel("Cache", "L1d"),
                                 num,
                                 unit,
                                 data.assoc
                             );
                         } else {
-                            println!("{}L1d: {} {}", label("Cache"), num, unit);
+                            println!("{}{} {}", inline_sublabel("Cache", "L1d"), num, unit);
                         }
                     }
 
