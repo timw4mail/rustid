@@ -24,6 +24,7 @@ impl CpuDisplay {
     pub fn display(
         cpu_arch: &crate::arm::micro_arch::CpuArch,
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+        color: bool,
     ) {
         println!();
 

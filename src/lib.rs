@@ -17,7 +17,7 @@
 //! use rustid::common::TCpu;
 //!
 //! let cpu = Cpu::detect();
-//! cpu.display_table();
+//! cpu.display_table(true);
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
 //!

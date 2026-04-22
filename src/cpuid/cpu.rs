@@ -599,7 +599,7 @@ impl TCpu for Cpu {
         }
     }
 
-    fn display_table(&self) {
+    fn display_table(&self, color: bool) {
         use crate::sfmt;
 
         #[cfg(not(target_os = "none"))]
@@ -629,19 +629,37 @@ impl TCpu for Cpu {
 
         #[cfg(not(target_family = "unix"))]
         let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}: ", label);
-        #[cfg(target_family = "unix")]
-        let label: fn(&str) -> Str<40> = |label| sfmt!("\x1b[32m{:>14}\x1b[0m: ", label);
         #[cfg(not(target_family = "unix"))]
         let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}: ", "", label);
-        #[cfg(target_family = "unix")]
-        let sublabel: fn(&str) -> Str<40> =
-            |label| sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "");
         #[cfg(not(target_family = "unix"))]
         let inline_sublabel: fn(&str, &str) -> Str<40> =
             |label, sub| sfmt!("{:>14}: {:1}: ", label, sub);
         #[cfg(target_family = "unix")]
-        let inline_sublabel: fn(&str, &str) -> Str<40> =
-            |label, sub| sfmt!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
+        let label = |label| -> Str<40> {
+            if color {
+                sfmt!("\x1b[32m{:>14}\x1b[0m: ", label)
+            } else {
+                sfmt!("{:>14}: ", label)
+            }
+        };
+
+        #[cfg(target_family = "unix")]
+        let sublabel = |label| -> Str<40> {
+            if color {
+                sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
+            } else {
+                sfmt!("{:>16}{}: ", "", label)
+            }
+        };
+
+        #[cfg(target_family = "unix")]
+        let inline_sublabel = |label, sub| -> Str<40> {
+            if color {
+                sfmt!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
+            } else {
+                sfmt!("{:>14}: {:1}: ", label, sub)
+            }
+        };
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -843,9 +861,11 @@ impl TCpu for Cpu {
                 }
             };
 
-            print_speed(&label("Frequency"), base);
             if boost > base {
-                print_speed(&label("Boost"), boost);
+                print_speed(&inline_sublabel("Frequency", "Base"), base);
+                print_speed(&sublabel("Boost"), boost);
+            } else {
+                print_speed(&label("Frequency"), base);
             }
 
             newline();

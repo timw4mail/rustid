@@ -26,7 +26,7 @@ pub trait TCpu {
     fn debug(&self);
 
     /// Display the CPU information in a table format
-    fn display_table(&self);
+    fn display_table(&self, color: bool);
 }
 
 #[cfg_attr(

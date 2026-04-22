@@ -252,7 +252,7 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
     }
 
-    fn display_table(&self) {
+    fn display_table(&self, color: bool) {
         println!();
 
         CpuDisplay::simple_line("Model", self.cpu_arch.marketing_name);

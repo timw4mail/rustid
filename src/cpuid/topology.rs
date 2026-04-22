@@ -1,6 +1,10 @@
 use super::constants::*;
+use super::mp::MpTable;
 use super::{StaticVec, has_ht, is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, Speed};
+
+#[cfg(not(target_os = "none"))]
+use super::{info_source, provider::CpuidInfoSource};
 
 impl Speed {
     /// Detects the CPU speed from available sources.
@@ -51,7 +55,7 @@ impl Speed {
 
     fn measure() -> Self {
         #[cfg(not(target_os = "none"))]
-        if !super::has_tsc() {
+        if info_source() == CpuidInfoSource::DumpFile || super::has_tsc() == false {
             return Speed::default();
         }
 
@@ -283,12 +287,11 @@ impl Topology {
         // 1. Initial socket count detection (Platform-specific fallbacks)
         // TODO: detect socket count from domains
         #[cfg(target_os = "none")]
-        let sockets_detected = super::mp::MpTable::detect().socket_count();
+        let sockets_detected = MpTable::detect().socket_count();
 
         #[cfg(not(target_os = "none"))]
-        let sockets_detected: u32 = if super::info_source() == super::provider::CpuidInfoSource::Cpu
-        {
-            super::mp::MpTable::detect().socket_count()
+        let sockets_detected: u32 = if info_source() == CpuidInfoSource::Cpu {
+            MpTable::detect().socket_count()
         } else {
             1
         };
