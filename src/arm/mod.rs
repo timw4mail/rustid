@@ -4,7 +4,7 @@
 mod brand;
 pub mod cpu;
 pub mod micro_arch;
-use crate::common::{CoreType, Level1Cache};
+use crate::common::{CoreType, CpuDisplay};
 pub use micro_arch::{CpuCore, Midr};
 use std::collections::{BTreeMap, HashSet};
 
@@ -20,64 +20,29 @@ trait TArmCpu {
     fn vendor(&self) -> &str;
 }
 
-pub struct CpuDisplay;
-
 impl CpuDisplay {
-    fn label(s: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return format!("{:>17}: ", s);
-        #[cfg(target_family = "unix")]
-        return format!("\x1b[32m{:>17}\x1b[0m: ", s);
-    }
-
-    fn sublabel(s: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return format!("{:>19} : ", s);
-        #[cfg(target_family = "unix")]
-        return format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s);
-    }
-
-    fn inline_sublabel(label: &str, sub: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return format!("{:>17}: {:1}: ", label, sub);
-        #[cfg(target_family = "unix")]
-        return format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
-    }
-
-    fn cache_count(share_count: u32, core_count: u32) -> String {
-        if share_count == 0 || (core_count / share_count) <= 1 {
-            String::new()
-        } else {
-            format!("{}x ", core_count / share_count)
-        }
-    }
-
     pub fn display(
         cpu_arch: &crate::arm::micro_arch::CpuArch,
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
     ) {
         println!();
-        println!(
-            "{}{}",
-            Self::label("Brand/Implementor"),
-            <crate::arm::brand::Vendor as Into<&str>>::into(cpu_arch.implementer)
+
+        Self::simple_line(
+            "Brand/Implementor",
+            <crate::arm::brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
-        println!();
 
-        println!("{}{}", Self::label("Model"), cpu_arch.model);
-        println!();
+        Self::simple_line("Model", &cpu_arch.model);
 
-        println!("{}{}", Self::label("Code Name"), cpu_arch.code_name);
-        println!();
+        Self::simple_line("Code Name", cpu_arch.code_name);
 
         if let Some(tech) = cpu_arch.technology {
-            println!("{}{}", Self::label("Process"), tech);
-            println!();
+            Self::simple_line("Process", tech);
         }
 
         for ((kind, _, _), core) in cores {
             let name = format!("{} Cores", Into::<String>::into(*kind));
-            println!("{}", Self::label(&name));
+            println!("{}", Self::raw_label(&name));
 
             if let Some(name) = core.name.clone() {
                 println!("{}{}", Self::label("Name"), name);
@@ -85,102 +50,7 @@ impl CpuDisplay {
 
             println!("{}{}", Self::label("Count"), core.count);
 
-            if let Some(cache) = core.cache {
-                #[inline]
-                fn cache_size(raw_size: u32) -> (u32, &'static str) {
-                    let mut num = raw_size / 1024;
-                    let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                    if num >= 1024 {
-                        num /= 1024;
-                    }
-
-                    (num, unit)
-                }
-
-                match cache.l1 {
-                    Level1Cache::Unified(cache) => {
-                        println!("{}L1: Unified {:>4} KB", Self::label("Cache"), cache.size);
-                    }
-                    Level1Cache::Split { data, instruction } => {
-                        let data_count: String =
-                            Self::cache_count(data.share_count, core.count as u32);
-                        let instruction_count =
-                            Self::cache_count(instruction.share_count, core.count as u32);
-
-                        if data.assoc > 0 {
-                            println!(
-                                "{}{}{} KB, {}-way",
-                                Self::inline_sublabel("Cache", "L1d"),
-                                &data_count,
-                                data.size / 1024,
-                                data.assoc
-                            );
-                        } else {
-                            println!(
-                                "{}{}{} KB",
-                                Self::inline_sublabel("Cache", "L1d"),
-                                &data_count,
-                                data.size / 1024
-                            );
-                        }
-
-                        if instruction.assoc > 0 {
-                            println!(
-                                "{}{}{} KB, {}-way",
-                                Self::sublabel("L1i"),
-                                &instruction_count,
-                                instruction.size / 1024,
-                                instruction.assoc
-                            );
-                        } else {
-                            println!(
-                                "{}{}{} KB",
-                                Self::sublabel("L1i"),
-                                &instruction_count,
-                                instruction.size / 1024,
-                            );
-                        }
-                    }
-                }
-
-                if let Some(cache) = cache.l2 {
-                    let count = Self::cache_count(cache.share_count, core.count as u32);
-                    let (num, unit) = cache_size(cache.size);
-
-                    if cache.assoc > 0 {
-                        println!(
-                            "{} {}{} {}, {}-way",
-                            Self::sublabel("L2"),
-                            &count,
-                            num,
-                            unit,
-                            cache.assoc
-                        );
-                    } else {
-                        println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
-                    }
-                }
-
-                if let Some(cache) = cache.l3 {
-                    let (num, unit) = cache_size(cache.size);
-                    let cache_count = Self::cache_count(cache.share_count, core.count as u32);
-
-                    if cache.assoc > 0 {
-                        println!(
-                            "{} {}{} {}, {}-way",
-                            Self::sublabel("L3"),
-                            &cache_count,
-                            num,
-                            unit,
-                            cache.assoc
-                        );
-                    } else {
-                        println!("{} {}{} {}", Self::sublabel("L3"), &cache_count, num, unit);
-                    }
-                }
-            }
-            println!();
+            Self::display_cache(core.cache, core.count);
         }
     }
 }

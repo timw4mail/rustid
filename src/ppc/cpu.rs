@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
-use crate::common::TCpu;
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
+use crate::common::{CpuDisplay, TCpu};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
 use std::path::Path;
@@ -253,127 +253,34 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self) {
-        #[cfg(not(target_family = "unix"))]
-        let label: fn(&str) -> String = |label| format!("{:>17}: ", label);
-        #[cfg(target_family = "unix")]
-        let label: fn(&str) -> String = |label| format!("\x1b[32m{:>17}\x1b[0m: ", label);
-        #[cfg(not(target_family = "unix"))]
-        let sublabel: fn(&str) -> String = |label| format!("{:>19}{}: ", "", label);
-        #[cfg(target_family = "unix")]
-        let sublabel: fn(&str) -> String =
-            |label| format!("\x1b[94m{:>19}{}\x1b[0m:{:1}", "", label, "");
-        #[cfg(not(target_family = "unix"))]
-        let inline_sublabel: fn(&str, &str) -> String =
-            |label, sub| format!("{:>17}: {:1}: ", label, sub);
-        #[cfg(target_family = "unix")]
-        let inline_sublabel: fn(&str, &str) -> String =
-            |label, sub| format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
-        let simple_line = |l, v: &str| {
-            let l = label(l);
-            println!("{}{}", l, v);
-            println!();
-        };
-
         println!();
-        simple_line("Model", self.cpu_arch.marketing_name);
-        simple_line("MicroArch", self.cpu_arch.micro_arch.into());
-        simple_line("Code Name", self.cpu_arch.code_name);
+
+        CpuDisplay::simple_line("Model", self.cpu_arch.marketing_name);
+        CpuDisplay::simple_line("MicroArch", self.cpu_arch.micro_arch.into());
+        CpuDisplay::simple_line("Code Name", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
-            simple_line("Process", tech);
+            CpuDisplay::simple_line("Process", tech);
         }
 
         if let Some(clock_mhz) = self.clock_speed {
             if clock_mhz >= 1000 {
                 let whole = clock_mhz / 1000;
                 let fract = (clock_mhz % 1000) / 10;
-                println!("{}{}.{:02} GHz", label("Frequency"), whole, fract);
+                println!(
+                    "{}{}.{:02} GHz",
+                    CpuDisplay::label("Frequency"),
+                    whole,
+                    fract
+                );
             } else {
-                println!("{}{}.00 MHz", label("Frequency"), clock_mhz);
+                println!("{}{}.00 MHz", CpuDisplay::label("Frequency"), clock_mhz);
             }
             println!();
         }
 
-        if let Some(ref cache) = self.cache {
-            fn cache_size(raw_size: u32) -> (u32, &'static str) {
-                let mut num = raw_size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
+        // TODO handle multiple cores/sockets
+        CpuDisplay::display_cache(self.cache, 1);
 
-                if num >= 1024 {
-                    num /= 1024;
-                }
-
-                (num, unit)
-            }
-
-            match &cache.l1 {
-                Level1Cache::Unified(l1) => {
-                    let (num, unit) = cache_size(l1.size);
-                    if l1.assoc > 0 {
-                        println!(
-                            "{}L1: Unified {} {}, {}-way",
-                            label("Cache"),
-                            num,
-                            unit,
-                            l1.assoc
-                        );
-                    } else {
-                        println!("{}L1: Unified {} {}", label("Cache"), num, unit);
-                    }
-                }
-                Level1Cache::Split { data, instruction } => {
-                    if data.size > 0 {
-                        let (num, unit) = cache_size(data.size);
-                        if data.assoc > 0 {
-                            println!(
-                                "{}{} {}, {}-way",
-                                inline_sublabel("Cache", "L1d"),
-                                num,
-                                unit,
-                                data.assoc
-                            );
-                        } else {
-                            println!("{}{} {}", inline_sublabel("Cache", "L1d"), num, unit);
-                        }
-                    }
-
-                    if instruction.size > 0 {
-                        let (num, unit) = cache_size(instruction.size);
-                        if instruction.assoc > 0 {
-                            println!(
-                                "{}{} {}, {}-way",
-                                sublabel("L1i"),
-                                num,
-                                unit,
-                                instruction.assoc
-                            );
-                        } else {
-                            println!("{}{} {}", sublabel("L1i"), num, unit);
-                        }
-                    }
-                }
-            }
-
-            if let Some(l2) = &cache.l2 {
-                let (num, unit) = cache_size(l2.size);
-                if l2.assoc > 0 {
-                    println!("{}{} {}, {}-way", sublabel("L2"), num, unit, l2.assoc);
-                } else {
-                    println!("{}{} {}", sublabel("L2"), num, unit);
-                }
-            }
-
-            if let Some(l3) = &cache.l3 {
-                let (num, unit) = cache_size(l3.size);
-                if l3.assoc > 0 {
-                    println!("{}{} {}, {}-way", sublabel("L3"), num, unit, l3.assoc);
-                } else {
-                    println!("{}{} {}", sublabel("L3"), num, unit);
-                }
-            }
-
-            println!();
-        }
-
-        crate::println!();
+        println!();
     }
 }

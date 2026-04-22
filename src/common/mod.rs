@@ -5,12 +5,18 @@ pub mod cores;
 
 pub mod constants;
 
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+pub mod display;
+
 pub use cache::*;
 
 #[cfg(not(target_os = "none"))]
 pub use cores::*;
 
 pub use constants::*;
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+pub use display::*;
 
 pub trait TCpu {
     /// Detect the CPU
