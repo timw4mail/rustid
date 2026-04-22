@@ -627,8 +627,28 @@ impl TCpu for Cpu {
             }
         };
 
+        #[cfg(not(target_family = "unix"))]
         let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}:{:1}", label, "");
+        #[cfg(target_family = "unix")]
+        let label: fn(&str) -> Str<40> = |label| sfmt!("\x1b[32m{:>14}\x1b[0m:{:1}", label, "");
+        #[cfg(not(target_family = "unix"))]
         let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}:{:1}", "", label, "");
+        #[cfg(target_family = "unix")]
+        let sublabel: fn(&str) -> Str<40> =
+            |label| sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "");
+        #[cfg(not(target_family = "unix"))]
+        let inline_sublabel: fn(&str, &str) -> Str<40> =
+            |label, sub| sfmt!("{:>14}:{:1}{:1}:{:1}", label, "", sub, "");
+        #[cfg(target_family = "unix")]
+        let inline_sublabel: fn(&str, &str) -> Str<40> = |label, sub| {
+            sfmt!(
+                "\x1b[32m{:>14}\x1b[0m:{:1}\x1b[94m{:1}\x1b[0m:{:1}",
+                label,
+                "",
+                sub,
+                ""
+            )
+        };
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -734,8 +754,8 @@ impl TCpu for Cpu {
 
                     if data.assoc > 0 {
                         println!(
-                            "{}L1d: {}{} KB, {}-way",
-                            label("Cache"),
+                            "{}{}{} KB, {}-way",
+                            inline_sublabel("Cache", "L1d"),
                             &data_count,
                             data.size / 1024,
                             data.assoc
