@@ -634,6 +634,7 @@ impl TCpu for Cpu {
         #[cfg(not(target_family = "unix"))]
         let inline_sublabel: fn(&str, &str) -> Str<40> =
             |label, sub| sfmt!("{:>14}: {:1}: ", label, sub);
+
         #[cfg(target_family = "unix")]
         let label = |label| -> Str<40> {
             if color {

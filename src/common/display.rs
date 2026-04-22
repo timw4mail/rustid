@@ -1,6 +1,8 @@
 use super::cache::{Cache, Level1Cache};
 
-pub struct CpuDisplay;
+pub struct CpuDisplay {
+    pub color: bool,
+}
 
 impl CpuDisplay {
     pub fn raw_label(s: &str) -> String {
@@ -15,29 +17,38 @@ impl CpuDisplay {
         format!("{:>17}: {:1}: ", label, sub)
     }
 
-    pub fn label(s: &str) -> String {
+    pub fn label(&self, s: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_label(s);
         #[cfg(target_family = "unix")]
+        if !self.color {
+            return Self::raw_label(s);
+        }
         return format!("\x1b[32m{:>17}\x1b[0m: ", s);
     }
 
-    pub fn sublabel(s: &str) -> String {
+    pub fn sublabel(&self, s: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_sublabel(s);
         #[cfg(target_family = "unix")]
+        if !self.color {
+            return Self::raw_sublabel(s);
+        }
         return format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s);
     }
 
-    pub fn inline_sublabel(label: &str, sub: &str) -> String {
+    pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_inline_sublabel(label, sub);
         #[cfg(target_family = "unix")]
+        if !self.color {
+            return Self::raw_inline_sublabel(label, sub);
+        }
         return format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
     }
 
-    pub fn simple_line(l: &str, v: &str) {
-        let l = Self::label(l);
+    pub fn simple_line(&self, l: &str, v: &str) {
+        let l = self.label(l);
         println!("{}{}", l, v);
         println!();
     }
@@ -50,7 +61,7 @@ impl CpuDisplay {
         }
     }
 
-    pub fn display_cache(cache: Option<Cache>, core_count: u32) {
+    pub fn display_cache(&self, cache: Option<Cache>, core_count: u32) {
         if let Some(cache) = cache {
             #[inline]
             fn cache_size(raw_size: u32) -> (u32, &'static str) {
@@ -66,7 +77,7 @@ impl CpuDisplay {
 
             match cache.l1 {
                 Level1Cache::Unified(l1) => {
-                    println!("{}L1: Unified {:>4} KB", Self::label("Cache"), l1.size);
+                    println!("{}L1: Unified {:>4} KB", self.label("Cache"), l1.size);
                 }
                 Level1Cache::Split { data, instruction } => {
                     let data_count: String = Self::cache_count(data.share_count, core_count as u32);
@@ -76,7 +87,7 @@ impl CpuDisplay {
                     if data.assoc > 0 {
                         println!(
                             "{}{}{} KB, {}-way",
-                            Self::inline_sublabel("Cache", "L1d"),
+                            self.inline_sublabel("Cache", "L1d"),
                             &data_count,
                             data.size / 1024,
                             data.assoc
@@ -84,7 +95,7 @@ impl CpuDisplay {
                     } else {
                         println!(
                             "{}{}{} KB",
-                            Self::inline_sublabel("Cache", "L1d"),
+                            self.inline_sublabel("Cache", "L1d"),
                             &data_count,
                             data.size / 1024
                         );
@@ -93,7 +104,7 @@ impl CpuDisplay {
                     if instruction.assoc > 0 {
                         println!(
                             "{}{}{} KB, {}-way",
-                            Self::sublabel("L1i"),
+                            self.sublabel("L1i"),
                             &instruction_count,
                             instruction.size / 1024,
                             instruction.assoc
@@ -101,7 +112,7 @@ impl CpuDisplay {
                     } else {
                         println!(
                             "{}{}{} KB",
-                            Self::sublabel("L1i"),
+                            self.sublabel("L1i"),
                             &instruction_count,
                             instruction.size / 1024,
                         );
@@ -116,14 +127,14 @@ impl CpuDisplay {
                 if l2.assoc > 0 {
                     println!(
                         "{} {}{} {}, {}-way",
-                        Self::sublabel("L2"),
+                        self.sublabel("L2"),
                         &count,
                         num,
                         unit,
                         l2.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L2"), &count, num, unit);
                 }
             }
 
@@ -134,14 +145,14 @@ impl CpuDisplay {
                 if l3.assoc > 0 {
                     println!(
                         "{} {}{} {}, {}-way",
-                        Self::sublabel("L3"),
+                        self.sublabel("L3"),
                         &cache_count,
                         num,
                         unit,
                         l3.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", Self::sublabel("L3"), &cache_count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L3"), &cache_count, num, unit);
                 }
             }
         }

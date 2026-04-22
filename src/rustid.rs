@@ -17,7 +17,7 @@ pub extern "C" fn _start() -> ! {
 
     let cpu = Cpu::detect();
     version();
-    cpu.display_table();
+    cpu.display_table(false);
 
     exit();
 }
@@ -53,6 +53,7 @@ fn main() {
 
     let mut color = true;
     let mut action = "default";
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     let mut file_path = None;
 
     let mut args = std::env::args().skip(1);
@@ -65,6 +66,7 @@ fn main() {
             "m" | "mono" => color = false,
             "e" | "everything" => action = "everything",
             "r" | "dump" => action = "dump",
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             "f" | "file" => {
                 file_path = args.next();
                 if file_path.is_none() {
@@ -82,6 +84,7 @@ fn main() {
                         'm' => color = false,
                         'e' => action = "everything",
                         'r' => action = "dump",
+                        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                         'f' => {
                             file_path = args.next();
                             if file_path.is_none() {
@@ -115,17 +118,11 @@ fn main() {
         rustid::file_version();
         let dump = CpuDump::parse_file(path);
         provider::set_cpuid_provider(dump);
-    } else {
-        match action {
-            "debug" | "everything" | "default" | "version" => version(),
-            _ => {}
-        }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    match action {
-        "debug" | "everything" | "default" | "version" => version(),
-        _ => {}
+    // Display the version header
+    if action != "dump" {
+        version();
     }
 
     match action {

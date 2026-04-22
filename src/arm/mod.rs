@@ -26,32 +26,34 @@ impl CpuDisplay {
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
         color: bool,
     ) {
+        let cpu = CpuDisplay { color };
+
         println!();
 
-        Self::simple_line(
+        cpu.simple_line(
             "Brand/Implementor",
             <crate::arm::brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
 
-        Self::simple_line("Model", &cpu_arch.model);
+        cpu.simple_line("Model", &cpu_arch.model);
 
-        Self::simple_line("Code Name", cpu_arch.code_name);
+        cpu.simple_line("Code Name", cpu_arch.code_name);
 
         if let Some(tech) = cpu_arch.technology {
-            Self::simple_line("Process", tech);
+            cpu.simple_line("Process", tech);
         }
 
         for ((kind, _, _), core) in cores {
             let name = format!("{} Cores", Into::<String>::into(*kind));
-            println!("{}", Self::raw_label(&name));
+            println!("{}", CpuDisplay::raw_label(&name));
 
             if let Some(name) = core.name.clone() {
-                println!("{}{}", Self::label("Name"), name);
+                println!("{}{}", cpu.label("Name"), name);
             }
 
-            println!("{}{}", Self::label("Count"), core.count);
+            println!("{}{}", cpu.label("Count"), core.count);
 
-            Self::display_cache(core.cache, core.count);
+            cpu.display_cache(core.cache, core.count);
         }
     }
 }

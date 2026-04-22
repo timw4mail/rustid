@@ -255,31 +255,28 @@ impl TCpu for Cpu {
     fn display_table(&self, color: bool) {
         println!();
 
-        CpuDisplay::simple_line("Model", self.cpu_arch.marketing_name);
-        CpuDisplay::simple_line("MicroArch", self.cpu_arch.micro_arch.into());
-        CpuDisplay::simple_line("Code Name", self.cpu_arch.code_name);
+        let cpu = CpuDisplay { color };
+
+        cpu.simple_line("Model", self.cpu_arch.marketing_name);
+        cpu.simple_line("MicroArch", self.cpu_arch.micro_arch.into());
+        cpu.simple_line("Code Name", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
-            CpuDisplay::simple_line("Process", tech);
+            cpu.simple_line("Process", tech);
         }
 
         if let Some(clock_mhz) = self.clock_speed {
             if clock_mhz >= 1000 {
                 let whole = clock_mhz / 1000;
                 let fract = (clock_mhz % 1000) / 10;
-                println!(
-                    "{}{}.{:02} GHz",
-                    CpuDisplay::label("Frequency"),
-                    whole,
-                    fract
-                );
+                println!("{}{}.{:02} GHz", cpu.label("Frequency"), whole, fract);
             } else {
-                println!("{}{}.00 MHz", CpuDisplay::label("Frequency"), clock_mhz);
+                println!("{}{}.00 MHz", cpu.label("Frequency"), clock_mhz);
             }
             println!();
         }
 
         // TODO handle multiple cores/sockets
-        CpuDisplay::display_cache(self.cache, 1);
+        cpu.display_cache(self.cache, 1);
 
         println!();
     }

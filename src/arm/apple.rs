@@ -226,8 +226,8 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
     }
 
-    fn display_table(&self) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores);
+    fn display_table(&self, color: bool) {
+        CpuDisplay::display(&self.cpu_arch, &self.cores, color);
     }
 }
 
