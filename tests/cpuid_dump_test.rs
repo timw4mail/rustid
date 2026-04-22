@@ -17,6 +17,10 @@ impl CpuidProvider for MockCpuidProvider {
     fn cpuid_count(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
         self.cpu.get(leaf, sub_leaf)
     }
+
+    fn info_source(&self) -> CpuidInfoSource {
+        CpuidInfoSource::DumpFile
+    }
 }
 
 fn raw_path(segment: &str) -> PathBuf {

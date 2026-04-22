@@ -628,27 +628,20 @@ impl TCpu for Cpu {
         };
 
         #[cfg(not(target_family = "unix"))]
-        let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}:{:1}", label, "");
+        let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}: ", label);
         #[cfg(target_family = "unix")]
-        let label: fn(&str) -> Str<40> = |label| sfmt!("\x1b[32m{:>14}\x1b[0m:{:1}", label, "");
+        let label: fn(&str) -> Str<40> = |label| sfmt!("\x1b[32m{:>14}\x1b[0m: ", label);
         #[cfg(not(target_family = "unix"))]
-        let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}:{:1}", "", label, "");
+        let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}: ", "", label);
         #[cfg(target_family = "unix")]
         let sublabel: fn(&str) -> Str<40> =
             |label| sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "");
         #[cfg(not(target_family = "unix"))]
         let inline_sublabel: fn(&str, &str) -> Str<40> =
-            |label, sub| sfmt!("{:>14}:{:1}{:1}:{:1}", label, "", sub, "");
+            |label, sub| sfmt!("{:>14}: {:1}: ", label, sub);
         #[cfg(target_family = "unix")]
-        let inline_sublabel: fn(&str, &str) -> Str<40> = |label, sub| {
-            sfmt!(
-                "\x1b[32m{:>14}\x1b[0m:{:1}\x1b[94m{:1}\x1b[0m:{:1}",
-                label,
-                "",
-                sub,
-                ""
-            )
-        };
+        let inline_sublabel: fn(&str, &str) -> Str<40> =
+            |label, sub| sfmt!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
 
         let simple_line = |l, v: &str| {
             let l = label(l);
@@ -680,7 +673,7 @@ impl TCpu for Cpu {
         if disp_model != UNK {
             if raw_model.eq(UNK) {
                 simple_line("Model (synth)", &disp_model);
-            } else if raw_model.eq(&disp_model) {
+            } else if raw_model.trim().eq(&disp_model) {
                 simple_line("Model", &disp_model);
             } else {
                 println!("{}{}", label("Model"), &disp_model);
@@ -760,6 +753,13 @@ impl TCpu for Cpu {
                             data.size / 1024,
                             data.assoc
                         );
+                    } else {
+                        println!(
+                            "{}{}{} KB",
+                            inline_sublabel("Cache", "L1d"),
+                            &data_count,
+                            data.size / 1024
+                        );
                     }
 
                     if instruction.assoc > 0 {
@@ -770,6 +770,13 @@ impl TCpu for Cpu {
                             instruction.size / 1024,
                             instruction.assoc
                         );
+                    } else {
+                        println!(
+                            "{}{}{} KB",
+                            sublabel("L1i"),
+                            &instruction_count,
+                            instruction.size / 1024,
+                        );
                     }
                 }
             }
@@ -778,14 +785,18 @@ impl TCpu for Cpu {
                 let count = cache_count(l2.share_count);
                 let (num, unit) = cache_size(l2.size);
 
-                println!(
-                    "{} {}{} {}, {}-way",
-                    sublabel("L2"),
-                    &count,
-                    num,
-                    unit,
-                    l2.assoc
-                );
+                if l2.assoc > 0 {
+                    println!(
+                        "{} {}{} {}, {}-way",
+                        sublabel("L2"),
+                        &count,
+                        num,
+                        unit,
+                        l2.assoc
+                    );
+                } else {
+                    println!("{} {}{} {}", sublabel("L2"), &count, num, unit);
+                }
             }
 
             // TODO: Determine reliable cache count for L3,
@@ -800,14 +811,18 @@ impl TCpu for Cpu {
 
                 let (num, unit) = cache_size(l3.size);
 
-                println!(
-                    "{} {}{} {}, {}-way",
-                    sublabel("L3"),
-                    &cache_count,
-                    num,
-                    unit,
-                    l3.assoc
-                );
+                if l3.assoc > 0 {
+                    println!(
+                        "{} {}{} {}, {}-way",
+                        sublabel("L3"),
+                        &cache_count,
+                        num,
+                        unit,
+                        l3.assoc
+                    );
+                } else {
+                    println!("{} {}{} {}", sublabel("L3"), &cache_count, num, unit);
+                }
             }
 
             newline();

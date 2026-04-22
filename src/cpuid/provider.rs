@@ -5,6 +5,12 @@ use std::fs;
 use std::path::Path;
 use std::sync::{LazyLock, RwLock};
 
+#[derive(Debug, PartialEq)]
+pub enum CpuidInfoSource {
+    DumpFile,
+    Cpu,
+}
+
 /// Trait abstracting the CPUID provider, allowing for mocking in tests.
 ///
 /// This trait enables dependency injection of CPUID providers,
@@ -12,6 +18,9 @@ use std::sync::{LazyLock, RwLock};
 pub trait CpuidProvider: Send + Sync {
     /// Execute CPUID with the given leaf and sub-leaf.
     fn cpuid_count(&self, leaf: u32, sub_leaf: u32) -> Cpuid;
+
+    /// Where did the CPUID info come from?
+    fn info_source(&self) -> CpuidInfoSource;
 }
 
 /// Real CPUID provider that executes the CPUID instruction on x86 hardware.
@@ -20,6 +29,10 @@ pub struct RealCpuid;
 impl CpuidProvider for RealCpuid {
     fn cpuid_count(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
         real_x86_cpuid_count(leaf, sub_leaf)
+    }
+
+    fn info_source(&self) -> CpuidInfoSource {
+        CpuidInfoSource::Cpu
     }
 }
 
@@ -62,6 +75,15 @@ pub(crate) fn cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
             return p.cpuid_count(leaf, sub_leaf);
         }
         PROVIDER.read().unwrap().cpuid_count(leaf, sub_leaf)
+    })
+}
+
+pub(crate) fn info_source() -> CpuidInfoSource {
+    THREAD_PROVIDER.with(|tp| {
+        if let Some(p) = tp.borrow().as_ref() {
+            return p.info_source();
+        }
+        PROVIDER.read().unwrap().info_source()
     })
 }
 
@@ -135,5 +157,9 @@ impl CpuDump {
 impl CpuidProvider for CpuDump {
     fn cpuid_count(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
         self.get(leaf, sub_leaf)
+    }
+
+    fn info_source(&self) -> CpuidInfoSource {
+        CpuidInfoSource::DumpFile
     }
 }

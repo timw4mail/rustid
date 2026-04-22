@@ -75,6 +75,11 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     super::provider::cpuid_count(leaf, sub_leaf)
 }
 
+#[cfg(not(target_os = "none"))]
+pub fn info_source() -> super::provider::CpuidInfoSource {
+    super::provider::info_source()
+}
+
 /// Returns true if the CPUID instruction is supported.
 ///
 /// Verified on real hardware
