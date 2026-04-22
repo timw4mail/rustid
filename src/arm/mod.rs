@@ -24,11 +24,24 @@ pub struct CpuDisplay;
 
 impl CpuDisplay {
     fn label(s: &str) -> String {
-        format!("{:>17}:{:1}", s, "")
+        #[cfg(not(target_family = "unix"))]
+        return format!("{:>17}: ", s);
+        #[cfg(target_family = "unix")]
+        return format!("\x1b[32m{:>17}\x1b[0m: ", s);
     }
 
     fn sublabel(s: &str) -> String {
-        format!("{:>19}{}:{:1}", "", s, "")
+        #[cfg(not(target_family = "unix"))]
+        return format!("{:>19} : ", s);
+        #[cfg(target_family = "unix")]
+        return format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s);
+    }
+
+    fn inline_sublabel(label: &str, sub: &str) -> String {
+        #[cfg(not(target_family = "unix"))]
+        return format!("{:>17}: {:1}: ", label, sub);
+        #[cfg(target_family = "unix")]
+        return format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
     }
 
     fn cache_count(share_count: u32, core_count: u32) -> String {
@@ -73,6 +86,18 @@ impl CpuDisplay {
             println!("{}{}", Self::label("Count"), core.count);
 
             if let Some(cache) = core.cache {
+                #[inline]
+                fn cache_size(raw_size: u32) -> (u32, &'static str) {
+                    let mut num = raw_size / 1024;
+                    let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                    if num >= 1024 {
+                        num /= 1024;
+                    }
+
+                    (num, unit)
+                }
+
                 match cache.l1 {
                     Level1Cache::Unified(cache) => {
                         println!("{}L1: Unified {:>4} KB", Self::label("Cache"), cache.size);
@@ -83,43 +108,76 @@ impl CpuDisplay {
                         let instruction_count =
                             Self::cache_count(instruction.share_count, core.count as u32);
 
-                        println!(
-                            "{}L1d: {}{} KB",
-                            Self::label("Cache"),
-                            &data_count,
-                            data.size / 1024
-                        );
-                        println!(
-                            "{}{}{} KB",
-                            Self::sublabel("L1i"),
-                            &instruction_count,
-                            instruction.size / 1024
-                        );
+                        if data.assoc > 0 {
+                            println!(
+                                "{}{}{} KB, {}-way",
+                                Self::inline_sublabel("Cache", "L1d"),
+                                &data_count,
+                                data.size / 1024,
+                                data.assoc
+                            );
+                        } else {
+                            println!(
+                                "{}{}{} KB",
+                                Self::inline_sublabel("Cache", "L1d"),
+                                &data_count,
+                                data.size / 1024
+                            );
+                        }
+
+                        if instruction.assoc > 0 {
+                            println!(
+                                "{}{}{} KB, {}-way",
+                                Self::sublabel("L1i"),
+                                &instruction_count,
+                                instruction.size / 1024,
+                                instruction.assoc
+                            );
+                        } else {
+                            println!(
+                                "{}{}{} KB",
+                                Self::sublabel("L1i"),
+                                &instruction_count,
+                                instruction.size / 1024,
+                            );
+                        }
                     }
                 }
 
                 if let Some(cache) = cache.l2 {
                     let count = Self::cache_count(cache.share_count, core.count as u32);
+                    let (num, unit) = cache_size(cache.size);
 
-                    let mut num = cache.size / 1024;
-                    let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                    if num >= 1024 {
-                        num /= 1024;
+                    if cache.assoc > 0 {
+                        println!(
+                            "{} {}{} {}, {}-way",
+                            Self::sublabel("L2"),
+                            &count,
+                            num,
+                            unit,
+                            cache.assoc
+                        );
+                    } else {
+                        println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
                     }
-
-                    println!("{} {}{} {}", Self::sublabel("L2"), &count, num, unit);
                 }
 
                 if let Some(cache) = cache.l3 {
-                    let mut num = cache.size / 1024;
-                    let unit = if num >= 1024 { "MB" } else { "KB" };
+                    let (num, unit) = cache_size(cache.size);
+                    let cache_count = Self::cache_count(cache.share_count, core.count as u32);
 
-                    if num >= 1024 {
-                        num /= 1024
+                    if cache.assoc > 0 {
+                        println!(
+                            "{} {}{} {}, {}-way",
+                            Self::sublabel("L3"),
+                            &cache_count,
+                            num,
+                            unit,
+                            cache.assoc
+                        );
+                    } else {
+                        println!("{} {}{} {}", Self::sublabel("L3"), &cache_count, num, unit);
                     }
-
-                    println!("{} {} {}", Self::sublabel("L3"), num, unit);
                 }
             }
             println!();
