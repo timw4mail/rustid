@@ -10,7 +10,7 @@ impl CpuDisplay {
     }
 
     pub fn raw_sublabel(s: &str) -> String {
-        format!("{:>19} : ", s)
+        format!("{:>16}{}: ", "", s)
     }
 
     pub fn raw_inline_sublabel(label: &str, sub: &str) -> String {
