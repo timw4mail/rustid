@@ -282,13 +282,15 @@ impl Topology {
 
         // 1. Initial socket count detection (Platform-specific fallbacks)
         // TODO: detect socket count from domains
-        let sockets_detected: u32 = cfg_select! {
-            target_os = "none" => super::mp::MpTable::detect().socket_count(),
-            _ => if super::info_source() == super::provider::CpuidInfoSource::Cpu {
-                super::mp::MpTable::detect().socket_count()
-            } else {
-                1
-            }
+        #[cfg(target_os = "none")]
+        let sockets_detected = super::mp::MpTable::detect().socket_count();
+
+        #[cfg(not(target_os = "none"))]
+        let sockets_detected: u32 = if super::info_source() == super::provider::CpuidInfoSource::Cpu
+        {
+            super::mp::MpTable::detect().socket_count()
+        } else {
+            1
         };
 
         if domains.is_empty() {
