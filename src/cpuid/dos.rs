@@ -4,6 +4,7 @@
 //! This module provides DOS-specific implementations including console output
 //! via DOS INT 21h interrupts and a custom panic handler for bare-metal environments.
 
+use super::vendor::cyrix::Cyrix;
 use crate::common::Speed;
 use core::arch::asm;
 use core::fmt::Write;
@@ -180,6 +181,12 @@ impl Speed {
         use super::is_386;
         use crate::cpuid::dos::peek_u16;
 
+        // For Cyrix, only measure 486-class cpus with the fallback,
+        // only the M2 chips can be measured with TSC, and only if CPUID is enabled
+        if Cyrix::should_measure_speed() == false {
+            return 0;
+        }
+
         // Use BIOS timer ticks at 0040:006C
         // 1 tick = 65536 / 1193182 seconds (~54.9 ms)
 
@@ -193,13 +200,6 @@ impl Speed {
 
         if super::has_tsc() {
             return Self::measure_frequency_tsc(t1);
-        }
-
-        // If the Cryix cpu supports enabling cpuid, this
-        // fallback method is going to be wildly inaccurate,
-        // so just skip it
-        if super::vendor::cyrix::Cyrix::can_enable_cpuid() {
-            return 0;
         }
 
         // No TSC (386/486). Use a calibrated instruction loop.

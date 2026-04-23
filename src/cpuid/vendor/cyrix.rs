@@ -263,6 +263,21 @@ impl Cyrix {
         }
     }
 
+    /// Only measure speed for 486-class cpus, or
+    /// cpus with TSC support
+    pub fn should_measure_speed() -> bool {
+        match CyrixModel::detect() {
+            // No TSC support, and no proper calibration
+            // in the backup speed measurement
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => false,
+
+            // If CPUID is not enabled, but can be, don't
+            // try to measure speed
+            _ if Self::can_enable_cpuid() => false,
+            _ => true,
+        }
+    }
+
     /// Check if the Cyrix model likely has CPUID support
     /// that can be enabled, if cpuid support is currently disabled
     pub fn can_enable_cpuid() -> bool {
