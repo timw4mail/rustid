@@ -599,7 +599,7 @@ impl TCpu for Cpu {
         }
     }
 
-    fn display_table(&self, color: bool) {
+    fn display_table(&self, _color: bool) {
         use crate::sfmt;
 
         #[cfg(not(target_os = "none"))]
@@ -637,7 +637,7 @@ impl TCpu for Cpu {
 
         #[cfg(target_family = "unix")]
         let label = |label| -> Str<40> {
-            if color {
+            if _color {
                 sfmt!("\x1b[32m{:>14}\x1b[0m: ", label)
             } else {
                 sfmt!("{:>14}: ", label)
@@ -646,7 +646,7 @@ impl TCpu for Cpu {
 
         #[cfg(target_family = "unix")]
         let sublabel = |label| -> Str<40> {
-            if color {
+            if _color {
                 sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
             } else {
                 sfmt!("{:>16}{}: ", "", label)
@@ -655,7 +655,7 @@ impl TCpu for Cpu {
 
         #[cfg(target_family = "unix")]
         let inline_sublabel = |label, sub| -> Str<40> {
-            if color {
+            if _color {
                 sfmt!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
             } else {
                 sfmt!("{:>14}: {:1}: ", label, sub)
