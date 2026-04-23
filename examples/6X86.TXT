@@ -1,9 +1,8 @@
---------------- Rustid 0.9.6 ---------------
+--------------- Rustid 1.0.0 (x86-DOS) ---------------
   Architecture: i586
-        Vendor: CyrixInstead (Cyrix/IBM/ST/TI)
+        Vendor: CyrixInstead (Cyrix/IBM/ST)
  Model (synth): Cyrix 6x86
      MicroArch: M1
-     Frequency: 300.00 MHz
      Signature: Family 5h, Model 2h, Stepping 0h
                 (0, 5, 0, 2, 0)
       Features: FPU 

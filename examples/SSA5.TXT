@@ -1,4 +1,4 @@
---------------- Rustid 0.9.6 ---------------
+--------------- Rustid 1.0.0 (x86-DOS) ---------------
   Architecture: i586
         Vendor: AuthenticAMD (AMD)
  Model (synth): AMD K5

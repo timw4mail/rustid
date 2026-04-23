@@ -443,7 +443,7 @@ impl Cpu {
                 "Am5x86WB" => "AMD 5x86 with Write-Back Cache",
                 _ => "AMD 5x86",
             },
-            MicroArch::SSA5 | MicroArch::K5 => "AMD K5",
+            MicroArch::SSA5 => "AMD K5",
 
             // Centaur
             MicroArch::Winchip => "IDT Winchip",

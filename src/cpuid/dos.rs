@@ -153,30 +153,82 @@ pub fn peek_u16(seg: u16, off: u16) -> u16 {
 }
 
 impl Speed {
+    #[inline(never)]
     fn measure_frequency_tsc(t1: u16) -> u32 {
-        use crate::cpuid::dos::peek_u16;
-
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_rdtsc as rdtsc;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_rdtsc as rdtsc;
-
-        let start_tsc = unsafe { rdtsc() };
+        let mut tsc_values = [0u32; 4]; // start_low, start_high, end_low, end_high
+        let start_pit: u16;
+        let end_pit: u16;
 
         // Wait for 2 ticks (~110ms)
         let target_ticks = t1.wrapping_add(2);
-        while peek_u16(0x0040, 0x006C) != target_ticks {
-            core::hint::spin_loop();
+
+        unsafe {
+            asm!(
+                // Latch and read start PIT
+                "xor al, al",
+                "out 0x43, al",
+                "in al, 0x40",
+                "mov ah, al",
+                "in al, 0x40",
+                "xchg al, ah",
+                "mov {1:x}, ax",
+
+                // Read start TSC
+                "rdtsc",
+                "mov [{0}], eax",
+                "mov [{0} + 4], edx",
+
+                "push es",
+                "mov ax, 0x40",
+                "mov es, ax",
+                ".align 16",
+                "2:",
+                "mov ax, es:[0x6C]",
+                "cmp ax, {3:x}",
+                "jne 2b",
+                "pop es",
+
+                // Read end TSC
+                "rdtsc",
+                "mov [{0} + 8], eax",
+                "mov [{0} + 12], edx",
+
+                // Latch and read end PIT
+                "xor al, al",
+                "out 0x43, al",
+                "in al, 0x40",
+                "mov ah, al",
+                "in al, 0x40",
+                "xchg al, ah",
+                "mov {2:x}, ax",
+
+                in(reg) tsc_values.as_mut_ptr(),
+                out(reg) start_pit,
+                out(reg) end_pit,
+                in(reg) target_ticks,
+                out("eax") _,
+                out("edx") _,
+                options(preserves_flags)
+            );
         }
 
-        let end_tsc = unsafe { rdtsc() };
+        let start_tsc = ((tsc_values[1] as u64) << 32) | (tsc_values[0] as u64);
+        let end_tsc = ((tsc_values[3] as u64) << 32) | (tsc_values[2] as u64);
         let tsc_delta = end_tsc - start_tsc;
 
-        // freq_mhz = (tsc_delta * 1193182) / (2 * 65536 * 1_000_000)
-        let freq_mhz = (tsc_delta * 1_193_182) / 131_072_000_000u64;
+        // PIT runs at 1.193182 MHz. Each tick is 65536 PIT cycles.
+        // Total pulses = (2 * 65536) + (start_pit - end_pit)
+        let elapsed_pulses = (2u64 * 65_536) + (start_pit as i32 - end_pit as i32) as u64;
+
+        // freq_hz = (tsc_delta * 1193182) / elapsed_pulses
+        // freq_mhz = freq_hz / 1_000_000
+        // We use rounded division: (numerator + denominator / 2) / denominator
+        let denom = elapsed_pulses * 1_000_000;
+        let freq_mhz = (tsc_delta * 1_193_182 + (denom / 2)) / denom;
         freq_mhz as u32
     }
 
+    #[inline(never)]
     pub fn measure_frequency() -> u32 {
         use super::is_386;
         use crate::cpuid::dos::peek_u16;
@@ -226,6 +278,7 @@ impl Speed {
                 "xchg al, ah",
                 "mov {2:x}, ax",
 
+                ".align 16",
                 "2:",
                 "add {0:e}, 1",
                 "push ax", // Extra work to slow down the loop and be more consistent

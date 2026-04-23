@@ -39,7 +39,7 @@ impl Intel {
             (0, 5, 0, 3, _) => brand_arch(MicroArch::P5, "P24T", Some(N600)),
             (0, 5, 0, 4, _) => brand_arch(MicroArch::P5, "P55C", Some(N350)), // With MMX
             (0, 5, 0, 7, _) => brand_arch(MicroArch::P5, "P54C", Some(N350)),
-            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5, "P55C", Some(N250)),
+            (0, 5, 0, 8, _) => brand_arch(MicroArch::P5, "Tillamook", Some(N250)),
             (0, 5, 0, 9 | 10, _) => brand_arch(MicroArch::Lakemont, "Lakemont", Some(N32)),
 
             // Pentium Pro
