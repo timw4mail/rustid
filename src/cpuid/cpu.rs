@@ -914,8 +914,8 @@ impl TCpu for Cpu {
         }
 
         #[cfg(target_arch = "x86")]
-        if super::is_cyrix() {
-            let cyrix = super::vendor::Cyrix::detect();
+        if is_cyrix() {
+            let cyrix = vendor::Cyrix::detect();
 
             if cyrix.dir0 != 0xFF {
                 println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
