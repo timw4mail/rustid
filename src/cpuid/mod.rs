@@ -25,7 +25,6 @@ pub mod mp;
 pub mod provider;
 
 pub mod topology;
-pub mod type_wrappers;
 pub mod vendor;
 
 #[cfg(target_arch = "x86")]
@@ -37,7 +36,6 @@ pub use brand::*;
 pub use constants::*;
 pub use cpu::*;
 pub use fns::*;
-pub use type_wrappers::*;
 
 #[cfg(target_arch = "x86")]
 pub use quirks::*;

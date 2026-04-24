@@ -18,6 +18,8 @@ pub use constants::*;
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 pub use display::*;
 
+use alloc::string::String;
+
 pub trait TCpu {
     /// Detect the CPU
     fn detect() -> Self;
@@ -29,14 +31,7 @@ pub trait TCpu {
     fn display_table(&self, color: bool);
 }
 
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)
-)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
 pub enum CoreType {
     Super,
     #[default]
@@ -81,21 +76,11 @@ impl From<CoreType> for String {
     }
 }
 
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq)
-)]
+#[derive(Debug, Default, PartialEq)]
 pub struct CpuArch {
     pub kind: CoreType,
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
     pub name: Option<String>,
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    pub name: Option<crate::cpuid::Str<70>>,
 
     pub cache: Option<Cache>,
 
@@ -103,14 +88,7 @@ pub struct CpuArch {
 }
 
 /// CPU speed information (base and boost frequencies).
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq)
-)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Speed {
     /// Base frequency in MHz
     pub base: u32,

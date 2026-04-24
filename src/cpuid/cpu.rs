@@ -4,26 +4,19 @@ use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::*;
-use super::{
-    EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, FeatureList, LEAF_1, Str, read_multi_leaf_str, x86_cpuid,
-};
+use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
 use crate::println;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// CPU feature class/level enumeration.
 ///
 /// Represents the instruction set and feature level of an x86 processor,
 /// roughly based on x86-64 microarchitecture levels.
 #[allow(non_camel_case_types)]
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Copy, Clone, PartialEq, Eq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Copy, Clone, PartialEq, Eq)
-)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FeatureClass {
     /// 80386-class processor
     i386,
@@ -128,14 +121,7 @@ impl FeatureClass {
 }
 
 /// CPU signature containing family, model, and stepping information.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Copy, Clone, PartialEq, Eq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Copy, Clone, PartialEq, Eq)
-)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct CpuSignature {
     /// Extended family value from CPUID
     pub extended_family: u32,
@@ -241,14 +227,7 @@ impl CpuSignature {
 ///
 /// Contains additional CPU identification data available on AMD processors
 /// via the extended CPUID leaf 0x80000001.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Copy, Clone, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Copy, Clone, PartialEq)
-)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct ExtendedSignature {
     pub base_brand_id: u32,
     pub brand_id: u32,
@@ -272,19 +251,12 @@ impl ExtendedSignature {
 }
 
 /// Represents a complete x86/x86_64 CPU with all detected information.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq)
-)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
-    pub easter_egg: Option<Str<70>>,
+    pub easter_egg: Option<String>,
     /// Model brand id
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
@@ -292,19 +264,19 @@ pub struct Cpu {
     /// AMD extended cpu signature
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
-    pub features: FeatureList,
+    pub features: Vec<&'static str>,
     /// Speed, threads, cores, sockets
     pub topology: Topology,
 }
 
 impl Cpu {
     /// Gets the CPU model string.
-    pub fn raw_model_string() -> Str<70> {
+    pub fn raw_model_string() -> String {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
     #[cfg(target_arch = "x86")]
-    fn intel_brand_index(&self) -> Option<Str<70>> {
+    fn intel_brand_index(&self) -> Option<String> {
         let brand_id = get_brand_id();
 
         const CELERON: &str = "Intel(R) Celeron(R) processor";
@@ -350,12 +322,12 @@ impl Cpu {
 
         match str {
             UNK => None,
-            _ => Some(Str::from(str)),
+            _ => Some(String::from(str)),
         }
     }
 
     #[cfg(not(target_os = "none"))]
-    fn cleanup_model_string(s: &str) -> Str<70> {
+    fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
 
         // Remove excess whitespace
@@ -363,11 +335,11 @@ impl Cpu {
             .split_ascii_whitespace()
             .filter(|p| !p.is_empty())
             .collect();
-        let str: Str<70> = filtered.join(" ").as_str().into();
+        let str: String = filtered.join(" ").as_str().into();
 
         // Remove speed
         if let Some(idx) = str.find('@') {
-            Str::from(str[..idx].trim())
+            String::from(str[..idx].trim())
         } else {
             str
         }
@@ -378,7 +350,7 @@ impl Cpu {
     /// This attempts to produce a marketing-style name based on the
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
-    pub fn display_model_string(&self) -> Str<70> {
+    pub fn display_model_string(&self) -> String {
         #[cfg(target_arch = "x86")]
         match CpuBrand::detect() {
             CpuBrand::AMD => {
@@ -388,7 +360,7 @@ impl Cpu {
                     && self.signature.model == 8
                     && self.signature.stepping == 1
                 {
-                    return Str::from("AMD Geode NX");
+                    return String::from("AMD Geode NX");
                 }
             }
             CpuBrand::Cyrix => {
@@ -420,7 +392,7 @@ impl Cpu {
                     }
                 };
 
-                return Str::from(s);
+                return String::from(s);
             }
             _ => (),
         }
@@ -515,11 +487,11 @@ impl Cpu {
         return Self::cleanup_model_string(s);
 
         #[cfg(target_os = "none")]
-        Str::from(s)
+        String::from(s)
     }
 
-    fn easter_egg() -> Option<Str<70>> {
-        let mut out: Str<70> = Str::new();
+    fn easter_egg() -> Option<String> {
+        let mut out: String = String::new();
         let brand = CpuBrand::detect();
 
         let addr = match brand {
@@ -554,7 +526,7 @@ impl Cpu {
 
         let trimmed = out.trim();
         if !trimmed.is_empty() {
-            Some(Str::from(trimmed))
+            Some(String::from(trimmed))
         } else {
             None
         }
@@ -598,19 +570,17 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self, _color: bool) {
-        use crate::sfmt;
-
         #[cfg(not(target_os = "none"))]
         let newline = || println!();
         #[cfg(target_os = "none")]
         let newline = || {};
 
-        let ma: Str<_> = self.arch.micro_arch.into();
+        let ma: String = self.arch.micro_arch.into();
         let ma: &str = &ma;
 
         let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
 
-        let cache_count = |share_count| -> Str<_> {
+        let cache_count = |share_count| -> String {
             #[allow(clippy::manual_checked_ops)]
             let count = if share_count == 0 {
                 self.topology.sockets
@@ -619,44 +589,43 @@ impl TCpu for Cpu {
             };
 
             if count < 2 {
-                sfmt!("")
+                String::new()
             } else {
-                sfmt!("{}x ", count)
+                alloc::format!("{}x ", count)
             }
         };
 
         #[cfg(not(target_family = "unix"))]
-        let label: fn(&str) -> Str<40> = |label| sfmt!("{:>14}: ", label);
+        let label = |label| alloc::format!("{:>14}: ", label);
         #[cfg(not(target_family = "unix"))]
-        let sublabel: fn(&str) -> Str<40> = |label| sfmt!("{:>16}{}: ", "", label);
+        let sublabel = |label| alloc::format!("{:>16}{}: ", "", label);
         #[cfg(not(target_family = "unix"))]
-        let inline_sublabel: fn(&str, &str) -> Str<40> =
-            |label, sub| sfmt!("{:>14}: {:1}: ", label, sub);
+        let inline_sublabel = |label, sub| alloc::format!("{:>14}: {:1}: ", label, sub);
 
         #[cfg(target_family = "unix")]
-        let label = |label| -> Str<40> {
+        let label = |label| -> String {
             if _color {
-                sfmt!("\x1b[32m{:>14}\x1b[0m: ", label)
+                alloc::format!("\x1b[32m{:>14}\x1b[0m: ", label)
             } else {
-                sfmt!("{:>14}: ", label)
+                alloc::format!("{:>14}: ", label)
             }
         };
 
         #[cfg(target_family = "unix")]
-        let sublabel = |label| -> Str<40> {
+        let sublabel = |label| -> String {
             if _color {
-                sfmt!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
+                alloc::format!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
             } else {
-                sfmt!("{:>16}{}: ", "", label)
+                alloc::format!("{:>16}{}: ", "", label)
             }
         };
 
         #[cfg(target_family = "unix")]
-        let inline_sublabel = |label, sub| -> Str<40> {
+        let inline_sublabel = |label, sub| -> String {
             if _color {
-                sfmt!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
+                alloc::format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
             } else {
-                sfmt!("{:>14}: {:1}: ", label, sub)
+                alloc::format!("{:>14}: {:1}: ", label, sub)
             }
         };
 
@@ -759,8 +728,8 @@ impl TCpu for Cpu {
                     println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: Str<10> = cache_count(data.share_count);
-                    let instruction_count: Str<10> = cache_count(instruction.share_count);
+                    let data_count: String = cache_count(data.share_count);
+                    let instruction_count: String = cache_count(instruction.share_count);
 
                     if data.assoc > 0 {
                         println!(
@@ -820,10 +789,10 @@ impl TCpu for Cpu {
             // especially for single-socket, multiple die CPUs, like Ryzen 9.
             // Share count for L3 cache always seems to be 8??
             if let Some(l3) = cache.l3 {
-                let cache_count: Str<10> = if self.topology.sockets < 2 {
+                let cache_count: String = if self.topology.sockets < 2 {
                     cache_count(l3.share_count)
                 } else {
-                    sfmt!("{}x ", self.topology.sockets)
+                    alloc::format!("{}x ", self.topology.sockets)
                 };
 
                 let (num, unit) = cache_size(l3.size);
@@ -899,11 +868,7 @@ impl TCpu for Cpu {
 
         // CPU Features
         if !self.features.is_empty() {
-            #[cfg(target_os = "none")]
-            let mut features: Str<130> = Str::new();
-
-            #[cfg(not(target_os = "none"))]
-            let mut features: Str<520> = Str::new();
+            let mut features = String::new();
 
             self.features.iter().for_each(|feature| {
                 features.push_str(feature);

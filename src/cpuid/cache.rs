@@ -1,5 +1,6 @@
 use super::*;
 use crate::common::cache::*;
+use alloc::vec::Vec;
 
 const DATA_CACHE: u32 = 1;
 const INSTRUCTION_CACHE: u32 = 2;
@@ -140,8 +141,6 @@ impl Cache {
     ///
     /// See <https://sandpile.org/x86/cpuid.htm#level_0000_0002h>
     fn detect_fallback() -> Option<Self> {
-        use super::StaticVec;
-
         if !is_valid_leaf(LEAF_2) {
             return None;
         }
@@ -150,7 +149,7 @@ impl Cache {
 
         let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
-        let mut desc_list: StaticVec<u32, 32> = StaticVec::new();
+        let mut desc_list: Vec<u32> = Vec::new();
 
         for i in 0..=iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);

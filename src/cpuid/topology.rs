@@ -1,7 +1,8 @@
 use super::constants::*;
 use super::mp::MpTable;
-use super::{StaticVec, has_ht, is_valid_leaf, vendor_str, x86_cpuid_count};
+use super::{has_ht, is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, Speed};
+use alloc::vec::Vec;
 
 #[cfg(not(target_os = "none"))]
 use super::{info_source, provider::CpuidInfoSource};
@@ -107,14 +108,7 @@ impl Speed {
 }
 
 /// Represents a topology domain (thread, core, die, socket, etc.).
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Copy, Clone, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Copy, Clone, PartialEq)
-)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct TopologyDomain {
     level: u32,
     kind: TopologyType,
@@ -122,14 +116,7 @@ pub struct TopologyDomain {
 }
 
 /// CPU topology domain type.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq, Copy, Clone)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq, Copy, Clone)
-)]
+#[derive(Debug, Default, PartialEq, Copy, Clone)]
 pub enum TopologyType {
     /// Invalid or unknown topology level
     #[default]
@@ -150,17 +137,10 @@ pub enum TopologyType {
     DieGroup,
 }
 
-pub type DomainList = StaticVec<TopologyDomain, 8>;
+pub type DomainList = Vec<TopologyDomain>;
 
 /// Complete CPU topology information including sockets, cores, threads, and cache.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, PartialEq)
-)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Topology {
     /// Number of processor sockets
     pub sockets: u32,
@@ -332,7 +312,7 @@ impl Topology {
     }
 
     fn detect_domains() -> DomainList {
-        let d: DomainList = StaticVec::new();
+        let d: DomainList = Vec::new();
 
         if !is_valid_leaf(LEAF_0B) {
             return d;
@@ -352,7 +332,7 @@ impl Topology {
     }
 
     fn detect_domains_leaf(leaf: u32) -> DomainList {
-        let mut d: DomainList = StaticVec::new();
+        let mut d: DomainList = Vec::new();
 
         if !is_valid_leaf(leaf) {
             return d;

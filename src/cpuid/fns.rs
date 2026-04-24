@@ -13,20 +13,15 @@ use super::constants::*;
 #[cfg(target_arch = "x86")]
 use super::quirks::get_vendor_by_quirk;
 
-use crate::cpuid::{CpuBrand, FeatureList, Str};
+use crate::cpuid::CpuBrand;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Represents the result of a CPUID instruction call.
 ///
 /// The CPUID instruction returns processor identification and feature information
 /// in the EAX, EBX, ECX, and EDX registers.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Copy, Clone, PartialEq, Eq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Copy, Clone, PartialEq, Eq)
-)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Cpuid {
     /// EAX register value
     pub eax: u32,
@@ -157,10 +152,10 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
 /// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
 ///
 /// Returns a 12-character vendor string from CPUID leaf 0.
-pub fn vendor_str() -> Str<20> {
+pub fn vendor_str() -> String {
     #[cfg(target_arch = "x86")]
     if !has_cpuid() {
-        return Str::from(get_vendor_by_quirk());
+        return String::from(get_vendor_by_quirk());
     }
 
     let res = x86_cpuid(LEAF_0);
@@ -174,15 +169,15 @@ pub fn vendor_str() -> Str<20> {
         .unwrap_or(UNK)
         .trim_matches('\0');
 
-    Str::from(s)
+    String::from(s)
 }
 
-pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<70> {
+pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> String {
     if !is_valid_leaf(max_leaf) {
-        return Str::from(UNK);
+        return String::from(UNK);
     }
 
-    let mut model = Str::<70>::new();
+    let mut model = String::new();
     for leaf in min_leaf..=max_leaf {
         let res = x86_cpuid(leaf);
         for reg in [res.eax, res.ebx, res.ecx, res.edx] {
@@ -192,7 +187,7 @@ pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> Str<70> {
         }
     }
 
-    Str::from(model.trim().trim_matches('\0'))
+    String::from(model.trim().trim_matches('\0'))
 }
 
 fn is_vendor(v: &str) -> bool {
@@ -459,7 +454,7 @@ pub fn has_3dnow() -> bool {
 }
 
 /// Get the full list of detected features.
-pub fn get_feature_list() -> FeatureList {
+pub fn get_feature_list() -> Vec<&'static str> {
     type FeatureFn = fn() -> bool;
 
     #[cfg(target_os = "none")]
@@ -515,7 +510,7 @@ pub fn get_feature_list() -> FeatureList {
         ("SHA", has_sha),
     ];
 
-    let mut out: FeatureList = FeatureList::new();
+    let mut out: Vec<&'static str> = Vec::new();
     for (name, check) in FEATURES {
         if check() {
             out.push(name);

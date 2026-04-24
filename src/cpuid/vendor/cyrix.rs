@@ -2,17 +2,11 @@ use super::TMicroArch;
 use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{CpuSignature, FeatureClass, Str, UNK, has_cx8};
+use crate::cpuid::{CpuSignature, FeatureClass, has_cx8};
 use crate::sfmt;
+use alloc::string::String;
 
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Clone, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Clone, PartialEq)
-)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub enum CyrixModel {
     Slc,
     Dlc,
@@ -131,14 +125,7 @@ impl CyrixModel {
 }
 
 /// Cyrix-specific CPU identification and detection.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Default, Clone)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Default, Clone)
-)]
+#[derive(Debug, Default, Clone)]
 pub struct Cyrix {
     /// Device ID register 0
     pub dir0: u8,
@@ -147,13 +134,13 @@ pub struct Cyrix {
     /// CPU stepping
     pub stepping: u8,
     /// Bus multiplier factor
-    pub multiplier: Str<10>,
+    pub multiplier: String,
     /// Model enum
     pub emodel: CyrixModel,
     /// Model name
-    pub model: Str<70>,
+    pub model: String,
     /// Code name
-    pub code_name: Str<70>,
+    pub code_name: String,
 }
 
 impl Cyrix {
@@ -169,7 +156,7 @@ impl Cyrix {
         let multiplier = Self::multiplier();
         let emodel = CyrixModel::detect();
         let model = Self::model_string();
-        let code_name = Str::from(Self::codename());
+        let code_name = String::from(Self::codename());
 
         Cyrix {
             dir0,
@@ -309,9 +296,9 @@ impl Cyrix {
     /// Get Cyrix processor model via registers
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
-    pub fn model_string() -> Str<70> {
+    pub fn model_string() -> String {
         if !crate::cpuid::is_cyrix() {
-            return Str::from(UNK);
+            return String::from(UNK);
         }
 
         let model = CyrixModel::detect().to_str();
@@ -339,9 +326,9 @@ impl Cyrix {
     /// Get bus multiplier for the current cpu
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
-    fn multiplier() -> Str<10> {
+    fn multiplier() -> String {
         if !crate::cpuid::is_cyrix() {
-            return Str::from("0");
+            return String::from("0");
         }
 
         let (dir0, _) = Self::get_device_ids();
@@ -361,7 +348,7 @@ impl Cyrix {
             _ => "0",
         };
 
-        Str::from(s)
+        String::from(s)
     }
 
     /// Get Cyrix processor model via registers

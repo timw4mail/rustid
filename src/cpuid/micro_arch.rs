@@ -6,20 +6,14 @@
 use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
-use super::{CpuBrand, CpuSignature, Str, is_centaur, is_zhaoxin};
+use super::{CpuBrand, CpuSignature, is_centaur, is_zhaoxin};
+use alloc::string::String;
 
 /// CPU Microarchitecture enumeration.
 ///
 /// Lists all known x86/x86_64 microarchitectures from various vendors
 /// including Intel, AMD, VIA/Centaur, Cyrix, and others.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Copy, Clone, PartialEq, Eq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Copy, Clone, PartialEq, Eq)
-)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum MicroArch {
     Unknown,
 
@@ -159,8 +153,8 @@ pub enum MicroArch {
     U5D,
 }
 
-impl From<MicroArch> for Str<40> {
-    fn from(ma: MicroArch) -> Str<40> {
+impl From<MicroArch> for String {
+    fn from(ma: MicroArch) -> String {
         let s = match ma {
             MicroArch::Unknown => UNK,
 
@@ -294,32 +288,25 @@ impl From<MicroArch> for Str<40> {
             MicroArch::U5D => "U5D",
         };
 
-        Str::from(s)
+        String::from(s)
     }
 }
 
 /// Complete CPU architecture information.
-#[cfg_attr(
-    all(target_os = "none", not(feature = "debug")),
-    derive(Clone, PartialEq)
-)]
-#[cfg_attr(
-    any(not(target_os = "none"), feature = "debug"),
-    derive(Debug, Clone, PartialEq)
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     /// CPU model string
-    pub model: Str<70>,
+    pub model: String,
     /// Microarchitecture family
     pub micro_arch: MicroArch,
     /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
     /// Brand name (e.g., "Intel", "AMD")
-    pub brand_name: Str<40>,
+    pub brand_name: String,
     /// Raw vendor string from CPUID
-    pub vendor_string: Str<20>,
+    pub vendor_string: String,
     /// Process technology node (e.g., "14nm", "7nm")
-    pub technology: Option<Str<10>>,
+    pub technology: Option<String>,
 }
 
 impl Default for CpuArch {
@@ -338,11 +325,11 @@ impl CpuArch {
         vendor_string: &str,
         technology: Option<&str>,
     ) -> Self {
-        let model_s: Str<70> = Str::from(model);
-        let brand_s: Str<40> = Str::from(brand_name);
-        let vendor_s: Str<20> = Str::from(vendor_string);
+        let model_s: String = String::from(model);
+        let brand_s: String = String::from(brand_name);
+        let vendor_s: String = String::from(vendor_string);
 
-        let technology = technology.map(Str::from);
+        let technology = technology.map(String::from);
 
         CpuArch {
             model: model_s,
@@ -457,18 +444,18 @@ pub(crate) mod tests {
     fn test_micro_arch_from_string() {
         #[cfg(target_arch = "x86")]
         {
-            assert_eq!(Str::<_>::from(MicroArch::Winchip), "Winchip");
-            assert_eq!(Str::<_>::from(MicroArch::Cy5x86), "Cx5x86");
-            assert_eq!(Str::<_>::from(MicroArch::VortexDX3), "Vortex86DX3");
-            assert_eq!(Str::<_>::from(MicroArch::Crusoe), "Crusoe");
-            assert_eq!(Str::<_>::from(MicroArch::U5S), "U5S");
+            assert_eq!(String::from(MicroArch::Winchip), "Winchip");
+            assert_eq!(String::from(MicroArch::Cy5x86), "Cx5x86");
+            assert_eq!(String::from(MicroArch::VortexDX3), "Vortex86DX3");
+            assert_eq!(String::from(MicroArch::Crusoe), "Crusoe");
+            assert_eq!(String::from(MicroArch::U5S), "U5S");
         }
 
-        assert_eq!(Str::<_>::from(MicroArch::Am486), "Am486");
-        assert_eq!(Str::<_>::from(MicroArch::ZenPlus), "Zen+");
-        assert_eq!(Str::<_>::from(MicroArch::Lujiazui), "LuJiaZui");
-        assert_eq!(Str::<_>::from(MicroArch::I486), "i486");
-        assert_eq!(Str::<_>::from(MicroArch::Unknown), UNK);
+        assert_eq!(String::from(MicroArch::Am486), "Am486");
+        assert_eq!(String::from(MicroArch::ZenPlus), "Zen+");
+        assert_eq!(String::from(MicroArch::Lujiazui), "LuJiaZui");
+        assert_eq!(String::from(MicroArch::I486), "i486");
+        assert_eq!(String::from(MicroArch::Unknown), UNK);
     }
 
     #[test]

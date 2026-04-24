@@ -4,7 +4,7 @@
 //! tables to determine multi-processor topology (sockets, cores).
 
 /// MultiProcessor (MP) table information for multi-socket systems.
-#[cfg_attr(any(not(target_os = "none"), feature = "debug"), derive(Debug))]
+#[derive(Debug)]
 pub struct MpTable {
     /// Number of processor sockets
     pub sockets: u32,

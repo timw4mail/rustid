@@ -16,12 +16,12 @@ pub unsafe extern "C" fn _start() -> ! {
         ".code16",
         "jmp 1f",
         ".align 4",
-        "2:",       // GDT Pointer
-        ".word 15", // Limit
-        "3:",       // Base placeholder
-        ".long 0",  // Base
-        "4:",       // GDT Entries
-        ".quad 0",  // Null
+        "2:",                       // GDT Pointer
+        ".word 15",                 // Limit
+        "3:",                       // Base placeholder
+        ".long 0",                  // Base
+        "4:",                       // GDT Entries
+        ".quad 0",                  // Null
         ".quad 0x00CF92000000FFFF", // Data
         "1:",
         // Basic setup
@@ -218,9 +218,9 @@ fn main() {
         }
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         "dump" => {
-            use rustid::cpuid::{Str, dump::dump_cpu, topology::Topology};
+            use rustid::cpuid::{dump::dump_cpu, topology::Topology};
 
-            let mut output: Str<16384> = Str::new();
+            let mut output = String::new();
             let topo = Topology::detect();
 
             let logical_cores = topo.threads as usize;

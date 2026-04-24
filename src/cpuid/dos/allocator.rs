@@ -3,9 +3,9 @@ use core::ptr::null_mut;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// A simple bump allocator for the DOS environment.
-/// 
-/// This allocator does not support deallocation, but it is sufficient for 
-/// the needs of rustid in a DOS environment where allocations are 
+///
+/// This allocator does not support deallocation, but it is sufficient for
+/// the needs of rustid in a DOS environment where allocations are
 /// relatively few and live for the duration of the program.
 pub struct DosAllocator {
     start: AtomicUsize,
@@ -22,7 +22,7 @@ impl DosAllocator {
     }
 
     /// Initializes the allocator with a memory range.
-    /// 
+    ///
     /// # Safety
     /// This function must be called only once and with a valid memory range.
     pub unsafe fn init(&self, start: usize, size: usize) {
@@ -39,7 +39,7 @@ unsafe impl GlobalAlloc for DosAllocator {
         loop {
             let current_start = self.start.load(Ordering::Relaxed);
             let current_end = self.end.load(Ordering::Relaxed);
-            
+
             if current_start == 0 {
                 return null_mut();
             }
@@ -54,7 +54,8 @@ unsafe impl GlobalAlloc for DosAllocator {
                 return null_mut();
             }
 
-            if self.start
+            if self
+                .start
                 .compare_exchange_weak(current_start, alloc_end, Ordering::SeqCst, Ordering::SeqCst)
                 .is_ok()
             {
@@ -76,9 +77,9 @@ unsafe extern "C" {
 }
 
 /// Initializes the global allocator for DOS.
-/// 
+///
 /// # Safety
-/// This function must be called early in the program's execution, 
+/// This function must be called early in the program's execution,
 /// before any allocations occur.
 pub unsafe fn init_heap() {
     // We have at least 64KB allocated via min_alloc in the EXE header.

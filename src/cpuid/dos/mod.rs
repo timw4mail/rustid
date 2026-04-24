@@ -58,16 +58,7 @@ macro_rules! println {
 #[macro_export]
 macro_rules! sfmt {
     ($($arg:tt)*) => {
-        {
-            use $crate::cpuid::type_wrappers::String;
-            use $crate::cpuid::type_wrappers::Str;
-            use core::fmt::Write;
-            let mut buf = String::<{ $crate::cpuid::type_wrappers::MAX_FMT_LEN }>::new();
-            let _ = buf.write_fmt(core::format_args!($($arg)*));
-            let mut result = Str::<_>::new();
-            result.push_str(buf.as_str());
-            result
-        }
+        alloc::format!($($arg)*)
     };
 }
 
