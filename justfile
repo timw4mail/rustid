@@ -64,6 +64,11 @@ build-dos: _build-dos _build-dos-debug _build-dos-dump
 	# Build initial binary and convert to COM
 	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --release --features dos-build
 	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
+	# Compress with UPX if available
+	@if command -v upx >/dev/null 2>&1; then \
+		echo "Compressing with UPX..."; \
+		upx --8086 -q rustid.com debug.com dump.com; \
+	fi
 	# Verify that the binary size is below the 64K limit
 	@cargo test --test dos_binary_size_test --features dos-build
 
