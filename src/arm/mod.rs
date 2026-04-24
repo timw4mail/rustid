@@ -22,7 +22,7 @@ trait TArmCpu {
 
 impl CpuDisplay {
     pub fn display(
-        cpu_arch: &crate::arm::micro_arch::CpuArch,
+        cpu_arch: &micro_arch::CpuArch,
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
         color: bool,
     ) {
@@ -32,7 +32,7 @@ impl CpuDisplay {
 
         cpu.simple_line(
             "Brand/Implementor",
-            <crate::arm::brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
+            <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
 
         cpu.simple_line("Model", &cpu_arch.model);

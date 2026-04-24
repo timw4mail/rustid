@@ -20,15 +20,6 @@
 //! cpu.display_table(true);
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
-//!
-//! # CLI Usage
-//!
-//! When compiled as a standalone binary (non-dos build):
-//! - `rustid` - Display basic CPU information
-//! - `rustid debug` - Display detailed debug information
-//! - `rustid version` - Display version info
-//! - `rustid help` - Show help message
-//! - `rustid everything` - Show all information
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");

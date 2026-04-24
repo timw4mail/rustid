@@ -222,7 +222,8 @@ impl Topology {
         }
 
         // 1. Try modern V2 topology leaves
-        for &leaf in &[EXT_LEAF_26, LEAF_1F] {
+        // 2. Try V1 topology leaf
+        for &leaf in &[EXT_LEAF_26, LEAF_1F, LEAF_0B] {
             if is_valid_leaf(leaf) {
                 let mut subleaf = 0;
                 let mut max_lcpus = 0;
@@ -238,24 +239,6 @@ impl Topology {
                 if max_lcpus > 0 {
                     return max_lcpus;
                 }
-            }
-        }
-
-        // 2. Try V1 topology leaf
-        if is_valid_leaf(LEAF_0B) {
-            let mut subleaf = 0;
-            let mut max_lcpus = 0;
-            loop {
-                let res = x86_cpuid_count(LEAF_0B, subleaf);
-                let domain_type = (res.ecx >> 8) & 0xFF;
-                if domain_type == 0 {
-                    break;
-                }
-                max_lcpus = res.ebx;
-                subleaf += 1;
-            }
-            if max_lcpus > 0 {
-                return max_lcpus;
             }
         }
 
