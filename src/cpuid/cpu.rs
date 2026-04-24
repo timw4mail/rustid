@@ -307,9 +307,9 @@ impl Cpu {
     fn intel_brand_index(&self) -> Option<Str<70>> {
         let brand_id = get_brand_id();
 
-        const CELERON: &str = "Intel® Celeron® processor";
-        const XEON: &str = "Intel® Xeon® processor";
-        const XEON_MP: &str = "Intel® Xeon® processor MP";
+        const CELERON: &str = "Intel(R) Celeron(R) processor";
+        const XEON: &str = "Intel(R) Xeon(R) processor";
+        const XEON_MP: &str = "Intel(R) Xeon(R) processor MP";
 
         let (family, model, stepping) = (
             self.signature.family,
@@ -325,14 +325,14 @@ impl Cpu {
 
         let str = match brand_id {
             0x01 | 0x0A | 0x14 => CELERON,
-            0x02 | 0x04 => "Intel® Pentium® III processor",
+            0x02 | 0x04 => "Intel(R) Pentium(R) III processor",
             0x03 => match (family, model, stepping) {
                 (0x6, 0xB, 0x1) => CELERON,
-                _ => "Intel® Pentium® III Xeon",
+                _ => "Intel(R) Pentium(R) III Xeon",
             },
-            0x06 => "Mobile Intel® Pentium® III processor-M",
-            0x07 | 0x0F | 0x13 | 0x17 => "Mobile Intel® Celeron® processor",
-            0x08 | 0x09 => "Intel® Pentium® 4 processor",
+            0x06 => "Mobile Intel(R) Pentium(R) III processor-M",
+            0x07 | 0x0F | 0x13 | 0x17 => "Mobile Intel(R) Celeron(R) processor",
+            0x08 | 0x09 => "Intel(R) Pentium(R) 4 processor",
             0x0B => match (family, model, stepping) {
                 (0xF, 0x1, 0x3) => XEON_MP,
                 _ => XEON,
@@ -340,11 +340,11 @@ impl Cpu {
             0x0C => XEON_MP,
             0x0E => match (family, model, stepping) {
                 (0xF, 0x1, 0x3) => XEON,
-                _ => "Mobile Intel® Pentium® 4 processor-M",
+                _ => "Mobile Intel(R) Pentium(R) 4 processor-M",
             },
-            0x11 | 0x15 => "Mobile Genuine Intel® processor",
-            0x12 => "Intel® Celeron® M processor",
-            0x16 => "Intel® Pentium® M processor",
+            0x11 | 0x15 => "Mobile Genuine Intel(R) processor",
+            0x12 => "Intel(R) Celeron(R) M processor",
+            0x16 => "Intel(R) Pentium(R) M processor",
             _ => UNK,
         };
 
