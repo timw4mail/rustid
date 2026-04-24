@@ -22,6 +22,9 @@
 //! ```
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 
+#[cfg(all(not(test), target_os = "none"))]
+extern crate alloc;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(not(target_os = "none"))]

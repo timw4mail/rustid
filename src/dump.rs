@@ -76,9 +76,11 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() {
-    use rustid::cpuid::dos::{DosWriter, exit};
+    use rustid::cpuid::dos::{DosWriter, exit, init_heap};
     use rustid::cpuid::{dump::dump_cpu, has_cpuid, topology::Topology};
     use rustid::{println, version};
+
+    unsafe { init_heap() };
 
     if has_cpuid() {
         let mut output = DosWriter {};

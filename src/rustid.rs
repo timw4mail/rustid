@@ -82,7 +82,9 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() {
-    use rustid::cpuid::dos::exit;
+    use rustid::cpuid::dos::{exit, init_heap};
+
+    unsafe { init_heap() };
 
     cyrix_cpuid_check();
 

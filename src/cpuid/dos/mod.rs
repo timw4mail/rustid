@@ -9,6 +9,9 @@ use crate::common::Speed;
 use core::arch::asm;
 use core::fmt::Write;
 
+pub mod allocator;
+pub use allocator::init_heap;
+
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.
 #[cfg(not(test))]

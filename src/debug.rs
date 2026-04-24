@@ -77,9 +77,11 @@ pub unsafe extern "C" fn _start() -> ! {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() {
     use rustid::common::TCpu;
-    use rustid::cpuid::dos::exit;
+    use rustid::cpuid::dos::{exit, init_heap};
     use rustid::cpuid::quirks::debug_quirks;
     use rustid::{Cpu, cyrix_cpuid_check, println, version};
+
+    unsafe { init_heap() };
 
     version();
     cyrix_cpuid_check();
