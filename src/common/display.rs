@@ -24,7 +24,7 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_label(s);
         }
-        return format!("\x1b[32m{:>17}\x1b[0m: ", s);
+        format!("\x1b[32m{:>17}\x1b[0m: ", s)
     }
 
     pub fn sublabel(&self, s: &str) -> String {
@@ -34,7 +34,7 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_sublabel(s);
         }
-        return format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s);
+        format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s)
     }
 
     pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
@@ -44,7 +44,7 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_inline_sublabel(label, sub);
         }
-        return format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub);
+        format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
     }
 
     pub fn simple_line(&self, l: &str, v: &str) {
@@ -80,9 +80,8 @@ impl CpuDisplay {
                     println!("{}L1: Unified {:>4} KB", self.label("Cache"), l1.size);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: String = Self::cache_count(data.share_count, core_count as u32);
-                    let instruction_count =
-                        Self::cache_count(instruction.share_count, core_count as u32);
+                    let data_count: String = Self::cache_count(data.share_count, core_count);
+                    let instruction_count = Self::cache_count(instruction.share_count, core_count);
 
                     if data.assoc > 0 {
                         println!(
@@ -121,7 +120,7 @@ impl CpuDisplay {
             }
 
             if let Some(l2) = cache.l2 {
-                let count = Self::cache_count(l2.share_count, core_count as u32);
+                let count = Self::cache_count(l2.share_count, core_count);
                 let (num, unit) = cache_size(l2.size);
 
                 if l2.assoc > 0 {
@@ -140,7 +139,7 @@ impl CpuDisplay {
 
             if let Some(l3) = cache.l3 {
                 let (num, unit) = cache_size(l3.size);
-                let cache_count = Self::cache_count(l3.share_count, core_count as u32);
+                let cache_count = Self::cache_count(l3.share_count, core_count);
 
                 if l3.assoc > 0 {
                     println!(

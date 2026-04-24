@@ -57,6 +57,8 @@ fn main() {
     let mut file_path = None;
 
     let mut args = std::env::args().skip(1);
+
+    #[allow(clippy::while_let_on_iterator)]
     while let Some(arg) = args.next() {
         let stripped = arg
             .strip_prefix("--")
