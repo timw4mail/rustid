@@ -55,7 +55,7 @@ impl Speed {
 
     fn measure() -> Self {
         #[cfg(not(target_os = "none"))]
-        if info_source() == CpuidInfoSource::DumpFile || super::has_tsc() == false {
+        if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
             return Speed::default();
         }
 

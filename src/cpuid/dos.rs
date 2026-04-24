@@ -310,8 +310,8 @@ impl Speed {
         let elapsed_pulses = (8u64 * 65_536) + (start_pit as i32 - end_pit as i32) as u64;
 
         // Calibration:
-        // 486 loop: add(1) + push(1) + pop(1) + mov mem(4) + cmp(1) + jne(3) = 10 cycles
-        // 386 loop: add(4) + push(2) + pop(4) + mov mem(6) + cmp(2) + jne(7) = 26 cycles
+        // 486 loop: 10 cycles
+        // 386 loop: 29 cycles
         // Cyrix loop: 14 cycles
         // UMC loop: 10 cycles
         // RapidCAD (486 core in 386 package): 20 cycles
@@ -325,7 +325,7 @@ impl Speed {
                         // RapidCAD
                         (3, 4) => 20,
                         // 'Regular' 386 Chips
-                        _ => 26,
+                        _ => 29,
                     }
                 } else {
                     // 'Classic' 486
