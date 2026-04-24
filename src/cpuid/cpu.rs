@@ -304,9 +304,8 @@ impl Cpu {
     }
 
     #[cfg(target_arch = "x86")]
-    #[cfg(not(target_os = "none"))]
     fn intel_brand_index(&self) -> Option<Str<70>> {
-        let brand_id = super::get_brand_id();
+        let brand_id = get_brand_id();
 
         const CELERON: &str = "Intel® Celeron® processor";
         const XEON: &str = "Intel® Xeon® processor";
@@ -394,9 +393,8 @@ impl Cpu {
             }
             CpuBrand::Cyrix => {
                 // Cyrix MSR model lookup is more accurate than the 'generic' way
-                return super::vendor::Cyrix::model_string();
+                return vendor::Cyrix::model_string();
             }
-            #[cfg(not(target_os = "none"))]
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
                 if let Some(model_name) = self.intel_brand_index() {
@@ -410,7 +408,7 @@ impl Cpu {
                 }
 
                 // 486s without cpuid
-                let s = if super::is_386() {
+                let s = if is_386() {
                     "'Classic' 386"
                 } else {
                     match (self.signature.family, self.signature.model) {
@@ -571,15 +569,15 @@ impl TCpu for Cpu {
     fn detect() -> Self {
         let sig = CpuSignature::detect();
         Self {
-            arch: CpuArch::find(&Self::raw_model_string(), sig, &super::vendor_str()),
+            arch: CpuArch::find(&Self::raw_model_string(), sig, &vendor_str()),
             easter_egg: Self::easter_egg(),
-            brand_id: super::get_brand_id(),
+            brand_id: get_brand_id(),
             signature: sig,
-            ext_signature: match super::is_amd() {
+            ext_signature: match is_amd() {
                 true => Some(ExtendedSignature::detect()),
                 false => None,
             },
-            features: super::get_feature_list(),
+            features: get_feature_list(),
             topology: Topology::detect(),
         }
     }
