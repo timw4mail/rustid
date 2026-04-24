@@ -35,6 +35,16 @@ fn main() -> Result<()> {
     input_file.read_to_end(&mut binary_data)?;
 
     let binary_size = binary_data.len() as u32;
+
+    // Read metadata from the first 6 bytes of the binary
+    if binary_data.len() < 6 {
+        eprintln!("Error: Binary too small to contain metadata");
+        std::process::exit(1);
+    }
+    
+    let _data_seg_offset = u16::from_le_bytes([binary_data[0], binary_data[1]]);
+    let stack_seg_offset = u16::from_le_bytes([binary_data[2], binary_data[3]]);
+    let stack_size = u16::from_le_bytes([binary_data[4], binary_data[5]]);
     
     // Header size is 32 bytes (2 paragraphs)
     let header_paragraphs = 2;
@@ -50,12 +60,12 @@ fn main() -> Result<()> {
         pages,
         relocations: 0,
         header_paragraphs,
-        min_alloc: 0x1000, // 64KB additional for heap/stack
+        min_alloc: 0x1000, // 64KB additional for heap
         max_alloc: 0xFFFF,
-        ss: 0x0000,
-        sp: 0xFFFE, // Top of 64K segment
+        ss: stack_seg_offset,
+        sp: stack_size,
         checksum: 0,
-        ip: 0x0010,
+        ip: 0x0010, // Start at .text
         cs: 0x0000,
         reloc_table_offset: 0x001C,
         overlay_number: 0,
@@ -63,7 +73,6 @@ fn main() -> Result<()> {
 
     let mut output_file = File::create(output_path)?;
     
-    // Safety check for alignment/padding (though repr(C, packed) should handle it)
     let header_bytes: &[u8] = unsafe {
         std::slice::from_raw_parts(
             &header as *const MzHeader as *const u8,
@@ -82,6 +91,8 @@ fn main() -> Result<()> {
     output_file.write_all(&binary_data)?;
 
     println!("Created {} ({} bytes)", output_path, total_size);
+    println!("  Segments: CS:0000 DS:CS+{:04X} SS:CS+{:04X} SP:{:04X}", 
+             _data_seg_offset, stack_seg_offset, stack_size);
 
     Ok(())
 }

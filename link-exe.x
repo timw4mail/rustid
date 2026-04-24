@@ -2,53 +2,35 @@ ENTRY(_start)
 
 SECTIONS {
     . = 0x0;
-
-    /* Header for segment offsets */
+    /* Metadata at the very beginning of the binary */
     .metadata : {
-        SHORT(__data_seg_offset)
-        SHORT(__bss_seg_offset)
-        SHORT(__stack_seg_offset)
+        SHORT(ABSOLUTE(__data_seg_offset))
+        SHORT(ABSOLUTE(__stack_seg_offset))
+        SHORT(ABSOLUTE(__stack_size))
     }
 
-    . = ALIGN(16);
-    .text : {
+    .text 0x10 : {
         *(.startup)
         *(.text .text.*)
     }
 
-    . = ALIGN(16);
-    __data_start = .;
-    __data_seg_offset = __data_start >> 4;
-
-    .rodata : {
-        *(.rodata .rodata.*)
-    }
-
-    .data : {
-        *(.data .data.*)
-    }
-
-    . = ALIGN(16);
-    __bss_start = .;
-    __bss_seg_offset = __bss_start >> 4;
-    .bss : {
-        *(.bss .bss.*)
-        *(COMMON)
-    }
-
-    . = ALIGN(16);
-    __stack_start = .;
-    __stack_seg_offset = __stack_start >> 4;
-    /* Stack at the end */
-    .stack : {
-        _stack_bottom = .;
-        . += 0x2000;
-        _stack_top = .;
-    }
-
-    . = ALIGN(4);
-    _heap = .;
+    .rodata : { *(.rodata .rodata.*) }
+    .data : { *(.data .data.*) }
+    .bss : { *(.bss .bss.*) *(COMMON) }
     
+    . = ALIGN(16);
+    _stack_bottom = .;
+    . += 0x2000;
+    _stack_top = .;
+    
+    __binary_end = .;
+    _heap = ALIGN(., 4);
+
+    /* Flat model metadata */
+    __data_seg_offset = 0;
+    __stack_seg_offset = 0;
+    __stack_size = _stack_top;
+
     /DISCARD/ : {
         *(.comment)
         *(.note*)

@@ -4,22 +4,81 @@
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
-pub extern "C" fn _start() -> ! {
+#[unsafe(naked)]
+pub unsafe extern "C" fn _start() -> ! {
+    core::arch::naked_asm!(
+        ".code16",
+        "jmp 1f",
+        ".align 4",
+        "2:",       // GDT Pointer
+        ".word 15", // Limit
+        "3:",       // Base placeholder
+        ".long 0",  // Base
+        "4:",       // GDT Entries
+        ".quad 0",  // Null
+        ".quad 0x00CF92000000FFFF", // Data
+        "1:",
+        // Basic setup
+        "mov ax, cs",
+        "mov ds, ax",
+        "mov es, ax",
+        "mov ss, ax",
+        "cli",
+        "push ds",
+        "push es",
+        // Calculate linear address: EAX = (CS << 4) + offset 4:
+        "mov eax, cs",
+        "movzx eax, ax",
+        "shl eax, 4",
+        "xor ebx, ebx",
+        "lea bx, [4b]",
+        "add eax, ebx",
+        // Patch GDT pointer base (label 3:)
+        "lea bx, [3b]",
+        ".byte 0x66, 0x89, 0x07",
+        // Load GDT (label 2:)
+        "lea bx, [2b]",
+        ".byte 0x0F, 0x01, 0x17", // lgdt [bx]
+        // Switch to PM
+        "mov eax, cr0",
+        "or al, 1",
+        "mov cr0, eax",
+        "jmp 6f",
+        "6:",
+        "mov ax, 8",
+        "mov ds, ax",
+        "mov es, ax",
+        "mov ss, ax",
+        "mov fs, ax",
+        "mov gs, ax",
+        "and al, 0xFE",
+        "mov cr0, eax",
+        "jmp 7f",
+        "7:",
+        "pop es",
+        "pop ds",
+        "sti",
+        "mov ax, cs",
+        "mov ds, ax",
+        "mov es, ax",
+        "mov ss, ax",
+        // Ensure SP is clean
+        ".byte 0x66, 0x0F, 0xB7, 0xE4", // movzx esp, sp
+        // Jump to rust_main (E9 XX XX)
+        // Manual 16-bit near jump to avoid 32-bit mis-encoding
+        ".byte 0xE9",
+        ".word rust_main - 8f",
+        "8:",
+        ".align 4"
+    );
+}
+
+#[cfg(all(target_os = "none", target_arch = "x86"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_main() {
     use rustid::cpuid::dos::{DosWriter, exit};
     use rustid::cpuid::{dump::dump_cpu, has_cpuid, topology::Topology};
     use rustid::{println, version};
-
-    // Initialize segment registers for EXE format
-    // Read segment offsets from the metadata header at offset 0
-    #[cfg(target_arch = "x86")]
-    unsafe {
-        core::arch::asm!(
-            "mov ax, cs",
-            "mov ds, ax",
-            "mov es, ax",
-            options(preserves_flags, nostack)
-        );
-    }
 
     if has_cpuid() {
         let mut output = DosWriter {};
