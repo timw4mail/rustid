@@ -28,10 +28,10 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: rustid
-          path: ./*.com
+          path: ./*.exe
 
       - name: Publish binaries
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create --generate-notes ${{ github.ref }} './rustid.com#DOS binary (rustid.com)' './debug.com#DOS debug binary (debug.com)' './dump.com#Raw cpuid dump (dump.com)'
+          gh release create --generate-notes ${{ github.ref }} './rustid.exe#DOS binary (rustid.exe)' './debug.exe#DOS debug binary (debug.exe)' './dump.exe#Raw cpuid dump (dump.exe)'
