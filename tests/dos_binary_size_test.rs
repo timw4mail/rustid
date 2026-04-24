@@ -5,7 +5,7 @@ fn test_dos_binary_size() {
 
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    let binaries = ["rustid.com", "debug.com", "dump.com"];
+    let binaries = ["rustid.exe", "debug.exe", "dump.exe"];
 
     for binary in binaries {
         let binary_path = Path::new(&manifest_dir).join(binary);

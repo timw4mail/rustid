@@ -13,6 +13,18 @@ use rustid::cyrix_cpuid_check;
 pub extern "C" fn _start() -> ! {
     use rustid::cpuid::dos::exit;
 
+    // Initialize segment registers for EXE format
+    // Read segment offsets from the metadata header at offset 0
+    #[cfg(target_arch = "x86")]
+    unsafe {
+        core::arch::asm!(
+            "mov ax, cs",
+            "mov ds, ax",
+            "mov es, ax",
+            options(preserves_flags, nostack)
+        );
+    }
+
     cyrix_cpuid_check();
 
     let cpu = Cpu::detect();

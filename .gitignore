@@ -157,7 +157,5 @@ Cargo.lock
 # End of https://www.toptal.com/developers/gitignore/api/rust,jetbrains+all,visualstudiocode,macos
 
 ## Build artifacts
-rustid.com
-debug.com
-drustid.com
-dump.com
+*.com
+*.exe

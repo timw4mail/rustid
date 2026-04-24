@@ -43,33 +43,31 @@ build-debug:
 build-release:
 	cargo build --release
 
-_build-dos:
+_build-dos-tools:
 	# Fetch required tools (if they aren't already installed)
 	@if ! command -v cargo-binutils >/dev/null 2>&1; then cargo install cargo-binutils; fi
 	@if ! rustup component list --installed | grep -q llvm-tools-preview; then rustup component add llvm-tools-preview; fi
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
-	# Cleanup old binaries
-	@rm -f *.com
 
-_build-dos-debug:
-	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features="debug dos-build" --bin debug --release
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug debug.com
+_build-dos-debug: _build-dos-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec --target i486-dos.json --features="debug dos-build" --bin debug --release
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug debug.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- debug.bin debug.exe
+	@rm debug.bin
 
-_build-dos-dump:
-	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --features dos-build --bin dump --release
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.com
+_build-dos-dump: _build-dos-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec --target i486-dos.json --features dos-build --bin dump --release
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- dump.bin dump.exe
+	@rm dump.bin
 
-# Build for DOS - subcommands are split into separate binaries
-build-dos: _build-dos _build-dos-debug _build-dos-dump
-	# Build initial binary and convert to COM
-	@cargo +nightly build -Zjson-target-spec --target i486-dos.json --release --features dos-build
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.com
-	# Compress with UPX if available
-	@if command -v upx >/dev/null 2>&1; then \
-		echo "Compressing with UPX..."; \
-		upx --8086 -q rustid.com debug.com dump.com; \
-	fi
-	# Verify that the binary size is below the 64K limit
+# Build for DOS (EXE format)
+build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
+	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec --target i486-dos.json --release --features dos-build
+	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- rustid.bin rustid.exe
+	@rm rustid.bin
+	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
 # Build for modern windows (cli),  requires visual studio to be installed
@@ -115,10 +113,9 @@ build-486:
 # Remove build files
 clean:
 	@cargo clean
-	@rm -f drustid.com
-	@rm -f debug.com
-	@rm -f dump.com
-	@rm -f rustid.com
+	@rm -f *.com
+	@rm -f *.exe
+	@rm -f *.bin
 
 # Build and run the app
 run arg="":
@@ -141,12 +138,12 @@ run-x86-emu arg="":
 # Run the dos build in DOSBox-X
 [windows]
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.com
+	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.exe
 
 # Run the dos debug build in DOSBox-X
 [linux, unix]
 run-dos: build-dos
-	dosbox-x . -fastlaunch rustid.com
+	dosbox-x . -fastlaunch rustid.exe
 
 # Run all the (native) tests
 test:
@@ -183,4 +180,3 @@ test-x86: _cargo_cross
 test-x86:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
 	cargo test --target i686-pc-windows-msvc
-
