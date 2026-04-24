@@ -81,7 +81,7 @@ impl TCpu for Cpu {
 
         #[cfg(target_os = "macos")]
         {
-            let midr_val = super::get_midr();
+            let midr_val = get_midr();
             raw_midr.insert(midr_val);
             midrs.insert(Midr::new(midr_val));
             // macOS core count is handled in apple.rs, but we'll fill all_midrs for consistency
