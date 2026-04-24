@@ -1,7 +1,7 @@
---------------- Rustid 0.11.4 (x86-DOS) ---------------
+--------------- Rustid 1.0.0 (x86-DOS) ---------------
   Architecture: i686-SSE
         Vendor: AuthenticAMD (AMD)
- Model (synth): AMD Geode NX
+         Model: AMD Geode NX
    Model (raw): AMD Athlon(tm) Processor
      MicroArch: K7
       Codename: Thoroughbred
