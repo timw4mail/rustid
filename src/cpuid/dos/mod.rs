@@ -55,13 +55,6 @@ macro_rules! println {
     };
 }
 
-#[macro_export]
-macro_rules! sfmt {
-    ($($arg:tt)*) => {
-        alloc::format!($($arg)*)
-    };
-}
-
 /// Writes a string to the DOS console character by character.
 pub fn _print_str(s: &str) {
     for &b in s.as_bytes() {

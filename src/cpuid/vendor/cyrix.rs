@@ -3,7 +3,7 @@ use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, FeatureClass, has_cx8};
-use crate::sfmt;
+use alloc::format;
 use alloc::string::String;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -303,7 +303,7 @@ impl Cyrix {
 
         let model = CyrixModel::detect().to_str();
 
-        sfmt!("Cyrix {}", model).into()
+        format!("Cyrix {}", model).into()
     }
 
     pub fn brand_string() -> &'static str {
