@@ -373,6 +373,7 @@ impl Cpu {
                     return model_name;
                 }
             }
+            CpuBrand::SiS => return String::from("SiS 550/551/552 SoC"),
             CpuBrand::Unknown => 'nocpuid: {
                 // Not a 386 or 486
                 if self.arch.model != UNK || self.signature.family > 4 {
