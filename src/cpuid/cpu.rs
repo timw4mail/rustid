@@ -509,7 +509,7 @@ impl Cpu {
             let reg_list = match brand {
                 // Surely there had to be a reason for this silly ordering?
                 #[cfg(target_arch = "x86")]
-                CpuBrand::Rise => [res.ebx, res.edx, res.ecx, res.eax],
+                CpuBrand::Rise | CpuBrand::SiS => [res.ebx, res.edx, res.ecx, res.eax],
 
                 _ => [res.eax, res.ebx, res.ecx, res.edx],
             };
