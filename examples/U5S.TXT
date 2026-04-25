@@ -1,9 +1,9 @@
---------------- Rustid 0.11.4 (x86-DOS) ---------------
+--------------- Rustid 1.0.0 (x86-DOS) ---------------
   Architecture: i486
         Vendor: UMC UMC UMC  (UMC)
  Model (synth): UMC Green CPU U5S (486 SX)
      MicroArch: U5S
   Process Node: 600nm
-     Frequency: 40.00 MHz
+     Frequency: 33.00 MHz
      Signature: Family 4h, Model 2h, Stepping 3h
                 (0, 4, 0, 2, 3)
