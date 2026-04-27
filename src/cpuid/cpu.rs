@@ -185,7 +185,7 @@ impl CpuSignature {
 
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
-        let from_cpuid = super::has_cpuid();
+        let from_cpuid = has_cpuid();
 
         #[cfg(all(target_arch = "x86", target_os = "none"))]
         if !from_cpuid {
@@ -869,12 +869,7 @@ impl TCpu for Cpu {
 
         // CPU Features
         if !self.features.is_empty() {
-            let mut features = String::new();
-
-            self.features.iter().for_each(|feature| {
-                features.push_str(feature);
-                features.push_str(" ");
-            });
+            let features = self.features.join(" ");
 
             simple_line("Features", &features);
         }

@@ -206,7 +206,7 @@ pub fn is_centaur() -> bool {
 
 /// Returns true if the CPU is from Cyrix.
 pub fn is_cyrix() -> bool {
-    is_vendor(VENDOR_CYRIX)
+    is_vendor(VENDOR_CYRIX) || is_vendor(VENDOR_NSC)
 }
 
 /// Is the CPU a Vortex86 or very similar RDC chip?

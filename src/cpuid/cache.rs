@@ -328,7 +328,8 @@ impl Cache {
                     }
                 }
             }
-            0x80 => {
+            0x80 =>
+            {
                 #[cfg(target_arch = "x86")]
                 if is_cyrix() {
                     c.l1 = Level1Cache::Unified(CacheLevel::no_count(
@@ -337,8 +338,9 @@ impl Cache {
                         4,
                     ));
                     return;
+                } else {
+                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
                 }
-                c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
             }
             _ => {}
         }

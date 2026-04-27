@@ -244,8 +244,8 @@ impl Cyrix {
         }
 
         match CyrixModel::detect() {
-            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L | CyrixModel::MediaGx => FeatureClass::i586,
-            CyrixModel::M2 => FeatureClass::i686,
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => FeatureClass::i586,
+            CyrixModel::M2 | CyrixModel::MediaGx => FeatureClass::i686,
             _ => FeatureClass::i486,
         }
     }
