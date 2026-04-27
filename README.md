@@ -56,30 +56,30 @@ cargo run
 Output varies by architecture. Here is an example for x86_64:
 
 ```text
---------------- Rustid 0.9.6 ---------------
+--------------- Rustid 1.0.0 (x86_64-windows) ---------------
   Architecture: x86_64-v4
 
         Vendor: AuthenticAMD (AMD)
 
-         Model: AMD Ryzen 9 7950X3D 16-Core Processor
+         Model: AMD Ryzen 9 9950X3D2 16-Core Processor
 
-     MicroArch: Zen 4
+     MicroArch: Zen 5
 
-      Codename: Raphael
+      Codename: Granite Ridge
 
-  Process Node: 5nm
+  Process Node: 4nm
 
-         Cores: 16 cores (32 threads)
+      Topology: 16 cores (32 threads)
 
-         Cache: L1d: 16x 32 KB, 8-way
+         Cache: L1d: 16x 48 KB, 12-way
                 L1i: 16x 32 KB, 8-way
-                L2:  16x 1 MB, 8-way
-                L3:  96 MB, 16-way
+                L2:  16x 1 MB, 16-way
+                L3:  2x 96 MB, 16-way
 
-     Frequency: 4.19 GHz
+     Frequency: 4.29 GHz
 
-     Signature: Family 19h, Model 61h, Stepping 2h
-                (10, 15, 6, 1, 2)
+     Signature: Family 1Ah, Model 44h, Stepping 0h
+                (11, 15, 4, 4, 0)
 
       Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES VAES AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C SHA
 ```
