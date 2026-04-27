@@ -1,4 +1,4 @@
---------------- Rustid 0.9.4 ---------------
+--------------- Rustid 1.0.0 (x86_64-linux) ---------------
   Architecture: x86_64-v2
 
         Vendor: AuthenticAMD (AMD)
@@ -13,15 +13,16 @@
 
     Easter Egg: HELLO KITTY! ^-^
 
-         Cores: 2 cores
+      Topology: 2 cores
 
          Cache: L1d: 2x 32 KB, 8-way
                 L1i: 2x 32 KB, 2-way
                 L2:  1 MB, 16-way
 
-     Frequency: 998.00 MHz
+     Frequency: 1.00 GHz
 
      Signature: Family 16h, Model 0h, Stepping 1h
                 (7, 15, 0, 0, 1)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES AVX BMI1 POPCNT F16C
+      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES AVX BMI1 POPCNT F16C 
+
