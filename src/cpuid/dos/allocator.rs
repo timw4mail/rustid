@@ -1,23 +1,31 @@
 use core::alloc::{GlobalAlloc, Layout};
+use core::cell::UnsafeCell;
 use core::ptr::null_mut;
-use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// A simple bump allocator for the DOS environment.
 ///
 /// This allocator does not support deallocation, but it is sufficient for
 /// the needs of rustid in a DOS environment where allocations are
 /// relatively few and live for the duration of the program.
+///
+/// Since DOS is a single-threaded environment, we use non-atomic operations
+/// to maintain compatibility with 386 processors which lack CMPXCHG.
 pub struct DosAllocator {
-    start: AtomicUsize,
-    end: AtomicUsize,
+    start: UnsafeCell<usize>,
+    end: UnsafeCell<usize>,
 }
+
+// SAFETY: DOS is a single-threaded/single-tasking environment.
+// Our allocator is only accessed by the main program and we don't
+// use interrupts for allocation.
+unsafe impl Sync for DosAllocator {}
 
 impl DosAllocator {
     /// Creates a new, uninitialized allocator.
     pub const fn new() -> Self {
         Self {
-            start: AtomicUsize::new(0),
-            end: AtomicUsize::new(0),
+            start: UnsafeCell::new(0),
+            end: UnsafeCell::new(0),
         }
     }
 
@@ -26,8 +34,10 @@ impl DosAllocator {
     /// # Safety
     /// This function must be called only once and with a valid memory range.
     pub unsafe fn init(&self, start: usize, size: usize) {
-        self.start.store(start, Ordering::SeqCst);
-        self.end.store(start + size, Ordering::SeqCst);
+        unsafe {
+            *self.start.get() = start;
+            *self.end.get() = start + size;
+        }
     }
 }
 
@@ -36,9 +46,9 @@ unsafe impl GlobalAlloc for DosAllocator {
         let size = layout.size();
         let align = layout.align();
 
-        loop {
-            let current_start = self.start.load(Ordering::Relaxed);
-            let current_end = self.end.load(Ordering::Relaxed);
+        unsafe {
+            let current_start = *self.start.get();
+            let current_end = *self.end.get();
 
             if current_start == 0 {
                 return null_mut();
@@ -54,13 +64,8 @@ unsafe impl GlobalAlloc for DosAllocator {
                 return null_mut();
             }
 
-            if self
-                .start
-                .compare_exchange_weak(current_start, alloc_end, Ordering::SeqCst, Ordering::SeqCst)
-                .is_ok()
-            {
-                return alloc_start as *mut u8;
-            }
+            *self.start.get() = alloc_end;
+            alloc_start as *mut u8
         }
     }
 
