@@ -118,6 +118,8 @@ impl TMicroArch for Amd {
             (10, 15, 5, 0, 0) => brand_arch(MicroArch::Zen3, "Cezanne", Some(N7)),
             (10, 15, 6, 1, 2) => brand_arch(MicroArch::Zen4, "Raphael", Some(N5)),
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some(N4)),
+
+            (11, 15, 4, 4, _) => brand_arch(MicroArch::Zen5, "Granite Ridge", Some(N4)),
             _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
