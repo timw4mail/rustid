@@ -51,22 +51,16 @@ _build-dos-tools:
 
 _build-dos-debug: _build-dos-tools
 	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features="debug dos-build" --bin debug --release
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/debug debug.bin
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- debug.bin debug.exe
-	@rm debug.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/debug debug.exe
 
 _build-dos-dump: _build-dos-tools
 	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features dos-build --bin dump --release
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/dump dump.bin
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- dump.bin dump.exe
-	@rm dump.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dump dump.exe
 
 # Build for DOS (EXE format)
 build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
 	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build
-	@rust-objcopy -I elf32-i386 -O binary ./target/i486-dos/release/rustid rustid.bin
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- rustid.bin rustid.exe
-	@rm rustid.bin
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/rustid rustid.exe
 	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
