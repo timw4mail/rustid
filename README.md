@@ -25,38 +25,12 @@ For DOS, there are release binaries on Github for each release.
 - Rust (`cargo` needs to be installed)
 - For most environments, `cargo install rustid` will add `rustid` to your path
 
-### Prerequisites (development)
-- Rust (`rustup` and `cargo` need to be installed)
-- `just` - Required to run build scripts. Can be installed with `cargo install just`.
-- DOSBox-X (optional) - Helpful for development and testing of the DOS version
-
-### Building
-
-**Standard Build:**
-```bash
-just build-release
-```
-
-**Build for DOS:**
-```bash
-just build-dos
-```
-This produces a `rustid.com` binary compatible with DOS environments (like DOSBox-X).
-
-**Cross-Compilation:**
-For other architectures, see the `justfile` for available targets (`just build-arm64`, `just build-ppc`, etc). Cross-compilation should be considered experimental.
-
 ## Usage
+- For binaries, just run `rustid`, for more commands run `rustid --help`.
+- For DOS, the main binary is `rustid.exe`, with debug and cpuid dump functionality in `debug.exe` and `dump.exe` respectively.
 
-Simply run the compiled binary to see your CPU details:
-
-```bash
-just run
-```
-or
-```bash
-cargo run
-```
+## Development
+See [DEVELOPMENT.md](./DEVELOPMENT.md)
 
 Output varies by architecture. Here is an example for x86_64:
 
