@@ -10,7 +10,6 @@ This application is developed using *some* AI, mostly related to:
 * Assembly code
 
 ## Features
-
 - **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, and PowerPC.
 - **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
@@ -19,8 +18,14 @@ This application is developed using *some* AI, mostly related to:
 
 ## Getting Started
 
-### Prerequisites
+### Installing (DOS)
+For DOS, there are release binaries on Github for each release.
 
+### Installing (MacOS, Linux, Windows, etc.)
+- Rust (`cargo` needs to be installed)
+- For most environments, `cargo install rustid` will add `rustid` to your path
+
+### Prerequisites (development)
 - Rust (`rustup` and `cargo` need to be installed)
 - `just` - Required to run build scripts. Can be installed with `cargo install just`.
 - DOSBox-X (optional) - Helpful for development and testing of the DOS version
