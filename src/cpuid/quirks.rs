@@ -110,9 +110,9 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
         return Some(CpuSignature::detect());
     }
 
-    static mut RESET_DONE: bool = false;
-    static mut CACHED_SIG: Option<CpuSignature> = None;
-    static mut SAVED_EDX: u32 = 0;
+    // Persist register context across reset using internal scoped statics.
+    // We MUST use statics for this because the CPU registers (including SS:SP)
+    // are completely wiped after the reset.
     static mut SAVED_SS: u16 = 0;
     static mut SAVED_SP: u16 = 0;
     static mut SAVED_BP: u16 = 0;
@@ -120,18 +120,13 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     static mut SAVED_DI: u16 = 0;
     static mut SAVED_BX: u16 = 0;
 
-    unsafe {
-        if RESET_DONE {
-            return CACHED_SIG.clone();
-        }
-        RESET_DONE = true;
-    }
+    let mut raw_sig: u32 = 0;
 
     unsafe {
         core::arch::asm!(
         "cli",
 
-        // Save all important registers to static memory
+        // Save execution context to static memory
         "mov word ptr ds:[{ss_ptr}], ss",
         "mov word ptr ds:[{sp_ptr}], sp",
         "mov word ptr ds:[{bp_ptr}], bp",
@@ -142,60 +137,63 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
         // 1. Set the warm boot pointer at 0040:0067h
         "mov ax, 0x40",
         "mov es, ax",
-        "lea ax, [2f]",      // Get offset of label 2 forward
+        "lea ax, [20f]",
         "mov word ptr es:[0x67], ax",
         "mov word ptr es:[0x69], cs",
 
         // 2. Set CMOS shutdown byte to 0x0A (Jump to 40:67 after reset)
         "mov al, 0x0F",
         "out 0x70, al",
-        "out 0xEB, al", // IO delay
+        "out 0x80, al", // IO delay
         "mov al, 0x0A",
         "out 0x71, al",
-        "out 0xEB, al", // IO delay
+        "out 0x80, al", // IO delay
 
         // 3. Trigger Reset
         // Method 1: Fast Reset via Port 0x92
         "in al, 0x92",
+        "out 0x80, al", // IO delay
         "or al, 1",
         "out 0x92, al",
-        "out 0xEB, al", // IO delay
+        "out 0x80, al", // IO delay
 
-        // Method 2: Keyboard Controller Reset (Port 0x64)
-        "mov cx, 0xFFFF",
-        "4:",
+        // Method 2: Keyboard Controller Reset (Port 0x64) fallback
+        "mov cx, 0x0FFF",
+        "22:",
         "in al, 0x64",
+        "out 0x80, al", // IO delay
         "test al, 2",
-        "jz 5f",
-        "loop 4b",
-        "5:",
+        "jz 23f",
+        "loop 22b",
+        "23:",
         "mov al, 0xFE",
         "out 0x64, al",
 
-        "3: hlt",
-        "jmp 3b",
+        "21: hlt",
+        "jmp 21b",
 
-        "2:",
+        "20:",
         // --- We are now back after reset ---
-        // IMMEDIATELY restore DS/ES so we can access our variables
+        // Restore segments first so we can access statics
         "mov ax, cs",
         "mov ds, ax",
         "mov es, ax",
 
-        // Capture EDX immediately
-        "mov dword ptr ds:[{edx_ptr}], edx",
+        // Restore execution context from our code/data segment
+        "mov ss, word ptr cs:[{ss_ptr}]",
+        "mov sp, word ptr cs:[{sp_ptr}]",
+        "mov bp, word ptr cs:[{bp_ptr}]",
+        "mov si, word ptr cs:[{si_ptr}]",
+        "mov di, word ptr cs:[{di_ptr}]",
+        "mov bx, word ptr cs:[{bx_ptr}]",
 
-        // Restore stack and other registers
-        "mov ss, word ptr ds:[{ss_ptr}]",
-        "mov sp, word ptr ds:[{sp_ptr}]",
-        "mov bp, word ptr ds:[{bp_ptr}]",
-        "mov si, word ptr ds:[{si_ptr}]",
-        "mov di, word ptr ds:[{di_ptr}]",
-        "mov bx, word ptr ds:[{bx_ptr}]",
+        // Capture EDX into our local variable
+        "mov {sig_out}, edx",
 
         // Cleanup: Clear CMOS shutdown byte
         "mov al, 0x0F",
         "out 0x70, al",
+        "out 0x80, al", // IO delay
         "xor al, al",
         "out 0x71, al",
 
@@ -206,13 +204,11 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
         si_ptr = sym SAVED_SI,
         di_ptr = sym SAVED_DI,
         bx_ptr = sym SAVED_BX,
-        edx_ptr = sym SAVED_EDX,
+        sig_out = out(reg) raw_sig,
         out("ax") _,
         out("cx") _,
         );
     }
-
-    let raw_sig = unsafe { SAVED_EDX };
 
     if raw_sig == 0 || raw_sig == 0xFFFFFFFF {
         return None;
@@ -222,13 +218,7 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     let model = (raw_sig >> 4) & 0xF;
     let family = (raw_sig >> 8) & 0xF;
 
-    let sig = CpuSignature::new_synth(family, model, stepping);
-
-    unsafe {
-        CACHED_SIG = Some(sig.clone());
-    }
-
-    Some(sig)
+    Some(CpuSignature::new_synth(family, model, stepping))
 }
 
 #[cfg(feature = "debug")]

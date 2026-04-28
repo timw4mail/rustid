@@ -45,8 +45,6 @@ build-release:
 
 _build-dos-tools:
 	# Fetch required tools (if they aren't already installed)
-	@if ! command -v cargo-binutils >/dev/null 2>&1; then cargo install cargo-binutils; fi
-	@if ! rustup component list --installed | grep -q llvm-tools-preview; then rustup component add llvm-tools-preview; fi
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos-debug: _build-dos-tools

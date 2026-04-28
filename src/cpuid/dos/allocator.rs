@@ -87,9 +87,10 @@ unsafe extern "C" {
 /// This function must be called early in the program's execution,
 /// before any allocations occur.
 pub unsafe fn init_heap() {
-    // We have at least 64KB allocated via min_alloc in the EXE header.
-    // The _heap symbol marks the beginning of this space.
     let heap_start = &raw mut _heap as usize;
-    // 64KB is a safe default for DOS rustid.
-    unsafe { ALLOCATOR.init(heap_start, 64 * 1024) };
+
+    // Use a safe default for Real Mode (within the current 64KB segment)
+    let heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
+
+    unsafe { ALLOCATOR.init(heap_start, heap_size) };
 }
