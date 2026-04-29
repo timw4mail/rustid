@@ -10,7 +10,6 @@ This application is developed using *some* AI, mostly related to:
 * Assembly code
 
 ## Features
-
 - **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, and PowerPC.
 - **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
@@ -19,39 +18,19 @@ This application is developed using *some* AI, mostly related to:
 
 ## Getting Started
 
-### Prerequisites
+### Installing (DOS)
+For DOS, there are release binaries on Github for each release.
 
-- Rust (`rustup` and `cargo` need to be installed)
-- `just` - Required to run build scripts. Can be installed with `cargo install just`.
-- DOSBox-X (optional) - Helpful for development and testing of the DOS version
-
-### Building
-
-**Standard Build:**
-```bash
-just build-release
-```
-
-**Build for DOS:**
-```bash
-just build-dos
-```
-This produces a `rustid.com` binary compatible with DOS environments (like DOSBox-X).
-
-**Cross-Compilation:**
-For other architectures, see the `justfile` for available targets (`just build-arm64`, `just build-ppc`, etc). Cross-compilation should be considered experimental.
+### Installing (MacOS, Linux, Windows, etc.)
+- Rust (`cargo` needs to be installed)
+- For most environments, `cargo install rustid` will add `rustid` to your path
 
 ## Usage
+- For binaries, just run `rustid`, for more commands run `rustid --help`.
+- For DOS, the main binary is `rustid.exe`, with debug and cpuid dump functionality in `debug.exe` and `dump.exe` respectively.
 
-Simply run the compiled binary to see your CPU details:
-
-```bash
-just run
-```
-or
-```bash
-cargo run
-```
+## Development
+See [DEVELOPMENT.md](./DEVELOPMENT.md)
 
 Output varies by architecture. Here is an example for x86_64:
 
