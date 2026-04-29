@@ -14,6 +14,7 @@ use super::constants::*;
 use super::quirks::get_vendor_by_quirk;
 
 use crate::cpuid::CpuBrand;
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -453,11 +454,12 @@ pub fn has_3dnow() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 31)
 }
 
-/// Get the full list of detected features.
-pub fn get_feature_list() -> Vec<&'static str> {
+#[cfg(target_os = "none")]
+pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     type FeatureFn = fn() -> bool;
 
-    #[cfg(target_os = "none")]
+    let mut map = BTreeMap::new();
+
     const FEATURES: &[(&str, FeatureFn)] = &[
         ("FPU", has_fpu),
         ("TSC", has_tsc),
@@ -467,27 +469,6 @@ pub fn get_feature_list() -> Vec<&'static str> {
         ("MMX", has_mmx),
         ("3DNow!", has_3dnow),
         ("3DNow!+", has_3dnow_plus),
-        ("AMD64", has_amd64),
-        ("SSE", has_sse),
-        ("SSE2", has_sse2),
-        ("SSE3", has_sse3),
-        ("SSE4A", has_sse4a),
-        ("SSE4.1", has_sse41),
-        ("SSE4.2", has_sse42),
-        ("SSSE3", has_ssse3),
-    ];
-    #[cfg(not(target_os = "none"))]
-    const FEATURES: &[(&str, FeatureFn)] = &[
-        ("FPU", has_fpu),
-        ("TSC", has_tsc),
-        ("CMPXCHG8B", has_cx8),
-        ("CMPXCHG16B", has_cx16),
-        ("CMOV", has_cmov),
-        ("MMX", has_mmx),
-        ("3DNow!", has_3dnow),
-        ("3DNow!+", has_3dnow_plus),
-        ("HT", has_ht),
-        ("x2apic", has_x2apic),
         ("AMD64", has_amd64),
         ("SSE", has_sse),
         ("SSE2", has_sse2),
@@ -497,26 +478,99 @@ pub fn get_feature_list() -> Vec<&'static str> {
         ("SSE4.2", has_sse42),
         ("SSSE3", has_ssse3),
         ("AES", has_aes),
-        ("VAES", has_vaes),
+        ("SHA", has_sha),
+    ];
+
+    let mut features: Vec<&'static str> = Vec::new();
+
+    for (name, check) in FEATURES {
+        if check() {
+            features.push(name);
+        }
+    }
+
+    if !features.is_empty() {
+        map.insert("", features.join(" "));
+    }
+
+    map
+}
+
+/// Get the full list of detected features.
+#[cfg(not(target_os = "none"))]
+pub fn get_feature_list() -> BTreeMap<&'static str, String> {
+    type FeatureFn = fn() -> bool;
+
+    const BASIC_FEATURES: &[(&str, FeatureFn)] = &[
+        ("FPU", has_fpu),
+        ("TSC", has_tsc),
+        ("CMPXCHG8B", has_cx8),
+        ("CMPXCHG16B", has_cx16),
+        ("CMOV", has_cmov),
+        ("MMX", has_mmx),
+        ("3DNow!", has_3dnow),
+        ("3DNow!+", has_3dnow_plus),
+        ("HT", has_ht),
+        ("AMD64", has_amd64),
+    ];
+
+    const SSE_FEATURES: &[(&str, FeatureFn)] = &[
+        ("SSE", has_sse),
+        ("SSE2", has_sse2),
+        ("SSE3", has_sse3),
+        ("SSE4A", has_sse4a),
+        ("SSE4.1", has_sse41),
+        ("SSE4.2", has_sse42),
+        ("SSSE3", has_ssse3),
+    ];
+
+    const AVX_FEATURES: &[(&str, FeatureFn)] = &[
         ("AVX", has_avx),
         ("AVX2", has_avx2),
         ("AVX512F", has_avx512f),
+    ];
+
+    const ENCRYPTION_FEATURES: &[(&str, FeatureFn)] =
+        &[("AES", has_aes), ("VAES", has_vaes), ("SHA", has_sha)];
+
+    const OTHER_FEATURES: &[(&str, FeatureFn)] = &[
+        ("x2apic", has_x2apic),
         ("FMA", has_fma),
         ("BMI1", has_bmi1),
         ("BMI2", has_bmi2),
         ("RDRAND", has_rdrand),
         ("POPCNT", has_popcnt),
         ("F16C", has_f16c),
-        ("SHA", has_sha),
     ];
 
-    let mut out: Vec<&'static str> = Vec::new();
-    for (name, check) in FEATURES {
-        if check() {
-            out.push(name);
+    let mut map = BTreeMap::new();
+
+    let mut basic: Vec<&'static str> = Vec::new();
+    let mut sse: Vec<&'static str> = Vec::new();
+    let mut avx: Vec<&'static str> = Vec::new();
+    let mut encryption: Vec<&'static str> = Vec::new();
+    let mut other: Vec<&'static str> = Vec::new();
+
+    for (v, key, checks) in [
+        (&mut basic, "", BASIC_FEATURES),
+        (&mut sse, "SSE", SSE_FEATURES),
+        (&mut avx, "AVX", AVX_FEATURES),
+        (&mut encryption, "Encryption", ENCRYPTION_FEATURES),
+        (&mut other, "Other", OTHER_FEATURES),
+    ] {
+        for (name, check) in checks {
+            if check() {
+                v.push(name);
+            }
+        }
+
+        if !v.is_empty() {
+            let s = v.join(" ");
+            map.insert(key, s);
         }
     }
-    out
+
+    map
 }
 
 #[cfg(test)]

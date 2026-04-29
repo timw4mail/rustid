@@ -8,8 +8,8 @@ use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
 use crate::println;
+use alloc::collections::BTreeMap;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 /// CPU feature class/level enumeration.
 ///
@@ -264,7 +264,7 @@ pub struct Cpu {
     /// AMD extended cpu signature
     pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
-    pub features: Vec<&'static str>,
+    pub features: BTreeMap<&'static str, String>,
     /// Speed, threads, cores, sockets
     pub topology: Topology,
 }
@@ -869,9 +869,26 @@ impl TCpu for Cpu {
 
         // CPU Features
         if !self.features.is_empty() {
-            let features = self.features.join(" ");
+            if self.features.len() == 1 {
+                simple_line("Features", self.features.get("").unwrap());
+            } else {
+                let keys = ["", "SSE", "AVX", "Encryption", "Other"];
+                for key in keys {
+                    if self.features.contains_key(key) {
+                        if key.is_empty() {
+                            println!(
+                                "{}{}",
+                                inline_sublabel("Features", "Base"),
+                                self.features.get(key).unwrap()
+                            );
+                        } else {
+                            println!("{}{}", sublabel(key), self.features.get(key).unwrap());
+                        }
+                    }
+                }
 
-            simple_line("Features", &features);
+                newline();
+            }
         }
 
         #[cfg(target_arch = "x86")]
