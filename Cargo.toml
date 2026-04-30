@@ -27,11 +27,6 @@ name = "rustid"
 path="src/rustid.rs"
 
 [[bin]]
-name = "dump"
-required-features = ["dos-build"]
-path="src/dump.rs"
-
-[[bin]]
 name = "debug"
 required-features = ["debug", "dos-build"]
 path="src/debug.rs"

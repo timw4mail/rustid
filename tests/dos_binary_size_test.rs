@@ -5,7 +5,7 @@ fn test_dos_binary_size() {
 
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    let binaries = ["rustid.exe", "debug.exe", "dump.exe"];
+    let binaries = ["rustid.exe", "debug.exe"];
 
     for binary in binaries {
         let binary_path = Path::new(&manifest_dir).join(binary);
@@ -18,7 +18,7 @@ fn test_dos_binary_size() {
         let metadata = std::fs::metadata(&binary_path).expect("Failed to read binary metadata");
         let size = metadata.len();
 
-        const MAX_SIZE: u64 = 128 * 1024; // 128KB (Multi-segment support)
+        const MAX_SIZE: u64 = 64 * 1024; // 128KB (Multi-segment support)
         assert!(
             size < MAX_SIZE,
             "{} is {} bytes, exceeds 64KB limit ({} bytes)",

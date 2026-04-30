@@ -16,7 +16,7 @@ just build-release
 ```bash
 just build-dos
 ```
-This produces a `rustid.com` binary compatible with DOS environments (like DOSBox-X).
+This produces a `rustid.exe` binary compatible with DOS environments (like DOSBox-X).
 
 **Cross-Compilation:**
 For other architectures, see the `justfile` for available targets (`just build-arm64`, `just build-ppc`, etc). Cross-compilation should be considered experimental.

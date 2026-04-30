@@ -1,12 +1,13 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-use rustid::common::TCpu;
 use rustid::{Cpu, version};
+use rustid::common::TCpu;
 
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
 
+// --- DOS entry point ---
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
@@ -14,18 +15,17 @@ use rustid::cyrix_cpuid_check;
 pub unsafe extern "C" fn _start() -> ! {
     core::arch::naked_asm!(
         ".code16",
-        // Basic segment setup
+        // DS on entry = PSP segment; save it in CX
+        "mov cx, ds",
         "mov ax, cs",
         "mov ds, ax",
         "mov es, ax",
-        "mov ss, ax",
-        // Ensure SP is clean
-        ".byte 0x66, 0x0F, 0xB7, 0xE4", // movzx esp, sp
-        // Jump to rust_main (E9 XX XX)
-        // Manual 16-bit near jump to avoid 32-bit mis-encoding
-        ".byte 0xE9",
-        ".word rust_main - 1f",
-        "1:",
+        // Ensure ESP is clean (only 16-bit SP is set by loader)
+        ".byte 0x66, 0x31, 0xC0", // xor eax, eax
+        "mov ax, sp",
+        ".byte 0x66, 0x89, 0xC4", // mov esp, eax
+        // Jump to rust_main, PSP seg in CX
+        "jmp rust_main",
         ".align 4"
     );
 }
@@ -33,15 +33,100 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
-    use rustid::cpuid::dos::{exit, init_heap};
+    use rustid::cpuid::dos::{DosWriter, exit, init_heap, peek_u8};
+    use rustid::cpuid::{dump::dump_cpu, has_cpuid, topology::Topology};
+    use rustid::{println};
+
+    // PSP segment is in CX (passed from _start)
+    let psp_seg: u16;
+    unsafe {
+        core::arch::asm!("mov {0:x}, cx", out(reg) psp_seg);
+    }
 
     unsafe { init_heap() };
 
-    cyrix_cpuid_check();
+    // Parse command line from PSP
+    // PSP+0x80 = command line length (byte), PSP+0x81+ = command line (starts with space)
+    let cmd_len = peek_u8(psp_seg, 0x80) as usize;
 
-    let cpu = Cpu::detect();
-    version();
-    cpu.display_table(false);
+    let mut action = "default";
+
+    if cmd_len > 0 {
+        // Read first token (skip leading space at 0x81)
+        let mut idx = 0x82u16;
+        let end = 0x81u16.wrapping_add(cmd_len as u16);
+
+        // Skip whitespace
+        while idx < end {
+            let b = peek_u8(psp_seg, idx);
+            if b != b' ' && b != b'\t' {
+                break;
+            }
+            idx = idx.wrapping_add(1);
+        }
+
+        // Read token bytes into a stack buffer
+        let mut token_buf = [0u8; 32];
+        let mut token_len = 0usize;
+        while idx < end && token_len < token_buf.len() {
+            let b = peek_u8(psp_seg, idx);
+            if b == b' ' || b == b'\t' {
+                break;
+            }
+            token_buf[token_len] = b;
+            token_len += 1;
+            idx = idx.wrapping_add(1);
+        }
+
+        // Parse token as argument
+        if token_len > 0 && token_buf[0] == b'/' {
+            let stripped = &token_buf[1..token_len];
+            match stripped {
+                b"r" | b"dump" => action = "dump",
+                b"v" | b"version" => action = "version",
+                b"h" | b"?" | b"help" => action = "help",
+                _ => {}
+            }
+        }
+    }
+
+    match action {
+        "dump" => {
+            if has_cpuid() {
+                let mut output = DosWriter {};
+
+                let topo = Topology::detect();
+
+                let logical_cores = topo.threads as usize;
+                for i in 0..logical_cores {
+                    dump_cpu(&mut output, i);
+                }
+            } else {
+                version();
+                cyrix_cpuid_check();
+                println!("This cpu does not support cpuid. Cpuid info cannot be dumped.");
+            }
+        }
+        "version" => {
+            version();
+        }
+        "help" => {
+            version();
+            println!("Usage: rustid [command]");
+            println!();
+            println!("Commands:");
+            println!("  /r, /dump          Dump raw CPUID values");
+            println!("  /v, /version       Display version info");
+            println!("  /?, /h, /help      Show this help message");
+            println!();
+        }
+        "default" => {
+            version();
+            cyrix_cpuid_check();
+            Cpu::detect().display_table(false);
+        }
+        _ => unreachable!(),
+    }
 
     exit();
 }
