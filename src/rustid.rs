@@ -1,9 +1,8 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-use rustid::{Cpu, version};
 use rustid::common::TCpu;
-
+use rustid::{Cpu, version};
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
 
@@ -20,6 +19,7 @@ pub unsafe extern "C" fn _start() -> ! {
         "mov ax, cs",
         "mov ds, ax",
         "mov es, ax",
+        "mov ss, ax",
         // Ensure ESP is clean (only 16-bit SP is set by loader)
         ".byte 0x66, 0x31, 0xC0", // xor eax, eax
         "mov ax, sp",
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn _start() -> ! {
 pub extern "C" fn rust_main() -> ! {
     use rustid::cpuid::dos::{DosWriter, exit, init_heap, peek_u8};
     use rustid::cpuid::{dump::dump_cpu, has_cpuid, topology::Topology};
-    use rustid::{println};
+    use rustid::println;
 
     // PSP segment is in CX (passed from _start)
     let psp_seg: u16;
@@ -81,11 +81,13 @@ pub extern "C" fn rust_main() -> ! {
         // Parse token as argument
         if token_len > 0 && token_buf[0] == b'/' {
             let stripped = &token_buf[1..token_len];
-            match stripped {
-                b"r" | b"dump" => action = "dump",
-                b"v" | b"version" => action = "version",
-                b"h" | b"?" | b"help" => action = "help",
-                _ => {}
+            if stripped.len() > 0 {
+                match stripped {
+                    b"r" | b"dump" => action = "dump",
+                    b"v" | b"version" => action = "version",
+                    b"h" | b"?" | b"help" => action = "help",
+                    _ => {}
+                }
             }
         }
     }

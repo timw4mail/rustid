@@ -4,7 +4,7 @@ use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::*;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
+use super::{read_multi_leaf_str, x86_cpuid};
 use crate::common::cache::Level1Cache;
 use crate::common::{TCpu, UNK};
 use crate::println;
@@ -223,33 +223,6 @@ impl CpuSignature {
     }
 }
 
-/// Extended CPU signature information from AMD processors.
-///
-/// Contains additional CPU identification data available on AMD processors
-/// via the extended CPUID leaf 0x80000001.
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
-pub struct ExtendedSignature {
-    pub base_brand_id: u32,
-    pub brand_id: u32,
-    pub pkg_type: u32,
-}
-
-impl ExtendedSignature {
-    /// Detects the CPU signature from CPUID leaf 1.
-    pub fn detect() -> Self {
-        let res = x86_cpuid(EXT_LEAF_1);
-
-        let brand_id = res.ebx & 0xFFFF;
-        let pkg_type = (res.ebx >> 28) & 0xF;
-
-        Self {
-            base_brand_id: super::get_brand_id(),
-            brand_id,
-            pkg_type,
-        }
-    }
-}
-
 /// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
@@ -261,8 +234,6 @@ pub struct Cpu {
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
-    /// AMD extended cpu signature
-    pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: BTreeMap<&'static str, String>,
     /// Speed, threads, cores, sockets
@@ -376,7 +347,7 @@ impl Cpu {
             CpuBrand::SiS => return String::from("SiS 550/551/552 SoC"),
             CpuBrand::Unknown => 'nocpuid: {
                 // Not a 386 or 486
-                if self.arch.model != UNK || self.signature.family > 4 {
+                if self.arch.model != UNK || has_cpuid() {
                     break 'nocpuid;
                 }
 
@@ -546,10 +517,6 @@ impl TCpu for Cpu {
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
-            ext_signature: match is_amd() {
-                true => Some(ExtendedSignature::detect()),
-                false => None,
-            },
             features: get_feature_list(),
             topology: Topology::detect(),
         }
@@ -1026,7 +993,6 @@ mod tests {
                 is_overdrive: false,
                 from_cpuid: false,
             },
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
         };
