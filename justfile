@@ -136,7 +136,7 @@ run-dos: build-dos
 # Run the dos build in DOSBox-x, and return the output to a file
 [linux, unix]
 test-dos: build-dos
-	dosbox-x . -fastlaunch -conf tools/dosbox-x.conf rustid.exe
+	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 10 -log-con rustid.exe
 
 # Run all the (native) tests
 test:

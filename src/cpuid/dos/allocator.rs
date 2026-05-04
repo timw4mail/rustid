@@ -87,10 +87,39 @@ unsafe extern "C" {
 /// This function must be called early in the program's execution,
 /// before any allocations occur.
 pub unsafe fn init_heap() {
+    use super::is_in_unreal_mode;
+    use core::arch::asm;
+
     let heap_start = &raw mut _heap as usize;
 
-    // Use a safe default for Real Mode (within the current 64KB segment)
-    let heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
+    let mut heap_size: usize;
+
+    if is_in_unreal_mode() {
+        // In Unreal Mode, we can use all memory allocated to our process.
+        // Get the top of memory from the PSP (at offset 0x0002).
+        let mut psp_seg: u16;
+        let mut ds_seg: u16;
+        unsafe {
+            asm!("mov ah, 0x51", "int 0x21", out("bx") psp_seg, options(preserves_flags, nostack));
+            asm!("mov {0:x}, ds", out(reg) ds_seg, options(preserves_flags, nostack));
+        }
+
+        let top_seg: u16 = super::peek_u16(psp_seg, 0x0002);
+
+        // available_bytes = (top_seg - ds_seg) << 4
+        // But we must account for the fact that heap_start is an offset within ds_seg.
+        let total_available = (top_seg.saturating_sub(ds_seg) as usize) << 4;
+        heap_size = total_available.saturating_sub(heap_start);
+
+        // Cap at something reasonable if DOS lied, but usually this is fine.
+        // Conventional memory is max 640KB.
+        if heap_size > 640 * 1024 {
+            heap_size = 640 * 1024 - heap_start;
+        }
+    } else {
+        // Use a safe default for Real Mode (within the current 64KB segment)
+        heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
+    }
 
     unsafe { ALLOCATOR.init(heap_start, heap_size) };
 }

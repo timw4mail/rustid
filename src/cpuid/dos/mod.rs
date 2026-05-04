@@ -11,6 +11,7 @@ use core::fmt::Write;
 
 pub mod allocator;
 pub use allocator::init_heap;
+pub mod unreal;
 
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.
@@ -98,6 +99,72 @@ pub fn exit() -> ! {
             options(noreturn)
         );
     }
+}
+
+/// Initialize the DOS environment with unreal mode support.
+/// This enables >64KB addressing which is required for larger binaries and flat memory access.
+pub fn init_dos_environment() {
+    unsafe {
+        unreal::ensure_a20_enabled();
+        unreal::init_unreal_mode();
+    }
+}
+
+/// Check if we're running in unreal mode (needed for proper memory access)
+pub fn is_in_unreal_mode() -> bool {
+    unreal::is_unreal_mode_enabled()
+}
+
+// Re-export unreal module functions for wildcard import support
+pub use unreal::{
+    enable_unreal_mode, ensure_a20_enabled, exit_to_real_mode, exit_unreal_mode, init_unreal_mode,
+    is_unreal_mode_enabled, setup_unreal_mode,
+};
+
+/// Reads a byte from a physical memory address using unreal mode (via FS).
+#[inline(never)]
+pub fn peek_phys_u8(addr: u32) -> u8 {
+    let val: u16;
+    unsafe {
+        asm!(
+            "mov al, fs:[ebx]",
+            "xor ah, ah",
+            in("ebx") addr,
+            out("ax") val,
+            options(preserves_flags, nostack)
+        );
+    }
+    val as u8
+}
+
+/// Reads a 16-bit word from a physical memory address using unreal mode (via FS).
+#[inline(never)]
+pub fn peek_phys_u16(addr: u32) -> u16 {
+    let val: u16;
+    unsafe {
+        asm!(
+            "mov ax, fs:[ebx]",
+            in("ebx") addr,
+            out("ax") val,
+            options(preserves_flags, nostack)
+        );
+    }
+    val
+}
+
+/// Reads a 32-bit dword from a physical memory address using unreal mode (via FS).
+#[inline(never)]
+pub fn peek_phys_u32(addr: u32) -> u32 {
+    let val: u32;
+    unsafe {
+        asm!(
+            "mov eax, fs:[ebx]",
+            in("ebx") addr,
+            out("eax") val,
+            options(preserves_flags, nostack)
+        );
+    }
+    val
 }
 
 /// Reads a byte from a segmented memory address.

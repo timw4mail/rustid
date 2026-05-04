@@ -26,6 +26,11 @@ SECTIONS {
     __binary_end = .;
     _heap = ALIGN(., 4);
 
+    /* Unreal Mode GDT - placed at known address for inline assembly reference */
+    .unreal_gdt : AT(0x1000) {
+        *(.unreal_gdt)
+    }
+
     /* Flat model metadata */
     __data_seg_offset = 0;
     __stack_seg_offset = 0;

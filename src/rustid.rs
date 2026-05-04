@@ -1,10 +1,11 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-use rustid::common::TCpu;
-use rustid::{Cpu, version};
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
+
+use rustid::common::TCpu;
+use rustid::{Cpu, version};
 
 // --- DOS entry point ---
 #[cfg(all(target_os = "none", target_arch = "x86"))]
@@ -33,17 +34,23 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
-    use rustid::cpuid::dos::{DosWriter, exit, init_heap, peek_u8};
+    use rustid::cpuid::dos::{
+        DosWriter, exit, exit_unreal_mode, init_dos_environment, init_heap, is_unreal_mode_enabled,
+        peek_u8,
+    };
     use rustid::cpuid::{dump::dump_cpu, has_cpuid, topology::Topology};
     use rustid::println;
+
+    // Initialize DOS environment (includes unreal mode for flat 32-bit addressing)
+    init_dos_environment();
+
+    unsafe { init_heap() };
 
     // PSP segment is in CX (passed from _start)
     let psp_seg: u16;
     unsafe {
         core::arch::asm!("mov {0:x}, cx", out(reg) psp_seg);
     }
-
-    unsafe { init_heap() };
 
     // Parse command line from PSP
     // PSP+0x80 = command line length (byte), PSP+0x81+ = command line (starts with space)
@@ -128,6 +135,11 @@ pub extern "C" fn rust_main() -> ! {
             Cpu::detect().display_table(false);
         }
         _ => unreachable!(),
+    }
+
+    // Exit unreal mode - now back to real mode with flat 31-bit memory space
+    if is_unreal_mode_enabled() {
+        unsafe { exit_unreal_mode() };
     }
 
     exit();
