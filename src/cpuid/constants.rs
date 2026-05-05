@@ -23,6 +23,7 @@ pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 // ----------------------------------------------------------------------------
 pub const HYP_VENDOR_HYPERV: &str = "Microsoft Hv";
 pub const HYP_VENDOR_KVM: &str = "KVMKVMKVM";
+pub const HYP_VENDOR_VBOX: &str = "VBoxVBoxVBox";
 
 // ----------------------------------------------------------------------------
 // ! Easter Eggs

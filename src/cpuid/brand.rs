@@ -205,6 +205,7 @@ impl From<String> for CpuBrand {
 pub enum HypervisorBrand {
     MicrosoftHyperV,
     LinuxKVM,
+    VirtualBox,
     Unknown,
 }
 
@@ -218,6 +219,7 @@ impl HypervisorBrand {
         match &self {
             HypervisorBrand::MicrosoftHyperV => "Microsoft HyperV",
             HypervisorBrand::LinuxKVM => "Linux KVM",
+            HypervisorBrand::VirtualBox => "VirtualBox",
             _ => UNK,
         }
     }
@@ -228,6 +230,7 @@ impl From<&str> for HypervisorBrand {
         match s {
             HYP_VENDOR_HYPERV => HypervisorBrand::MicrosoftHyperV,
             HYP_VENDOR_KVM => HypervisorBrand::LinuxKVM,
+            HYP_VENDOR_VBOX => HypervisorBrand::VirtualBox,
             _ => HypervisorBrand::Unknown,
         }
     }
