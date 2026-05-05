@@ -851,7 +851,7 @@ impl TCpu for Cpu {
             if self.features.len() == 1 {
                 simple_line("Features", self.features.get("").unwrap());
             } else {
-                let keys = ["", "SSE", "AVX", "Encryption", "Other"];
+                let keys = ["", "SSE", "AVX", "Security", "Other"];
                 for key in keys {
                     if self.features.contains_key(key) {
                         if key.is_empty() {

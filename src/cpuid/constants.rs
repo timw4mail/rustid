@@ -20,9 +20,18 @@ pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
 // ----------------------------------------------------------------------------
 // ! Hypervisor Vendor Strings
+// See: <https://wiki.osdev.org/CPUID>
 // ----------------------------------------------------------------------------
+pub const HYP_VENDOR_BHYVE: &str = "bhyve bhyve ";
 pub const HYP_VENDOR_HYPERV: &str = "Microsoft Hv";
-pub const HYP_VENDOR_KVM: &str = "KVMKVMKVM";
+pub const HYP_VENDOR_KVM: &str = " KVMKVMKVM  ";
+pub const HYP_VENDOR_PARALLELS: &str = " prl hyperv ";
+pub const HYP_VENDOR_PARALLELS_ALT: &str = " lrpepyh vr ";
+pub const HYP_VENDOR_QEMU: &str = "TCGTCGTCGTCG";
+pub const HYP_VENDOR_QNX: &str = " QNXQVMBSQG ";
+pub const HYP_VENDOR_VBOX: &str = "VBoxVBoxVBox";
+pub const HYP_VENDOR_VMWARE: &str = "VMWareVMWare";
+pub const HYP_VENDOR_XEN: &str = "XenVMMXenVMM";
 
 // ----------------------------------------------------------------------------
 // ! Easter Eggs

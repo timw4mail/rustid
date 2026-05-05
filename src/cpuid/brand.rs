@@ -203,8 +203,15 @@ impl From<String> for CpuBrand {
 }
 
 pub enum HypervisorBrand {
+    Bhyve,
     MicrosoftHyperV,
     LinuxKVM,
+    Parallels,
+    Qemu,
+    Qnx,
+    VirtualBox,
+    VmWare,
+    Xen,
     Unknown,
 }
 
@@ -216,9 +223,16 @@ impl HypervisorBrand {
 
     pub fn to_str(&self) -> &'static str {
         match &self {
+            HypervisorBrand::Bhyve => "Bhyve",
             HypervisorBrand::MicrosoftHyperV => "Microsoft HyperV",
             HypervisorBrand::LinuxKVM => "Linux KVM",
-            _ => UNK,
+            HypervisorBrand::Parallels => "Parallels",
+            HypervisorBrand::Qemu => "QEMU",
+            HypervisorBrand::Qnx => "QNX",
+            HypervisorBrand::VirtualBox => "VirtualBox",
+            HypervisorBrand::VmWare => "VMWare",
+            HypervisorBrand::Xen => "Xen",
+            HypervisorBrand::Unknown => UNK,
         }
     }
 }
@@ -226,8 +240,15 @@ impl HypervisorBrand {
 impl From<&str> for HypervisorBrand {
     fn from(s: &str) -> Self {
         match s {
+            HYP_VENDOR_BHYVE => HypervisorBrand::Bhyve,
             HYP_VENDOR_HYPERV => HypervisorBrand::MicrosoftHyperV,
             HYP_VENDOR_KVM => HypervisorBrand::LinuxKVM,
+            HYP_VENDOR_PARALLELS | HYP_VENDOR_PARALLELS_ALT => HypervisorBrand::Parallels,
+            HYP_VENDOR_QEMU => HypervisorBrand::Qemu,
+            HYP_VENDOR_QNX => HypervisorBrand::Qnx,
+            HYP_VENDOR_VBOX => HypervisorBrand::VirtualBox,
+            HYP_VENDOR_VMWARE => HypervisorBrand::VmWare,
+            HYP_VENDOR_XEN => HypervisorBrand::Xen,
             _ => HypervisorBrand::Unknown,
         }
     }

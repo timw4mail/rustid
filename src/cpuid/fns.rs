@@ -459,6 +459,35 @@ pub fn has_vaes() -> bool {
 // ! Leaf 8000_0001h - Extended features
 // ----------------------------------------------------------------------------
 
+/// Returns true if the CPU supports the NX (No-Execute) bit / XD (Execute Disable).
+///
+/// This bit in EDX indicates that the CPU supports marking pages as non-executable,
+/// which is a key security feature used by NX/XD/DEP.
+pub fn has_nx() -> bool {
+    has_feature(EXT_LEAF_1, Reg::Edx, 20)
+}
+
+/// Returns true if the CPU supports Intel VT-x (VMX) hardware virtualization.
+///
+/// Checks ECX bit 5 in basic leaf 0x1.
+pub fn has_vtx() -> bool {
+    has_feature(LEAF_1, Reg::Ecx, 5)
+}
+
+/// Returns true if the CPU supports AMD SVM (Secure Virtual Machine) hardware virtualization.
+///
+/// Checks ECX bit 2 in extended leaf 0x80000001.
+pub fn has_amdv() -> bool {
+    has_feature(EXT_LEAF_1, Reg::Ecx, 2)
+}
+
+/// Returns true if the CPU supports hardware-assisted virtualization.
+///
+/// This is true if either Intel VT-x (VMX) or AMD SVM is supported.
+pub fn has_virtualization() -> bool {
+    has_vtx() || has_amdv()
+}
+
 /// Returns true if the CPU supports SSE4A instructions (AMD-specific).
 pub fn has_sse4a() -> bool {
     if CpuBrand::detect() != CpuBrand::AMD {
@@ -559,8 +588,14 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("AVX512F", has_avx512f),
     ];
 
-    const ENCRYPTION_FEATURES: &[(&str, FeatureFn)] =
-        &[("AES", has_aes), ("VAES", has_vaes), ("SHA", has_sha)];
+    const SECURITY_FEATURES: &[(&str, FeatureFn)] = &[
+        ("NX", has_nx),
+        ("AES", has_aes),
+        ("VAES", has_vaes),
+        ("SHA", has_sha),
+        ("VT-x", has_vtx),
+        ("AMD-V", has_amdv),
+    ];
 
     const OTHER_FEATURES: &[(&str, FeatureFn)] = &[
         ("x2apic", has_x2apic),
@@ -584,7 +619,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         (&mut basic, "", BASIC_FEATURES),
         (&mut sse, "SSE", SSE_FEATURES),
         (&mut avx, "AVX", AVX_FEATURES),
-        (&mut encryption, "Encryption", ENCRYPTION_FEATURES),
+        (&mut encryption, "Security", SECURITY_FEATURES),
         (&mut other, "Other", OTHER_FEATURES),
     ] {
         for (name, check) in checks {
