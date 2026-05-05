@@ -113,6 +113,10 @@ pub fn max_leaf() -> u32 {
     x86_cpuid(LEAF_0).eax
 }
 
+pub fn max_hypervisor_leaf() -> u32 {
+    x86_cpuid(HYP_LEAF_0).eax
+}
+
 /// Returns the maximum extended CPUID leaf supported.
 pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
@@ -171,6 +175,26 @@ pub fn vendor_str() -> String {
         .trim_matches('\0');
 
     String::from(s)
+}
+
+pub fn hypervisor_str() -> String {
+    if is_hypervisor_guest() {
+        let res = x86_cpuid(HYP_LEAF_0);
+
+        let mut bytes = [0u8; 12];
+
+        bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
+        bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
+        bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
+
+        let s = core::str::from_utf8(&bytes)
+            .unwrap_or(UNK)
+            .trim_matches('\0');
+
+        String::from(s)
+    } else {
+        String::from(UNK)
+    }
 }
 
 pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> String {
@@ -392,6 +416,11 @@ pub fn has_f16c() -> bool {
 /// Returns true if the CPU supports RDRAND instruction.
 pub fn has_rdrand() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 30)
+}
+
+/// Is this cpu running under a hypervisor? (Virtualization)
+pub fn is_hypervisor_guest() -> bool {
+    has_feature(LEAF_1, Reg::Ecx, 31)
 }
 
 // ----------------------------------------------------------------------------

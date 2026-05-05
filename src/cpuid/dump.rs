@@ -86,6 +86,13 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
         dump_leaf_maybe_subleaves(f, leaf, 4);
     }
 
+    if is_hypervisor_guest() {
+        let max_hyp_leaf = max_hypervisor_leaf();
+        for leaf in HYP_LEAF_0..=max_hyp_leaf {
+            dump_leaf_maybe_subleaves(f, leaf, 4);
+        }
+    }
+
     let max_ext_leaf = max_extended_leaf();
     for leaf in EXT_LEAF_0..=max_ext_leaf {
         dump_leaf_maybe_subleaves(f, leaf, 4);
