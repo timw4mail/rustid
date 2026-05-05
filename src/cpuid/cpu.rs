@@ -49,7 +49,7 @@ impl FeatureClass {
     pub fn detect() -> FeatureClass {
         use super::*;
 
-        if has_avx512f() {
+        if has_avx512_f() {
             return FeatureClass::x86_64_v4;
         }
 
@@ -651,7 +651,7 @@ impl TCpu for Cpu {
             newline();
         }
 
-        if is_hypervisor_guest() {
+        if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
             let hyp = HypervisorBrand::detect();
             println!(
                 "{}{} ({})",
@@ -884,7 +884,7 @@ impl TCpu for Cpu {
             if self.features.len() == 1 {
                 simple_line("Features", self.features.get("").unwrap());
             } else {
-                let keys = ["", "SSE", "AVX", "Security", "Other"];
+                let keys = ["", "SSE", "AVX", "AVX512", "Security", "Other"];
                 for key in keys {
                     if self.features.contains_key(key) {
                         if key.is_empty() {

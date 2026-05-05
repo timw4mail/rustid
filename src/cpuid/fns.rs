@@ -443,16 +443,86 @@ pub fn has_bmi2() -> bool {
 }
 
 /// Returns true if the CPU supports AVX-512 Foundation instructions.
-pub fn has_avx512f() -> bool {
+pub fn has_avx512_f() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 16)
+}
+
+/// Returns true if the CPU supports AVX-512 DQ instructions.
+pub fn has_avx512_dq() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 17)
+}
+
+/// Returns true if the CPU supports AVX-512 IFMA instructions.
+pub fn has_avx512_ifma() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 21)
+}
+
+/// Returns true if the CPU supports AVX-512 PF instructions (Xeon Phi).
+pub fn has_avx512_pf() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 26)
+}
+
+/// Returns true if the CPU supports AVX-512 ER instructions (Xeon Phi).
+pub fn has_avx512_er() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 27)
+}
+
+/// Returns true if the CPU supports AVX-512 CD instructions.
+pub fn has_avx512_cd() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 28)
 }
 
 pub fn has_sha() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 29)
 }
 
+/// Returns true if the CPU supports AVX-512 BW instructions.
+pub fn has_avx512_bw() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 30)
+}
+
+/// Returns true if the CPU supports AVX-512 VL instructions.
+pub fn has_avx512_vl() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 31)
+}
+
 pub fn has_vaes() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 9)
+}
+
+/// Returns true if the CPU supports VPCLMULQDQ instructions.
+pub fn has_vpclmulqdq() -> bool {
+    has_feature(LEAF_7, Reg::Ecx, 10)
+}
+
+/// Returns true if the CPU supports AVX-VNNI instructions.
+pub fn has_avx_vnni() -> bool {
+    has_feature(LEAF_7, Reg::Ecx, 11)
+}
+
+/// Returns true if the CPU supports AVX-512 BITALG instructions.
+pub fn has_avx512_bitalg() -> bool {
+    has_feature(LEAF_7, Reg::Ecx, 12)
+}
+
+/// Returns true if the CPU supports AVX-512 VPOPCNTDQ instructions.
+pub fn has_avx512_vpopcntdq() -> bool {
+    has_feature(LEAF_7, Reg::Ecx, 14)
+}
+
+/// Returns true if the CPU supports AVX-512 4VNNIW instructions (Xeon Phi).
+pub fn has_avx512_4vnniw() -> bool {
+    has_feature(LEAF_7, Reg::Edx, 2)
+}
+
+/// Returns true if the CPU supports AVX-512 4FMAPS instructions (Xeon Phi).
+pub fn has_avx512_4fmaps() -> bool {
+    has_feature(LEAF_7, Reg::Edx, 3)
+}
+
+/// Returns true if the CPU supports AVX-512 VP2INTERSECT instructions.
+pub fn has_avx512_vp2intersect() -> bool {
+    has_feature(LEAF_7, Reg::Edx, 8)
 }
 
 // ----------------------------------------------------------------------------
@@ -585,7 +655,24 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     const AVX_FEATURES: &[(&str, FeatureFn)] = &[
         ("AVX", has_avx),
         ("AVX2", has_avx2),
-        ("AVX512F", has_avx512f),
+        ("AVX-VNNI", has_avx_vnni),
+        ("VPCLMULQDQ", has_vpclmulqdq),
+    ];
+
+    const AVX512_FEATURES: &[(&str, FeatureFn)] = &[
+        ("F", has_avx512_f),
+        ("DQ", has_avx512_dq),
+        ("IFMA", has_avx512_ifma),
+        ("PF", has_avx512_pf),
+        ("ER", has_avx512_er),
+        ("CD", has_avx512_cd),
+        ("BW", has_avx512_bw),
+        ("VL", has_avx512_vl),
+        ("BITALG", has_avx512_bitalg),
+        ("VPOPCNTDQ", has_avx512_vpopcntdq),
+        ("4VNNIW", has_avx512_4vnniw),
+        ("4FMAPS", has_avx512_4fmaps),
+        ("VP2INTERSECT", has_avx512_vp2intersect),
     ];
 
     const SECURITY_FEATURES: &[(&str, FeatureFn)] = &[
@@ -612,6 +699,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     let mut basic: Vec<&'static str> = Vec::new();
     let mut sse: Vec<&'static str> = Vec::new();
     let mut avx: Vec<&'static str> = Vec::new();
+    let mut avx512: Vec<&'static str> = Vec::new();
     let mut encryption: Vec<&'static str> = Vec::new();
     let mut other: Vec<&'static str> = Vec::new();
 
@@ -619,6 +707,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         (&mut basic, "", BASIC_FEATURES),
         (&mut sse, "SSE", SSE_FEATURES),
         (&mut avx, "AVX", AVX_FEATURES),
+        (&mut avx512, "AVX512", AVX512_FEATURES),
         (&mut encryption, "Security", SECURITY_FEATURES),
         (&mut other, "Other", OTHER_FEATURES),
     ] {
