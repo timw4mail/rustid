@@ -3,10 +3,41 @@
 
 mod brand;
 pub mod cpu;
+pub mod features;
 pub mod micro_arch;
 use crate::common::{CoreType, CpuDisplay};
 pub use micro_arch::{CpuCore, Midr};
 use std::collections::{BTreeMap, HashSet};
+
+#[cfg(not(target_os = "macos"))]
+pub use cpu::*;
+
+// ----------------------------------------------------------------------------
+// ! MacOS
+// ----------------------------------------------------------------------------
+
+#[cfg(target_os = "macos")]
+pub mod apple;
+#[cfg(target_os = "macos")]
+pub use apple::*;
+
+// ----------------------------------------------------------------------------
+// ! Linux
+// ----------------------------------------------------------------------------
+
+#[cfg(target_os = "linux")]
+pub mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::*;
+
+// ----------------------------------------------------------------------------
+// ! Windows
+// ----------------------------------------------------------------------------
+
+#[cfg(target_os = "windows")]
+pub mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::*;
 
 trait TArmCpu {
     /// Returns the CPU model name, if available
@@ -24,6 +55,7 @@ impl CpuDisplay {
     pub fn display(
         cpu_arch: &micro_arch::CpuArch,
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+        features: &BTreeMap<&'static str, String>,
         color: bool,
     ) {
         let cpu = CpuDisplay { color };
@@ -31,7 +63,7 @@ impl CpuDisplay {
         println!();
 
         cpu.simple_line(
-            "Brand/Implementor",
+            "Brand",
             <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
 
@@ -55,20 +87,23 @@ impl CpuDisplay {
 
             cpu.display_cache(core.cache, core.count);
         }
+
+        // Display features
+        if !features.is_empty() {
+            let keys = ["Base", "SIMD", "Security", "Atomics", "Fp", "Misc"];
+            for key in keys {
+                if let Some(feat_str) = features.get(key) {
+                    if key == "Base" {
+                        println!("{}{}", cpu.inline_sublabel("Features", "Base"), feat_str);
+                    } else {
+                        println!("{}{}", cpu.sublabel(key), feat_str);
+                    }
+                }
+            }
+            println!();
+        }
     }
 }
-
-#[cfg(not(target_os = "macos"))]
-pub use cpu::*;
-
-// ----------------------------------------------------------------------------
-// ! MacOS
-// ----------------------------------------------------------------------------
-
-#[cfg(target_os = "macos")]
-pub mod apple;
-#[cfg(target_os = "macos")]
-pub use apple::*;
 
 // ----------------------------------------------------------------------------
 // ! Windows

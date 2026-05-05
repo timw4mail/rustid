@@ -22,6 +22,9 @@ windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_Syst
 [target.'cfg(not(any(target_os = "none", target_arch = "x86", target_arch ="x86_64")))'.dependencies]
 core_affinity = "0.8.3"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
 [[bin]]
 name = "rustid"
 path="src/rustid.rs"

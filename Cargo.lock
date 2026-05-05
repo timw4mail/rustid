@@ -58,6 +58,7 @@ name = "rustid"
 version = "1.1.0"
 dependencies = [
  "core_affinity",
+ "libc",
  "windows",
 ]
 
