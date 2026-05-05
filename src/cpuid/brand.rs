@@ -202,6 +202,37 @@ impl From<String> for CpuBrand {
     }
 }
 
+pub enum HypervisorBrand {
+    MicrosoftHyperV,
+    LinuxKVM,
+    Unknown,
+}
+
+impl HypervisorBrand {
+    pub fn detect() -> Self {
+        let str = super::hypervisor_str();
+        Self::from(str.as_str())
+    }
+
+    pub fn to_str(&self) -> &'static str {
+        match &self {
+            HypervisorBrand::MicrosoftHyperV => "Microsoft HyperV",
+            HypervisorBrand::LinuxKVM => "Linux KVM",
+            _ => UNK,
+        }
+    }
+}
+
+impl From<&str> for HypervisorBrand {
+    fn from(s: &str) -> Self {
+        match s {
+            HYP_VENDOR_HYPERV => HypervisorBrand::MicrosoftHyperV,
+            HYP_VENDOR_KVM => HypervisorBrand::LinuxKVM,
+            _ => HypervisorBrand::Unknown,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -651,6 +651,18 @@ impl TCpu for Cpu {
             newline();
         }
 
+        if is_hypervisor_guest() {
+            let hyp = HypervisorBrand::detect();
+            println!(
+                "{}{} ({})",
+                label("Hypervisor"),
+                hypervisor_str(),
+                hyp.to_str()
+            );
+
+            newline();
+        }
+
         if self.signature.is_overdrive {
             simple_line("Overdrive", "Yes");
         }

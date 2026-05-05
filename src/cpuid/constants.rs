@@ -19,6 +19,12 @@ pub const VENDOR_UMC: &str = "UMC UMC UMC ";
 pub const VENDOR_ZHAOXIN: &str = "  Shanghai  ";
 
 // ----------------------------------------------------------------------------
+// ! Hypervisor Vendor Strings
+// ----------------------------------------------------------------------------
+pub const HYP_VENDOR_HYPERV: &str = "Microsoft Hv";
+pub const HYP_VENDOR_KVM: &str = "KVMKVMKVM";
+
+// ----------------------------------------------------------------------------
 // ! Easter Eggs
 // ----------------------------------------------------------------------------
 
@@ -66,6 +72,15 @@ pub const LEAF_18: u32 = 0x18;
 /// Intel extended topology v2
 pub const LEAF_1F: u32 = 0x1F;
 
+// --------------------------------------------
+// ! Hypervisor CPUID Leaves
+// --------------------------------------------
+pub const HYP_LEAF_0: u32 = 0x4000_0000;
+
+// --------------------------------------------
+// ! Extended CPUID Leaves
+// --------------------------------------------
+
 /// Extended CPUID leaf 0x80000000 - Maximum extended leaf
 pub const EXT_LEAF_0: u32 = 0x8000_0000;
 
@@ -98,6 +113,10 @@ pub const EXT_LEAF_26: u32 = 0x8000_0026;
 
 /// The max value of the extended CPUID leaf
 pub const EXT_LEAF_MAX: u32 = 0x8000_FFFF;
+
+// --------------------------------------------
+// ! Vendor CPUID Leaves
+// --------------------------------------------
 
 /// Centaur/Zhaoxin vendor leaf base
 pub const CENTAUR_LEAF_0: u32 = 0xC000_0000;
