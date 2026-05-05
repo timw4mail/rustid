@@ -105,10 +105,6 @@ impl CpuDisplay {
     }
 }
 
-// ----------------------------------------------------------------------------
-// ! Linux
-// ----------------------------------------------------------------------------
-
 /// Gets the Main ID Register (MIDR).
 ///
 /// The MIDR contains information about the CPU implementer, part number, and revision.

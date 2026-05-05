@@ -4,7 +4,6 @@
 //! `getauxval(AT_HWCAP/AT_HWCAP2/AT_HWCAP3)` when available.
 
 use std::collections::BTreeMap;
-use std::process::Command;
 
 // ----------------------------------------------------------------------------
 // Feature detection via /proc/cpuinfo (text-based, primary method)
@@ -79,47 +78,20 @@ pub fn get_features_from_hwcap() -> BTreeMap<String, bool> {
         const HWCAP_SVE: c_ulong = 1 << 22;
         const HWCAP_ASIMDFHM: c_ulong = 1 << 23;
         const HWCAP_DIT: c_ulong = 1 << 24;
-        const HWCAP_USCAT: c_ulong = 1 << 25;
-        const HWCAP_ILRCPC: c_ulong = 1 << 26;
-        const HWCAP_FLAGM: c_ulong = 1 << 27;
         const HWCAP_SSBS: c_ulong = 1 << 28;
         const HWCAP_SB: c_ulong = 1 << 29;
         const HWCAP_PACA: c_ulong = 1 << 30;
-        const HWCAP_PACG: c_ulong = 1 << 31;
 
         // HWCAP2 flags
-        const HWCAP2_DCPODP: c_ulong = 1 << 0;
         const HWCAP2_SVE2: c_ulong = 1 << 1;
         const HWCAP2_SVEAES: c_ulong = 1 << 2;
-        const HWCAP2_SVEPMULL: c_ulong = 1 << 3;
-        const HWCAP2_SVEBITPERM: c_ulong = 1 << 4;
-        const HWCAP2_SVESHA3: c_ulong = 1 << 5;
-        const HWCAP2_SVESHA512: c_ulong = 1 << 6;
-        const HWCAP2_SVESM4: c_ulong = 1 << 7;
         const HWCAP2_FLAGM2: c_ulong = 1 << 8;
         const HWCAP2_FRINT: c_ulong = 1 << 9;
-        const HWCAP2_SVEI8MM: c_ulong = 1 << 10;
-        const HWCAP2_SVEF32MM: c_ulong = 1 << 11;
-        const HWCAP2_SVEF64MM: c_ulong = 1 << 12;
-        const HWCAP2_SVEBF16: c_ulong = 1 << 13;
         const HWCAP2_I8MM: c_ulong = 1 << 14;
         const HWCAP2_BF16: c_ulong = 1 << 15;
-        const HWCAP2_DGH: c_ulong = 1 << 16;
-        const HWCAP2_RNG: c_ulong = 1 << 17;
         const HWCAP2_BTI: c_ulong = 1 << 18;
-        const HWCAP2_MTE: c_ulong = 1 << 19;
         const HWCAP2_ECV: c_ulong = 1 << 20;
-        const HWCAP2_AFP: c_ulong = 1 << 21;
-        const HWCAP2_RPRES: c_ulong = 1 << 22;
-        const HWCAP2_MTE3: c_ulong = 1 << 23;
         const HWCAP2_SME: c_ulong = 1 << 24;
-        const HWCAP2_SME_I16I64: c_ulong = 1 << 25;
-        const HWCAP2_SME_F64F64: c_ulong = 1 << 26;
-        const HWCAP2_SME_I8I32: c_ulong = 1 << 27;
-        const HWCAP2_SME_F16F32: c_ulong = 1 << 28;
-        const HWCAP2_SME_B16F32: c_ulong = 1 << 29;
-        const HWCAP2_SME_F32F32: c_ulong = 1 << 30;
-        const HWCAP2_SME_FA64: c_ulong = 1 << 31;
 
         unsafe {
             let hwcap = libc::getauxval(AT_HWCAP as u64);
