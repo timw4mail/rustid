@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.1.0]
+
+### Added
+- Makefile for users who prefer it over Just or in environments that don't support just
+- Detection of hypervisor information (when current OS is virtualized)
+- Checks for NX-bit and Virtualization features
+- Expanded AX512 feature list
+- CPU feature list categorized by type
+- Direct conversion of raw ELF binary to DOS MZ EXE binary (instead of using rust-objcopy)
+
+### Changed
+- Display of CPU feature list for ARM
+- Updated non-x86 formatting to match x86 style
+- Restored functionality of CPU reset signature detection (for dos)
+- Updated README to focus on binary usage
+- Updated README to reflect binaries and cargo install
+
+## [1.0.0]
+
+### Added
+- Zen5 CPU support
+- SiS model string support
+- Mac arm64 example
+- Process node values for Vortex86 mappings
+- Color output for PowerPC and ARM
+- Helper to identify source CPU ID data
+- Ability to combine CLI flags (debug command can get info from CPUID dump)
+- Haiku socket detection and MpTable implementation
+- Reorganized test data files
+
+### Changed
+- Removed custom string format macro
+- Removed type wrappers, using native Rust types with DOS allocator
+- Enabled alloc types for DOS (String, Vec)
+- Updated release build config to reference .exe files
+- Restored Intel Brand Table lookup for DOS (replaced Unicode registered trademark with (R))
+- Refactored ARM and PPC formatting into common module
+- Adjusted CLI parsing for all architectures
+- Improved speed measurements for CPUs without TSC instruction
+- Updated most of the examples
+- Updated M1 Apple chip cache mapping
+- Minor code cleanups
+
+### Fixed
+- 386 compatibility for DOS build
+- Display of SiS CPU easter egg
+- Fixed Haiku socket detection
+- Removed wildly inaccurate speed measurement for some Cyrix CPUs
+- Tweaked display of cleaned-up model strings
+
 ## [0.11.4]
 
 ### Added
