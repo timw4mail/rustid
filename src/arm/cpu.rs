@@ -14,6 +14,7 @@ pub struct Cpu {
     pub vendor: String,
     pub cpu_arch: CpuArch,
     pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+    pub features: BTreeMap<&'static str, String>,
 }
 
 impl TCpu for Cpu {
@@ -97,6 +98,7 @@ impl TCpu for Cpu {
         );
 
         let cores = Self::detect_cores(&all_midrs);
+        let features = super::get_all_features();
 
         Self {
             raw_midr,
@@ -104,6 +106,7 @@ impl TCpu for Cpu {
             vendor: vendor.into(),
             cpu_arch,
             cores,
+            features,
         }
     }
 
@@ -125,7 +128,7 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self, color: bool) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, color);
+        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, color);
     }
 }
 

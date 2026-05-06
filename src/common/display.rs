@@ -6,17 +6,18 @@ pub struct CpuDisplay {
 
 impl CpuDisplay {
     pub fn raw_label(s: &str) -> String {
-        format!("{:>17}: ", s)
+        format!("{:>14}: ", s)
     }
 
     pub fn raw_sublabel(s: &str) -> String {
-        format!("{:>19}{}: ", "", s)
+        format!("{:>16}{}: ", "", s)
     }
 
     pub fn raw_inline_sublabel(label: &str, sub: &str) -> String {
-        format!("{:>17}: {:1}: ", label, sub)
+        format!("{:>14}: {:1}: ", label, sub)
     }
 
+    #[allow(unreachable_code)]
     pub fn label(&self, s: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_label(s);
@@ -24,9 +25,10 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_label(s);
         }
-        format!("\x1b[32m{:>17}\x1b[0m: ", s)
+        format!("\x1b[32m{:>14}\x1b[0m: ", s)
     }
 
+    #[allow(unreachable_code)]
     pub fn sublabel(&self, s: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_sublabel(s);
@@ -34,9 +36,10 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_sublabel(s);
         }
-        format!("\x1b[94m{:>19}{}\x1b[0m: ", "", s)
+        format!("\x1b[94m{:>16}{}\x1b[0m: ", "", s)
     }
 
+    #[allow(unreachable_code)]
     pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
         #[cfg(not(target_family = "unix"))]
         return Self::raw_inline_sublabel(label, sub);
@@ -44,7 +47,7 @@ impl CpuDisplay {
         if !self.color {
             return Self::raw_inline_sublabel(label, sub);
         }
-        format!("\x1b[32m{:>17}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
+        format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
     }
 
     pub fn simple_line(&self, l: &str, v: &str) {

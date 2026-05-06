@@ -8,6 +8,281 @@ use crate::common::*;
 use std::collections::{BTreeMap, HashSet};
 use std::process::Command;
 
+// ----------------------------------------------------------------------------
+// Feature detection via sysctl (text-based, matches existing pattern)
+// ----------------------------------------------------------------------------
+
+/// Parses sysctl output for hw.optional.* keys to detect CPU features.
+/// All feature names are converted to lowercase for consistency.
+pub fn get_features_from_sysctl() -> BTreeMap<String, bool> {
+    let mut features: BTreeMap<String, bool> = BTreeMap::new();
+
+    // Run sysctl to get hw.optional and hw.optional.arm keys
+    if let Ok(output) = Command::new("sysctl").arg("-a").output()
+        && let Ok(stdout) = String::from_utf8(output.stdout)
+    {
+        for line in stdout.lines() {
+            let line = line.trim();
+            if let Some((key, value)) = line.split_once(':') {
+                let key = key.trim();
+                let value = value.trim();
+
+                // Only process hw.optional.* keys
+                if key.starts_with("hw.optional") {
+                    // Convert value to bool (1 = true, 0 = false)
+                    if let Ok(v) = value.parse::<i32>()
+                        && v == 1
+                    {
+                        // Extract feature name from key
+                        // e.g., "hw.optional.neon" -> "neon"
+                        // e.g., "hw.optional.arm.FEAT_AES" -> "aes"
+                        let feature_name = if key.starts_with("hw.optional.arm.FEAT_") {
+                            // Remove "hw.optional.arm.FEAT_" prefix
+                            let feat = key.strip_prefix("hw.optional.arm.FEAT_").unwrap();
+                            feat.to_lowercase()
+                        } else if key.starts_with("hw.optional.arm.FEAT") {
+                            // Handle "hw.optional.arm.FEATXYZ" without underscore
+                            let feat = key.strip_prefix("hw.optional.arm.FEAT").unwrap();
+                            feat.to_lowercase()
+                        } else if key.starts_with("hw.optional.arm.") {
+                            let feat = key.strip_prefix("hw.optional.arm.").unwrap();
+                            feat.to_lowercase()
+                        } else if key.starts_with("hw.optional.") {
+                            let feat = key.strip_prefix("hw.optional.").unwrap();
+                            feat.to_lowercase()
+                        } else {
+                            continue;
+                        };
+
+                        // Map known feature names to canonical lowercase names
+                        let canonical = match feature_name.as_str() {
+                            "floatingpoint" => "fp",
+                            "neon" => "neon",
+                            "neon_hpfp" => "fphp",
+                            "neon_fp16" => "fp16",
+                            "armv8_1_atomics" => "atomics",
+                            "armv8_crc32" => "crc32",
+                            "armv8_2_fhm" => "asimdfhm",
+                            "armv8_2_sha512" => "sha512",
+                            "armv8_2_sha3" => "sha3",
+                            "amx_version" => "amx",
+                            "ucnormal_mem" => "ucnormal",
+                            "arm64" => "asimd", // arm64 implies ASIMD
+                            // hw.optional.arm.FEAT_* names
+                            "crc32" => "crc32",
+                            "flagm" => "flagm",
+                            "fhm" => "asimdfhm",
+                            "dotprod" => "dotprod",
+                            "sha3" => "sha3",
+                            "rdm" => "asimdrdm",
+                            "lse" => "atomics",
+                            "sha256" => "sha2",
+                            "sha512" => "sha512",
+                            "sha1" => "sha1",
+                            "aes" => "aes",
+                            "pmull" => "pmull",
+                            "specres" => "specres",
+                            "specres2" => "specres2",
+                            "sb" => "sb",
+                            "frintts" => "frintts",
+                            "lrcpc" => "lrcpc",
+                            "lrcpc2" => "lrcpc2",
+                            "fcma" => "fcma",
+                            "jscvt" => "jscvt",
+                            "pauth" => "pauth",
+                            "pauth2" => "pauth2",
+                            "fpac" => "fpac",
+                            "fpaccomb" => "fpac", // alias
+                            "dpb" => "dpb",
+                            "dpb2" => "dpb2",
+                            "bf16" => "bf16",
+                            "ebf16" => "bf16", // alias
+                            "i8mm" => "i8mm",
+                            "wft" => "wfx",
+                            "rpres" => "rpres",
+                            "cssc" => "cssc",
+                            "hbc" => "hbc",
+                            "ecv" => "ecv",
+                            "afp" => "afp",
+                            "lse2" => "lse2",
+                            "csv2" => "csv2",
+                            "csv3" => "csv3",
+                            "pacimp" => "pauth",
+                            _ => &feature_name,
+                        };
+
+                        features.insert(canonical.to_string(), true);
+                    }
+                }
+            }
+        }
+    }
+
+    // Default features for Apple Silicon (always present)
+    if features.is_empty() {
+        // If sysctl didn't work, assume M1+ baseline features
+        features.insert("fp".to_string(), true);
+        features.insert("asimd".to_string(), true);
+        features.insert("neon".to_string(), true);
+        features.insert("evtstrm".to_string(), true);
+        features.insert("aes".to_string(), true);
+        features.insert("pmull".to_string(), true);
+        features.insert("sha1".to_string(), true);
+        features.insert("sha2".to_string(), true);
+        features.insert("crc32".to_string(), true);
+        features.insert("atomics".to_string(), true);
+        features.insert("asimdrdm".to_string(), true);
+        features.insert("jscvt".to_string(), true);
+        features.insert("fcma".to_string(), true);
+        features.insert("lrcpc".to_string(), true);
+        features.insert("dcpop".to_string(), true);
+        features.insert("asimddp".to_string(), true);
+        features.insert("sve".to_string(), true);
+    }
+
+    features
+}
+
+/// Check if floating-point (fp) is supported.
+pub fn has_fp() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("fp").copied().unwrap_or(false)
+}
+
+/// Check if Advanced SIMD (NEON/asimd) is supported.
+pub fn has_simd() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("asimd").copied().unwrap_or(false)
+        || features.get("neon").copied().unwrap_or(false)
+}
+
+/// Check if NEON is supported (alias for has_simd on ARM).
+pub fn has_neon() -> bool {
+    has_simd()
+}
+
+/// Check if AES instructions are supported.
+pub fn has_aes() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("aes").copied().unwrap_or(false)
+}
+
+/// Check if SHA1 instructions are supported.
+pub fn has_sha1() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("sha1").copied().unwrap_or(false)
+}
+
+/// Check if SHA2 instructions are supported.
+pub fn has_sha2() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("sha2").copied().unwrap_or(false)
+}
+
+/// Check if SHA3 instructions are supported.
+pub fn has_sha3() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("sha3").copied().unwrap_or(false)
+}
+
+/// Check if SHA512 instructions are supported.
+pub fn has_sha512() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("sha512").copied().unwrap_or(false)
+}
+
+/// Check if CRC32 instructions are supported.
+pub fn has_crc32() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("crc32").copied().unwrap_or(false)
+}
+
+/// Check if atomic instructions (LSE) are supported.
+pub fn has_atomics() -> bool {
+    let features = get_features_from_sysctl();
+    features.get("atomics").copied().unwrap_or(false)
+}
+
+/// Returns all detected features as a BTreeMap of category to space-separated features.
+pub fn get_all_features() -> BTreeMap<&'static str, String> {
+    let mut detected: BTreeMap<&'static str, bool> = BTreeMap::new();
+    let features = get_features_from_sysctl();
+
+    // Base features
+    detected.insert("fp", features.get("fp").copied().unwrap_or(false));
+    detected.insert("asimd", features.get("asimd").copied().unwrap_or(false));
+    detected.insert("cpuid", features.get("cpuid").copied().unwrap_or(false));
+    detected.insert("evtstrm", features.get("evtstrm").copied().unwrap_or(false));
+
+    // SIMD
+    detected.insert("neon", features.get("neon").copied().unwrap_or(false));
+    detected.insert("asimdhp", features.get("asimdhp").copied().unwrap_or(false));
+    detected.insert(
+        "asimdfhm",
+        features.get("asimdfhm").copied().unwrap_or(false),
+    );
+    detected.insert("asimddp", features.get("asimddp").copied().unwrap_or(false));
+    detected.insert(
+        "asimdrdm",
+        features.get("asimdrdm").copied().unwrap_or(false),
+    );
+
+    // Crypto
+    detected.insert("aes", features.get("aes").copied().unwrap_or(false));
+    detected.insert("pmull", features.get("pmull").copied().unwrap_or(false));
+    detected.insert("sha1", features.get("sha1").copied().unwrap_or(false));
+    detected.insert("sha2", features.get("sha2").copied().unwrap_or(false));
+    detected.insert("sha3", features.get("sha3").copied().unwrap_or(false));
+    detected.insert("sha512", features.get("sha512").copied().unwrap_or(false));
+    detected.insert("sm3", features.get("sm3").copied().unwrap_or(false));
+    detected.insert("sm4", features.get("sm4").copied().unwrap_or(false));
+
+    // Atomic
+    detected.insert("atomics", features.get("atomics").copied().unwrap_or(false));
+    detected.insert("lse", features.get("atomics").copied().unwrap_or(false));
+    detected.insert("lse2", features.get("lse2").copied().unwrap_or(false));
+
+    // FP
+    detected.insert("fphp", features.get("fphp").copied().unwrap_or(false));
+    detected.insert("fp16", features.get("fp16").copied().unwrap_or(false));
+    detected.insert("fcma", features.get("fcma").copied().unwrap_or(false));
+    detected.insert("jscvt", features.get("jscvt").copied().unwrap_or(false));
+
+    // Misc
+    detected.insert("crc32", features.get("crc32").copied().unwrap_or(false));
+    detected.insert("dcpop", features.get("dcpop").copied().unwrap_or(false));
+    detected.insert("lrcpc", features.get("lrcpc").copied().unwrap_or(false));
+    detected.insert("lrcpc2", features.get("lrcpc2").copied().unwrap_or(false));
+    detected.insert("flagm", features.get("flagm").copied().unwrap_or(false));
+    detected.insert("flagm2", features.get("flagm2").copied().unwrap_or(false));
+    detected.insert("dit", features.get("dit").copied().unwrap_or(false));
+    detected.insert("ssbs", features.get("ssbs").copied().unwrap_or(false));
+    detected.insert("bti", features.get("bti").copied().unwrap_or(false));
+    detected.insert("pauth", features.get("pauth").copied().unwrap_or(false));
+    detected.insert("pauth2", features.get("pauth2").copied().unwrap_or(false));
+    detected.insert("fpac", features.get("fpac").copied().unwrap_or(false));
+    detected.insert("specres", features.get("specres").copied().unwrap_or(false));
+    detected.insert(
+        "specres2",
+        features.get("specres2").copied().unwrap_or(false),
+    );
+    detected.insert("csv2", features.get("csv2").copied().unwrap_or(false));
+    detected.insert("csv3", features.get("csv3").copied().unwrap_or(false));
+    detected.insert("ecv", features.get("ecv").copied().unwrap_or(false));
+    detected.insert("sb", features.get("sb").copied().unwrap_or(false));
+    detected.insert("frintts", features.get("frintts").copied().unwrap_or(false));
+    detected.insert("dpb", features.get("dpb").copied().unwrap_or(false));
+    detected.insert("dpb2", features.get("dpb2").copied().unwrap_or(false));
+    detected.insert("dotprod", features.get("dotprod").copied().unwrap_or(false));
+    detected.insert("bf16", features.get("bf16").copied().unwrap_or(false));
+    detected.insert("i8mm", features.get("i8mm").copied().unwrap_or(false));
+    detected.insert("sve", features.get("sve").copied().unwrap_or(false));
+    detected.insert("sve2", features.get("sve2").copied().unwrap_or(false));
+    detected.insert("sme", features.get("sme").copied().unwrap_or(false));
+
+    super::features::build_feature_map(&detected)
+}
+
 const CPUFAMILY_ARM_FIRESTORM_ICESTORM: usize = 0x1b588bb3;
 const CPUFAMILY_ARM_BLIZZARD_AVALANCHE: usize = 0xda33d83d;
 const CPUFAMILY_ARM_EVEREST_SAWTOOTH: usize = 0x8765edea;
@@ -127,6 +402,7 @@ pub struct Cpu {
     pub model: String,
     pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
     pub raw: BTreeMap<String, String>,
+    pub features: BTreeMap<&'static str, String>,
 }
 
 impl TCpu for Cpu {
@@ -198,6 +474,8 @@ impl TCpu for Cpu {
             );
         }
 
+        let features = super::get_all_features();
+
         Self {
             model: values.get("machdep.cpu.brand_string").unwrap().to_string(),
             raw_midr,
@@ -206,6 +484,7 @@ impl TCpu for Cpu {
             cpu_arch,
             cores,
             raw: values,
+            features,
         }
     }
 
@@ -227,7 +506,7 @@ impl TCpu for Cpu {
     }
 
     fn display_table(&self, color: bool) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, color);
+        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, color);
     }
 }
 

@@ -16,11 +16,14 @@ lto = true
 strip = true
 panic = "abort"
 
-[target.'cfg(all(any(target_arch = "aarch64", target_arch = "arm64ec"), target_os = "windows"))'.dependencies]
-windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Registry"] }
+[target.'cfg(all(target_os = "windows", any(target_arch="aarch64", target_arch="arm64ec")))'.dependencies]
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Registry", "Win32_System_Threading"] }
 
 [target.'cfg(not(any(target_os = "none", target_arch = "x86", target_arch ="x86_64")))'.dependencies]
 core_affinity = "0.8.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
 
 [[bin]]
 name = "rustid"
