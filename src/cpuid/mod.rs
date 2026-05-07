@@ -27,7 +27,6 @@ pub mod provider;
 pub mod topology;
 pub mod vendor;
 
-#[cfg(target_arch = "x86")]
 pub mod quirks;
 
 // ----------------------------------------------------------------------------
@@ -37,5 +36,4 @@ pub use constants::*;
 pub use cpu::*;
 pub use fns::*;
 
-#[cfg(target_arch = "x86")]
 pub use quirks::*;

@@ -38,7 +38,6 @@ pub const HYP_VENDOR_XEN: &str = "XenVMMXenVMM";
 // ----------------------------------------------------------------------------
 
 pub const AMD_EASTER_EGG_ADDR: u32 = 0x8FFF_FFFF;
-#[cfg(target_arch = "x86")]
 pub const RISE_EASTER_EGG_ADDR: u32 = 0x0000_5A4E;
 
 // --------------------------------------------

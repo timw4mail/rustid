@@ -169,6 +169,12 @@ impl Cyrix {
         }
     }
 
+    #[cfg(not(all(target_arch = "x86", target_os = "none")))]
+    fn get_device_ids() -> (u8, u8) {
+        (Self::get_device_id_from_signature(), 0)
+    }
+
+    #[cfg(all(target_arch = "x86", target_os = "none"))]
     fn get_device_ids() -> (u8, u8) {
         if !crate::cpuid::is_cyrix() {
             return (0, 0);
@@ -207,8 +213,21 @@ impl Cyrix {
         (dir0, dir1)
     }
 
+    #[cfg(not(target_os = "none"))]
     fn get_device_id_from_signature() -> u8 {
-        #[cfg(target_os = "none")]
+        let sig = CpuSignature::detect();
+
+        match (sig.family, sig.model) {
+            (4, 9) => 0x28,
+            (5, 2 | 3) => 0x30,
+            (5, 4) => 0x40,
+            (6, 0) => 0x50,
+            _ => 0,
+        }
+    }
+
+    #[cfg(target_os = "none")]
+    fn get_device_id_from_signature() -> u8 {
         if let Some(signature) = crate::cpuid::get_reset_signature() {
             return match (signature.family, signature.model) {
                 (3, 2) => 0x01,
@@ -217,8 +236,6 @@ impl Cyrix {
                 _ => 0,
             };
         }
-
-        0
     }
 
     pub fn get_signature_from_device_id() -> CpuSignature {

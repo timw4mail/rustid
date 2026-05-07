@@ -2,7 +2,6 @@
 //!
 //! For 386/486 processors that don't support the CPUID instruction,
 //! these methods use alternative techniques to identify the CPU vendor and type.
-#![cfg(target_arch = "x86")]
 
 use super::*;
 
@@ -44,10 +43,16 @@ pub fn is_486() -> bool {
     is_ac_flag_supported()
 }
 
+#[cfg(not(target_arch = "x86"))]
+pub fn is_ac_flag_supported() -> bool {
+    true
+}
+
 /// Helper to check for AC flag support in EFLAGS register, which is a shibboleth that can
 /// determine if the CPU is a 386 or 486.
 ///
 /// Verified on real hardware
+#[cfg(target_arch = "x86")]
 fn is_ac_flag_supported() -> bool {
     let supported: u32;
     unsafe {
@@ -71,8 +76,14 @@ fn is_ac_flag_supported() -> bool {
     supported != 0
 }
 
+#[cfg(not(target_arch = "x86"))]
+pub fn has_cyrix_5_2_quirk() -> bool {
+    false
+}
+
 /// Returns true if the CPU is a Cyrix processor.
 #[inline(never)]
+#[cfg(target_arch = "x86")]
 pub fn has_cyrix_5_2_quirk() -> bool {
     let flags: u8;
     unsafe {

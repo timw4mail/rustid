@@ -365,7 +365,6 @@ impl CpuArch {
             return Centaur::micro_arch(model, s);
         }
 
-        #[cfg(target_arch = "x86")]
         match brand {
             CpuBrand::AMD => Amd::micro_arch(model, s),
 
@@ -420,15 +419,6 @@ impl CpuArch {
 
             CpuBrand::NexGen => unknown_model,
 
-            _ => unknown_model,
-        }
-
-        #[cfg(target_arch = "x86_64")]
-        match brand {
-            CpuBrand::AMD => Amd::micro_arch(model, s),
-
-            CpuBrand::Intel => Intel::micro_arch(model, s),
-
             CpuBrand::Hygon => unknown_model,
 
             _ => unknown_model,
@@ -442,14 +432,11 @@ pub(crate) mod tests {
 
     #[test]
     fn test_micro_arch_from_string() {
-        #[cfg(target_arch = "x86")]
-        {
-            assert_eq!(String::from(MicroArch::Winchip), "Winchip");
-            assert_eq!(String::from(MicroArch::Cy5x86), "Cx5x86");
-            assert_eq!(String::from(MicroArch::VortexDX3), "Vortex86DX3");
-            assert_eq!(String::from(MicroArch::Crusoe), "Crusoe");
-            assert_eq!(String::from(MicroArch::U5S), "U5S");
-        }
+        assert_eq!(String::from(MicroArch::Winchip), "Winchip");
+        assert_eq!(String::from(MicroArch::Cy5x86), "Cx5x86");
+        assert_eq!(String::from(MicroArch::VortexDX3), "Vortex86DX3");
+        assert_eq!(String::from(MicroArch::Crusoe), "Crusoe");
+        assert_eq!(String::from(MicroArch::U5S), "U5S");
 
         assert_eq!(String::from(MicroArch::Am486), "Am486");
         assert_eq!(String::from(MicroArch::ZenPlus), "Zen+");
@@ -498,7 +485,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_dmp() {
         let model = "DMP Processor";
         let vendor_str = VENDOR_DMP;
@@ -517,7 +503,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_rise() {
         let model = "Rise Processor";
         let vendor_str = VENDOR_RISE;
@@ -536,7 +521,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[cfg(target_arch = "x86")]
     fn test_cpu_arch_find_umc_transmeta() {
         let model = "Processor";
 

@@ -94,7 +94,6 @@ impl FeatureClass {
             return FeatureClass::i486;
         }
 
-        #[cfg(target_arch = "x86")]
         if is_486() {
             return FeatureClass::i486;
         }
@@ -275,7 +274,6 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
-    #[cfg(target_arch = "x86")]
     fn intel_brand_index(&self) -> Option<String> {
         let brand_id = get_brand_id();
 
@@ -351,7 +349,6 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String {
-        #[cfg(target_arch = "x86")]
         match CpuBrand::detect() {
             CpuBrand::AMD => {
                 // The Geode NX is special
@@ -497,8 +494,6 @@ impl Cpu {
 
         let addr = match brand {
             CpuBrand::AMD => AMD_EASTER_EGG_ADDR,
-
-            #[cfg(target_arch = "x86")]
             CpuBrand::Rise | CpuBrand::SiS | CpuBrand::DMP | CpuBrand::Rdc => RISE_EASTER_EGG_ADDR,
 
             _ => 1,
@@ -509,7 +504,6 @@ impl Cpu {
 
             let reg_list = match brand {
                 // Surely there had to be a reason for this silly ordering?
-                #[cfg(target_arch = "x86")]
                 CpuBrand::Rise | CpuBrand::SiS => [res.ebx, res.edx, res.ecx, res.eax],
 
                 _ => [res.eax, res.ebx, res.ecx, res.edx],
@@ -948,7 +942,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_arch = "x86")]
     fn test_display_model_string_x32() {
         // Test case for MicroArch::Am486
         let mut arch_am486 = CpuArch::default();

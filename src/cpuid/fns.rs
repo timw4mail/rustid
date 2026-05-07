@@ -163,7 +163,19 @@ pub fn vendor_str() -> String {
         return String::from(get_vendor_by_quirk());
     }
 
-    let res = x86_cpuid(LEAF_0);
+    raw_vendor_str(LEAF_0)
+}
+
+pub fn hypervisor_str() -> String {
+    if is_hypervisor_guest() {
+        raw_vendor_str(HYP_LEAF_0)
+    } else {
+        String::from(UNK)
+    }
+}
+
+fn raw_vendor_str(leaf: u32) -> String {
+    let res = x86_cpuid(leaf);
     let mut bytes = [0u8; 12];
 
     bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
@@ -175,26 +187,6 @@ pub fn vendor_str() -> String {
         .trim_matches('\0');
 
     String::from(s)
-}
-
-pub fn hypervisor_str() -> String {
-    if is_hypervisor_guest() {
-        let res = x86_cpuid(HYP_LEAF_0);
-
-        let mut bytes = [0u8; 12];
-
-        bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
-        bytes[4..8].copy_from_slice(&res.edx.to_le_bytes());
-        bytes[8..12].copy_from_slice(&res.ecx.to_le_bytes());
-
-        let s = core::str::from_utf8(&bytes)
-            .unwrap_or(UNK)
-            .trim_matches('\0');
-
-        String::from(s)
-    } else {
-        String::from(UNK)
-    }
 }
 
 pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> String {

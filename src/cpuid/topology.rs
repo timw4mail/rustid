@@ -32,7 +32,6 @@ impl Speed {
                     measured: false,
                 }
             }
-            #[cfg(target_arch = "x86")]
             VENDOR_TRANSMETA => {
                 use crate::cpuid::TRANSMETA_LEAF_1;
 

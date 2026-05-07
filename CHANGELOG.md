@@ -16,6 +16,7 @@
 - Restored functionality of CPU reset signature detection (for dos)
 - Updated README to focus on binary usage
 - Updated README to reflect binaries and cargo install
+- Improved output for cpu dumps when displaying dumps on x86_64 for x86 cpus
 
 ## [1.0.0]
 
