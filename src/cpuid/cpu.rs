@@ -350,16 +350,15 @@ impl Cpu {
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String {
         match CpuBrand::detect() {
-            CpuBrand::AMD => {
+            CpuBrand::AMD
                 // The Geode NX is special
                 if CpuBrand::detect() == CpuBrand::AMD
                     && self.signature.family == 6
                     && self.signature.model == 8
                     && self.signature.stepping == 1
-                {
+                => {
                     return String::from("AMD Geode NX");
                 }
-            }
             CpuBrand::Cyrix => {
                 // Cyrix MSR model lookup is more accurate than the 'generic' way
                 return vendor::Cyrix::model_string();
@@ -878,7 +877,7 @@ impl TCpu for Cpu {
             if self.features.len() == 1 {
                 simple_line("Features", self.features.get("").unwrap());
             } else {
-                let keys = ["", "SSE", "AVX", "AVX512", "Security", "Other"];
+                let keys = ["", "SSE", "AVX", "AVX512", "Security", "Other", "Centaur"];
                 for key in keys {
                     if self.features.contains_key(key) {
                         if key.is_empty() {
@@ -944,10 +943,12 @@ mod tests {
     #[test]
     fn test_display_model_string_x32() {
         // Test case for MicroArch::Am486
-        let mut arch_am486 = CpuArch::default();
-        arch_am486.micro_arch = MicroArch::Am486;
+        let mut arch_am486 = CpuArch {
+            micro_arch: MicroArch::Am486,
+            code_name: "Am486DX2",
+            ..Default::default()
+        };
 
-        arch_am486.code_name = "Am486DX2";
         let cpu_am486_dx2 = Cpu {
             arch: arch_am486.clone(),
             brand_id: 0,
@@ -975,12 +976,12 @@ mod tests {
         );
 
         // Test case for MicroArch::I486
-        let mut arch_i486 = CpuArch::default();
-        arch_i486.micro_arch = MicroArch::I486;
-
-        arch_i486.code_name = "i80486DX";
         let cpu_i486_dx = Cpu {
-            arch: arch_i486.clone(),
+            arch: CpuArch {
+                micro_arch: MicroArch::I486,
+                code_name: "i80486DX",
+                ..Default::default()
+            },
             brand_id: 0,
             easter_egg: None,
             signature: CpuSignature::detect(),

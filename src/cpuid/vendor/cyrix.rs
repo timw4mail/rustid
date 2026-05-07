@@ -174,6 +174,19 @@ impl Cyrix {
         (Self::get_device_id_from_signature(), 0)
     }
 
+    #[cfg(not(target_os = "none"))]
+    fn get_device_id_from_signature() -> u8 {
+        let sig = CpuSignature::detect();
+
+        match (sig.family, sig.model) {
+            (4, 9) => 0x28,
+            (5, 2 | 3) => 0x30,
+            (5, 4) => 0x40,
+            (6, 0) => 0x50,
+            _ => 0,
+        }
+    }
+
     #[cfg(all(target_arch = "x86", target_os = "none"))]
     fn get_device_ids() -> (u8, u8) {
         if !crate::cpuid::is_cyrix() {
@@ -213,19 +226,6 @@ impl Cyrix {
         (dir0, dir1)
     }
 
-    #[cfg(not(target_os = "none"))]
-    fn get_device_id_from_signature() -> u8 {
-        let sig = CpuSignature::detect();
-
-        match (sig.family, sig.model) {
-            (4, 9) => 0x28,
-            (5, 2 | 3) => 0x30,
-            (5, 4) => 0x40,
-            (6, 0) => 0x50,
-            _ => 0,
-        }
-    }
-
     #[cfg(target_os = "none")]
     fn get_device_id_from_signature() -> u8 {
         if let Some(signature) = crate::cpuid::get_reset_signature() {
@@ -235,6 +235,8 @@ impl Cyrix {
                 (4, 8) => 0x1B,
                 _ => 0,
             };
+        } else {
+            0
         }
     }
 
@@ -298,13 +300,7 @@ impl Cyrix {
         // 6x86/6x86L/6x86MX can toggle cpuid, earlier models can not
         // MediaGX always has cpuid enabled
         match model {
-            CyrixModel::Cx5x86 => {
-                if stepping >= 1 {
-                    true
-                } else {
-                    false
-                }
-            }
+            CyrixModel::Cx5x86 => stepping >= 1,
             CyrixModel::Cx6x86 | CyrixModel::Cx6x86L | CyrixModel::M2 => true,
             _ => false,
         }
@@ -320,7 +316,7 @@ impl Cyrix {
 
         let model = CyrixModel::detect().to_str();
 
-        format!("Cyrix {}", model).into()
+        format!("Cyrix {}", model)
     }
 
     pub fn brand_string() -> &'static str {

@@ -9,6 +9,7 @@
 - Expanded AX512 feature list
 - CPU feature list categorized by type
 - Direct conversion of raw ELF binary to DOS MZ EXE binary (instead of using rust-objcopy)
+- Feature section for Centaur cpu instructions
 
 ### Changed
 - Display of CPU feature list for ARM

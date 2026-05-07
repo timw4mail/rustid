@@ -17,6 +17,7 @@ pub mod cpu;
 pub mod dos;
 
 pub mod dump;
+pub mod features;
 pub mod fns;
 pub mod micro_arch;
 pub mod mp;
@@ -34,6 +35,7 @@ pub mod quirks;
 pub use brand::*;
 pub use constants::*;
 pub use cpu::*;
+pub use features::*;
 pub use fns::*;
 
 pub use quirks::*;

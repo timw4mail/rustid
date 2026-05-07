@@ -810,6 +810,20 @@ mod zhaoxin_kx5640 {
             assert_eq!(res.eax, 0xC0000004);
         });
     }
+
+    #[test]
+    fn test_zhaoxin_padlock_features() {
+        with_mock_cpu(|| {
+            use rustid::cpuid::vendor::centaur;
+            assert!(!centaur::has_rng(), "KX-5640 has no RNG");
+            assert!(!centaur::has_rng2(), "KX-5640 has no RNG2");
+            assert!(centaur::has_ace(), "KX-5640 has ACE enabled");
+            assert!(centaur::has_ace2(), "KX-5640 has ACE2 enabled");
+            assert!(centaur::has_phe(), "KX-5640 has PHE");
+            assert!(centaur::has_phe2(), "KX-5640 has PHE2");
+            assert!(centaur::has_pmm(), "KX-5640 has PMM");
+        });
+    }
 }
 
 mod via_c7d {
@@ -899,6 +913,85 @@ mod via_c7d {
         with_mock_cpu(|| {
             let res = x86_cpuid_count(0xC000_0000, 0);
             assert_eq!(res.eax, 0xC000_0002);
+        });
+    }
+
+    #[test]
+    fn test_via_padlock_features() {
+        with_mock_cpu(|| {
+            use rustid::cpuid::vendor::centaur;
+            assert!(!centaur::has_rng(), "C7-D has no RNG");
+            assert!(!centaur::has_rng2(), "C7-D has no RNG2");
+            assert!(!centaur::has_ace(), "C7-D ACE present but NOT enabled");
+            assert!(!centaur::has_ace2(), "C7-D ACE2 present but NOT enabled");
+            assert!(centaur::has_phe(), "C7-D has PHE");
+            assert!(centaur::has_phe2(), "C7-D has PHE2");
+            assert!(centaur::has_pmm(), "C7-D has PMM");
+        });
+    }
+}
+
+mod olpc {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/olpc.txt");
+        test();
+    }
+
+    #[test]
+    fn test_olpc_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_CENTAUR);
+        });
+    }
+
+    #[test]
+    fn test_olpc_padlock_features() {
+        with_mock_cpu(|| {
+            use rustid::cpuid::vendor::centaur;
+            assert!(!centaur::has_rng(), "VIA C5M has no RNG");
+            assert!(!centaur::has_rng2(), "VIA C5M has no RNG2");
+            assert!(!centaur::has_ace(), "VIA C5M ACE present but NOT enabled");
+            assert!(!centaur::has_ace2(), "VIA C5M ACE2 present but NOT enabled");
+            assert!(centaur::has_phe(), "VIA C5M has PHE");
+            assert!(centaur::has_phe2(), "VIA C5M has PHE2");
+            assert!(centaur::has_pmm(), "VIA C5M has PMM");
+        });
+    }
+}
+
+mod via_w2b {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/W2B-DUMP.TXT");
+        test();
+    }
+
+    #[test]
+    fn test_w2b_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_CENTAUR);
+        });
+    }
+
+    #[test]
+    fn test_w2b_padlock_features() {
+        with_mock_cpu(|| {
+            use rustid::cpuid::vendor::centaur;
+            assert!(centaur::has_rng(), "Winchip 2B has RNG");
+            assert!(!centaur::has_rng2(), "Winchip 2B has no RNG2");
+            assert!(centaur::has_ace(), "Winchip 2B has ACE enabled");
+            assert!(
+                !centaur::has_ace2(),
+                "Winchip 2B ACE2 present but NOT enabled"
+            );
+            assert!(!centaur::has_phe(), "Winchip 2B has no PHE");
+            assert!(centaur::has_phe2(), "Winchip 2B has PHE2");
+            assert!(!centaur::has_pmm(), "Winchip 2B has no PMM");
         });
     }
 }

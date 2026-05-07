@@ -12,7 +12,6 @@ impl TMicroArch for Centaur {
             CpuBrand::Zhaoxin
         } else {
             match s.family {
-                #[cfg(target_arch = "x86")]
                 5 => CpuBrand::IDT,
                 6 => CpuBrand::Via,
                 7 => CpuBrand::Zhaoxin,
@@ -74,6 +73,54 @@ impl TMicroArch for Centaur {
             _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
+}
+
+// ----------------------------------------------------------------------------
+// ! Centaur Feature Detection (CPUID leaf 0xC0000001, EDX register)
+//
+// These are VIA PadLock security features and Centaur-specific extensions.
+// For ACE and ACE2, both the present bit AND the enable bit must be set.
+// ----------------------------------------------------------------------------
+
+use crate::cpuid::{CENTAUR_LEAF_1, Reg, has_feature};
+
+/// Random Number Generator (`xstore` instruction)
+pub fn has_rng() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 0)
+}
+
+/// Enhanced RNG (`xstore2` instruction)
+pub fn has_rng2() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 1)
+}
+
+/// Advanced Cryptography Engine (AES encryption/decryption)
+///
+/// Requires both presence (bit 2) and enable (bit 4).
+pub fn has_ace() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 2) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 4)
+}
+
+/// Advanced Cryptography Engine 2 (AES 192/256-bit keys)
+///
+/// Requires both presence (bit 3) and enable (bit 5).
+pub fn has_ace2() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 3) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 5)
+}
+
+/// PadLock Hash Engine (SHA-1/SHA-256)
+pub fn has_phe() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 6)
+}
+
+/// PadLock Hash Engine 2 (SHA-512)
+pub fn has_phe2() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 7)
+}
+
+/// PadLock Montgomery Multiplier (big-integer modular exponentiation)
+pub fn has_pmm() -> bool {
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, 8)
 }
 
 #[cfg(test)]
