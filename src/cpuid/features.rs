@@ -164,6 +164,10 @@ pub fn has_avx512_dq() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 17)
 }
 
+pub fn has_rdseed() -> bool {
+    has_feature(LEAF_7, Reg::Ebx, 18)
+}
+
 /// Returns true if the CPU supports AVX-512 IFMA instructions.
 pub fn has_avx512_ifma() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 21)
@@ -198,6 +202,7 @@ pub fn has_avx512_vl() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 31)
 }
 
+/// Vector version of AES instruction
 pub fn has_vaes() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 9)
 }
@@ -349,8 +354,8 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     const BASIC_FEATURES: FeatureMap = &[
         ("FPU", has_fpu),
         ("TSC", has_tsc),
-        ("CMPXCHG8B", has_cx8),
-        ("CMPXCHG16B", has_cx16),
+        ("CX8", has_cx8),
+        ("CX16", has_cx16),
         ("CMOV", has_cmov),
         ("MMX", has_mmx),
         ("3DNow!", has_3dnow),
@@ -394,6 +399,8 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
     const SECURITY_FEATURES: FeatureMap = &[
         ("NX", has_nx),
+        ("RDSEED", has_rdseed),
+        ("RDRAND", has_rdrand),
         ("AES", has_aes),
         ("VAES", has_vaes),
         ("SHA", has_sha),
@@ -406,7 +413,6 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("FMA", has_fma),
         ("BMI1", has_bmi1),
         ("BMI2", has_bmi2),
-        ("RDRAND", has_rdrand),
         ("POPCNT", has_popcnt),
         ("F16C", has_f16c),
     ];
