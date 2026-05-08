@@ -24,7 +24,8 @@ impl CpuidProvider for MockCpuidProvider {
 }
 
 fn raw_path(segment: &str) -> PathBuf {
-    let mut path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let mut path =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("Couldn't find repo dir"));
     path.push("tests");
     path.push("cpuid");
     path.push(segment);
@@ -166,7 +167,7 @@ mod ppro {
     #[test]
     fn test_socket_count() {
         let file = raw_path("linux-cpuinfo/p6x2.txt");
-        let mp = MpTable::detect_cpuinfo(file.to_str().unwrap());
+        let mp = MpTable::detect_cpuinfo(file.to_str().expect("Test file missing"));
         assert_eq!(mp.socket_count(), 2);
     }
 }

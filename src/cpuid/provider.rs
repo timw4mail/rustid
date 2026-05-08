@@ -59,13 +59,17 @@ pub fn reset_cpuid_provider() {
 
 /// Sets a custom global CPUID provider.
 pub fn set_global_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P) {
-    let mut p = PROVIDER.write().unwrap();
+    let mut p = PROVIDER
+        .write()
+        .expect("Failed to get CPUID Provider RefCell for writing");
     *p = Box::new(provider);
 }
 
 /// Resets the global CPUID provider to the real implementation.
 pub fn reset_global_cpuid_provider() {
-    let mut p = PROVIDER.write().unwrap();
+    let mut p = PROVIDER
+        .write()
+        .expect("Failed to get CPUID Provider RefCell for writing");
     *p = Box::new(RealCpuid);
 }
 
@@ -74,7 +78,10 @@ pub(crate) fn cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
         if let Some(p) = tp.borrow().as_ref() {
             return p.cpuid_count(leaf, sub_leaf);
         }
-        PROVIDER.read().unwrap().cpuid_count(leaf, sub_leaf)
+        PROVIDER
+            .read()
+            .expect("Failed to get CPUID Provider")
+            .cpuid_count(leaf, sub_leaf)
     })
 }
 
@@ -83,7 +90,10 @@ pub(crate) fn info_source() -> CpuidInfoSource {
         if let Some(p) = tp.borrow().as_ref() {
             return p.info_source();
         }
-        PROVIDER.read().unwrap().info_source()
+        PROVIDER
+            .read()
+            .expect("Failed to get CPUID Provider")
+            .info_source()
     })
 }
 

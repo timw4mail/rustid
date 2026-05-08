@@ -865,7 +865,12 @@ impl TCpu for Cpu {
         // CPU Features
         if !self.features.is_empty() {
             if self.features.len() == 1 {
-                simple_line("Features", self.features.get("").unwrap());
+                simple_line(
+                    "Features",
+                    self.features
+                        .get("")
+                        .expect("There should be at least one key in the features BTreeMap."),
+                );
             } else {
                 let keys = ["", "SSE", "AVX", "AVX512", "Security", "Other", "Centaur"];
                 for key in keys {
@@ -874,10 +879,18 @@ impl TCpu for Cpu {
                             println!(
                                 "{}{}",
                                 inline_sublabel("Features", "Base"),
-                                self.features.get(key).unwrap()
+                                self.features.get(key).expect(
+                                    "Somehow the key in the features BTreeMap disappeared!"
+                                )
                             );
                         } else {
-                            println!("{}{}", sublabel(key), self.features.get(key).unwrap());
+                            println!(
+                                "{}{}",
+                                sublabel(key),
+                                self.features.get(key).expect(
+                                    "Somehow the key in the features BTreeMap disappeared!"
+                                )
+                            );
                         }
                     }
                 }
