@@ -589,14 +589,6 @@ impl TCpu for Cpu {
             }
         };
 
-        #[cfg(not(target_family = "unix"))]
-        let label = |label| alloc::format!("{:>14}: ", label);
-        #[cfg(not(target_family = "unix"))]
-        let sublabel = |label| alloc::format!("{:>16}{}: ", "", label);
-        #[cfg(not(target_family = "unix"))]
-        let inline_sublabel = |label, sub| alloc::format!("{:>14}: {:1}: ", label, sub);
-
-        #[cfg(target_family = "unix")]
         let label = |label| -> String {
             if _color {
                 alloc::format!("\x1b[32m{:>14}\x1b[0m: ", label)
@@ -605,7 +597,6 @@ impl TCpu for Cpu {
             }
         };
 
-        #[cfg(target_family = "unix")]
         let sublabel = |label| -> String {
             if _color {
                 alloc::format!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
@@ -614,7 +605,6 @@ impl TCpu for Cpu {
             }
         };
 
-        #[cfg(target_family = "unix")]
         let inline_sublabel = |label, sub| -> String {
             if _color {
                 alloc::format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)

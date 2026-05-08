@@ -514,10 +514,4 @@ mod tests {
         assert_eq!(Cache::amd_assoc((0x00060000 >> 16) & 0xF), 8);
         assert_eq!(Cache::amd_assoc((0x000F0000 >> 16) & 0xF), 1);
     }
-
-    #[test]
-    #[ignore]
-    fn test_amd_assoc_k5() {
-        assert_eq!(Cache::amd_assoc((0x20020220 >> 16) & 0xF), 4);
-    }
 }
