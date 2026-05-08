@@ -316,7 +316,7 @@ impl Default for CpuArch {
 }
 
 impl CpuArch {
-    /// Creates a new CpuArch with the specified parameters.
+    /// Creates a new `CpuArch` with the specified parameters.
     pub fn new(
         model: &str,
         micro_arch: MicroArch,
@@ -344,6 +344,7 @@ impl CpuArch {
     /// Finds and returns the CPU architecture based on model string, signature, and vendor.
     ///
     /// Uses CPUID information to determine the microarchitecture and code name.
+    #[must_use]
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
         let arch = |ma: MicroArch,
                     code_name: &'static str,
@@ -429,6 +430,7 @@ impl CpuArch {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::cpuid::constants::*;
 
     #[test]
     fn test_micro_arch_from_string() {

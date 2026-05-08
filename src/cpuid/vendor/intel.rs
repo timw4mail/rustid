@@ -7,6 +7,7 @@ pub struct Intel;
 
 impl Intel {
     /// Detects the Intel microarchitecture based on the CPU model string and signature.
+    #[must_use]
     pub fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
             CpuArch::new(model, ma, code_name, "Intel", VENDOR_INTEL, tech)

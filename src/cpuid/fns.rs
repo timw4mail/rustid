@@ -44,6 +44,7 @@ impl From<CpuidResult> for Cpuid {
 }
 
 /// Calls CPUID with the given leaf (EAX).
+#[must_use]
 pub fn x86_cpuid(leaf: u32) -> Cpuid {
     x86_cpuid_count(leaf, 0)
 }
@@ -61,6 +62,7 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 }
 
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
+#[must_use]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     #[cfg(target_os = "none")]
     return real_x86_cpuid_count(leaf, sub_leaf);
@@ -70,6 +72,7 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 }
 
 #[cfg(not(target_os = "none"))]
+#[must_use]
 pub fn info_source() -> super::provider::CpuidInfoSource {
     super::provider::info_source()
 }
@@ -77,6 +80,7 @@ pub fn info_source() -> super::provider::CpuidInfoSource {
 /// Returns true if the CPUID instruction is supported.
 ///
 /// Verified on real hardware
+#[must_use]
 pub fn has_cpuid() -> bool {
     #[cfg(target_arch = "x86_64")]
     return true;
@@ -107,21 +111,25 @@ pub fn has_cpuid() -> bool {
 }
 
 /// Returns the maximum basic CPUID leaf supported.
+#[must_use]
 pub fn max_leaf() -> u32 {
     x86_cpuid(LEAF_0).eax
 }
 
+#[must_use]
 pub fn max_hypervisor_leaf() -> u32 {
     x86_cpuid(HYP_LEAF_0).eax
 }
 
 /// Returns the maximum extended CPUID leaf supported.
+#[must_use]
 pub fn max_extended_leaf() -> u32 {
     x86_cpuid(EXT_LEAF_0).eax
 }
 
 /// Returns the maximum vendor-specific CPUID leaf, if one exists,
 /// otherwise returns the maximum extended leaf.
+#[must_use]
 pub fn max_vendor_leaf() -> u32 {
     match &*vendor_str() {
         VENDOR_CENTAUR => x86_cpuid(CENTAUR_LEAF_0).eax,
@@ -134,6 +142,7 @@ pub fn max_vendor_leaf() -> u32 {
 ///
 /// Checks whether the specified CPUID leaf is within the range supported by
 /// the processor (basic, extends, or vendor-specific).
+#[must_use]
 pub fn is_valid_leaf(leaf: u32) -> bool {
     if !has_cpuid() {
         return false;
@@ -152,9 +161,10 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
     }
 }
 
-/// Gets the CPU vendor ID string (e.g., "GenuineIntel", "AuthenticAMD").
+/// Gets the CPU vendor ID string (e.g., "`GenuineIntel`", "`AuthenticAMD`").
 ///
 /// Returns a 12-character vendor string from CPUID leaf 0.
+#[must_use]
 pub fn vendor_str() -> String {
     #[cfg(target_arch = "x86")]
     if !has_cpuid() {
@@ -164,6 +174,7 @@ pub fn vendor_str() -> String {
     raw_vendor_str(LEAF_0)
 }
 
+#[must_use]
 pub fn hypervisor_str() -> String {
     if is_hypervisor_guest() {
         raw_vendor_str(HYP_LEAF_0)
@@ -187,6 +198,7 @@ fn raw_vendor_str(leaf: u32) -> String {
     String::from(s)
 }
 
+#[must_use]
 pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> String {
     if !is_valid_leaf(max_leaf) {
         return String::from(UNK);
@@ -210,35 +222,42 @@ fn is_vendor(v: &str) -> bool {
 }
 
 /// Returns true if the CPU is from AMD.
+#[must_use]
 pub fn is_amd() -> bool {
     is_vendor(VENDOR_AMD)
 }
 
 /// Returns true if the CPU is from Centaur (IDT/VIA/Zhaoxin).
+#[must_use]
 pub fn is_centaur() -> bool {
     is_vendor(VENDOR_CENTAUR)
 }
 
 /// Returns true if the CPU is from Cyrix.
+#[must_use]
 pub fn is_cyrix() -> bool {
     is_vendor(VENDOR_CYRIX) || is_vendor(VENDOR_NSC)
 }
 
 /// Is the CPU a Vortex86 or very similar RDC chip?
+#[must_use]
 pub fn is_vortex() -> bool {
     is_vendor(VENDOR_DMP) || is_vendor(VENDOR_RDC)
 }
 
 /// Returns true if the CPU is from Intel.
+#[must_use]
 pub fn is_intel() -> bool {
     is_vendor(VENDOR_INTEL)
 }
 
+#[must_use]
 pub fn is_umc() -> bool {
     is_vendor(VENDOR_UMC)
 }
 
 /// Returns true if the CPU is from Zhaoxin.
+#[must_use]
 pub fn is_zhaoxin() -> bool {
     is_vendor(VENDOR_ZHAOXIN)
 }
@@ -246,11 +265,13 @@ pub fn is_zhaoxin() -> bool {
 /// Returns true if the CPU is an Intel Overdrive processor.
 ///
 /// Checks the Overdrive bit (EAX bit 12) in CPUID leaf 1.
+#[must_use]
 pub fn is_overdrive() -> bool {
     (x86_cpuid(LEAF_1).eax & (1 << 12)) != 0
 }
 
 /// Returns the number of logical cores.
+#[must_use]
 pub fn logical_cores() -> u32 {
     // Since AMD has a handy flag for getting logical cores,
     // try that first
@@ -282,6 +303,7 @@ pub fn logical_cores() -> u32 {
 /// Returns the CPU brand ID from basic leaf 0x00000001.
 ///
 /// The brand ID is a value that identifies the specific CPU brand variant.
+#[must_use]
 pub fn get_brand_id() -> u32 {
     let res = x86_cpuid(LEAF_1);
     res.ebx & 0xFF

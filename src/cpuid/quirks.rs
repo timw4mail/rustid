@@ -33,17 +33,20 @@ pub fn get_vendor_by_quirk() -> &'static str {
 }
 
 /// Returns true if the CPU is a 386-class processor.
+#[must_use]
 pub fn is_386() -> bool {
     !is_486()
 }
 
 /// Returns true if the CPU is at least a 486-class processor.
 #[inline(never)]
+#[must_use]
 pub fn is_486() -> bool {
     is_ac_flag_supported()
 }
 
 #[cfg(not(target_arch = "x86"))]
+#[must_use]
 pub fn is_ac_flag_supported() -> bool {
     true
 }
@@ -53,6 +56,7 @@ pub fn is_ac_flag_supported() -> bool {
 ///
 /// Verified on real hardware
 #[cfg(target_arch = "x86")]
+#[must_use]
 fn is_ac_flag_supported() -> bool {
     let supported: u32;
     unsafe {
@@ -77,12 +81,14 @@ fn is_ac_flag_supported() -> bool {
 }
 
 #[cfg(not(target_arch = "x86"))]
+#[must_use]
 pub fn has_cyrix_5_2_quirk() -> bool {
     false
 }
 
 /// Returns true if the CPU is a Cyrix processor.
 #[inline(never)]
+#[must_use]
 #[cfg(target_arch = "x86")]
 pub fn has_cyrix_5_2_quirk() -> bool {
     let flags: u8;

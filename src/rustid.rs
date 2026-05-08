@@ -122,7 +122,7 @@ fn main() {
                         'v' => action = "version",
                         'h' => action = "help",
                         _ => {
-                            eprintln!("Unknown flag: -{}", c);
+                            eprintln!("Unknown flag: -{c}");
                             help();
                             return;
                         }
@@ -130,7 +130,7 @@ fn main() {
                 }
             }
             _ => {
-                eprintln!("Unknown command: {}", arg);
+                eprintln!("Unknown command: {arg}");
                 help();
                 return;
             }
@@ -179,7 +179,7 @@ fn main() {
                 dump_cpu(&mut output, i);
             }
 
-            print!("{}", output);
+            print!("{output}");
         }
         "help" => help(),
         "version" => {}

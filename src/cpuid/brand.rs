@@ -1,6 +1,6 @@
 //! CPU Vendor Identification
 //!
-//! This module provides CPU vendor detection for x86/x86_64 processors
+//! This module provides CPU vendor detection for `x86/x86_64` processors
 //! using the CPUID instruction.
 
 use super::constants::*;
@@ -29,13 +29,15 @@ pub enum CpuBrand {
 
 impl CpuBrand {
     /// Detects the CPU brand/vendor from CPUID information.
+    #[must_use]
     pub fn detect() -> Self {
         let vendor_str = super::vendor_str();
 
         Self::from(vendor_str)
     }
 
-    /// Converts the CPU brand to its vendor ID string (e.g., "AuthenticAMD").
+    /// Converts the CPU brand to its vendor ID string (e.g., "`AuthenticAMD`").
+    #[must_use]
     pub fn to_vendor_str(&self) -> &str {
         match self {
             CpuBrand::AMD => VENDOR_AMD,
@@ -71,6 +73,7 @@ impl CpuBrand {
     }
 
     /// Converts the CPU brand to a human-readable name (e.g., "AMD", "Intel").
+    #[must_use]
     pub fn to_brand_name(&self) -> &str {
         match self {
             CpuBrand::AMD => "AMD",
@@ -162,11 +165,13 @@ pub enum HypervisorBrand {
 }
 
 impl HypervisorBrand {
+    #[must_use]
     pub fn detect() -> Self {
         let str = super::hypervisor_str();
         Self::from(str.as_str())
     }
 
+    #[must_use]
     pub fn to_str(&self) -> &'static str {
         match &self {
             HypervisorBrand::Bhyve => "Bhyve",

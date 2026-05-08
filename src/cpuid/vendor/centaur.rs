@@ -85,11 +85,13 @@ impl TMicroArch for Centaur {
 use crate::cpuid::{CENTAUR_LEAF_1, Reg, has_feature};
 
 /// Random Number Generator (`xstore` instruction)
+#[must_use]
 pub fn has_rng() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 0)
 }
 
 /// Enhanced RNG (`xstore2` instruction)
+#[must_use]
 pub fn has_rng2() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 1)
 }
@@ -97,6 +99,7 @@ pub fn has_rng2() -> bool {
 /// Advanced Cryptography Engine (AES encryption/decryption)
 ///
 /// Requires both presence (bit 2) and enable (bit 4).
+#[must_use]
 pub fn has_ace() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 2) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 4)
 }
@@ -104,21 +107,25 @@ pub fn has_ace() -> bool {
 /// Advanced Cryptography Engine 2 (AES 192/256-bit keys)
 ///
 /// Requires both presence (bit 3) and enable (bit 5).
+#[must_use]
 pub fn has_ace2() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 3) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 5)
 }
 
-/// PadLock Hash Engine (SHA-1/SHA-256)
+/// `PadLock` Hash Engine (SHA-1/SHA-256)
+#[must_use]
 pub fn has_phe() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 6)
 }
 
-/// PadLock Hash Engine 2 (SHA-512)
+/// `PadLock` Hash Engine 2 (SHA-512)
+#[must_use]
 pub fn has_phe2() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 7)
 }
 
-/// PadLock Montgomery Multiplier (big-integer modular exponentiation)
+/// `PadLock` Montgomery Multiplier (big-integer modular exponentiation)
+#[must_use]
 pub fn has_pmm() -> bool {
     has_feature(CENTAUR_LEAF_1, Reg::Edx, 8)
 }

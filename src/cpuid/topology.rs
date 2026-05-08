@@ -9,6 +9,7 @@ use super::{info_source, provider::CpuidInfoSource};
 
 impl Speed {
     /// Detects the CPU speed from available sources.
+    #[must_use]
     pub fn detect() -> Self {
         use super::{LEAF_16, x86_cpuid};
         match &*vendor_str() {
@@ -160,6 +161,7 @@ pub struct Topology {
 
 impl Topology {
     /// Detects and returns the CPU topology.
+    #[must_use]
     pub fn detect() -> Self {
         let speed = Speed::detect();
         let cache = Cache::detect();
@@ -169,7 +171,7 @@ impl Topology {
         let mut threads_per_socket = 0;
         let mut threads_per_die = 0;
 
-        for d in domains.iter() {
+        for d in &domains {
             if d.count > threads_per_socket {
                 threads_per_socket = d.count;
             }
@@ -286,7 +288,7 @@ impl Topology {
         let mut threads_per_core = 1;
         let mut threads_per_package = 0;
 
-        for d in domains.iter() {
+        for d in domains {
             if d.kind == TopologyType::Thread {
                 threads_per_core = d.count;
             }
@@ -392,7 +394,7 @@ impl Topology {
                     });
                 }
                 _ => return d,
-            };
+            }
         }
 
         d

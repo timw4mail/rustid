@@ -1,4 +1,4 @@
-use super::*;
+use super::{Cpuid, real_x86_cpuid_count};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
@@ -146,6 +146,7 @@ impl CpuDump {
         CpuDump { leaves }
     }
 
+    #[must_use]
     pub fn get(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
         self.leaves
             .get(&(leaf, sub_leaf))

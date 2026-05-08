@@ -22,38 +22,45 @@ pub struct CacheLevel {
 }
 
 impl CacheLevel {
-    /// Creates a new CacheLevel with the specified parameters.
+    /// Creates a new `CacheLevel` with the specified parameters.
+    #[must_use]
     pub fn new(size: u32, kind: CacheType, assoc: u32, share_count: u32) -> Self {
         CacheLevel {
+            assoc,
             size,
             kind,
-            assoc,
             share_count,
         }
     }
 
-    /// Creates a new CacheLevel without share count information.
+    /// Creates a new `CacheLevel` without share count information.
+    #[must_use]
     pub fn no_count(size: u32, kind: CacheType, assoc: u32) -> Self {
         Self::new(size, kind, assoc, 0)
     }
 
-    /// Creates a new unified CacheLevel.
+    /// Creates a new unified `CacheLevel`.
+    #[must_use]
     pub fn new_unified(size: u32, assoc: u32) -> Self {
         Self::new(size, CacheType::Unified, assoc, 0)
     }
 
+    #[must_use]
     pub fn size(&self) -> u32 {
         self.size
     }
 
+    #[must_use]
     pub fn assoc(&self) -> u32 {
         self.assoc
     }
 
+    #[must_use]
     pub fn kind(&self) -> CacheType {
         self.kind
     }
 
+    #[must_use]
     pub fn share_count(&self) -> u32 {
         self.share_count
     }
@@ -70,11 +77,13 @@ pub enum Level1Cache {
 
 impl Level1Cache {
     /// Creates a new unified L1 cache.
+    #[must_use]
     pub fn new_unified(size: u32, assoc: u32) -> Self {
         Level1Cache::Unified(CacheLevel::new_unified(size, assoc))
     }
 
     /// Returns true if the L1 cache is unified.
+    #[must_use]
     pub fn is_unified(&self) -> bool {
         match self {
             Level1Cache::Unified(_) => true,
@@ -83,6 +92,7 @@ impl Level1Cache {
     }
 
     /// Returns true if the L1 cache is split (separate I-cache and D-cache).
+    #[must_use]
     pub fn is_split(&self) -> bool {
         !self.is_unified()
     }
@@ -120,6 +130,7 @@ impl Level1Cache {
     }
 
     /// Creates a default split L1 cache configuration.
+    #[must_use]
     pub fn default_split() -> Self {
         Level1Cache::Split {
             data: CacheLevel::default(),
@@ -127,6 +138,7 @@ impl Level1Cache {
         }
     }
     /// Returns the total size of the L1 cache in bytes.
+    #[must_use]
     pub fn size(&self) -> u32 {
         match self {
             Level1Cache::Unified(level) => level.size,

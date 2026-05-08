@@ -72,10 +72,7 @@ pub fn version() {
 #[cfg(not(target_os = "none"))]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn file_version() {
-    println!(
-        "--------------- Rustid {} ({}-{}:from-cpuid-dump) ---------------",
-        VERSION, ARCH, OS
-    );
+    println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");
 }
 
 #[cfg(target_arch = "x86")]

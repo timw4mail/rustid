@@ -19,6 +19,7 @@ enum CacheDescTarget {
 }
 
 impl Cache {
+    #[must_use]
     pub fn new(l1: Level1Cache, l2: Option<CacheLevel>, l3: Option<CacheLevel>) -> Cache {
         Cache { l1, l2, l3 }
     }
@@ -26,30 +27,38 @@ impl Cache {
     /// Detects and returns the cache configuration for this CPU.
     ///
     /// Returns `None` if cache information cannot be determined.
+    #[must_use]
     pub fn detect() -> Option<Self> {
         if !has_cpuid() {
             return None;
         }
 
         match &*vendor_str() {
-            VENDOR_AMD => match is_valid_leaf(EXT_LEAF_1D) {
-                true => Cache::detect_general(EXT_LEAF_1D),
-                false => Cache::detect_ext_5_6(),
-            },
-            VENDOR_CENTAUR => match is_valid_leaf(EXT_LEAF_5) {
-                true => Cache::detect_ext_5_6(),
-                false => {
+            VENDOR_AMD => {
+                if is_valid_leaf(EXT_LEAF_1D) {
+                    Cache::detect_general(EXT_LEAF_1D)
+                } else {
+                    Cache::detect_ext_5_6()
+                }
+            }
+            VENDOR_CENTAUR => {
+                if is_valid_leaf(EXT_LEAF_5) {
+                    Cache::detect_ext_5_6()
+                } else {
                     if is_valid_leaf(LEAF_4) {
                         Cache::detect_general(LEAF_4)
                     } else {
                         Cache::detect_fallback()
                     }
                 }
-            },
-            VENDOR_TRANSMETA => match is_valid_leaf(EXT_LEAF_5) {
-                true => Cache::detect_ext_5_6(),
-                false => Cache::detect_fallback(),
-            },
+            }
+            VENDOR_TRANSMETA => {
+                if is_valid_leaf(EXT_LEAF_5) {
+                    Cache::detect_ext_5_6()
+                } else {
+                    Cache::detect_fallback()
+                }
+            }
             _ => {
                 // The 1-bit cache descriptors are on LEAF 0x2, but
                 // the extended cache topology is on LEAF 0x4.
@@ -199,7 +208,7 @@ impl Cache {
             }
         }
 
-        for desc in desc_list.iter() {
+        for desc in &desc_list {
             Self::apply_descriptor(*desc, &mut c);
         }
 
@@ -336,9 +345,8 @@ impl Cache {
                         4,
                     ));
                     return;
-                } else {
-                    c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
                 }
+                c.l2 = Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8));
             }
             _ => {}
         }
@@ -368,8 +376,8 @@ impl Cache {
     }
 
     /// Cache detection via deterministic cache parameters
-    /// EXT_LEAF_1D for AMD
-    /// LEAF_4 for Intel
+    /// `EXT_LEAF_1D` for AMD
+    /// `LEAF_4` for Intel
     fn detect_general(leaf: u32) -> Option<Self> {
         let mut c = Cache::default();
 
@@ -404,7 +412,7 @@ impl Cache {
                     }
 
                     c.l1.set_data(cache_size, cache_ways_of_associativity);
-                    c.l1.set_data_share_count(share_count)
+                    c.l1.set_data_share_count(share_count);
                 }
                 INSTRUCTION_CACHE if cache_level == 1 => {
                     if c.l1.is_unified() {

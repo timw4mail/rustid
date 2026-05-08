@@ -1,6 +1,6 @@
 use super::TMicroArch;
 use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::constants::*;
+use crate::cpuid::constants::{N350, UNK, VENDOR_CYRIX};
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::{CpuSignature, FeatureClass, has_cx8};
 use alloc::format;
@@ -33,11 +33,13 @@ pub enum CyrixModel {
 }
 
 impl CyrixModel {
+    #[must_use]
     pub fn detect() -> Self {
         let (dir0, dir1) = Cyrix::get_device_ids();
         Self::detect_with_ids(dir0, dir1)
     }
 
+    #[must_use]
     pub fn detect_with_ids(dir0: u8, dir1: u8) -> Self {
         match dir0 {
             // Cx486SLC/DLC/SRx/DRx (M0.5)
@@ -83,6 +85,7 @@ impl CyrixModel {
         }
     }
 
+    #[must_use]
     pub fn to_str(&self) -> &'static str {
         match self {
             // Cx486SLC/DLC/SRx/DRx (M0.5)
@@ -145,6 +148,7 @@ pub struct Cyrix {
 
 impl Cyrix {
     /// Detects and returns Cyrix CPU information.
+    #[must_use]
     pub fn detect() -> Cyrix {
         if !crate::cpuid::is_cyrix() {
             return Cyrix::default();
@@ -240,6 +244,7 @@ impl Cyrix {
         }
     }
 
+    #[must_use]
     pub fn get_signature_from_device_id() -> CpuSignature {
         if !crate::cpuid::is_cyrix() {
             return CpuSignature::default();
@@ -257,6 +262,7 @@ impl Cyrix {
         }
     }
 
+    #[must_use]
     pub fn get_feature_class() -> FeatureClass {
         if !crate::cpuid::is_cyrix() {
             return FeatureClass::i386;
@@ -271,6 +277,7 @@ impl Cyrix {
 
     /// Only measure speed for 486-class cpus, or
     /// cpus with TSC support
+    #[must_use]
     pub fn should_measure_speed() -> bool {
         match CyrixModel::detect() {
             // No TSC support, and no proper calibration
@@ -286,6 +293,7 @@ impl Cyrix {
 
     /// Check if the Cyrix model likely has CPUID support
     /// that can be enabled, if cpuid support is currently disabled
+    #[must_use]
     pub fn can_enable_cpuid() -> bool {
         // If it's not Cyrix, or cpuid is enabled, we don't care
         if crate::cpuid::has_cpuid() || !crate::cpuid::is_cyrix() {
@@ -309,6 +317,7 @@ impl Cyrix {
     /// Get Cyrix processor model via registers
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
+    #[must_use]
     pub fn model_string() -> String {
         if !crate::cpuid::is_cyrix() {
             return String::from(UNK);
@@ -316,9 +325,10 @@ impl Cyrix {
 
         let model = CyrixModel::detect().to_str();
 
-        format!("Cyrix {}", model)
+        format!("Cyrix {model}")
     }
 
+    #[must_use]
     pub fn brand_string() -> &'static str {
         // Some device ids are unique
         let (dir0, _) = Self::get_device_ids();
@@ -367,6 +377,7 @@ impl Cyrix {
     /// Get Cyrix processor model via registers
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
+    #[must_use]
     pub fn codename() -> &'static str {
         match CyrixModel::detect() {
             CyrixModel::Slc

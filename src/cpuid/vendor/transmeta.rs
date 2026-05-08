@@ -12,6 +12,7 @@ pub struct Transmeta {
 }
 
 impl Transmeta {
+    #[must_use]
     pub fn detect() -> Self {
         Self {
             version_str: Self::version_str(),

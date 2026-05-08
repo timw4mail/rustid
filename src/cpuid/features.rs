@@ -1,6 +1,6 @@
 use super::CpuBrand;
-use super::constants::*;
-use super::fns::*;
+use super::constants::{EXT_LEAF_1, LEAF_1, LEAF_7};
+use super::fns::{is_valid_leaf, x86_cpuid};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -32,105 +32,126 @@ pub(crate) fn has_feature(leaf: u32, register: Reg, bit: u32) -> bool {
 // ! Leaf 0000_0001h
 // ------------------------------------------------------------------------
 
+#[must_use]
 pub fn has_aes() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 25)
 }
 
 /// Returns true if the CPU has a Floating Point Unit (FPU).
+#[must_use]
 pub fn has_fpu() -> bool {
     has_feature(LEAF_1, Reg::Edx, 0)
 }
 
 /// Returns true if the CPU has a Time Stamp Counter (TSC).
+#[must_use]
 pub fn has_tsc() -> bool {
     has_feature(LEAF_1, Reg::Edx, 4)
 }
 
 /// Returns true if the CPU supports CMPXCHG8B instruction.
+#[must_use]
 pub fn has_cx8() -> bool {
     has_feature(LEAF_1, Reg::Edx, 8)
 }
 
 /// Returns true if the CPU supports CMOV instructions.
+#[must_use]
 pub fn has_cmov() -> bool {
     has_feature(LEAF_1, Reg::Edx, 15)
 }
 
 /// Returns true if the CPU supports MMX instructions.
+#[must_use]
 pub fn has_mmx() -> bool {
     has_feature(LEAF_1, Reg::Edx, 23)
 }
 
 /// Returns true if the CPU supports SSE instructions.
+#[must_use]
 pub fn has_sse() -> bool {
     has_feature(LEAF_1, Reg::Edx, 25)
 }
 
 /// Returns true if the CPU supports SSE2 instructions.
+#[must_use]
 pub fn has_sse2() -> bool {
     has_feature(LEAF_1, Reg::Edx, 26)
 }
 
 /// Returns true if the CPU supports Hyper-Threading.
+#[must_use]
 pub fn has_ht() -> bool {
     has_feature(LEAF_1, Reg::Edx, 28)
 }
 
 /// Returns true if the CPU supports SSE3 instructions.
+#[must_use]
 pub fn has_sse3() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 0)
 }
 
 /// Returns true if the CPU supports SSSE3 instructions.
+#[must_use]
 pub fn has_ssse3() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 9)
 }
 
 /// Returns true if the CPU supports FMA (Fused Multiply Add).
+#[must_use]
 pub fn has_fma() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 12)
 }
 
 /// Returns true if the CPU supports CMPXCHG16B instruction.
+#[must_use]
 pub fn has_cx16() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 13)
 }
 
 /// Returns true if the CPU supports SSE4.1 instructions.
+#[must_use]
 pub fn has_sse41() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 19)
 }
 
 /// Returns true if the CPU supports SSE4.2 instructions.
+#[must_use]
 pub fn has_sse42() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 20)
 }
 
+#[must_use]
 pub fn has_x2apic() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 21)
 }
 
 /// Returns true if the CPU supports POPCNT instruction.
+#[must_use]
 pub fn has_popcnt() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 23)
 }
 
 /// Returns true if the CPU supports AVX instructions.
+#[must_use]
 pub fn has_avx() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 28)
 }
 
 /// Returns true if the CPU supports F16C (Half-precision floating point).
+#[must_use]
 pub fn has_f16c() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 29)
 }
 
 /// Returns true if the CPU supports RDRAND instruction.
+#[must_use]
 pub fn has_rdrand() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 30)
 }
 
 /// Is this cpu running under a hypervisor? (Virtualization)
+#[must_use]
 pub fn is_hypervisor_guest() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 31)
 }
@@ -140,104 +161,125 @@ pub fn is_hypervisor_guest() -> bool {
 // ----------------------------------------------------------------------------
 
 /// Returns true if the CPU supports BMI1 (Bit Manipulation Instructions).
+#[must_use]
 pub fn has_bmi1() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 3)
 }
 
 /// Returns true if the CPU supports AVX2 instructions.
+#[must_use]
 pub fn has_avx2() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 5)
 }
 
 /// Returns true if the CPU supports BMI2 instructions.
+#[must_use]
 pub fn has_bmi2() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 8)
 }
 
 /// Returns true if the CPU supports AVX-512 Foundation instructions.
+#[must_use]
 pub fn has_avx512_f() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 16)
 }
 
 /// Returns true if the CPU supports AVX-512 DQ instructions.
+#[must_use]
 pub fn has_avx512_dq() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 17)
 }
 
+#[must_use]
 pub fn has_rdseed() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 18)
 }
 
 /// Returns true if the CPU supports AVX-512 IFMA instructions.
+#[must_use]
 pub fn has_avx512_ifma() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 21)
 }
 
 /// Returns true if the CPU supports AVX-512 PF instructions (Xeon Phi).
+#[must_use]
 pub fn has_avx512_pf() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 26)
 }
 
 /// Returns true if the CPU supports AVX-512 ER instructions (Xeon Phi).
+#[must_use]
 pub fn has_avx512_er() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 27)
 }
 
 /// Returns true if the CPU supports AVX-512 CD instructions.
+#[must_use]
 pub fn has_avx512_cd() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 28)
 }
 
+#[must_use]
 pub fn has_sha() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 29)
 }
 
 /// Returns true if the CPU supports AVX-512 BW instructions.
+#[must_use]
 pub fn has_avx512_bw() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 30)
 }
 
 /// Returns true if the CPU supports AVX-512 VL instructions.
+#[must_use]
 pub fn has_avx512_vl() -> bool {
     has_feature(LEAF_7, Reg::Ebx, 31)
 }
 
 /// Vector version of AES instruction
+#[must_use]
 pub fn has_vaes() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 9)
 }
 
 /// Returns true if the CPU supports VPCLMULQDQ instructions.
+#[must_use]
 pub fn has_vpclmulqdq() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 10)
 }
 
 /// Returns true if the CPU supports AVX-VNNI instructions.
+#[must_use]
 pub fn has_avx_vnni() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 11)
 }
 
 /// Returns true if the CPU supports AVX-512 BITALG instructions.
+#[must_use]
 pub fn has_avx512_bitalg() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 12)
 }
 
 /// Returns true if the CPU supports AVX-512 VPOPCNTDQ instructions.
+#[must_use]
 pub fn has_avx512_vpopcntdq() -> bool {
     has_feature(LEAF_7, Reg::Ecx, 14)
 }
 
 /// Returns true if the CPU supports AVX-512 4VNNIW instructions (Xeon Phi).
+#[must_use]
 pub fn has_avx512_4vnniw() -> bool {
     has_feature(LEAF_7, Reg::Edx, 2)
 }
 
 /// Returns true if the CPU supports AVX-512 4FMAPS instructions (Xeon Phi).
+#[must_use]
 pub fn has_avx512_4fmaps() -> bool {
     has_feature(LEAF_7, Reg::Edx, 3)
 }
 
 /// Returns true if the CPU supports AVX-512 VP2INTERSECT instructions.
+#[must_use]
 pub fn has_avx512_vp2intersect() -> bool {
     has_feature(LEAF_7, Reg::Edx, 8)
 }
@@ -250,6 +292,7 @@ pub fn has_avx512_vp2intersect() -> bool {
 ///
 /// This bit in EDX indicates that the CPU supports marking pages as non-executable,
 /// which is a key security feature used by NX/XD/DEP.
+#[must_use]
 pub fn has_nx() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 20)
 }
@@ -257,6 +300,7 @@ pub fn has_nx() -> bool {
 /// Returns true if the CPU supports Intel VT-x (VMX) hardware virtualization.
 ///
 /// Checks ECX bit 5 in basic leaf 0x1.
+#[must_use]
 pub fn has_vtx() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 5)
 }
@@ -264,6 +308,7 @@ pub fn has_vtx() -> bool {
 /// Returns true if the CPU supports AMD SVM (Secure Virtual Machine) hardware virtualization.
 ///
 /// Checks ECX bit 2 in extended leaf 0x80000001.
+#[must_use]
 pub fn has_amdv() -> bool {
     has_feature(EXT_LEAF_1, Reg::Ecx, 2)
 }
@@ -271,11 +316,13 @@ pub fn has_amdv() -> bool {
 /// Returns true if the CPU supports hardware-assisted virtualization.
 ///
 /// This is true if either Intel VT-x (VMX) or AMD SVM is supported.
+#[must_use]
 pub fn has_virtualization() -> bool {
     has_vtx() || has_amdv()
 }
 
 /// Returns true if the CPU supports SSE4A instructions (AMD-specific).
+#[must_use]
 pub fn has_sse4a() -> bool {
     if CpuBrand::detect() != CpuBrand::AMD {
         return false;
@@ -285,16 +332,19 @@ pub fn has_sse4a() -> bool {
 }
 
 /// Returns true if the CPU supports AMD64 (x86-64) instructions.
+#[must_use]
 pub fn has_amd64() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 29)
 }
 
 /// Returns true if the CPU supports 3DNow!+ instructions.
+#[must_use]
 pub fn has_3dnow_plus() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 30)
 }
 
 /// Returns true if the CPU supports 3DNow! instructions.
+#[must_use]
 pub fn has_3dnow() -> bool {
     has_feature(EXT_LEAF_1, Reg::Edx, 31)
 }
@@ -348,6 +398,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
 /// Get the full list of detected features.
 #[cfg(not(target_os = "none"))]
+#[must_use]
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     use super::vendor::centaur;
 

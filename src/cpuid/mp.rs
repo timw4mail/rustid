@@ -18,12 +18,14 @@ impl Default for MpTable {
 
 impl MpTable {
     /// Returns the number of processor sockets.
+    #[must_use]
     pub fn socket_count(&self) -> u32 {
         self.sockets
     }
 
     /// Detects the number of sockets by reading sysinfo -cpu
     #[cfg(not(target_os = "none"))]
+    #[must_use]
     pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
@@ -44,6 +46,7 @@ impl MpTable {
 
     /// Detects the number of sockets by reading /proc/cpuinfo
     #[cfg(not(target_os = "none"))]
+    #[must_use]
     pub fn detect_cpuinfo(file: &str) -> MpTable {
         use std::collections::HashSet;
 
@@ -86,6 +89,7 @@ impl MpTable {
 #[cfg(not(target_os = "none"))]
 impl MpTable {
     /// Detects the number of sockets via platform-specific means
+    #[must_use]
     pub fn detect() -> MpTable {
         #[cfg(target_os = "linux")]
         return Self::detect_cpuinfo("/proc/cpuinfo");
