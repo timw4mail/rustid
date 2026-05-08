@@ -39,6 +39,9 @@ name = "debug"
 required-features = ["debug", "dos-build"]
 path="src/debug.rs"
 
+[lints.clippy]
+unwrap_used = "warn"
+
 [features]
 default = []
 debug = []
