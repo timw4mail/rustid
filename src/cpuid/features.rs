@@ -1,6 +1,6 @@
 use super::CpuBrand;
 use super::constants::{EXT_LEAF_1, LEAF_1, LEAF_7};
-use super::fns::{is_valid_leaf, x86_cpuid};
+use super::fns::{is_amd, is_cyrix, is_valid_leaf, x86_cpuid};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -154,6 +154,11 @@ pub fn has_rdrand() -> bool {
 #[must_use]
 pub fn is_hypervisor_guest() -> bool {
     has_feature(LEAF_1, Reg::Ecx, 31)
+}
+
+#[must_use]
+pub fn has_apic() -> bool {
+    has_feature(LEAF_1, Reg::Edx, 9)
 }
 
 // ----------------------------------------------------------------------------
@@ -331,6 +336,17 @@ pub fn has_sse4a() -> bool {
     has_feature(EXT_LEAF_1, Reg::Ecx, 6)
 }
 
+#[must_use]
+pub fn has_mmx_plus() -> bool {
+    if is_amd() {
+        has_feature(EXT_LEAF_1, Reg::Edx, 22)
+    } else if is_cyrix() {
+        has_feature(EXT_LEAF_1, Reg::Edx, 24)
+    } else {
+        false
+    }
+}
+
 /// Returns true if the CPU supports AMD64 (x86-64) instructions.
 #[must_use]
 pub fn has_amd64() -> bool {
@@ -367,8 +383,10 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("CMPXCHG16B", has_cx16),
         ("CMOV", has_cmov),
         ("MMX", has_mmx),
+        ("MMX+", has_mmx_plus),
         ("3DNow!", has_3dnow),
         ("3DNow!+", has_3dnow_plus),
+        ("APIC", has_apic),
         ("AMD64", has_amd64),
         ("SSE", has_sse),
         ("SSE2", has_sse2),
@@ -390,7 +408,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     }
 
     if !features.is_empty() {
-        map.insert("", features.join(" "));
+        map.insert("Base", features.join(" "));
     }
 
     map
@@ -409,9 +427,11 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("CX16", has_cx16),
         ("CMOV", has_cmov),
         ("MMX", has_mmx),
+        ("MMX+", has_mmx_plus),
         ("3DNow!", has_3dnow),
         ("3DNow!+", has_3dnow_plus),
         ("HT", has_ht),
+        ("APIC", has_apic),
         ("AMD64", has_amd64),
     ];
 
@@ -459,14 +479,14 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("AMD-V", has_amdv),
     ];
 
-    const OTHER_FEATURES: FeatureMap = &[
-        ("x2apic", has_x2apic),
+    const MATH_FEATURES: FeatureMap = &[
         ("FMA", has_fma),
         ("BMI1", has_bmi1),
         ("BMI2", has_bmi2),
-        ("POPCNT", has_popcnt),
         ("F16C", has_f16c),
     ];
+
+    const OTHER_FEATURES: FeatureMap = &[("x2apic", has_x2apic), ("POPCNT", has_popcnt)];
 
     const CENTAUR_FEATURES: FeatureMap = &[
         ("RNG", centaur::has_rng),
@@ -485,15 +505,17 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     let mut avx: Vec<&'static str> = Vec::new();
     let mut avx512: Vec<&'static str> = Vec::new();
     let mut encryption: Vec<&'static str> = Vec::new();
+    let mut math: Vec<&'static str> = Vec::new();
     let mut other: Vec<&'static str> = Vec::new();
     let mut centaur: Vec<&'static str> = Vec::new();
 
     for (v, key, checks) in [
-        (&mut basic, "", BASIC_FEATURES),
+        (&mut basic, "Base", BASIC_FEATURES),
         (&mut sse, "SSE", SSE_FEATURES),
         (&mut avx, "AVX", AVX_FEATURES),
         (&mut avx512, "AVX512", AVX512_FEATURES),
         (&mut encryption, "Security", SECURITY_FEATURES),
+        (&mut math, "Math", MATH_FEATURES),
         (&mut other, "Other", OTHER_FEATURES),
         (&mut centaur, "Centaur", CENTAUR_FEATURES),
     ] {

@@ -430,7 +430,6 @@ impl CpuArch {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::cpuid::constants::*;
 
     #[test]
     fn test_micro_arch_from_string() {

@@ -19,9 +19,6 @@ impl CpuDisplay {
 
     #[allow(unreachable_code)]
     pub fn label(&self, s: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return Self::raw_label(s);
-        #[cfg(target_family = "unix")]
         if !self.color {
             return Self::raw_label(s);
         }
@@ -30,9 +27,6 @@ impl CpuDisplay {
 
     #[allow(unreachable_code)]
     pub fn sublabel(&self, s: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return Self::raw_sublabel(s);
-        #[cfg(target_family = "unix")]
         if !self.color {
             return Self::raw_sublabel(s);
         }
@@ -41,9 +35,6 @@ impl CpuDisplay {
 
     #[allow(unreachable_code)]
     pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
-        #[cfg(not(target_family = "unix"))]
-        return Self::raw_inline_sublabel(label, sub);
-        #[cfg(target_family = "unix")]
         if !self.color {
             return Self::raw_inline_sublabel(label, sub);
         }

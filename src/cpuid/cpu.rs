@@ -868,30 +868,22 @@ impl TCpu for Cpu {
                 simple_line(
                     "Features",
                     self.features
-                        .get("")
+                        .get("Base")
                         .expect("There should be at least one key in the features BTreeMap."),
                 );
             } else {
-                let keys = ["", "SSE", "AVX", "AVX512", "Security", "Other", "Centaur"];
+                let keys = [
+                    "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
+                ];
                 for key in keys {
                     if self.features.contains_key(key) {
-                        if key.is_empty() {
-                            println!(
-                                "{}{}",
-                                inline_sublabel("Features", "Base"),
-                                self.features.get(key).expect(
-                                    "Somehow the key in the features BTreeMap disappeared!"
-                                )
-                            );
-                        } else {
-                            println!(
-                                "{}{}",
-                                sublabel(key),
-                                self.features.get(key).expect(
-                                    "Somehow the key in the features BTreeMap disappeared!"
-                                )
-                            );
-                        }
+                        println!(
+                            "{}{}",
+                            sublabel(key),
+                            self.features
+                                .get(key)
+                                .expect("Somehow the key in the features BTreeMap disappeared!")
+                        );
                     }
                 }
 
