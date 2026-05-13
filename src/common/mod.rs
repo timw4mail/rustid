@@ -5,7 +5,6 @@ pub mod cores;
 
 pub mod constants;
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 pub mod display;
 
 pub use cache::*;
@@ -15,7 +14,6 @@ pub use cores::*;
 
 pub use constants::*;
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 pub use display::*;
 
 use alloc::string::String;

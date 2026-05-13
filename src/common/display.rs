@@ -1,4 +1,11 @@
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 use super::cache::{Cache, Level1Cache};
+
+use alloc::format;
+use alloc::string::String;
+
+#[cfg(target_os = "none")]
+use crate::println;
 
 pub struct CpuDisplay {
     pub color: bool,
@@ -17,36 +24,39 @@ impl CpuDisplay {
         format!("{:>14}: {:1}: ", label, sub)
     }
 
-    #[allow(unreachable_code)]
     pub fn label(&self, s: &str) -> String {
         if !self.color {
-            return Self::raw_label(s);
+            Self::raw_label(s)
+        } else {
+            format!("\x1b[32m{:>14}\x1b[0m: ", s)
         }
-        format!("\x1b[32m{:>14}\x1b[0m: ", s)
     }
 
-    #[allow(unreachable_code)]
     pub fn sublabel(&self, s: &str) -> String {
         if !self.color {
-            return Self::raw_sublabel(s);
+            Self::raw_sublabel(s)
+        } else {
+            format!("\x1b[94m{:>16}{}\x1b[0m: ", "", s)
         }
-        format!("\x1b[94m{:>16}{}\x1b[0m: ", "", s)
     }
 
-    #[allow(unreachable_code)]
     pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
         if !self.color {
-            return Self::raw_inline_sublabel(label, sub);
+            Self::raw_inline_sublabel(label, sub)
+        } else {
+            format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
         }
-        format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
     }
 
     pub fn simple_line(&self, l: &str, v: &str) {
         let l = self.label(l);
         println!("{}{}", l, v);
+
+        #[cfg(not(target_os = "none"))]
         println!();
     }
 
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
     pub fn cache_count(share_count: u32, core_count: u32) -> String {
         if share_count == 0 || (core_count / share_count) <= 1 {
             String::new()
@@ -55,6 +65,7 @@ impl CpuDisplay {
         }
     }
 
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
     pub fn display_cache(&self, cache: Option<Cache>, core_count: u32) {
         if let Some(cache) = cache {
             #[inline]

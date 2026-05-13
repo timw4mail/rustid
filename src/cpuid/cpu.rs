@@ -6,7 +6,7 @@ use super::topology::Topology;
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 use crate::common::cache::Level1Cache;
-use crate::common::{TCpu, UNK};
+use crate::common::{CpuDisplay, TCpu, UNK};
 use crate::println;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
@@ -527,6 +527,140 @@ impl Cpu {
     }
 }
 
+impl Cpu {
+    fn display_cache(&self, color: bool) {
+        #[cfg(not(target_os = "none"))]
+        let newline = || println!();
+        #[cfg(target_os = "none")]
+        let newline = || {};
+
+        let disp = CpuDisplay { color };
+
+        let cache_count = |share_count| -> String {
+            #[allow(clippy::manual_checked_ops)]
+            let count = if share_count == 0 {
+                self.topology.sockets
+            } else {
+                self.topology.threads / share_count
+            };
+
+            if count < 2 {
+                String::new()
+            } else {
+                alloc::format!("{}x ", count)
+            }
+        };
+
+        if let Some(cache) = self.topology.cache {
+            #[inline]
+            fn cache_size(raw_size: u32) -> (u32, &'static str) {
+                let mut num = raw_size / 1024;
+                let unit = if num >= 1024 { "MB" } else { "KB" };
+
+                if num >= 1024 {
+                    num /= 1024;
+                }
+
+                (num, unit)
+            }
+
+            match cache.l1 {
+                Level1Cache::Unified(cache) => {
+                    println!(
+                        "{}L1: Unified {} KB",
+                        disp.label("Cache"),
+                        cache.size / 1024
+                    );
+                }
+                Level1Cache::Split { data, instruction } => {
+                    let data_count: String = cache_count(data.share_count);
+                    let instruction_count: String = cache_count(instruction.share_count);
+
+                    if data.assoc > 0 {
+                        println!(
+                            "{}{}{} KB, {}-way",
+                            disp.inline_sublabel("Cache", "L1d"),
+                            &data_count,
+                            data.size / 1024,
+                            data.assoc
+                        );
+                    } else {
+                        println!(
+                            "{}{}{} KB",
+                            disp.inline_sublabel("Cache", "L1d"),
+                            &data_count,
+                            data.size / 1024
+                        );
+                    }
+
+                    if instruction.assoc > 0 {
+                        println!(
+                            "{}{}{} KB, {}-way",
+                            disp.sublabel("L1i"),
+                            &instruction_count,
+                            instruction.size / 1024,
+                            instruction.assoc
+                        );
+                    } else {
+                        println!(
+                            "{}{}{} KB",
+                            disp.sublabel("L1i"),
+                            &instruction_count,
+                            instruction.size / 1024,
+                        );
+                    }
+                }
+            }
+
+            if let Some(l2) = cache.l2 {
+                let count = cache_count(l2.share_count);
+                let (num, unit) = cache_size(l2.size);
+
+                if l2.assoc > 0 {
+                    println!(
+                        "{} {}{} {}, {}-way",
+                        disp.sublabel("L2"),
+                        &count,
+                        num,
+                        unit,
+                        l2.assoc
+                    );
+                } else {
+                    println!("{} {}{} {}", disp.sublabel("L2"), &count, num, unit);
+                }
+            }
+
+            // TODO: Determine reliable cache count for L3,
+            // especially for single-socket, multiple die CPUs, like Ryzen 9.
+            // Share count for L3 cache always seems to be 8??
+            if let Some(l3) = cache.l3 {
+                let cache_count: String = if self.topology.sockets < 2 {
+                    cache_count(l3.share_count)
+                } else {
+                    alloc::format!("{}x ", self.topology.sockets)
+                };
+
+                let (num, unit) = cache_size(l3.size);
+
+                if l3.assoc > 0 {
+                    println!(
+                        "{} {}{} {}, {}-way",
+                        disp.sublabel("L3"),
+                        &cache_count,
+                        num,
+                        unit,
+                        l3.assoc
+                    );
+                } else {
+                    println!("{} {}{} {}", disp.sublabel("L3"), &cache_count, num, unit);
+                }
+            }
+
+            newline();
+        }
+    }
+}
+
 impl TCpu for Cpu {
     /// Detects and returns comprehensive CPU information.
     ///
@@ -569,64 +703,20 @@ impl TCpu for Cpu {
         #[cfg(target_os = "none")]
         let newline = || {};
 
+        let disp = CpuDisplay { color: _color };
+
         let ma: String = self.arch.micro_arch.into();
         let ma: &str = &ma;
 
         let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
 
-        let cache_count = |share_count| -> String {
-            #[allow(clippy::manual_checked_ops)]
-            let count = if share_count == 0 {
-                self.topology.sockets
-            } else {
-                self.topology.threads / share_count
-            };
-
-            if count < 2 {
-                String::new()
-            } else {
-                alloc::format!("{}x ", count)
-            }
-        };
-
-        let label = |label| -> String {
-            if _color {
-                alloc::format!("\x1b[32m{:>14}\x1b[0m: ", label)
-            } else {
-                alloc::format!("{:>14}: ", label)
-            }
-        };
-
-        let sublabel = |label| -> String {
-            if _color {
-                alloc::format!("\x1b[94m{:>16}{}\x1b[0m:{:1}", "", label, "")
-            } else {
-                alloc::format!("{:>16}{}: ", "", label)
-            }
-        };
-
-        let inline_sublabel = |label, sub| -> String {
-            if _color {
-                alloc::format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
-            } else {
-                alloc::format!("{:>14}: {:1}: ", label, sub)
-            }
-        };
-
-        let simple_line = |l, v: &str| {
-            let l = label(l);
-            println!("{}{}", l, v);
-
-            newline();
-        };
-
-        simple_line("Architecture", FeatureClass::detect().to_str());
+        disp.simple_line("Architecture", FeatureClass::detect().to_str());
 
         // Vendor_string (brand_name)
         if self.arch.brand_name != UNK {
             println!(
                 "{}{} ({})",
-                label("Vendor"),
+                disp.label("Vendor"),
                 self.arch.vendor_string,
                 self.arch.brand_name
             );
@@ -638,7 +728,7 @@ impl TCpu for Cpu {
             let hyp = HypervisorBrand::detect();
             println!(
                 "{}{} ({})",
-                label("Hypervisor"),
+                disp.label("Hypervisor"),
                 hypervisor_str(),
                 hyp.to_str()
             );
@@ -647,48 +737,48 @@ impl TCpu for Cpu {
         }
 
         if self.signature.is_overdrive {
-            simple_line("Overdrive", "Yes");
+            disp.simple_line("Overdrive", "Yes");
         }
 
         let (raw_model, disp_model) = (Cpu::raw_model_string(), self.display_model_string());
 
         if disp_model != UNK {
             if raw_model.eq(UNK) {
-                simple_line("Model (synth)", &disp_model);
+                disp.simple_line("Model (synth)", &disp_model);
             } else if raw_model.trim().eq(&disp_model) {
-                simple_line("Model", &disp_model);
+                disp.simple_line("Model", &disp_model);
             } else {
-                println!("{}{}", label("Model"), &disp_model);
-                println!("{}{}", label("Model (raw)"), &raw_model);
+                println!("{}{}", disp.label("Model"), &disp_model);
+                println!("{}{}", disp.label("Model (raw)"), &raw_model);
 
                 newline();
             }
         }
 
         if ma != UNK {
-            simple_line("MicroArch", ma);
+            disp.simple_line("MicroArch", ma);
         }
 
         if !(self.arch.code_name == "Unknown"
             || self.arch.code_name == ma
             || self.arch.micro_arch == MicroArch::I486)
         {
-            simple_line("Codename", self.arch.code_name);
+            disp.simple_line("Codename", self.arch.code_name);
         }
 
         // Process node
         if let Some(tech) = &self.arch.technology {
-            simple_line("Process Node", tech);
+            disp.simple_line("Process Node", tech);
         }
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
         if let Some(easter_egg) = &self.easter_egg {
-            simple_line("Easter Egg", easter_egg);
+            disp.simple_line("Easter Egg", easter_egg);
         }
 
         // Sockets / Cores / Threads
         if multi_core {
-            let lbl = label("Topology");
+            let lbl = disp.label("Topology");
             if self.topology.sockets > 1 {
                 println!(
                     "{}{} sockets, {} cores, {} threads",
@@ -706,109 +796,8 @@ impl TCpu for Cpu {
             newline();
         }
 
-        if let Some(cache) = self.topology.cache {
-            #[inline]
-            fn cache_size(raw_size: u32) -> (u32, &'static str) {
-                let mut num = raw_size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                if num >= 1024 {
-                    num /= 1024;
-                }
-
-                (num, unit)
-            }
-
-            match cache.l1 {
-                Level1Cache::Unified(cache) => {
-                    println!("{}L1: Unified {} KB", label("Cache"), cache.size / 1024);
-                }
-                Level1Cache::Split { data, instruction } => {
-                    let data_count: String = cache_count(data.share_count);
-                    let instruction_count: String = cache_count(instruction.share_count);
-
-                    if data.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            inline_sublabel("Cache", "L1d"),
-                            &data_count,
-                            data.size / 1024,
-                            data.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            inline_sublabel("Cache", "L1d"),
-                            &data_count,
-                            data.size / 1024
-                        );
-                    }
-
-                    if instruction.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            sublabel("L1i"),
-                            &instruction_count,
-                            instruction.size / 1024,
-                            instruction.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            sublabel("L1i"),
-                            &instruction_count,
-                            instruction.size / 1024,
-                        );
-                    }
-                }
-            }
-
-            if let Some(l2) = cache.l2 {
-                let count = cache_count(l2.share_count);
-                let (num, unit) = cache_size(l2.size);
-
-                if l2.assoc > 0 {
-                    println!(
-                        "{} {}{} {}, {}-way",
-                        sublabel("L2"),
-                        &count,
-                        num,
-                        unit,
-                        l2.assoc
-                    );
-                } else {
-                    println!("{} {}{} {}", sublabel("L2"), &count, num, unit);
-                }
-            }
-
-            // TODO: Determine reliable cache count for L3,
-            // especially for single-socket, multiple die CPUs, like Ryzen 9.
-            // Share count for L3 cache always seems to be 8??
-            if let Some(l3) = cache.l3 {
-                let cache_count: String = if self.topology.sockets < 2 {
-                    cache_count(l3.share_count)
-                } else {
-                    alloc::format!("{}x ", self.topology.sockets)
-                };
-
-                let (num, unit) = cache_size(l3.size);
-
-                if l3.assoc > 0 {
-                    println!(
-                        "{} {}{} {}, {}-way",
-                        sublabel("L3"),
-                        &cache_count,
-                        num,
-                        unit,
-                        l3.assoc
-                    );
-                } else {
-                    println!("{} {}{} {}", sublabel("L3"), &cache_count, num, unit);
-                }
-            }
-
-            newline();
-        }
+        // Cache
+        self.display_cache(_color);
 
         // Clock Speed (Base/Boost)
         if self.topology.speed.base > 0 {
@@ -826,10 +815,10 @@ impl TCpu for Cpu {
             };
 
             if boost > base {
-                print_speed(&inline_sublabel("Frequency", "Base"), base);
-                print_speed(&sublabel("Boost"), boost);
+                print_speed(&disp.inline_sublabel("Frequency", "Base"), base);
+                print_speed(&disp.sublabel("Boost"), boost);
             } else {
-                print_speed(&label("Frequency"), base);
+                print_speed(&disp.label("Frequency"), base);
             }
 
             newline();
@@ -845,7 +834,7 @@ impl TCpu for Cpu {
 
             println!(
                 "{}Family {:X}h, Model {:X}h, Stepping {:X}h",
-                label(key),
+                disp.label(key),
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping
@@ -865,7 +854,7 @@ impl TCpu for Cpu {
         // CPU Features
         if !self.features.is_empty() {
             if self.features.len() == 1 {
-                simple_line(
+                disp.simple_line(
                     "Features",
                     self.features
                         .get("Base")
@@ -879,7 +868,7 @@ impl TCpu for Cpu {
                     if self.features.contains_key(key) {
                         println!(
                             "{}{}",
-                            sublabel(key),
+                            disp.sublabel(key),
                             self.features
                                 .get(key)
                                 .expect("Somehow the key in the features BTreeMap disappeared!")
@@ -896,11 +885,11 @@ impl TCpu for Cpu {
             let cyrix = vendor::Cyrix::detect();
 
             if cyrix.dir0 != 0xFF {
-                println!("{}Model number: {:X}h", label("Cyrix"), cyrix.dir0);
-                println!("{}{:X}h", sublabel("Revision"), cyrix.revision);
-                println!("{}{:X}h", sublabel("Stepping"), cyrix.stepping);
+                println!("{}Model number: {:X}h", disp.label("Cyrix"), cyrix.dir0);
+                println!("{}{:X}h", disp.sublabel("Revision"), cyrix.revision);
+                println!("{}{:X}h", disp.sublabel("Stepping"), cyrix.stepping);
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
-                    println!("{}{}x", sublabel("Bus Multiplier"), &cyrix.multiplier);
+                    println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
                 #[cfg(not(target_os = "none"))]
                 println!();
