@@ -38,17 +38,25 @@ pub fn get_features_from_sysctl() -> BTreeMap<String, bool> {
                         // e.g., "hw.optional.arm.FEAT_AES" -> "aes"
                         let feature_name = if key.starts_with("hw.optional.arm.FEAT_") {
                             // Remove "hw.optional.arm.FEAT_" prefix
-                            let feat = key.strip_prefix("hw.optional.arm.FEAT_").unwrap();
+                            let feat = key
+                                .strip_prefix("hw.optional.arm.FEAT_")
+                                .expect("starts_with guard ensures this matches");
                             feat.to_lowercase()
                         } else if key.starts_with("hw.optional.arm.FEAT") {
                             // Handle "hw.optional.arm.FEATXYZ" without underscore
-                            let feat = key.strip_prefix("hw.optional.arm.FEAT").unwrap();
+                            let feat = key
+                                .strip_prefix("hw.optional.arm.FEAT")
+                                .expect("starts_with guard ensures this matches");
                             feat.to_lowercase()
                         } else if key.starts_with("hw.optional.arm.") {
-                            let feat = key.strip_prefix("hw.optional.arm.").unwrap();
+                            let feat = key
+                                .strip_prefix("hw.optional.arm.")
+                                .expect("starts_with guard ensures this matches");
                             feat.to_lowercase()
                         } else if key.starts_with("hw.optional.") {
-                            let feat = key.strip_prefix("hw.optional.").unwrap();
+                            let feat = key
+                                .strip_prefix("hw.optional.")
+                                .expect("starts_with guard ensures this matches");
                             feat.to_lowercase()
                         } else {
                             continue;
@@ -297,7 +305,7 @@ fn get_sysctl_map() -> BTreeMap<String, String> {
             .expect("Failed to load cpu details from sysctl")
             .stdout,
     )
-    .unwrap()
+    .expect("Unable to get cpu info from sysctl")
     .split('\n')
     .filter(|l| !l.is_empty())
     .for_each(|x| {
@@ -420,39 +428,43 @@ impl TCpu for Cpu {
         let values = get_sysctl_map();
         let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
 
-        let perf_levels: usize = values.get("hw.nperflevels").unwrap().parse().unwrap();
+        let perf_levels: usize = values
+            .get("hw.nperflevels")
+            .expect("sysctl hw.nperflevels missing")
+            .parse()
+            .expect("sysctl hw.nperflevels not a valid usize");
 
         for i in 0..perf_levels {
             let kind_type = values.get(&format!("hw.perflevel{}.name", i));
-            let kind = CoreType::from(kind_type.unwrap().clone());
+            let kind = CoreType::from(kind_type.expect("sysctl perflevel name missing").clone());
             let mut cache = Cache::default();
             let mut l1 = Level1Cache::default_split();
 
             let cpus_per_l2: u32 = values
                 .get(&format!("hw.perflevel{}.cpusperl2", i))
-                .unwrap()
+                .expect("sysctl perflevel cpusperl2 missing")
                 .parse()
-                .unwrap();
+                .expect("sysctl perflevel cpusperl2 not a valid u32");
             let l1d_size: u32 = values
                 .get(&format!("hw.perflevel{}.l1dcachesize", i))
-                .unwrap()
+                .expect("sysctl perflevel l1dcachesize missing")
                 .parse()
-                .unwrap();
+                .expect("sysctl perflevel l1dcachesize not a valid u32");
             let l1i_size: u32 = values
                 .get(&format!("hw.perflevel{}.l1icachesize", i))
-                .unwrap()
+                .expect("sysctl perflevel l1icachesize missing")
                 .parse()
-                .unwrap();
+                .expect("sysctl perflevel l1icachesize not a valid u32");
             let l2_size: u32 = values
                 .get(&format!("hw.perflevel{}.l2cachesize", i))
-                .unwrap()
+                .expect("sysctl perflevel l2cachesize missing")
                 .parse()
-                .unwrap();
+                .expect("sysctl perflevel l2cachesize not a valid u32");
             let count: u32 = values
                 .get(&format!("hw.perflevel{}.physicalcpu", i))
-                .unwrap()
+                .expect("sysctl perflevel physicalcpu missing")
                 .parse()
-                .unwrap();
+                .expect("sysctl perflevel physicalcpu not a valid u32");
 
             l1.set_data(l1d_size, 0);
             l1.set_data_share_count(1);
@@ -477,7 +489,10 @@ impl TCpu for Cpu {
         let features = super::get_all_features();
 
         Self {
-            model: values.get("machdep.cpu.brand_string").unwrap().to_string(),
+            model: values
+                .get("machdep.cpu.brand_string")
+                .expect("sysctl machdep.cpu.brand_string missing")
+                .to_string(),
             raw_midr,
             midrs,
             vendor: vendor.into(),
