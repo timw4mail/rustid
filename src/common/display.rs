@@ -1,4 +1,3 @@
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 use super::cache::{Cache, Level1Cache};
 
 use alloc::format;
@@ -56,7 +55,22 @@ impl CpuDisplay {
         println!();
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    pub fn newline() {
+        #[cfg(not(target_os = "none"))]
+        println!();
+    }
+
+    pub fn format_frequency(mhz: impl Into<u64>) -> String {
+        let mhz = mhz.into();
+        if mhz >= 1000 {
+            let whole = mhz / 1000;
+            let fract = (mhz % 1000) / 10;
+            format!("{}.{:02} GHz", whole, fract)
+        } else {
+            format!("{}.00 MHz", mhz)
+        }
+    }
+
     pub fn cache_count(share_count: u32, core_count: u32) -> String {
         if share_count == 0 || (core_count / share_count) <= 1 {
             String::new()
@@ -65,28 +79,20 @@ impl CpuDisplay {
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    pub fn display_cache(&self, cache: Option<Cache>, core_count: u32) {
+    pub fn display_cache(
+        &self,
+        cache: Option<Cache>,
+        cache_count: &dyn Fn(u32) -> String,
+        l3_socket_count: u32,
+    ) {
         if let Some(cache) = cache {
-            #[inline]
-            fn cache_size(raw_size: u32) -> (u32, &'static str) {
-                let mut num = raw_size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                if num >= 1024 {
-                    num /= 1024;
-                }
-
-                (num, unit)
-            }
-
             match cache.l1 {
                 Level1Cache::Unified(l1) => {
                     println!("{}L1: Unified {:>4} KB", self.label("Cache"), l1.size);
                 }
                 Level1Cache::Split { data, instruction } => {
-                    let data_count: String = Self::cache_count(data.share_count, core_count);
-                    let instruction_count = Self::cache_count(instruction.share_count, core_count);
+                    let data_count: String = cache_count(data.share_count);
+                    let instruction_count: String = cache_count(instruction.share_count);
 
                     if data.assoc > 0 {
                         println!(
@@ -125,8 +131,8 @@ impl CpuDisplay {
             }
 
             if let Some(l2) = cache.l2 {
-                let count = Self::cache_count(l2.share_count, core_count);
-                let (num, unit) = cache_size(l2.size);
+                let count = cache_count(l2.share_count);
+                let (num, unit) = Self::cache_size(l2.size);
 
                 if l2.assoc > 0 {
                     println!(
@@ -143,23 +149,39 @@ impl CpuDisplay {
             }
 
             if let Some(l3) = cache.l3 {
-                let (num, unit) = cache_size(l3.size);
-                let cache_count = Self::cache_count(l3.share_count, core_count);
+                let (num, unit) = Self::cache_size(l3.size);
+                let count: String = if l3_socket_count > 1 {
+                    format!("{}x ", l3_socket_count)
+                } else {
+                    cache_count(l3.share_count)
+                };
 
                 if l3.assoc > 0 {
                     println!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L3"),
-                        &cache_count,
+                        &count,
                         num,
                         unit,
                         l3.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L3"), &cache_count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L3"), &count, num, unit);
                 }
             }
         }
         println!();
+    }
+
+    #[inline]
+    fn cache_size(raw_size: u32) -> (u32, &'static str) {
+        let mut num = raw_size / 1024;
+        let unit = if num >= 1024 { "MB" } else { "KB" };
+
+        if num >= 1024 {
+            num /= 1024;
+        }
+
+        (num, unit)
     }
 }

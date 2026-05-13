@@ -85,7 +85,8 @@ impl CpuDisplay {
 
             println!("{}{}", cpu.label("Count"), core.count);
 
-            cpu.display_cache(core.cache, core.count);
+            let cc = |s| CpuDisplay::cache_count(s, core.count);
+            cpu.display_cache(core.cache, &cc, 0);
         }
 
         // Display features

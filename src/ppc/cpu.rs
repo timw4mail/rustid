@@ -265,18 +265,17 @@ impl TCpu for Cpu {
         }
 
         if let Some(clock_mhz) = self.clock_speed {
-            if clock_mhz >= 1000 {
-                let whole = clock_mhz / 1000;
-                let fract = (clock_mhz % 1000) / 10;
-                println!("{}{}.{:02} GHz", cpu.label("Frequency"), whole, fract);
-            } else {
-                println!("{}{}.00 MHz", cpu.label("Frequency"), clock_mhz);
-            }
-            println!();
+            println!(
+                "{}{}",
+                cpu.label("Frequency"),
+                CpuDisplay::format_frequency(clock_mhz)
+            );
+            CpuDisplay::newline();
         }
 
         // TODO handle multiple cores/sockets
-        cpu.display_cache(self.cache, 1);
+        let cc = |s| CpuDisplay::cache_count(s, 1);
+        cpu.display_cache(self.cache, &cc, 0);
 
         println!();
     }

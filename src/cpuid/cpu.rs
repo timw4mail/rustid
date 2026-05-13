@@ -5,7 +5,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
-use crate::common::cache::Level1Cache;
+
 use crate::common::{CpuDisplay, TCpu, UNK};
 use crate::println;
 use alloc::collections::BTreeMap;
@@ -527,140 +527,6 @@ impl Cpu {
     }
 }
 
-impl Cpu {
-    fn display_cache(&self, color: bool) {
-        #[cfg(not(target_os = "none"))]
-        let newline = || println!();
-        #[cfg(target_os = "none")]
-        let newline = || {};
-
-        let disp = CpuDisplay { color };
-
-        let cache_count = |share_count| -> String {
-            #[allow(clippy::manual_checked_ops)]
-            let count = if share_count == 0 {
-                self.topology.sockets
-            } else {
-                self.topology.threads / share_count
-            };
-
-            if count < 2 {
-                String::new()
-            } else {
-                alloc::format!("{}x ", count)
-            }
-        };
-
-        if let Some(cache) = self.topology.cache {
-            #[inline]
-            fn cache_size(raw_size: u32) -> (u32, &'static str) {
-                let mut num = raw_size / 1024;
-                let unit = if num >= 1024 { "MB" } else { "KB" };
-
-                if num >= 1024 {
-                    num /= 1024;
-                }
-
-                (num, unit)
-            }
-
-            match cache.l1 {
-                Level1Cache::Unified(cache) => {
-                    println!(
-                        "{}L1: Unified {} KB",
-                        disp.label("Cache"),
-                        cache.size / 1024
-                    );
-                }
-                Level1Cache::Split { data, instruction } => {
-                    let data_count: String = cache_count(data.share_count);
-                    let instruction_count: String = cache_count(instruction.share_count);
-
-                    if data.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            disp.inline_sublabel("Cache", "L1d"),
-                            &data_count,
-                            data.size / 1024,
-                            data.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            disp.inline_sublabel("Cache", "L1d"),
-                            &data_count,
-                            data.size / 1024
-                        );
-                    }
-
-                    if instruction.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            disp.sublabel("L1i"),
-                            &instruction_count,
-                            instruction.size / 1024,
-                            instruction.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            disp.sublabel("L1i"),
-                            &instruction_count,
-                            instruction.size / 1024,
-                        );
-                    }
-                }
-            }
-
-            if let Some(l2) = cache.l2 {
-                let count = cache_count(l2.share_count);
-                let (num, unit) = cache_size(l2.size);
-
-                if l2.assoc > 0 {
-                    println!(
-                        "{} {}{} {}, {}-way",
-                        disp.sublabel("L2"),
-                        &count,
-                        num,
-                        unit,
-                        l2.assoc
-                    );
-                } else {
-                    println!("{} {}{} {}", disp.sublabel("L2"), &count, num, unit);
-                }
-            }
-
-            // TODO: Determine reliable cache count for L3,
-            // especially for single-socket, multiple die CPUs, like Ryzen 9.
-            // Share count for L3 cache always seems to be 8??
-            if let Some(l3) = cache.l3 {
-                let cache_count: String = if self.topology.sockets < 2 {
-                    cache_count(l3.share_count)
-                } else {
-                    alloc::format!("{}x ", self.topology.sockets)
-                };
-
-                let (num, unit) = cache_size(l3.size);
-
-                if l3.assoc > 0 {
-                    println!(
-                        "{} {}{} {}, {}-way",
-                        disp.sublabel("L3"),
-                        &cache_count,
-                        num,
-                        unit,
-                        l3.assoc
-                    );
-                } else {
-                    println!("{} {}{} {}", disp.sublabel("L3"), &cache_count, num, unit);
-                }
-            }
-
-            newline();
-        }
-    }
-}
-
 impl TCpu for Cpu {
     /// Detects and returns comprehensive CPU information.
     ///
@@ -697,13 +563,8 @@ impl TCpu for Cpu {
         }
     }
 
-    fn display_table(&self, _color: bool) {
-        #[cfg(not(target_os = "none"))]
-        let newline = || println!();
-        #[cfg(target_os = "none")]
-        let newline = || {};
-
-        let disp = CpuDisplay { color: _color };
+    fn display_table(&self, color: bool) {
+        let disp = CpuDisplay { color };
 
         let ma: String = self.arch.micro_arch.into();
         let ma: &str = &ma;
@@ -721,7 +582,7 @@ impl TCpu for Cpu {
                 self.arch.brand_name
             );
 
-            newline();
+            CpuDisplay::newline();
         }
 
         if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
@@ -733,7 +594,7 @@ impl TCpu for Cpu {
                 hyp.to_str()
             );
 
-            newline();
+            CpuDisplay::newline();
         }
 
         if self.signature.is_overdrive {
@@ -751,7 +612,7 @@ impl TCpu for Cpu {
                 println!("{}{}", disp.label("Model"), &disp_model);
                 println!("{}{}", disp.label("Model (raw)"), &raw_model);
 
-                newline();
+                CpuDisplay::newline();
             }
         }
 
@@ -793,35 +654,52 @@ impl TCpu for Cpu {
                 println!("{}{} cores", lbl, self.topology.cores);
             }
 
-            newline();
+            CpuDisplay::newline();
         }
 
         // Cache
-        self.display_cache(_color);
+        let cache_count = |share_count: u32| -> String {
+            #[allow(clippy::manual_checked_ops)]
+            let count = if share_count == 0 {
+                self.topology.sockets
+            } else {
+                self.topology.threads / share_count
+            };
+
+            if count < 2 {
+                String::new()
+            } else {
+                alloc::format!("{}x ", count)
+            }
+        };
+
+        disp.display_cache(self.topology.cache, &cache_count, self.topology.sockets);
 
         // Clock Speed (Base/Boost)
         if self.topology.speed.base > 0 {
             let base = self.topology.speed.base;
             let boost = self.topology.speed.boost;
 
-            let print_speed = |l: &str, mhz: u32| {
-                if mhz >= 1000 {
-                    let whole = mhz / 1000;
-                    let fract = (mhz % 1000) / 10;
-                    println!("{}{}.{:02} GHz", l, whole, fract);
-                } else {
-                    println!("{}{}.00 MHz", l, mhz);
-                }
-            };
-
             if boost > base {
-                print_speed(&disp.inline_sublabel("Frequency", "Base"), base);
-                print_speed(&disp.sublabel("Boost"), boost);
+                println!(
+                    "{}{}",
+                    disp.inline_sublabel("Frequency", "Base"),
+                    CpuDisplay::format_frequency(base)
+                );
+                println!(
+                    "{}{}",
+                    disp.sublabel("Boost"),
+                    CpuDisplay::format_frequency(boost)
+                );
             } else {
-                print_speed(&disp.label("Frequency"), base);
+                println!(
+                    "{}{}",
+                    disp.label("Frequency"),
+                    CpuDisplay::format_frequency(base)
+                );
             }
 
-            newline();
+            CpuDisplay::newline();
         }
 
         // CPU Signature
@@ -848,7 +726,7 @@ impl TCpu for Cpu {
                 self.signature.model,
                 self.signature.stepping
             );
-            newline();
+            CpuDisplay::newline();
         }
 
         // CPU Features
@@ -876,7 +754,7 @@ impl TCpu for Cpu {
                     }
                 }
 
-                newline();
+                CpuDisplay::newline();
             }
         }
 
