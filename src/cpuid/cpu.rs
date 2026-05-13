@@ -744,13 +744,21 @@ impl TCpu for Cpu {
                 ];
                 for key in keys {
                     if self.features.contains_key(key) {
-                        println!(
-                            "{}{}",
-                            disp.sublabel(key),
-                            self.features
-                                .get(key)
-                                .expect("Somehow the key in the features BTreeMap disappeared!")
-                        );
+                        if key == "Base" {
+                            println!(
+                                "{}{}",
+                                disp.inline_sublabel("Features", "Base"),
+                                self.features.get(key).expect("Missing Base key?")
+                            )
+                        } else {
+                            println!(
+                                "{}{}",
+                                disp.sublabel(key),
+                                self.features.get(key).expect(
+                                    "Somehow the key in the features BTreeMap disappeared!"
+                                )
+                            );
+                        }
                     }
                 }
 
