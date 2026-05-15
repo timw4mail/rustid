@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0]
+
+### Added
+- Re-added "Features" label to x86 CPU output
+- Show APIC and MMX+ extensions in x86 feature list
+- Show 3dnow prefetch in x86 feature list
+
+### Changed
+- Refactored x86 display table to use common display module, reducing code duplication
+- Further deduplicated output formatting code across architectures
+
 ## [1.1.0]
 
 ### Added

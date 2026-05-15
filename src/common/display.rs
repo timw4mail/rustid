@@ -170,7 +170,7 @@ impl CpuDisplay {
                 }
             }
         }
-        println!();
+        Self::newline();
     }
 
     #[inline]

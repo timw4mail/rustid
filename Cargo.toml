@@ -1,6 +1,6 @@
 [package]
 name = "rustid"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2024"
 authors = ["Timothy J. Warren <tim@timshome.page>"]
 description = "A utility to identify the name and properties of the current cpu"

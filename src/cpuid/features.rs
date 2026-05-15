@@ -337,6 +337,11 @@ pub fn has_sse4a() -> bool {
 }
 
 #[must_use]
+pub fn has_3dnow_prefetch() -> bool {
+    has_feature(EXT_LEAF_1, Reg::Ecx, 8)
+}
+
+#[must_use]
 pub fn has_mmx_plus() -> bool {
     if is_amd() {
         has_feature(EXT_LEAF_1, Reg::Edx, 22)
@@ -430,6 +435,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("MMX+", has_mmx_plus),
         ("3DNow!", has_3dnow),
         ("3DNow!+", has_3dnow_plus),
+        ("3DNow!-Prefetch", has_3dnow_prefetch),
         ("HT", has_ht),
         ("APIC", has_apic),
         ("AMD64", has_amd64),
