@@ -30,14 +30,19 @@ name = "rustid"
 path="src/rustid.rs"
 
 [[bin]]
+name = "dos_rustid"
+required-features = ["dos-build"]
+path="src/dos_rustid.rs"
+
+[[bin]]
 name = "dump"
 required-features = ["dos-build"]
-path="src/dump.rs"
+path="src/dos_dump.rs"
 
 [[bin]]
 name = "debug"
 required-features = ["debug", "dos-build"]
-path="src/debug.rs"
+path="src/dos_debug.rs"
 
 [lints.clippy]
 unwrap_used = "warn"

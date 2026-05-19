@@ -9,6 +9,7 @@
 - Show 3dnow prefetch in x86 feature list
 
 ### Changed
+- Separated dos binaries from non-dos binary
 - Refactored x86 display table to use common display module, reducing code duplication
 - Further deduplicated output formatting code across architectures
 

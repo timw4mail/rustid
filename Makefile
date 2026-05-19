@@ -72,8 +72,8 @@ _build-dos-dump: _build-dos-tools
 
 # Build for DOS (EXE format)
 build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/rustid rustid.exe
+	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 
 # Build for modern windows (cli), requires visual studio to be installed

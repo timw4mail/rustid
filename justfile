@@ -20,7 +20,7 @@ check:
 lint:
 	cargo clippy --all-targets --all-features
 
-# Fix linting erros
+# Fix linting errors
 fix:
 	cargo fix --all-targets --all-features
 
@@ -57,8 +57,8 @@ _build-dos-dump: _build-dos-tools
 
 # Build for DOS (EXE format)
 build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/rustid rustid.exe
+	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
 	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
