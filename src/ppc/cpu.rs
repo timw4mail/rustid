@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
-use crate::common::{CpuDisplay, TCpu};
+use crate::common::{CliFlags, CpuDisplay, TCpu};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
 use std::path::Path;
@@ -252,10 +252,10 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
     }
 
-    fn display_table(&self, color: bool) {
+    fn display_table(&self, flags: CliFlags) {
         println!();
 
-        let cpu = CpuDisplay { color };
+        let cpu = CpuDisplay { flags };
 
         cpu.simple_line("Model", self.cpu_arch.marketing_name);
         cpu.simple_line("MicroArch", self.cpu_arch.micro_arch.into());
