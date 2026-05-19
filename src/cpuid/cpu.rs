@@ -727,15 +727,37 @@ impl TCpu for Cpu {
                 self.signature.display_model,
                 self.signature.stepping
             );
-            println!(
-                "{:>16}({}, {}, {}, {}, {})",
-                "",
-                self.signature.extended_family,
-                self.signature.family,
-                self.signature.extended_model,
-                self.signature.model,
-                self.signature.stepping
-            );
+            if flags.verbose {
+                println!(
+                    "{:>16}({:X}, {:X}, {:X}, {:X}, {:X})",
+                    disp.sublabel("hex"),
+                    self.signature.extended_family,
+                    self.signature.family,
+                    self.signature.extended_model,
+                    self.signature.model,
+                    self.signature.stepping
+                );
+                println!(
+                    "{:>16}({}, {}, {}, {}, {})",
+                    disp.sublabel("dec"),
+                    self.signature.extended_family,
+                    self.signature.family,
+                    self.signature.extended_model,
+                    self.signature.model,
+                    self.signature.stepping
+                );
+            } else {
+                println!(
+                    "{:>16}({}, {}, {}, {}, {})",
+                    "",
+                    self.signature.extended_family,
+                    self.signature.family,
+                    self.signature.extended_model,
+                    self.signature.model,
+                    self.signature.stepping
+                );
+            }
+
             CpuDisplay::newline();
         }
 
