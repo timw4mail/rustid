@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check lint fix fmt quality build build-debug build-release clean run from-file run-debug test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump
+.PHONY: default check lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump run-x86-emu
 
 # Lists the available actions
 default:
@@ -95,6 +95,10 @@ run-x86-emu:
 run-dos: build-dos
 	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.exe
 
+# Run the dos build in DOSBox-X, and return the output to a file
+test-dos: build-dos
+	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch /conf ./tools/dosbox-x.conf /time-limit 2 /log-con rustid.exe
+
 # Run windwos arm tests
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
@@ -159,10 +163,16 @@ run-debug:
 ifeq ($(OS),Linux)
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.exe
+
+test-dos: build-dos
+	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 endif
 ifeq ($(OS),Darwin)
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.exe
+
+test-dos: build-dos
+	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 endif
 
 # Run all the (native) tests

@@ -137,6 +137,16 @@ run-dos: build-dos
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.exe
 
+# Run the dos build in DOSBox-x, and return the output to a file
+[linux, unix]
+test-dos: build-dos
+	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
+
+# Run the dos build in DOSBox-x, and return the output to a file
+[windows]
+test-dos: build-dos
+	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch /conf ./tools/dosbox-x.conf /time-limit 2 /log-con rustid.exe
+
 # Run all the (native) tests
 test:
 	cargo test
