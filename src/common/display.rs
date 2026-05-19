@@ -3,11 +3,12 @@ use super::cache::{Cache, Level1Cache};
 use alloc::format;
 use alloc::string::String;
 
+use crate::common::CliFlags;
 #[cfg(target_os = "none")]
 use crate::println;
 
 pub struct CpuDisplay {
-    pub color: bool,
+    pub flags: CliFlags,
 }
 
 impl CpuDisplay {
@@ -24,7 +25,7 @@ impl CpuDisplay {
     }
 
     pub fn label(&self, s: &str) -> String {
-        if !self.color {
+        if !self.flags.color {
             Self::raw_label(s)
         } else {
             format!("\x1b[32m{:>14}\x1b[0m: ", s)
@@ -32,7 +33,7 @@ impl CpuDisplay {
     }
 
     pub fn sublabel(&self, s: &str) -> String {
-        if !self.color {
+        if !self.flags.color {
             Self::raw_sublabel(s)
         } else {
             format!("\x1b[94m{:>16}{}\x1b[0m: ", "", s)
@@ -40,7 +41,7 @@ impl CpuDisplay {
     }
 
     pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
-        if !self.color {
+        if !self.flags.color {
             Self::raw_inline_sublabel(label, sub)
         } else {
             format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)

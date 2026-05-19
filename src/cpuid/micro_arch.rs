@@ -406,7 +406,8 @@ impl CpuArch {
                     (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some(N600)),
 
                     // SiS
-                    (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, None),
+                    // See: <https://www.cpushack.com/2010/10/07/the-rise-of-the-vortex86-embedded-x86/>
+                    (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, Some(N180)),
 
                     // DM&P
                     // See: <https://www.vortex86.com/compare>

@@ -6,7 +6,8 @@ use super::topology::Topology;
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 
-use crate::common::{CpuDisplay, TCpu, UNK};
+use crate::common::{CliFlags, CpuDisplay, TCpu, UNK};
+use crate::cpuid::vendor::Cyrix;
 use crate::println;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
@@ -252,6 +253,7 @@ impl ExtendedSignature {
 /// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
+    pub has_cpuid: bool,
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
@@ -535,6 +537,7 @@ impl TCpu for Cpu {
     fn detect() -> Self {
         let sig = CpuSignature::detect();
         Self {
+            has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch: CpuArch::find(&Self::raw_model_string(), sig, &vendor_str()),
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
@@ -563,8 +566,8 @@ impl TCpu for Cpu {
         }
     }
 
-    fn display_table(&self, color: bool) {
-        let disp = CpuDisplay { color };
+    fn display_table(&self, flags: CliFlags) {
+        let disp = CpuDisplay { flags };
 
         let ma: String = self.arch.micro_arch.into();
         let ma: &str = &ma;
@@ -601,6 +604,10 @@ impl TCpu for Cpu {
             disp.simple_line("Overdrive", "Yes");
         }
 
+        if !self.has_cpuid {
+            disp.simple_line("CPUID", "No");
+        }
+
         let (raw_model, disp_model) = (Cpu::raw_model_string(), self.display_model_string());
 
         if disp_model != UNK {
@@ -610,7 +617,10 @@ impl TCpu for Cpu {
                 disp.simple_line("Model", &disp_model);
             } else {
                 println!("{}{}", disp.label("Model"), &disp_model);
-                println!("{}{}", disp.label("Model (raw)"), &raw_model);
+
+                if flags.verbose {
+                    println!("{}{}", disp.label("Model (raw)"), &raw_model);
+                }
 
                 CpuDisplay::newline();
             }
@@ -827,6 +837,7 @@ mod tests {
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
+            ..Default::default()
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
 
@@ -839,6 +850,7 @@ mod tests {
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
+            ..Default::default()
         };
         assert_eq!(
             cpu_am486_x2wb.display_model_string(),
@@ -858,6 +870,7 @@ mod tests {
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
+            ..Default::default()
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
 
@@ -880,6 +893,7 @@ mod tests {
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
+            ..Default::default()
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), UNK);
     }
@@ -905,6 +919,7 @@ mod tests {
             ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
+            ..Default::default()
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
     }

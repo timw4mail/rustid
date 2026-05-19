@@ -3,6 +3,7 @@
 ## [1.2.0]
 
 ### Added
+- Verbose flag added to cli options
 - Re-added "Features" label to x86 CPU output
 - Show APIC and MMX+ extensions in x86 feature list
 - Show 3dnow prefetch in x86 feature list

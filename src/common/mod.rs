@@ -18,6 +18,12 @@ pub use display::*;
 
 use alloc::string::String;
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct CliFlags {
+    pub color: bool,
+    pub verbose: bool,
+}
+
 pub trait TCpu {
     /// Detect the CPU
     fn detect() -> Self;
@@ -26,7 +32,7 @@ pub trait TCpu {
     fn debug(&self);
 
     /// Display the CPU information in a table format
-    fn display_table(&self, color: bool);
+    fn display_table(&self, flags: CliFlags);
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]

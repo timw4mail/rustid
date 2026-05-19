@@ -33,15 +33,19 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
-    use rustid::cpuid::dos::{exit, init_heap};
+    use rustid::{
+        common::CliFlags,
+        cpuid::dos::{exit, init_heap},
+    };
 
     unsafe { init_heap() };
 
     cyrix_cpuid_check();
 
+    let flags = CliFlags::default();
     let cpu = Cpu::detect();
     version();
-    cpu.display_table(false);
+    cpu.display_table(flags);
 
     exit();
 }
@@ -58,24 +62,30 @@ fn help() {
     println!("  r, dump          Dump raw CPUID values");
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     println!("  f, file <file>   Load CPUID dump from file and display CPU information");
-    println!("  v, version       Display version info");
+    println!("  V, version       Display version info");
     println!("  h, help          Show this help message");
     println!();
     println!("Flags:");
     println!("  m, mono          Don't output color");
+    println!("  v, verbose       Output more detailed information");
     println!();
     println!("All commands accept optional leading dashes. Flags can be combined, e.g. -me");
 }
 
 #[cfg(not(target_os = "none"))]
 fn main() {
+    use rustid::common::CliFlags;
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     use rustid::cpuid;
 
     #[cfg(target_arch = "x86")]
     cyrix_cpuid_check();
 
-    let mut color = true;
+    let mut flags = CliFlags {
+        color: true,
+        ..Default::default()
+    };
+
     let mut action = "default";
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     let mut file_path = None;
@@ -89,7 +99,7 @@ fn main() {
             .unwrap_or_else(|| arg.strip_prefix('-').unwrap_or(&arg));
 
         match stripped {
-            "m" | "mono" => color = false,
+            "m" | "mono" => flags.color = false,
             "e" | "everything" => action = "everything",
             "r" | "dump" => action = "dump",
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -101,13 +111,14 @@ fn main() {
                     return;
                 }
             }
-            "v" | "version" => action = "version",
+            "v" | "verbose" => flags.verbose = true,
+            "V" | "version" => action = "version",
             "h" | "help" => action = "help",
             "d" | "debug" => action = "debug",
             _ if arg.starts_with('-') && !arg.starts_with("--") => {
                 for c in arg.chars().skip(1) {
                     match c {
-                        'm' => color = false,
+                        'm' => flags.color = false,
                         'e' => action = "everything",
                         'r' => action = "dump",
                         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -119,7 +130,8 @@ fn main() {
                                 return;
                             }
                         }
-                        'v' => action = "version",
+                        'v' => flags.verbose = true,
+                        'V' => action = "version",
                         'h' => action = "help",
                         _ => {
                             eprintln!("Unknown flag: -{c}");
@@ -162,8 +174,9 @@ fn main() {
             Cpu::detect().debug();
         }
         "everything" => {
+            flags.verbose = true;
             let cpu = Cpu::detect();
-            cpu.display_table(color);
+            cpu.display_table(flags);
             println!("---");
             cpu.debug();
         }
@@ -184,7 +197,7 @@ fn main() {
         "help" => help(),
         "version" => {}
         "default" => {
-            Cpu::detect().display_table(color);
+            Cpu::detect().display_table(flags);
         }
         _ => unreachable!(),
     }
