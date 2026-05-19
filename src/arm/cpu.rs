@@ -3,8 +3,8 @@ use super::brand::Vendor;
 use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
-use crate::common::CpuDisplay;
 use crate::common::*;
+use crate::common::{CliFlags, CpuDisplay, TCpu};
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Default, PartialEq)]
@@ -127,8 +127,8 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
     }
 
-    fn display_table(&self, color: bool) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, color);
+    fn display_table(&self, flags: CliFlags) {
+        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, flags);
     }
 }
 

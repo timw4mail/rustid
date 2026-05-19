@@ -5,7 +5,7 @@ mod brand;
 pub mod cpu;
 pub mod features;
 pub mod micro_arch;
-use crate::common::{CoreType, CpuDisplay};
+use crate::common::{CliFlags, CoreType, CpuDisplay};
 pub use micro_arch::{CpuCore, Midr};
 use std::collections::{BTreeMap, HashSet};
 
@@ -56,9 +56,9 @@ impl CpuDisplay {
         cpu_arch: &micro_arch::CpuArch,
         cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
         features: &BTreeMap<&'static str, String>,
-        color: bool,
+        flags: CliFlags,
     ) {
-        let cpu = CpuDisplay { color };
+        let cpu = CpuDisplay { flags };
 
         println!();
 
