@@ -14,10 +14,11 @@
 //!
 //! ```
 //! use rustid::Cpu;
-//! use rustid::common::TCpu;
+//! use rustid::common::{CliFlags, TCpu};
 //!
 //! let cpu = Cpu::detect();
-//! cpu.display_table(true);
+//! let flags = CliFlags::default();
+//! cpu.display_table(flags);
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
