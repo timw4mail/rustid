@@ -159,3 +159,6 @@ Cargo.lock
 ## Build artifacts
 *.com
 *.exe
+
+## Logs
+dos.log

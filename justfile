@@ -68,6 +68,7 @@ build-windows:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-msvc; then rustup target add x86_64-pc-windows-msvc; fi
 	cargo build --target x86_64-pc-windows-msvc --release
 
+[windows]
 build-windows-arm:
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
 	cargo build --target aarch64-pc-windows-msvc --release
@@ -117,10 +118,6 @@ run arg="":
 from-file arg="":
 	@{{base_run}} file {{arg}}
 
-# Build and run the debug app
-run-debug arg="":
-	@{{base_run}} --features debug --bin debug {{arg}}
-
 # Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
 [windows]
 run-x86-emu arg="":
@@ -130,7 +127,7 @@ run-x86-emu arg="":
 # Run the dos build in DOSBox-X
 [windows]
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.exe
+	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
 
 # Run the dos debug build in DOSBox-X
 [linux, unix]
@@ -145,7 +142,7 @@ test-dos: build-dos
 # Run the dos build in DOSBox-x, and return the output to a file
 [windows]
 test-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch /conf ./tools/dosbox-x.conf /time-limit 2 /log-con rustid.exe
+	"C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ./tools/dosbox-x.conf -time-limit 2 rustid.exe
 
 # Run all the (native) tests
 test:

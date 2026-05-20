@@ -93,11 +93,11 @@ run-x86-emu:
 
 # Run the dos build in DOSBox-X
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch rustid.exe
+	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
 
 # Run the dos build in DOSBox-X, and return the output to a file
 test-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  /fastlaunch /conf ./tools/dosbox-x.conf /time-limit 2 /log-con rustid.exe
+	"C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ./tools/dosbox-x.conf -time-limit 2 rustid.exe
 
 # Run windwos arm tests
 test-arm: _cargo_cross
@@ -154,10 +154,6 @@ run:
 # Run rustid, but pull cpu information from a cpuid dump
 from-file:
 	@$(BASE_RUN) file $(ARG)
-
-# Build and run the debug app
-run-debug:
-	@$(BASE_RUN) --features debug --bin debug $(ARG)
 
 # Run the dos build in DOSBox-X (Linux/Unix)
 ifeq ($(OS),Linux)
