@@ -41,7 +41,7 @@ pub extern "C" fn rust_main() -> ! {
 
     Cpu::detect().debug();
 
-    exit();
+    exit(0);
 }
 
 #[cfg(not(all(target_os = "none", target_arch = "x86")))]

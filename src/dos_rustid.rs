@@ -1,9 +1,6 @@
 #![cfg_attr(all(not(test), target_os = "none"), no_std)]
 #![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
-#[cfg(target_arch = "x86")]
-use rustid::cyrix_cpuid_check;
-
 #[cfg(all(target_os = "none", target_arch = "x86"))]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
@@ -32,18 +29,19 @@ pub unsafe extern "C" fn _start() -> ! {
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{CliFlags, TCpu};
     use rustid::cpuid::dos::{exit, init_heap};
-    use rustid::{Cpu, version};
+    use rustid::{Cpu, cyrix_cpuid_check, version};
 
     unsafe { init_heap() };
 
     cyrix_cpuid_check();
 
-    let flags = CliFlags::default();
     let cpu = Cpu::detect();
+    let flags = CliFlags::default();
+
     version();
     cpu.display_table(flags);
 
-    exit();
+    exit(0);
 }
 
 #[cfg(not(all(target_os = "none", target_arch = "x86")))]

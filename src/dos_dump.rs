@@ -47,7 +47,7 @@ pub extern "C" fn rust_main() -> ! {
         println!("This cpu does not support cpuid. Cpuid info cannot be dumped.");
     }
 
-    exit();
+    exit(0);
 }
 
 #[cfg(not(all(target_os = "none", target_arch = "x86")))]

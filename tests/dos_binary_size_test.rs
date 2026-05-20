@@ -18,10 +18,10 @@ fn test_dos_binary_size() {
         let metadata = std::fs::metadata(&binary_path).expect("Failed to read binary metadata");
         let size = metadata.len();
 
-        const MAX_SIZE: u64 = 128 * 1024; // 128KB (Multi-segment support)
+        const MAX_SIZE: u64 = 62 * 1024; // Max dos segment size
         assert!(
             size < MAX_SIZE,
-            "{} is {} bytes, exceeds 64KB limit ({} bytes)",
+            "{} is {} bytes, exceeds ~62KB limit ({} bytes)",
             binary,
             size,
             MAX_SIZE

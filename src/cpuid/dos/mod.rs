@@ -15,9 +15,22 @@ pub use allocator::init_heap;
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.
 #[cfg(not(test))]
+#[cold]
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    // crate::println!("PANIC: {}", info);
+    use crate::println;
+    if let Some(location) = info.location() {
+        println!(
+            "Panic in file '{}' at line {}:{}",
+            location.file(),
+            location.line(),
+            location.column(),
+        );
+    } else {
+        println!("Panic for unknown reason.");
+    }
+    exit(1);
 }
 
 /// Prints a formatted string to the DOS console.
@@ -89,14 +102,15 @@ fn printc(ch: u8) {
 }
 
 /// Exits the program and returns control to DOS using INT 21h, AH=4Ch.
-pub fn exit() -> ! {
+pub fn exit(code: u8) -> ! {
     // Exit to DOS via INT 21h, AH=4Ch
     unsafe {
         asm!(
             "int 0x21",
-            in("ax") 0x4C00_u16,
+            in("ah") 0x4C_u8,
+            in("al") code,
             options(noreturn)
-        );
+        )
     }
 }
 
