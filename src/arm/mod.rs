@@ -69,15 +69,37 @@ impl CpuDisplay {
 
         cpu.simple_line("Model", &cpu_arch.model);
 
-        cpu.simple_line("Code Name", cpu_arch.code_name);
+        cpu.simple_line("Codename", cpu_arch.code_name);
 
         if let Some(tech) = cpu_arch.technology {
             cpu.simple_line("Process", tech);
         }
 
-        for ((kind, _, _), core) in cores {
-            let name = format!("{} Cores", Into::<String>::into(*kind));
-            println!("{}", CpuDisplay::raw_label(&name));
+        #[allow(clippy::explicit_counter_loop)]
+        if cores.len() > 1 {
+            let mut i = 1;
+            for ((kind, _, _), core) in cores {
+                let core_num = format!("Core #{i}");
+                println!("{}", cpu.label(&core_num));
+                println!("{}{}", cpu.label("Count"), core.count);
+                let name = Into::<String>::into(*kind);
+                println!("{}{}", cpu.label("Type"), &name);
+
+                if let Some(name) = core.name.clone() {
+                    println!("{}{}", cpu.label("Codename"), name);
+                }
+
+                let cc = |s| CpuDisplay::cache_count(s, core.count);
+                cpu.display_cache(core.cache, &cc, 0);
+
+                i += 1;
+            }
+        } else {
+            println!("{}", cpu.label("Cores"));
+            let keys: Vec<_> = cores.keys().collect();
+            let core = cores
+                .get(keys[0])
+                .expect("There should be a core to display");
 
             if let Some(name) = core.name.clone() {
                 println!("{}{}", cpu.label("Name"), name);
