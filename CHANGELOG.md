@@ -4,14 +4,19 @@
 
 ### Added
 - Verbose flag added to cli options
+- Extended signature line to verbose mode
 - Re-added "Features" label to x86 CPU output
 - Show APIC and MMX+ extensions in x86 feature list
 - Show 3dnow prefetch in x86 feature list
+- test-dos command to Makefile and Justfile
 
 ### Changed
 - Separated dos binaries from non-dos binary
 - Refactored x86 display table to use common display module, reducing code duplication
 - Further deduplicated output formatting code across architectures
+- Refactored ARM display of different core types
+- Removed unused DOS module
+- Read hypervisor string in the correct byte order
 
 ## [1.1.0]
 
