@@ -684,6 +684,58 @@ mod amd_5900xt {
     }
 }
 
+mod amd_2700u {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/2700U.txt");
+        test();
+    }
+
+    #[test]
+    fn test_amd_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_AMD);
+        });
+    }
+
+    #[test]
+    fn test_amd_brand_string() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+
+            let brand = Cpu::detect().display_model_string();
+            assert!(brand.contains("2700U"));
+        });
+    }
+
+    #[test]
+    fn test_amd_signature() {
+        with_mock_cpu(|| {
+            let (ext_family, family, ext_model, model, stepping) = get_signature();
+            assert_eq!(ext_family, 8);
+            assert_eq!(family, 15);
+            assert_eq!(ext_model, 1);
+            assert_eq!(model, 1);
+            assert_eq!(stepping, 0);
+        });
+    }
+
+    #[test]
+    fn test_amd_topology() {
+        with_mock_cpu(|| {
+            use rustid::common::TCpu;
+
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads, 8);
+            assert_eq!(cpu.topology.cores, 4);
+            assert_eq!(cpu.topology.sockets, 1);
+            assert_eq!(cpu.topology.dies, 1);
+        });
+    }
+}
+
 mod zhaoxin_kx5640 {
     use super::*;
 

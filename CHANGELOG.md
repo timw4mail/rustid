@@ -16,7 +16,10 @@
 - Further deduplicated output formatting code across architectures
 - Refactored ARM display of different core types
 - Removed unused DOS module
-- Read hypervisor string in the correct byte order
+
+### Fixed
+- Read hypervisor vendor string in the correct byte order
+- Improved core and thread count detection for AMD cpus
 
 ## [1.1.0]
 
