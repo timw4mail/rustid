@@ -1,7 +1,7 @@
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, logical_cores};
+use crate::cpuid::{CpuSignature, amd_logical_cores};
 
 /// AMD-specific microarchitecture detection.
 pub struct Amd;
@@ -75,13 +75,13 @@ impl TMicroArch for Amd {
 
             // Family 10h (K10)
             // Phenom X2 (Athlon X2), Phenom X3, Phenom X4
-            (1, 15, 0, 2, 3) => match logical_cores() {
+            (1, 15, 0, 2, 3) => match amd_logical_cores() {
                 2 => brand_arch(MicroArch::K10, "Kuma", Some(N65)),
                 3 => brand_arch(MicroArch::K10, "Toliman", Some(N65)),
                 _ => brand_arch(MicroArch::K10, "Agena", Some(N65)),
             },
             // Phenom II X2, Phenom II X4
-            (1, 15, 0, 4, _) => match logical_cores() {
+            (1, 15, 0, 4, _) => match amd_logical_cores() {
                 2 => brand_arch(MicroArch::K10, "Callisto", Some(N45)),
                 _ => brand_arch(MicroArch::K10, "Deneb", Some(N45)),
             },

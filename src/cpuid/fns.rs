@@ -283,7 +283,7 @@ pub fn is_overdrive() -> bool {
 
 /// Returns the number of logical cores.
 #[must_use]
-pub fn logical_cores() -> u32 {
+pub fn amd_logical_cores() -> u32 {
     // Since AMD has a handy flag for getting logical cores,
     // try that first
     if is_amd() {
@@ -305,6 +305,18 @@ pub fn logical_cores() -> u32 {
     }
 
     1
+}
+
+#[must_use]
+pub fn amd_threads_per_core() -> u32 {
+    if is_amd() && is_valid_leaf(EXT_LEAF_1E) {
+        let res = x86_cpuid(EXT_LEAF_1E);
+        let count = (res.ebx >> 8) & 0xFF;
+
+        count + 1
+    } else {
+        1u32
+    }
 }
 
 // ------------------------------------------------------------------------

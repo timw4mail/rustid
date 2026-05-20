@@ -1,6 +1,9 @@
 use super::constants::*;
 use super::mp::MpTable;
-use super::{has_ht, is_valid_leaf, vendor_str, x86_cpuid_count};
+use super::{
+    amd_logical_cores, amd_threads_per_core, has_ht, is_amd, is_valid_leaf, vendor_str,
+    x86_cpuid_count,
+};
 use crate::common::{Cache, Speed};
 use alloc::vec::Vec;
 
@@ -224,21 +227,8 @@ impl Topology {
         }
 
         // 3. Fallback for AMD
-        if is_valid_leaf(EXT_LEAF_8) {
-            let res = super::x86_cpuid(EXT_LEAF_8);
-            let count = (res.ecx & 0xFF) + 1;
-            if count > 1 {
-                return count;
-            }
-        }
-
-        // 4. Fallback for Leaf 1
-        if is_valid_leaf(LEAF_1) {
-            let res = super::x86_cpuid(LEAF_1);
-            let count = (res.ebx >> 16) & 0xFF;
-            if count > 0 {
-                return count;
-            }
+        if is_amd() {
+            return amd_logical_cores();
         }
 
         1
@@ -263,7 +253,11 @@ impl Topology {
         if domains.is_empty() {
             let (cores, threads) = match &*vendor_str() {
                 VENDOR_AMD if threads_total_fallback > 1 => {
-                    (threads_total_fallback, threads_total_fallback)
+                    let threads_per_core = amd_threads_per_core();
+                    (
+                        threads_total_fallback / threads_per_core,
+                        threads_total_fallback,
+                    )
                 }
                 VENDOR_INTEL => {
                     if threads_total_fallback < 2 {
