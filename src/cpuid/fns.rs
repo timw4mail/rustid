@@ -177,7 +177,18 @@ pub fn vendor_str() -> String {
 #[must_use]
 pub fn hypervisor_str() -> String {
     if is_hypervisor_guest() {
-        raw_vendor_str(HYP_LEAF_0)
+        let res = x86_cpuid(HYP_LEAF_0);
+        let mut bytes = [0u8; 12];
+
+        bytes[0..4].copy_from_slice(&res.ebx.to_le_bytes());
+        bytes[4..8].copy_from_slice(&res.ecx.to_le_bytes());
+        bytes[8..12].copy_from_slice(&res.edx.to_le_bytes());
+
+        let s = core::str::from_utf8(&bytes)
+            .unwrap_or(UNK)
+            .trim_matches('\0');
+
+        String::from(s)
     } else {
         String::from(UNK)
     }
