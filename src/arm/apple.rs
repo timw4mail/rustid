@@ -505,8 +505,8 @@ impl TCpu for Cpu {
         println!("{:#?}", self);
     }
 
-    fn display_table(&self, color: bool) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, color);
+    fn display_table(&self, flags: CliFlags) {
+        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, flags);
     }
 }
 
