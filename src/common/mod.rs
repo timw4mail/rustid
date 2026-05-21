@@ -8,7 +8,7 @@ pub mod constants;
 pub mod display;
 
 #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
-pub mod sysconf;
+pub mod sysctl;
 
 pub use cache::*;
 
@@ -20,7 +20,7 @@ pub use constants::*;
 pub use display::*;
 
 #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
-pub use sysconf::*;
+pub use sysctl::*;
 
 use alloc::string::String;
 

@@ -3,10 +3,9 @@ use super::brand::*;
 use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use crate::arm::TArmCpu;
-use crate::common::UNK;
 use crate::common::*;
+use crate::common::{UNK, get_full_raw_sysctl_map};
 use std::collections::{BTreeMap, HashSet};
-use std::process::Command;
 
 // ----------------------------------------------------------------------------
 // Feature detection via sysctl (text-based, matches existing pattern)
@@ -18,110 +17,100 @@ pub fn get_features_from_sysctl() -> BTreeMap<String, bool> {
     let mut features: BTreeMap<String, bool> = BTreeMap::new();
 
     // Run sysctl to get hw.optional and hw.optional.arm keys
-    if let Ok(output) = Command::new("sysctl").arg("-a").output()
-        && let Ok(stdout) = String::from_utf8(output.stdout)
-    {
-        for line in stdout.lines() {
-            let line = line.trim();
-            if let Some((key, value)) = line.split_once(':') {
-                let key = key.trim();
-                let value = value.trim();
+    for (key, value) in get_full_raw_sysctl_map() {
+        // Only process hw.optional.* keys
+        if key.starts_with("hw.optional") {
+            // Convert value to bool (1 = true, 0 = false)
+            if let Ok(v) = value.parse::<i32>()
+                && v == 1
+            {
+                // Extract feature name from key
+                // e.g., "hw.optional.neon" -> "neon"
+                // e.g., "hw.optional.arm.FEAT_AES" -> "aes"
+                let feature_name = if key.starts_with("hw.optional.arm.FEAT_") {
+                    // Remove "hw.optional.arm.FEAT_" prefix
+                    let feat = key
+                        .strip_prefix("hw.optional.arm.FEAT_")
+                        .expect("starts_with guard ensures this matches");
+                    feat.to_lowercase()
+                } else if key.starts_with("hw.optional.arm.FEAT") {
+                    // Handle "hw.optional.arm.FEATXYZ" without underscore
+                    let feat = key
+                        .strip_prefix("hw.optional.arm.FEAT")
+                        .expect("starts_with guard ensures this matches");
+                    feat.to_lowercase()
+                } else if key.starts_with("hw.optional.arm.") {
+                    let feat = key
+                        .strip_prefix("hw.optional.arm.")
+                        .expect("starts_with guard ensures this matches");
+                    feat.to_lowercase()
+                } else if key.starts_with("hw.optional.") {
+                    let feat = key
+                        .strip_prefix("hw.optional.")
+                        .expect("starts_with guard ensures this matches");
+                    feat.to_lowercase()
+                } else {
+                    continue;
+                };
 
-                // Only process hw.optional.* keys
-                if key.starts_with("hw.optional") {
-                    // Convert value to bool (1 = true, 0 = false)
-                    if let Ok(v) = value.parse::<i32>()
-                        && v == 1
-                    {
-                        // Extract feature name from key
-                        // e.g., "hw.optional.neon" -> "neon"
-                        // e.g., "hw.optional.arm.FEAT_AES" -> "aes"
-                        let feature_name = if key.starts_with("hw.optional.arm.FEAT_") {
-                            // Remove "hw.optional.arm.FEAT_" prefix
-                            let feat = key
-                                .strip_prefix("hw.optional.arm.FEAT_")
-                                .expect("starts_with guard ensures this matches");
-                            feat.to_lowercase()
-                        } else if key.starts_with("hw.optional.arm.FEAT") {
-                            // Handle "hw.optional.arm.FEATXYZ" without underscore
-                            let feat = key
-                                .strip_prefix("hw.optional.arm.FEAT")
-                                .expect("starts_with guard ensures this matches");
-                            feat.to_lowercase()
-                        } else if key.starts_with("hw.optional.arm.") {
-                            let feat = key
-                                .strip_prefix("hw.optional.arm.")
-                                .expect("starts_with guard ensures this matches");
-                            feat.to_lowercase()
-                        } else if key.starts_with("hw.optional.") {
-                            let feat = key
-                                .strip_prefix("hw.optional.")
-                                .expect("starts_with guard ensures this matches");
-                            feat.to_lowercase()
-                        } else {
-                            continue;
-                        };
+                // Map known feature names to canonical lowercase names
+                let canonical = match feature_name.as_str() {
+                    "floatingpoint" => "fp",
+                    "neon" => "neon",
+                    "neon_hpfp" => "fphp",
+                    "neon_fp16" => "fp16",
+                    "armv8_1_atomics" => "atomics",
+                    "armv8_crc32" => "crc32",
+                    "armv8_2_fhm" => "asimdfhm",
+                    "armv8_2_sha512" => "sha512",
+                    "armv8_2_sha3" => "sha3",
+                    "amx_version" => "amx",
+                    "ucnormal_mem" => "ucnormal",
+                    "arm64" => "asimd", // arm64 implies ASIMD
+                    // hw.optional.arm.FEAT_* names
+                    "crc32" => "crc32",
+                    "flagm" => "flagm",
+                    "fhm" => "asimdfhm",
+                    "dotprod" => "dotprod",
+                    "sha3" => "sha3",
+                    "rdm" => "asimdrdm",
+                    "lse" => "atomics",
+                    "sha256" => "sha2",
+                    "sha512" => "sha512",
+                    "sha1" => "sha1",
+                    "aes" => "aes",
+                    "pmull" => "pmull",
+                    "specres" => "specres",
+                    "specres2" => "specres2",
+                    "sb" => "sb",
+                    "frintts" => "frintts",
+                    "lrcpc" => "lrcpc",
+                    "lrcpc2" => "lrcpc2",
+                    "fcma" => "fcma",
+                    "jscvt" => "jscvt",
+                    "pauth" => "pauth",
+                    "pauth2" => "pauth2",
+                    "fpac" => "fpac",
+                    "fpaccomb" => "fpac", // alias
+                    "dpb" => "dpb",
+                    "dpb2" => "dpb2",
+                    "bf16" => "bf16",
+                    "ebf16" => "bf16", // alias
+                    "i8mm" => "i8mm",
+                    "wft" => "wfx",
+                    "rpres" => "rpres",
+                    "cssc" => "cssc",
+                    "hbc" => "hbc",
+                    "ecv" => "ecv",
+                    "afp" => "afp",
+                    "lse2" => "lse2",
+                    "csv2" => "csv2",
+                    "csv3" => "csv3",
+                    "pacimp" => "pauth",
+                    _ => &feature_name,
+                };
 
-                        // Map known feature names to canonical lowercase names
-                        let canonical = match feature_name.as_str() {
-                            "floatingpoint" => "fp",
-                            "neon" => "neon",
-                            "neon_hpfp" => "fphp",
-                            "neon_fp16" => "fp16",
-                            "armv8_1_atomics" => "atomics",
-                            "armv8_crc32" => "crc32",
-                            "armv8_2_fhm" => "asimdfhm",
-                            "armv8_2_sha512" => "sha512",
-                            "armv8_2_sha3" => "sha3",
-                            "amx_version" => "amx",
-                            "ucnormal_mem" => "ucnormal",
-                            "arm64" => "asimd", // arm64 implies ASIMD
-                            // hw.optional.arm.FEAT_* names
-                            "crc32" => "crc32",
-                            "flagm" => "flagm",
-                            "fhm" => "asimdfhm",
-                            "dotprod" => "dotprod",
-                            "sha3" => "sha3",
-                            "rdm" => "asimdrdm",
-                            "lse" => "atomics",
-                            "sha256" => "sha2",
-                            "sha512" => "sha512",
-                            "sha1" => "sha1",
-                            "aes" => "aes",
-                            "pmull" => "pmull",
-                            "specres" => "specres",
-                            "specres2" => "specres2",
-                            "sb" => "sb",
-                            "frintts" => "frintts",
-                            "lrcpc" => "lrcpc",
-                            "lrcpc2" => "lrcpc2",
-                            "fcma" => "fcma",
-                            "jscvt" => "jscvt",
-                            "pauth" => "pauth",
-                            "pauth2" => "pauth2",
-                            "fpac" => "fpac",
-                            "fpaccomb" => "fpac", // alias
-                            "dpb" => "dpb",
-                            "dpb2" => "dpb2",
-                            "bf16" => "bf16",
-                            "ebf16" => "bf16", // alias
-                            "i8mm" => "i8mm",
-                            "wft" => "wfx",
-                            "rpres" => "rpres",
-                            "cssc" => "cssc",
-                            "hbc" => "hbc",
-                            "ecv" => "ecv",
-                            "afp" => "afp",
-                            "lse2" => "lse2",
-                            "csv2" => "csv2",
-                            "csv3" => "csv3",
-                            "pacimp" => "pauth",
-                            _ => &feature_name,
-                        };
-
-                        features.insert(canonical.to_string(), true);
-                    }
-                }
+                features.insert(canonical.to_string(), true);
             }
         }
     }
@@ -298,26 +287,12 @@ const CPUFAMILY_ARM_EVEREST_SAWTOOTH: usize = 0x8765edea;
 /// Get all the juicy cpu details from sysctl
 fn get_sysctl_map() -> BTreeMap<String, String> {
     let mut values: BTreeMap<String, String> = BTreeMap::new();
-    TryInto::<String>::try_into(
-        Command::new("sysctl")
-            .arg("-a")
-            .output()
-            .expect("Failed to load cpu details from sysctl")
-            .stdout,
-    )
-    .expect("Unable to get cpu info from sysctl")
-    .split('\n')
-    .filter(|l| !l.is_empty())
-    .for_each(|x| {
-        let line: Vec<_> = x.split(": ").collect();
-        if let Some(key) = line.first()
-            && let Some(val) = line.get(1)
-            && (key.starts_with("machdep.cpu")
-                || (key.starts_with("hw") && !key.contains("optional")))
-        {
-            values.insert(String::from(*key), String::from(*val));
+
+    for (key, value) in get_full_raw_sysctl_map() {
+        if key.starts_with("machdep.cpu") || (key.starts_with("hw") && !key.contains("optional")) {
+            values.insert(key.clone(), value.clone());
         }
-    });
+    }
 
     values
 }
