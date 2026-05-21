@@ -44,14 +44,14 @@ impl MpTable {
         table
     }
 
-    /// Detects the number of sockets by parsing sysconf on FreeBSD
-    #[cfg(not(target_os = "none"))]
+    /// Detects the number of sockets by parsing sysctl on FreeBSD
+    #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
     #[must_use]
-    pub fn detect_sysconf() -> MpTable {
+    pub fn detect_sysctl() -> MpTable {
         use std::collections::HashMap;
 
         let mut table = MpTable { sockets: 1 };
-        let map: HashMap<String, u32> = crate::common::get_int_sysconf_map("kern.smp", "kern.smp.");
+        let map: HashMap<String, u32> = crate::common::get_int_sysctl_map("kern.smp", "kern.smp.");
         if let Some(sockets) = map.get("cpus") {
             table.sockets = *sockets;
         }
@@ -110,7 +110,7 @@ impl MpTable {
         return Self::detect_cpuinfo("/proc/cpuinfo");
 
         #[cfg(target_os = "freebsd")]
-        return Self::detect_sysconf();
+        return Self::detect_sysctl();
 
         #[cfg(target_os = "haiku")]
         return Self::detect_sysinfo("sysinfo");
