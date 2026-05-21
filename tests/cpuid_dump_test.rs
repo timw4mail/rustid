@@ -1015,7 +1015,7 @@ mod olpc {
     }
 }
 
-mod via_w2b {
+mod idt_w2b {
     use super::*;
 
     fn with_mock_cpu(test: impl FnOnce()) {
@@ -1035,15 +1035,12 @@ mod via_w2b {
     fn test_w2b_padlock_features() {
         with_mock_cpu(|| {
             use rustid::cpuid::vendor::centaur;
-            assert!(centaur::has_rng(), "Winchip 2B has RNG");
+            assert!(!centaur::has_rng(), "Winchip 2B has no RNG");
             assert!(!centaur::has_rng2(), "Winchip 2B has no RNG2");
-            assert!(centaur::has_ace(), "Winchip 2B has ACE enabled");
-            assert!(
-                !centaur::has_ace2(),
-                "Winchip 2B ACE2 present but NOT enabled"
-            );
+            assert!(!centaur::has_ace(), "Winchip 2B has no ACE enabled");
+            assert!(!centaur::has_ace2(), "Winchip 2B ACE2 not present");
             assert!(!centaur::has_phe(), "Winchip 2B has no PHE");
-            assert!(centaur::has_phe2(), "Winchip 2B has PHE2");
+            assert!(!centaur::has_phe2(), "Winchip 2B has no PHE2");
             assert!(!centaur::has_pmm(), "Winchip 2B has no PMM");
         });
     }

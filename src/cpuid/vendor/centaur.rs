@@ -2,7 +2,7 @@ use crate::cpuid::brand::CpuBrand;
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, is_zhaoxin};
+use crate::cpuid::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
 
 pub struct Centaur;
 
@@ -53,7 +53,7 @@ impl TMicroArch for Centaur {
             (0, 6, 0, 9, 0..=7) => brand_arch(MicroArch::Nehemiah, "C5XL", Some(N130)),
             (0, 6, 0, 9, 8..=15) => brand_arch(MicroArch::NehemiahP, "C5P", Some(N130)),
             (0, 6, 0, 10, _) => brand_arch(MicroArch::Esther, "C5J Model A", Some(N90)),
-            (0, 5, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some(N90)), // OLPC XO 1.5
+            (0, 6, 0, 13, _) => brand_arch(MicroArch::Esther, "C5J Model D", Some(N90)), // OLPC XO 1.5
 
             // From instlatx64
             (0, 6, 0, 15, 0..8) => brand_arch(MicroArch::Isaiah, "CNA", Some(N65)),
@@ -82,18 +82,35 @@ impl TMicroArch for Centaur {
 // For ACE and ACE2, both the present bit AND the enable bit must be set.
 // ----------------------------------------------------------------------------
 
-use crate::cpuid::{CENTAUR_LEAF_1, Reg, has_feature};
+use crate::cpuid::{CENTAUR_LEAF_1, EXT_LEAF_1, Reg, has_feature};
+
+fn has_centaur_feature(leaf: u32, register: Reg, bit: u32) -> bool {
+    if !is_valid_leaf(leaf) {
+        return false;
+    }
+
+    // If CENTAUR_LEAF_1 == EXT_LEAF_1, these leaves do not contain Centaur-specific data
+    // See: <https://www.ardent-tool.com/CPU/docs/IDT_Centaur/WinChip2/wc_2_datasheet_a2.pdf>
+    let ext_leaf = x86_cpuid(EXT_LEAF_1);
+    let centaur_leaf = x86_cpuid(CENTAUR_LEAF_1);
+    if ext_leaf == centaur_leaf {
+        return false;
+    }
+
+    // If we know that the Centaur leaf is different, we can check for centaur-specific values
+    has_feature(leaf, register, bit)
+}
 
 /// Random Number Generator (`xstore` instruction)
 #[must_use]
 pub fn has_rng() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 0)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 0)
 }
 
 /// Enhanced RNG (`xstore2` instruction)
 #[must_use]
 pub fn has_rng2() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 1)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 1)
 }
 
 /// Advanced Cryptography Engine (AES encryption/decryption)
@@ -101,7 +118,8 @@ pub fn has_rng2() -> bool {
 /// Requires both presence (bit 2) and enable (bit 4).
 #[must_use]
 pub fn has_ace() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 2) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 4)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 2)
+        && has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 4)
 }
 
 /// Advanced Cryptography Engine 2 (AES 192/256-bit keys)
@@ -109,25 +127,26 @@ pub fn has_ace() -> bool {
 /// Requires both presence (bit 3) and enable (bit 5).
 #[must_use]
 pub fn has_ace2() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 3) && has_feature(CENTAUR_LEAF_1, Reg::Edx, 5)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 3)
+        && has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 5)
 }
 
 /// `PadLock` Hash Engine (SHA-1/SHA-256)
 #[must_use]
 pub fn has_phe() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 6)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 6)
 }
 
 /// `PadLock` Hash Engine 2 (SHA-512)
 #[must_use]
 pub fn has_phe2() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 7)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 7)
 }
 
 /// `PadLock` Montgomery Multiplier (big-integer modular exponentiation)
 #[must_use]
 pub fn has_pmm() -> bool {
-    has_feature(CENTAUR_LEAF_1, Reg::Edx, 8)
+    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 8)
 }
 
 #[cfg(test)]
