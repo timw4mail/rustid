@@ -170,8 +170,8 @@ impl CpuDisplay {
                     println!("{} {}{} {}", self.sublabel("L3"), &count, num, unit);
                 }
             }
+            Self::newline();
         }
-        Self::newline();
     }
 
     #[inline]
