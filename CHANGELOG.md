@@ -18,6 +18,7 @@
 - Removed unused DOS module
 
 ### Fixed
+- Updated Centaur feature flag detection (IDT, Via, Zhaoxin) based on CPU datasheets
 - Read hypervisor vendor string in the correct byte order
 - Improved core and thread count detection for AMD cpus
 

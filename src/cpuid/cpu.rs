@@ -3,7 +3,7 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::vendor::{Centaur, Cyrix};
+use super::vendor::Cyrix;
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 
@@ -794,13 +794,17 @@ impl TCpu for Cpu {
                     }
                 }
 
+                #[cfg(not(target_os = "none"))]
                 if is_centaur() {
-                    let centaur_map = Centaur::get_feature_list();
+                    use alloc::format;
+                    use alloc::vec::Vec;
+
+                    let centaur_map = super::vendor::Centaur::get_feature_list();
                     if !centaur_map.is_empty() {
                         let mut list: Vec<String> = Vec::new();
                         for (name, enabled) in &centaur_map {
                             if *enabled {
-                                list.push(name.to_string());
+                                list.push(String::from(*name));
                             } else {
                                 if flags.color {
                                     list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name))
