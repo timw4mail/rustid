@@ -35,10 +35,12 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md)
 Output varies by architecture. Here is an example for x86_64:
 
 ```text
---------------- Rustid 1.0.0 (x86_64-windows) ---------------
+--------------- Rustid 1.2.0 (x86_64-windows) ---------------
   Architecture: x86_64-v4
 
         Vendor: AuthenticAMD (AMD)
+
+    Hypervisor: Microsoft Hv (Microsoft HyperV)
 
          Model: AMD Ryzen 9 9950X3D2 16-Core Processor
 
@@ -60,7 +62,14 @@ Output varies by architecture. Here is an example for x86_64:
      Signature: Family 1Ah, Model 44h, Stepping 0h
                 (11, 15, 4, 4, 0)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES VAES AVX AVX2 AVX512F FMA BMI1 BMI2 RDRAND POPCNT F16C SHA
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX MMX+ 3DNow!-Prefetch HT APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3
+                AVX: AVX AVX2 AVX-VNNI VPCLMULQDQ
+                AVX512: F DQ IFMA CD BW VL BITALG VPOPCNTDQ VP2INTERSECT
+                Security: NX RDSEED RDRAND AES VAES SHA
+                Math: FMA BMI1 BMI2 F16C
+                Other: POPCNT
+
 ```
 
 For ARM and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).

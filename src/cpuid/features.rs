@@ -374,7 +374,7 @@ pub fn has_3dnow() -> bool {
 // ! Feature list aggregation
 // ----------------------------------------------------------------------------
 
-type FeatureFn = fn() -> bool;
+pub type FeatureFn = fn() -> bool;
 type FeatureMap<'a> = &'a [(&'static str, FeatureFn)];
 
 #[cfg(target_os = "none")]
@@ -423,8 +423,6 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 #[cfg(not(target_os = "none"))]
 #[must_use]
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
-    use super::vendor::centaur;
-
     const BASIC_FEATURES: FeatureMap = &[
         ("FPU", has_fpu),
         ("TSC", has_tsc),
@@ -494,16 +492,6 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
     const OTHER_FEATURES: FeatureMap = &[("x2apic", has_x2apic), ("POPCNT", has_popcnt)];
 
-    const CENTAUR_FEATURES: FeatureMap = &[
-        ("RNG", centaur::has_rng),
-        ("RNG2", centaur::has_rng2),
-        ("ACE", centaur::has_ace),
-        ("ACE2", centaur::has_ace2),
-        ("PHE", centaur::has_phe),
-        ("PHE2", centaur::has_phe2),
-        ("PMM", centaur::has_pmm),
-    ];
-
     let mut map = BTreeMap::new();
 
     let mut basic: Vec<&'static str> = Vec::new();
@@ -513,7 +501,6 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     let mut encryption: Vec<&'static str> = Vec::new();
     let mut math: Vec<&'static str> = Vec::new();
     let mut other: Vec<&'static str> = Vec::new();
-    let mut centaur: Vec<&'static str> = Vec::new();
 
     for (v, key, checks) in [
         (&mut basic, "Base", BASIC_FEATURES),
@@ -523,7 +510,6 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         (&mut encryption, "Security", SECURITY_FEATURES),
         (&mut math, "Math", MATH_FEATURES),
         (&mut other, "Other", OTHER_FEATURES),
-        (&mut centaur, "Centaur", CENTAUR_FEATURES),
     ] {
         for (name, check) in checks {
             if check() {

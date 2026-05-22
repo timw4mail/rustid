@@ -868,13 +868,22 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_padlock_features() {
         with_mock_cpu(|| {
             use rustid::cpuid::vendor::centaur;
-            assert!(!centaur::has_rng(), "KX-5640 has no RNG");
-            assert!(!centaur::has_rng2(), "KX-5640 has no RNG2");
-            assert!(centaur::has_ace(), "KX-5640 has ACE enabled");
-            assert!(centaur::has_ace2(), "KX-5640 has ACE2 enabled");
+            assert!(centaur::has_rng(), "KX-5640 has RNG");
+            assert!(centaur::rng_enabled(), "KX-5640 rng enabled");
+            assert!(centaur::has_rng2(), "KX-5640 has RNG2");
+            assert!(centaur::rng2_enabled(), "KX-5640 rng2 enabled");
+            assert!(centaur::has_ace(), "KX-5640 has ACE");
+            assert!(centaur::ace_enabled(), "KX-5640 has ACE enabled");
+            assert!(centaur::has_ace2(), "KX-5640 has ACE2");
+            assert!(!centaur::ace2_enabled(), "KX-5640 has AC2 disabled");
             assert!(centaur::has_phe(), "KX-5640 has PHE");
+            assert!(centaur::phe_enabled(), "KX-5640 has PHE enabled");
             assert!(centaur::has_phe2(), "KX-5640 has PHE2");
+            assert!(centaur::phe2_enabled(), "KX-5640 has PHE2 enabled");
             assert!(centaur::has_pmm(), "KX-5640 has PMM");
+            assert!(centaur::pmm_enabled(), "KX-5640 has PMM enabled");
+            assert!(centaur::has_rsa(), "KX-5640 has RSA");
+            assert!(centaur::rsa_enabled(), "KX-5640 has RSA enabled");
         });
     }
 }
@@ -973,12 +982,15 @@ mod via_c7d {
     fn test_via_padlock_features() {
         with_mock_cpu(|| {
             use rustid::cpuid::vendor::centaur;
-            assert!(!centaur::has_rng(), "C7-D has no RNG");
+            assert!(centaur::has_rng(), "C7-D has RNG");
+            assert!(centaur::rng_enabled(), "C7-D has RNG enabled");
             assert!(!centaur::has_rng2(), "C7-D has no RNG2");
-            assert!(!centaur::has_ace(), "C7-D ACE present but NOT enabled");
-            assert!(!centaur::has_ace2(), "C7-D ACE2 present but NOT enabled");
+            assert!(centaur::has_ace(), "C7-D has ACE");
+            assert!(centaur::ace_enabled(), "C7-D has ACE enabled");
+            assert!(centaur::has_ace2(), "C7-D ACE2");
+            assert!(centaur::ace2_enabled(), "C7-D ACE2 enabled");
             assert!(centaur::has_phe(), "C7-D has PHE");
-            assert!(centaur::has_phe2(), "C7-D has PHE2");
+            assert!(!centaur::has_phe2(), "C7-D does not have PHE2");
             assert!(centaur::has_pmm(), "C7-D has PMM");
         });
     }
@@ -1004,13 +1016,16 @@ mod olpc {
     fn test_olpc_padlock_features() {
         with_mock_cpu(|| {
             use rustid::cpuid::vendor::centaur;
-            assert!(!centaur::has_rng(), "VIA C5M has no RNG");
-            assert!(!centaur::has_rng2(), "VIA C5M has no RNG2");
-            assert!(!centaur::has_ace(), "VIA C5M ACE present but NOT enabled");
-            assert!(!centaur::has_ace2(), "VIA C5M ACE2 present but NOT enabled");
-            assert!(centaur::has_phe(), "VIA C5M has PHE");
-            assert!(centaur::has_phe2(), "VIA C5M has PHE2");
-            assert!(centaur::has_pmm(), "VIA C5M has PMM");
+            assert!(centaur::has_rng(), "C7-M has RNG");
+            assert!(centaur::rng_enabled(), "C7-M has RNG enabled");
+            assert!(!centaur::has_rng2(), "C7-M has no RNG2");
+            assert!(centaur::has_ace(), "C7-M has ACE");
+            assert!(centaur::ace_enabled(), "C7-M has ACE enabled");
+            assert!(centaur::has_ace2(), "C7-M ACE2");
+            assert!(centaur::ace2_enabled(), "C7-M ACE2 enabled");
+            assert!(centaur::has_phe(), "C7-M has PHE");
+            assert!(!centaur::has_phe2(), "C7-M does not have PHE2");
+            assert!(centaur::has_pmm(), "C7-M has PMM");
         });
     }
 }

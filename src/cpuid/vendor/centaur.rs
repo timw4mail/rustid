@@ -3,21 +3,26 @@ use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
+use std::collections::BTreeMap;
 
 pub struct Centaur;
 
+fn centaur_cpu_brand() -> CpuBrand {
+    if is_zhaoxin() {
+        CpuBrand::Zhaoxin
+    } else {
+        let s = CpuSignature::detect();
+        match s.family {
+            5 => CpuBrand::IDT,
+            6 => CpuBrand::Via,
+            _ => CpuBrand::Zhaoxin,
+        }
+    }
+}
+
 impl TMicroArch for Centaur {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand = if is_zhaoxin() {
-            CpuBrand::Zhaoxin
-        } else {
-            match s.family {
-                5 => CpuBrand::IDT,
-                6 => CpuBrand::Via,
-                7 => CpuBrand::Zhaoxin,
-                _ => CpuBrand::Unknown,
-            }
-        };
+        let brand = centaur_cpu_brand();
 
         let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
             CpuArch::new(
@@ -84,8 +89,8 @@ impl TMicroArch for Centaur {
 
 use crate::cpuid::{CENTAUR_LEAF_1, EXT_LEAF_1, Reg, has_feature};
 
-fn has_centaur_feature(leaf: u32, register: Reg, bit: u32) -> bool {
-    if !is_valid_leaf(leaf) {
+fn has_centaur_feature(bit: u32) -> bool {
+    if !is_valid_leaf(CENTAUR_LEAF_1) {
         return false;
     }
 
@@ -98,28 +103,53 @@ fn has_centaur_feature(leaf: u32, register: Reg, bit: u32) -> bool {
     }
 
     // If we know that the Centaur leaf is different, we can check for centaur-specific values
-    has_feature(leaf, register, bit)
+    has_feature(CENTAUR_LEAF_1, Reg::Edx, bit)
+}
+
+/// Alternate Instruction Set Support
+///
+/// This flag is different for Zhaoxin
+#[must_use]
+pub fn has_ais() -> bool {
+    centaur_cpu_brand() != CpuBrand::Zhaoxin && has_centaur_feature(0)
+}
+pub fn ais_enabled() -> bool {
+    has_ais() && has_centaur_feature(1)
+}
+
+/// Chinese Cipher Security SM2
+pub fn has_sm2() -> bool {
+    centaur_cpu_brand() == CpuBrand::Zhaoxin && has_centaur_feature(0)
+}
+pub fn sm2_enabled() -> bool {
+    has_sm2() && has_centaur_feature(0)
 }
 
 /// Random Number Generator (`xstore` instruction)
 #[must_use]
 pub fn has_rng() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 0)
+    has_centaur_feature(2)
+}
+pub fn rng_enabled() -> bool {
+    has_rng() && has_centaur_feature(3)
 }
 
-/// Enhanced RNG (`xstore2` instruction)
-#[must_use]
-pub fn has_rng2() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 1)
+/// Chinese Cipher Security SM3 & SM4
+pub fn has_sm3_4() -> bool {
+    centaur_cpu_brand() == CpuBrand::Zhaoxin && has_centaur_feature(4)
+}
+pub fn sm3_4_enabled() -> bool {
+    has_sm3_4() && has_centaur_feature(5)
 }
 
 /// Advanced Cryptography Engine (AES encryption/decryption)
-///
-/// Requires both presence (bit 2) and enable (bit 4).
 #[must_use]
 pub fn has_ace() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 2)
-        && has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 4)
+    has_centaur_feature(6)
+}
+#[must_use]
+pub fn ace_enabled() -> bool {
+    has_ace() && has_centaur_feature(7)
 }
 
 /// Advanced Cryptography Engine 2 (AES 192/256-bit keys)
@@ -127,26 +157,90 @@ pub fn has_ace() -> bool {
 /// Requires both presence (bit 3) and enable (bit 5).
 #[must_use]
 pub fn has_ace2() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 3)
-        && has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 5)
+    has_centaur_feature(8)
+}
+pub fn ace2_enabled() -> bool {
+    has_ace2() && has_centaur_feature(9)
 }
 
 /// `PadLock` Hash Engine (SHA-1/SHA-256)
 #[must_use]
 pub fn has_phe() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 6)
+    has_centaur_feature(10)
 }
-
-/// `PadLock` Hash Engine 2 (SHA-512)
-#[must_use]
-pub fn has_phe2() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 7)
+pub fn phe_enabled() -> bool {
+    has_phe() && has_centaur_feature(11)
 }
 
 /// `PadLock` Montgomery Multiplier (big-integer modular exponentiation)
 #[must_use]
 pub fn has_pmm() -> bool {
-    has_centaur_feature(CENTAUR_LEAF_1, Reg::Edx, 8)
+    has_centaur_feature(12)
+}
+pub fn pmm_enabled() -> bool {
+    has_pmm() && has_centaur_feature(13)
+}
+
+/// Enhanced RNG (`xstore2` instruction)
+#[must_use]
+pub fn has_rng2() -> bool {
+    has_centaur_feature(22)
+}
+pub fn rng2_enabled() -> bool {
+    has_rng2() && has_centaur_feature(23)
+}
+
+/// `PadLock` Hash Engine 2 (SHA-512)
+#[must_use]
+pub fn has_phe2() -> bool {
+    has_centaur_feature(25)
+}
+pub fn phe2_enabled() -> bool {
+    has_phe2() && has_centaur_feature(26)
+}
+
+/// `Padlock` Montgomery Multiplier 2/ RSA
+#[must_use]
+pub fn has_rsa() -> bool {
+    has_centaur_feature(27)
+}
+pub fn rsa_enabled() -> bool {
+    has_rsa() && has_centaur_feature(28)
+}
+
+pub type CentaurFeatureMap<'a> = &'a [(
+    &'static str,
+    crate::cpuid::features::FeatureFn,
+    crate::cpuid::features::FeatureFn,
+)];
+
+impl Centaur {
+    pub fn get_feature_list() -> BTreeMap<&'static str, bool> {
+        const CENTAUR_FEATURES: CentaurFeatureMap = &[
+            ("AIS", has_ais, ais_enabled),
+            ("CCS_SM2", has_sm2, sm2_enabled),
+            ("CCS_SM3_SM4", has_sm3_4, sm3_4_enabled),
+            ("RNG", has_rng, rng_enabled),
+            ("RNG2", has_rng2, rng2_enabled),
+            ("ACE", has_ace, ace_enabled),
+            ("ACE2", has_ace2, ace2_enabled),
+            ("PHE", has_phe, phe_enabled),
+            ("PHE2", has_phe2, phe2_enabled),
+            ("PMM", has_pmm, pmm_enabled),
+            ("RSA", has_rsa, rsa_enabled),
+        ];
+
+        let mut map: BTreeMap<&'static str, bool> = BTreeMap::new();
+
+        for (name, exists, enabled) in CENTAUR_FEATURES {
+            if exists() {
+                let active = enabled();
+                map.insert(*name, active);
+            }
+        }
+
+        map
+    }
 }
 
 #[cfg(test)]

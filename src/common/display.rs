@@ -1,4 +1,5 @@
 use super::cache::{Cache, Level1Cache};
+use super::constants::*;
 
 use alloc::format;
 use alloc::string::String;
@@ -28,7 +29,7 @@ impl CpuDisplay {
         if !self.flags.color {
             Self::raw_label(s)
         } else {
-            format!("\x1b[32m{:>14}\x1b[0m: ", s)
+            format!("{}{s:>14}{}: ", Self::ansi(ANSI_GREEN), ANSI_RESET)
         }
     }
 
@@ -36,7 +37,12 @@ impl CpuDisplay {
         if !self.flags.color {
             Self::raw_sublabel(s)
         } else {
-            format!("\x1b[94m{:>16}{}\x1b[0m: ", "", s)
+            format!(
+                "{:>16}{}{s}{}: ",
+                "",
+                Self::ansi(ANSI_BRIGHT_BLUE),
+                ANSI_RESET
+            )
         }
     }
 
@@ -44,8 +50,22 @@ impl CpuDisplay {
         if !self.flags.color {
             Self::raw_inline_sublabel(label, sub)
         } else {
-            format!("\x1b[32m{:>14}\x1b[0m: \x1b[94m{:1}\x1b[0m: ", label, sub)
+            format!(
+                "{}{label:>14}{}: {}{sub:1}{}: ",
+                Self::ansi(ANSI_GREEN),
+                ANSI_RESET,
+                Self::ansi(ANSI_BRIGHT_BLUE),
+                ANSI_RESET
+            )
         }
+    }
+
+    pub fn ansi(code: &str) -> String {
+        format!("\x1b[{code}m")
+    }
+
+    pub fn ansi_color(code: &str, s: &str) -> String {
+        format!("{}{s}{ANSI_RESET}", Self::ansi(code))
     }
 
     pub fn simple_line(&self, l: &str, v: &str) {
