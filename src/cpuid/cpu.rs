@@ -256,6 +256,8 @@ pub struct Cpu {
     pub has_cpuid: bool,
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
+    /// Hypervisor vendor string
+    pub hyp_vendor_str: Option<String>,
     /// Easter egg string (hidden CPU info for some AMD/Rise processors)
     pub easter_egg: Option<String>,
     /// Model brand id
@@ -539,6 +541,11 @@ impl TCpu for Cpu {
         Self {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch: CpuArch::find(&Self::raw_model_string(), sig, &vendor_str()),
+            hyp_vendor_str: if is_hypervisor_guest() {
+                Some(hypervisor_str())
+            } else {
+                None
+            },
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
