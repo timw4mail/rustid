@@ -151,6 +151,7 @@ impl From<String> for CpuBrand {
     }
 }
 
+#[derive(PartialEq, Debug)]
 pub enum HypervisorBrand {
     Bhyve,
     MicrosoftHyperV,
@@ -312,5 +313,34 @@ mod tests {
 
         let unknown_string = String::from("UNKNOWN_VEN");
         assert_eq!(CpuBrand::from(unknown_string), CpuBrand::Unknown);
+    }
+
+    #[test]
+    fn test_hypervisor_brand_to_str() {
+        assert_eq!(HypervisorBrand::Bhyve.to_str(), "Bhyve");
+        assert_eq!(HypervisorBrand::MicrosoftHyperV.to_str(), "Microsoft HyperV");
+        assert_eq!(HypervisorBrand::LinuxKVM.to_str(), "Linux KVM");
+        assert_eq!(HypervisorBrand::Parallels.to_str(), "Parallels");
+        assert_eq!(HypervisorBrand::Qemu.to_str(), "QEMU");
+        assert_eq!(HypervisorBrand::Qnx.to_str(), "QNX");
+        assert_eq!(HypervisorBrand::VirtualBox.to_str(), "VirtualBox");
+        assert_eq!(HypervisorBrand::VmWare.to_str(), "VMWare");
+        assert_eq!(HypervisorBrand::Xen.to_str(), "Xen");
+        assert_eq!(HypervisorBrand::Unknown.to_str(), UNK);
+    }
+
+    #[test]
+    fn test_from_str_for_hypervisor_brand() {
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_BHYVE), HypervisorBrand::Bhyve);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_HYPERV), HypervisorBrand::MicrosoftHyperV);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_KVM), HypervisorBrand::LinuxKVM);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_PARALLELS), HypervisorBrand::Parallels);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_PARALLELS_ALT), HypervisorBrand::Parallels);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_QEMU), HypervisorBrand::Qemu);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_QNX), HypervisorBrand::Qnx);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_VBOX), HypervisorBrand::VirtualBox);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_VMWARE), HypervisorBrand::VmWare);
+        assert_eq!(HypervisorBrand::from(HYP_VENDOR_XEN), HypervisorBrand::Xen);
+        assert_eq!(HypervisorBrand::from("SomeUnknownVendor"), HypervisorBrand::Unknown);
     }
 }
