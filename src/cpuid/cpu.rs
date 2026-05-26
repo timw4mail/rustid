@@ -541,7 +541,7 @@ impl TCpu for Cpu {
         Self {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch: CpuArch::find(&Self::raw_model_string(), sig, &vendor_str()),
-            hyp_vendor_str: if is_hypervisor_guest() {
+            hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
                 Some(hypervisor_str())
             } else {
                 None
@@ -595,14 +595,10 @@ impl TCpu for Cpu {
             CpuDisplay::newline();
         }
 
-        if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
+        // Hypervisor vendor_string (brand_name)
+        if let Some(hyp_str) = &self.hyp_vendor_str {
             let hyp = HypervisorBrand::detect();
-            println!(
-                "{}{} ({})",
-                disp.label("Hypervisor"),
-                hypervisor_str(),
-                hyp.to_str()
-            );
+            println!("{}{} ({})", disp.label("Hypervisor"), hyp_str, hyp.to_str());
 
             CpuDisplay::newline();
         }
