@@ -597,7 +597,7 @@ impl TCpu for Cpu {
 
         // Hypervisor vendor_string (brand_name)
         if let Some(hyp_str) = &self.hyp_vendor_str {
-            let hyp = HypervisorBrand::detect();
+            let hyp = HypervisorBrand::from(hyp_str.as_str());
             println!("{}{} ({})", disp.label("Hypervisor"), hyp_str, hyp.to_str());
 
             CpuDisplay::newline();

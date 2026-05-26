@@ -318,7 +318,10 @@ mod tests {
     #[test]
     fn test_hypervisor_brand_to_str() {
         assert_eq!(HypervisorBrand::Bhyve.to_str(), "Bhyve");
-        assert_eq!(HypervisorBrand::MicrosoftHyperV.to_str(), "Microsoft HyperV");
+        assert_eq!(
+            HypervisorBrand::MicrosoftHyperV.to_str(),
+            "Microsoft HyperV"
+        );
         assert_eq!(HypervisorBrand::LinuxKVM.to_str(), "Linux KVM");
         assert_eq!(HypervisorBrand::Parallels.to_str(), "Parallels");
         assert_eq!(HypervisorBrand::Qemu.to_str(), "QEMU");
@@ -331,16 +334,43 @@ mod tests {
 
     #[test]
     fn test_from_str_for_hypervisor_brand() {
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_BHYVE), HypervisorBrand::Bhyve);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_HYPERV), HypervisorBrand::MicrosoftHyperV);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_KVM), HypervisorBrand::LinuxKVM);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_PARALLELS), HypervisorBrand::Parallels);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_PARALLELS_ALT), HypervisorBrand::Parallels);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_QEMU), HypervisorBrand::Qemu);
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_BHYVE),
+            HypervisorBrand::Bhyve
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_HYPERV),
+            HypervisorBrand::MicrosoftHyperV
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_KVM),
+            HypervisorBrand::LinuxKVM
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_PARALLELS),
+            HypervisorBrand::Parallels
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_PARALLELS_ALT),
+            HypervisorBrand::Parallels
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_QEMU),
+            HypervisorBrand::Qemu
+        );
         assert_eq!(HypervisorBrand::from(HYP_VENDOR_QNX), HypervisorBrand::Qnx);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_VBOX), HypervisorBrand::VirtualBox);
-        assert_eq!(HypervisorBrand::from(HYP_VENDOR_VMWARE), HypervisorBrand::VmWare);
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_VBOX),
+            HypervisorBrand::VirtualBox
+        );
+        assert_eq!(
+            HypervisorBrand::from(HYP_VENDOR_VMWARE),
+            HypervisorBrand::VmWare
+        );
         assert_eq!(HypervisorBrand::from(HYP_VENDOR_XEN), HypervisorBrand::Xen);
-        assert_eq!(HypervisorBrand::from("SomeUnknownVendor"), HypervisorBrand::Unknown);
+        assert_eq!(
+            HypervisorBrand::from("SomeUnknownVendor"),
+            HypervisorBrand::Unknown
+        );
     }
 }
