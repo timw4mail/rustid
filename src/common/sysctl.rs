@@ -13,6 +13,25 @@ pub fn get_int_sysctl_map(prefix: &str, strip_prefix: &str) -> HashMap<String, u
     map
 }
 
+pub fn get_sysctl_value(name: &str) -> Option<String> {
+    if let Ok(output) = Command::new("sysctl").arg(name).output()
+        && let Ok(stdout) = String::from_utf8(output.stdout)
+    {
+        for line in stdout.lines() {
+            let line = line.trim();
+            if let Some((key, value)) = line.split_once(':')
+                && key.trim() == name
+            {
+                let value = value.trim();
+
+                return Some(String::from(value));
+            }
+        }
+    }
+
+    None
+}
+
 fn get_sysctl_map_by_prefix(prefix: &str, strip_prefix: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
 
