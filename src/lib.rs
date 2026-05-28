@@ -47,9 +47,9 @@ pub mod cpuid;
 #[cfg(x86_cpu)]
 pub use cpuid::Cpu;
 
-#[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
+#[cfg(ppc_cpu)]
 pub mod ppc;
-#[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
+#[cfg(ppc_cpu)]
 pub use ppc::cpu::Cpu;
 
 #[cfg(arm_cpu)]
