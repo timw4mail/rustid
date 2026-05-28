@@ -48,7 +48,7 @@ required-features = ["debug", "dos-build"]
 path="src/dos_debug.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ["cfg(dos)"] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)'] }
 
 [lints.clippy]
 unwrap_used = "warn"

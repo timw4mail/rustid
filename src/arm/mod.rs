@@ -1,4 +1,4 @@
-#![cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
+#![cfg(arm_cpu)]
 //! ARM CPU detection.
 
 mod brand;
@@ -146,7 +146,7 @@ pub fn get_midr() -> usize {
                 core::arch::asm!("mrc p15, 0, {midr}, c0, c0, 0", midr = out(reg) midr, options(nomem, nostack));
             }
         }
-        #[cfg(target_arch = "aarch64")]
+        #[cfg(any(target_arch = "aarch64", target_arch = "arm64ec"))]
         {
             // For AArch64, MIDR_EL1 (EL1)
             unsafe {

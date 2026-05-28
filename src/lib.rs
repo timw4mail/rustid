@@ -42,9 +42,9 @@ extern crate std;
 
 pub mod common;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(x86_cpu)]
 pub mod cpuid;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(x86_cpu)]
 pub use cpuid::Cpu;
 
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
@@ -52,9 +52,9 @@ pub mod ppc;
 #[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
 pub use ppc::cpu::Cpu;
 
-#[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
+#[cfg(arm_cpu)]
 pub mod arm;
-#[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
+#[cfg(arm_cpu)]
 pub use arm::Cpu;
 
 #[cfg(dos)]
@@ -71,7 +71,7 @@ pub fn version() {
 }
 
 #[cfg(not(dos))]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(x86_cpu)]
 pub fn file_version() {
     println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");
 }
