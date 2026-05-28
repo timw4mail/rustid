@@ -255,12 +255,13 @@ impl Cache {
         let mut found_cache = false;
 
         let lines: Vec<&str> = output_str.lines().collect();
-        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
 
         // No output from lscpu -C
         if lines.len() < 2 {
             return None;
         }
+
+        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
 
         for line in lines.into_iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
