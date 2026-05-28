@@ -1,6 +1,7 @@
-#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#![cfg(x86_cpu)]
 
 use rustid::common::*;
+use rustid::common::TDetect;
 use rustid::cpuid::provider::*;
 use rustid::cpuid::*;
 use std::path::PathBuf;
@@ -149,8 +150,6 @@ mod ppro {
     #[test]
     fn test_model_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("Pentium Pro"));

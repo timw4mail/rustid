@@ -1,6 +1,6 @@
 use super::*;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
-use crate::common::TCpu;
+use crate::common::TDetect;
 use crate::cpuid;
 use core::fmt::Write;
 

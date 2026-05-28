@@ -388,7 +388,7 @@ pub struct Cpu {
     pub features: BTreeMap<&'static str, String>,
 }
 
-impl TCpu for Cpu {
+impl TDetect for Cpu {
     fn detect() -> Self {
         let mut raw_midr: HashSet<usize> = HashSet::new();
         let mut midrs: HashSet<Midr> = HashSet::new();
@@ -477,7 +477,9 @@ impl TCpu for Cpu {
             features,
         }
     }
+}
 
+impl TCpu for Cpu {
     fn debug(&self)
     where
         Self: std::fmt::Debug,
