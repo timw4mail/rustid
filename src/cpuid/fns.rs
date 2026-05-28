@@ -64,14 +64,14 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 #[must_use]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
-    #[cfg(target_os = "none")]
+    #[cfg(dos)]
     return real_x86_cpuid_count(leaf, sub_leaf);
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     super::provider::cpuid_count(leaf, sub_leaf)
 }
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 #[must_use]
 pub fn info_source() -> super::provider::CpuidInfoSource {
     super::provider::info_source()

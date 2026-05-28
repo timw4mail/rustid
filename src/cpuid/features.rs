@@ -377,7 +377,7 @@ pub fn has_3dnow() -> bool {
 pub type FeatureFn = fn() -> bool;
 type FeatureMap<'a> = &'a [(&'static str, FeatureFn)];
 
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     let mut map = BTreeMap::new();
 
@@ -420,7 +420,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 }
 
 /// Get the full list of detected features.
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 #[must_use]
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     const BASIC_FEATURES: FeatureMap = &[

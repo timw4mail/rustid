@@ -21,23 +21,23 @@
 //! cpu.display_table(flags);
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
-#![cfg_attr(all(not(test), target_os = "none"), no_std)]
+#![cfg_attr(all(not(test), dos), no_std)]
 
 extern crate alloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 const ARCH: &str = std::env::consts::ARCH;
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 const ARCH: &str = "x86";
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 const OS: &str = std::env::consts::OS;
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 const OS: &str = "DOS";
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 extern crate std;
 
 pub mod common;
@@ -57,10 +57,10 @@ pub mod arm;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec"))]
 pub use arm::Cpu;
 
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 pub use cpuid::dos::*;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 pub use std::{print, println};
 
 pub fn version() {
@@ -70,7 +70,7 @@ pub fn version() {
     );
 }
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn file_version() {
     println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");

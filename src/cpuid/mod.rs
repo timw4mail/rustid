@@ -14,7 +14,7 @@ pub mod constants;
 pub mod count;
 pub mod cpu;
 
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 pub mod dos;
 
 pub mod dump;
@@ -23,7 +23,7 @@ pub mod fns;
 pub mod micro_arch;
 pub mod mp;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 pub mod provider;
 
 pub mod topology;

@@ -4,14 +4,14 @@ use crate::cpuid::{amd_threads_per_core, has_ht};
 use super::mp::MpTable;
 use super::{amd_logical_cores, is_amd};
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 use super::{info_source, provider::CpuidInfoSource};
 
 pub fn get_socket_count() -> u32 {
-    #[cfg(target_os = "none")]
+    #[cfg(dos)]
     let sockets_detected = MpTable::detect().socket_count();
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     let sockets_detected: u32 = if info_source() == CpuidInfoSource::Cpu {
         MpTable::detect().socket_count()
     } else {

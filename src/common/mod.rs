@@ -1,9 +1,9 @@
 pub mod cache;
 
-#[cfg(not(target_os = "none"))]
-pub mod cores;
-
 pub mod constants;
+
+#[cfg(not(dos))]
+pub mod count;
 
 pub mod display;
 
@@ -12,10 +12,10 @@ pub mod sysctl;
 
 pub use cache::*;
 
-#[cfg(not(target_os = "none"))]
-pub use cores::*;
-
 pub use constants::*;
+
+#[cfg(not(dos))]
+pub use count::*;
 
 pub use display::*;
 

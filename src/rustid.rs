@@ -1,4 +1,4 @@
-#![cfg(not(target_os = "none"))]
+#![cfg(not(dos))]
 
 use rustid::common::TCpu;
 use rustid::{Cpu, version};
@@ -6,7 +6,7 @@ use rustid::{Cpu, version};
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 fn help() {
     println!("Usage: rustid [FLAGS] [COMMAND]");
     println!();
@@ -28,7 +28,7 @@ fn help() {
     println!("All commands accept optional leading dashes. Flags can be combined, e.g. -me");
 }
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 fn main() {
     use rustid::common::CliFlags;
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

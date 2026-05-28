@@ -1,7 +1,7 @@
-#![cfg_attr(all(not(test), target_os = "none"), no_std)]
-#![cfg_attr(all(not(test), target_os = "none"), no_main)]
+#![cfg_attr(all(not(test), dos), no_std)]
+#![cfg_attr(all(not(test), dos), no_main)]
 
-#[cfg(all(target_os = "none", target_arch = "x86"))]
+#[cfg(dos)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 #[unsafe(naked)]
@@ -24,7 +24,7 @@ pub unsafe extern "C" fn _start() -> ! {
     );
 }
 
-#[cfg(all(target_os = "none", target_arch = "x86"))]
+#[cfg(dos)]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::cpuid::dos::{DosWriter, exit, init_heap};
@@ -50,5 +50,5 @@ pub extern "C" fn rust_main() -> ! {
     exit(0);
 }
 
-#[cfg(not(all(target_os = "none", target_arch = "x86")))]
+#[cfg(not(dos))]
 pub fn main() {}

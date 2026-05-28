@@ -4,7 +4,7 @@ use crate::common::{Cache, Speed};
 use crate::cpuid::count::{get_core_count, get_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 use super::{info_source, provider::CpuidInfoSource};
 
 impl Speed {
@@ -55,7 +55,7 @@ impl Speed {
     }
 
     fn measure() -> Self {
-        #[cfg(not(target_os = "none"))]
+        #[cfg(not(dos))]
         if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
             return Speed::default();
         }
@@ -72,7 +72,7 @@ impl Speed {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     fn measure_frequency() -> u32 {
         #[cfg(target_arch = "x86")]
         use core::arch::x86::_rdtsc as rdtsc;

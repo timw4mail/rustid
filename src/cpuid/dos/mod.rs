@@ -1,4 +1,4 @@
-#![cfg(all(target_arch = "x86", target_os = "none"))]
+#![cfg(dos)]
 //! DOS/16-bit environment support for rustid.
 //!
 //! This module provides DOS-specific implementations including console output
