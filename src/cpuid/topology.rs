@@ -1,13 +1,10 @@
 use super::constants::*;
-use super::mp::MpTable;
-use super::{
-    amd_logical_cores, amd_threads_per_core, has_ht, is_amd, is_valid_leaf, vendor_str,
-    x86_cpuid_count,
-};
+use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, Speed};
+use crate::cpuid::count::{get_core_count, get_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 use super::{info_source, provider::CpuidInfoSource};
 
 impl Speed {
@@ -58,7 +55,7 @@ impl Speed {
     }
 
     fn measure() -> Self {
-        #[cfg(not(target_os = "none"))]
+        #[cfg(not(dos))]
         if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
             return Speed::default();
         }
@@ -75,7 +72,7 @@ impl Speed {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     fn measure_frequency() -> u32 {
         #[cfg(target_arch = "x86")]
         use core::arch::x86::_rdtsc as rdtsc;
@@ -200,81 +197,18 @@ impl Topology {
         }
     }
 
-    fn amd_threads() -> u32 {
-        if vendor_str() != VENDOR_AMD {
-            return 1;
-        }
-
-        // 1. Try modern V2 topology leaves
-        // 2. Try V1 topology leaf
-        for &leaf in &[EXT_LEAF_26, LEAF_1F, LEAF_0B] {
-            if is_valid_leaf(leaf) {
-                let mut subleaf = 0;
-                let mut max_lcpus = 0;
-                loop {
-                    let res = x86_cpuid_count(leaf, subleaf);
-                    let domain_type = (res.ecx >> 8) & 0xFF;
-                    if domain_type == 0 {
-                        break;
-                    }
-                    max_lcpus = res.ebx;
-                    subleaf += 1;
-                }
-                if max_lcpus > 0 {
-                    return max_lcpus;
-                }
-            }
-        }
-
-        // 3. Fallback for AMD
-        if is_amd() {
-            return amd_logical_cores();
-        }
-
-        1
-    }
-
     /// Returns (sockets, total_cores, total_threads)
     fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
-        let threads_total_fallback = Self::amd_threads();
-
-        // 1. Initial socket count detection (Platform-specific fallbacks)
-        // TODO: detect socket count from domains
-        #[cfg(target_os = "none")]
-        let sockets_detected = MpTable::detect().socket_count();
-
-        #[cfg(not(target_os = "none"))]
-        let sockets_detected: u32 = if info_source() == CpuidInfoSource::Cpu {
-            MpTable::detect().socket_count()
-        } else {
-            1
-        };
+        // 1. Get raw counts from fallback sources
+        let sockets_detected = get_socket_count();
+        let threads_detected = get_thread_count();
+        let cores_detected = get_core_count();
 
         if domains.is_empty() {
-            let (cores, threads) = match &*vendor_str() {
-                VENDOR_AMD if threads_total_fallback > 1 => {
-                    let threads_per_core = amd_threads_per_core();
-                    (
-                        threads_total_fallback / threads_per_core,
-                        threads_total_fallback,
-                    )
-                }
-                VENDOR_INTEL => {
-                    if threads_total_fallback < 2 {
-                        (1, 1)
-                    } else if has_ht() {
-                        (threads_total_fallback / 2, threads_total_fallback)
-                    } else {
-                        (threads_total_fallback, threads_total_fallback)
-                    }
-                }
-                _ => (1, 1),
-            };
-
             return (
                 sockets_detected,
-                cores * sockets_detected,
-                threads * sockets_detected,
+                cores_detected * sockets_detected,
+                threads_detected * sockets_detected,
             );
         }
 
@@ -292,7 +226,7 @@ impl Topology {
         }
 
         if threads_per_package == 0 {
-            threads_per_package = threads_total_fallback;
+            threads_per_package = threads_detected;
         }
 
         let t_per_core = threads_per_core.max(1);

@@ -187,7 +187,7 @@ impl CpuSignature {
     pub fn detect() -> Self {
         let from_cpuid = has_cpuid();
 
-        #[cfg(all(target_arch = "x86", target_os = "none"))]
+        #[cfg(dos)]
         if !from_cpuid {
             use super::vendor::cyrix::Cyrix;
 
@@ -328,7 +328,7 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
 
@@ -484,10 +484,10 @@ impl Cpu {
             }
         };
 
-        #[cfg(not(target_os = "none"))]
+        #[cfg(not(dos))]
         return Self::cleanup_model_string(s);
 
-        #[cfg(target_os = "none")]
+        #[cfg(dos)]
         String::from(s)
     }
 
@@ -559,10 +559,10 @@ impl TCpu for Cpu {
     }
 
     fn debug(&self) {
-        #[cfg(not(target_os = "none"))]
+        #[cfg(not(dos))]
         println!("{:#?}", self);
 
-        #[cfg(all(target_os = "none", feature = "debug"))]
+        #[cfg(all(dos, feature = "debug"))]
         {
             use super::is_cyrix;
 
@@ -797,7 +797,7 @@ impl TCpu for Cpu {
                     }
                 }
 
-                #[cfg(not(target_os = "none"))]
+                #[cfg(not(dos))]
                 if is_centaur() {
                     use alloc::format;
                     use alloc::vec::Vec;
@@ -838,7 +838,7 @@ impl TCpu for Cpu {
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
                     println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
-                #[cfg(not(target_os = "none"))]
+                #[cfg(not(dos))]
                 println!();
             }
         }

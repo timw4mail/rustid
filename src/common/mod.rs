@@ -1,9 +1,9 @@
 pub mod cache;
 
-#[cfg(not(target_os = "none"))]
-pub mod cores;
-
 pub mod constants;
+
+#[cfg(not(dos))]
+pub mod count;
 
 pub mod display;
 
@@ -12,10 +12,10 @@ pub mod sysctl;
 
 pub use cache::*;
 
-#[cfg(not(target_os = "none"))]
-pub use cores::*;
-
 pub use constants::*;
+
+#[cfg(not(dos))]
+pub use count::*;
 
 pub use display::*;
 
@@ -70,14 +70,14 @@ impl From<CoreType> for &str {
     }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(not(x86_cpu))]
 impl From<String> for CoreType {
     fn from(val: String) -> Self {
         Self::from(val.as_str())
     }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(not(x86_cpu))]
 impl From<CoreType> for String {
     fn from(val: CoreType) -> String {
         let s: &str = val.into();

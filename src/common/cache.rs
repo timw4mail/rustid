@@ -161,7 +161,7 @@ pub struct Cache {
     pub l3: Option<CacheLevel>,
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(not(x86_cpu))]
 #[cfg(any(target_os = "linux", target_os = "windows", target_family = "unix"))]
 impl Cache {
     pub fn detect() -> Option<Cache> {

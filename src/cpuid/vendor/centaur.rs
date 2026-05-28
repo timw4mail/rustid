@@ -4,7 +4,7 @@ use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 use alloc::collections::BTreeMap;
 
 pub struct Centaur;
@@ -216,7 +216,7 @@ pub type CentaurFeatureMap<'a> = &'a [(
     crate::cpuid::features::FeatureFn,
 )];
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 impl Centaur {
     pub fn get_feature_list() -> BTreeMap<&'static str, bool> {
         const CENTAUR_FEATURES: CentaurFeatureMap = &[

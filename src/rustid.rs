@@ -1,4 +1,4 @@
-#![cfg(not(target_os = "none"))]
+#![cfg(not(dos))]
 
 use rustid::common::TCpu;
 use rustid::{Cpu, version};
@@ -6,7 +6,7 @@ use rustid::{Cpu, version};
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 fn help() {
     println!("Usage: rustid [FLAGS] [COMMAND]");
     println!();
@@ -14,9 +14,9 @@ fn help() {
     println!("  (no args)        Display CPU information");
     println!("  d, debug         Display detailed debug information");
     println!("  e, everything    Show CPU information and debug information");
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     println!("  r, dump          Dump raw CPUID values");
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     println!("  f, file <file>   Load CPUID dump from file and display CPU information");
     println!("  V, version       Display version info");
     println!("  h, help          Show this help message");
@@ -28,10 +28,10 @@ fn help() {
     println!("All commands accept optional leading dashes. Flags can be combined, e.g. -me");
 }
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 fn main() {
     use rustid::common::CliFlags;
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     use rustid::cpuid;
 
     #[cfg(target_arch = "x86")]
@@ -43,7 +43,7 @@ fn main() {
     };
 
     let mut action = "default";
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     let mut file_path = None;
 
     let mut args = std::env::args().skip(1);
@@ -58,7 +58,7 @@ fn main() {
             "m" | "mono" => flags.color = false,
             "e" | "everything" => action = "everything",
             "r" | "dump" => action = "dump",
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(x86_cpu)]
             "f" | "file" => {
                 file_path = args.next();
                 if file_path.is_none() {
@@ -77,7 +77,7 @@ fn main() {
                         'm' => flags.color = false,
                         'e' => action = "everything",
                         'r' => action = "dump",
-                        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                        #[cfg(x86_cpu)]
                         'f' => {
                             file_path = args.next();
                             if file_path.is_none() {
@@ -105,7 +105,7 @@ fn main() {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     if let Some(path) = &file_path {
         use cpuid::provider::{self, CpuDump};
 
@@ -116,12 +116,12 @@ fn main() {
 
     // Display the version header
     if action != "dump" {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(x86_cpu)]
         if file_path.is_none() {
             version();
         }
 
-        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        #[cfg(not(x86_cpu))]
         version();
     }
 
@@ -136,7 +136,7 @@ fn main() {
             println!("---");
             cpu.debug();
         }
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(x86_cpu)]
         "dump" => {
             use rustid::cpuid::{dump::dump_cpu, topology::Topology};
 
@@ -158,7 +158,7 @@ fn main() {
         _ => unreachable!(),
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(x86_cpu)]
     if file_path.is_some() {
         use rustid::cpuid::provider;
         provider::reset_cpuid_provider();

@@ -24,7 +24,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading sysinfo -cpu (for Haiku)
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     #[must_use]
     pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
@@ -44,15 +44,25 @@ impl MpTable {
         table
     }
 
-    /// Detects the number of sockets by parsing sysctl on FreeBSD
-    #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
+    /// Detects the number of sockets by parsing sysctl on various unix/unix-like OSes
+    #[cfg(all(
+        target_family = "unix",
+        not(any(target_os = "linux", target_os = "haiku"))
+    ))]
     #[must_use]
     pub fn detect_sysctl() -> MpTable {
-        use std::collections::HashMap;
-
         let mut table = MpTable { sockets: 1 };
-        let map: HashMap<String, u32> = crate::common::get_int_sysctl_map("kern.smp", "kern.smp.");
-        if let Some(sockets) = map.get("cpus") {
+
+        #[cfg(not(any(target_os = "freebsd", target_os = "netbsd")))]
+        let key = "";
+
+        #[cfg(target_os = "freebsd")]
+        let key = "kern.smp.cpus";
+
+        #[cfg(target_os = "netbsd")]
+        let key = "hw.acpi.cpu.dynamic";
+
+        if let Some(sockets) = crate::common::get_sysctl_int_value(key) {
             table.sockets = *sockets;
         }
 
@@ -60,7 +70,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading /proc/cpuinfo
-    #[cfg(not(target_os = "none"))]
+    #[cfg(not(dos))]
     #[must_use]
     pub fn detect_cpuinfo(file: &str) -> MpTable {
         use std::collections::HashSet;
@@ -101,7 +111,7 @@ impl MpTable {
     }
 }
 
-#[cfg(not(target_os = "none"))]
+#[cfg(not(dos))]
 impl MpTable {
     /// Detects the number of sockets via platform-specific means
     #[must_use]
@@ -109,7 +119,7 @@ impl MpTable {
         #[cfg(target_os = "linux")]
         return Self::detect_cpuinfo("/proc/cpuinfo");
 
-        #[cfg(target_os = "freebsd")]
+        #[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
         return Self::detect_sysctl();
 
         #[cfg(target_os = "haiku")]
@@ -121,13 +131,13 @@ impl MpTable {
 }
 
 /// MP Floating Pointer Structure signature: "_MP_"
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
 /// MP Floating Pointer Structure from the Intel MP Specification.
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 struct MpFloatingPointer {
     /// Structure signature ("_MP_")
     signature: [u8; 4],
@@ -151,7 +161,7 @@ struct MpFloatingPointer {
     mp_feature5: u8,
 }
 
-#[cfg(target_os = "none")]
+#[cfg(dos)]
 impl MpTable {
     /// Detects the number of sockets using the Intel MP Specification.
     pub fn detect() -> MpTable {
