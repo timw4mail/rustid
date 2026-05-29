@@ -2,8 +2,13 @@
 
 ## [1.3.0]
 
+### Added
+- Hypervisor vendor string in debug output
+
 ### Fixed
 - Fixed detection of KVM hypervisor
+- Fixed detection of cache for multiple core types on linux arm
+- Fixed crash when `lscpu -C` produces no output
 
 ## [1.2.0]
 
@@ -202,9 +207,6 @@
 - Extended topology iteration code
 - Cache multiplier display based on CPID cache share count
 
-### Changed
-- Renamed AMD64 to EM64T for Intel CPUs
-
 ### Fixed
 - Intel core/thread count detection
 
@@ -238,7 +240,6 @@
 - CPU clock speed display
 - Core 2 Quad detection
 - Topology/cache/speed information lookup
-- AMD extended CPU signature detection (brand_id, pkg_type)
 - Intel overdrive processor detection
 - UMC 486 mappings
 - More CPU mappings and easter eggs
