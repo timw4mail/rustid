@@ -395,20 +395,6 @@ impl Cache {
 
         if found_cache { Some(cache) } else { None }
     }
-
-    fn parse_cache_value(line: &str) -> Option<u32> {
-        let parts: Vec<&str> = line.split(':').collect();
-        if parts.len() != 2 {
-            return None;
-        }
-
-        let value = parts[1]
-            .trim()
-            .trim_end_matches(" KB")
-            .trim_end_matches("K");
-        let size: u32 = value.parse().ok()?;
-        Some(size * 1024)
-    }
 }
 
 #[cfg(test)]
