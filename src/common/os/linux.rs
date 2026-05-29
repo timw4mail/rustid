@@ -89,8 +89,10 @@ impl TopologyCount {
 
 impl TDetect for TopologyCount {
     fn detect() -> Self {
-        let mut topo = TopologyCount::default();
-        topo.sockets = Self::get_socket_count();
+        let mut topo = TopologyCount {
+            sockets: Self::get_socket_count(),
+            ..Default::default()
+        };
 
         let cpu_root = Path::new("/sys/devices/system/cpu");
         if !cpu_root.exists() {
@@ -125,15 +127,7 @@ impl Cache {
             return Some(cache);
         }
 
-        if let Some(cache) = Self::from_device_tree() {
-            return Some(cache);
-        }
-
         if let Some(cache) = Self::from_lscpu_command() {
-            return Some(cache);
-        }
-
-        if let Some(cache) = Self::from_cpuinfo() {
             return Some(cache);
         }
 
@@ -195,8 +189,12 @@ impl Cache {
             match level {
                 1 => match cache_type {
                     CacheType::Unified => {
-                        cache.l1 =
-                            Level1Cache::Unified(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
+                        cache.l1 = Level1Cache::Unified(CacheLevel::new(
+                            size_bytes,
+                            cache_type,
+                            assoc,
+                            share_count,
+                        ));
                         found_cache = true;
                     }
                     CacheType::Data => {
@@ -241,13 +239,11 @@ impl Cache {
                     _ => {}
                 },
                 2 => {
-                    cache.l2 =
-                        Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
+                    cache.l2 = Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
                     found_cache = true;
                 }
                 3 => {
-                    cache.l3 =
-                        Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
+                    cache.l3 = Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
                     found_cache = true;
                 }
                 _ => {}
@@ -283,8 +279,7 @@ impl Cache {
                 .join(format!("cpu{}", cpu_id))
                 .join("regs/identification/midr_el1");
             if let Ok(content) = fs::read_to_string(&midr_path) {
-                if let Ok(midr) =
-                    usize::from_str_radix(content.trim().trim_start_matches("0x"), 16)
+                if let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16)
                 {
                     midr_map.entry(midr).or_default().push(cpu_id);
                 }
@@ -304,62 +299,11 @@ impl Cache {
             }
         }
 
-        if cache_map.is_empty() { None } else { Some(cache_map) }
-    }
-
-    fn from_device_tree() -> Option<Cache> {
-        use std::fs;
-        use std::path::Path;
-
-        // Try to read cache information from device tree
-        let dt_root = Path::new("/proc/device-tree");
-        if !dt_root.exists() {
-            return None;
+        if cache_map.is_empty() {
+            None
+        } else {
+            Some(cache_map)
         }
-
-        // Try to read cache properties
-        let mut cache = Cache::default();
-        let mut found_cache = false;
-
-        // Try to read L1 cache
-        if let Ok(l1_size) = fs::read_to_string(dt_root.join("l1-cache-size"))
-            && let Ok(size) = l1_size.trim().parse::<u32>()
-            && let Ok(l1_assoc) = fs::read_to_string(dt_root.join("l1-cache-associativity"))
-            && let Ok(assoc) = l1_assoc.trim().parse::<u32>()
-        {
-            cache.l1 = Level1Cache::new_unified(size, assoc);
-            found_cache = true;
-        }
-
-        // Try to read L2 cache
-        if let Ok(l2_size) = fs::read_to_string(dt_root.join("l2-cache-size"))
-            && let Ok(size) = l2_size.trim().parse::<u32>()
-        {
-            let mut l2_assoc = 0;
-            if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l2-cache-associativity"))
-                && let Ok(assoc) = assoc_str.trim().parse::<u32>()
-            {
-                l2_assoc = assoc;
-            }
-            cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, l2_assoc, 0));
-            found_cache = true;
-        }
-
-        // Try to read L3 cache
-        if let Ok(l3_size) = fs::read_to_string(dt_root.join("l3-cache-size"))
-            && let Ok(size) = l3_size.trim().parse::<u32>()
-        {
-            let mut l3_assoc = 0;
-            if let Ok(assoc_str) = fs::read_to_string(dt_root.join("l3-cache-associativity"))
-                && let Ok(assoc) = assoc_str.trim().parse::<u32>()
-            {
-                l3_assoc = assoc;
-            }
-            cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, l3_assoc, 0));
-            found_cache = true;
-        }
-
-        if found_cache { Some(cache) } else { None }
     }
 
     fn from_lscpu_command() -> Option<Cache> {
@@ -447,103 +391,6 @@ impl Cache {
                 data: *data,
                 instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
             };
-        }
-
-        if found_cache { Some(cache) } else { None }
-    }
-
-    fn from_cpuinfo() -> Option<Cache> {
-        use std::fs;
-
-        let output = match fs::read_to_string("/proc/cpuinfo") {
-            Ok(o) => o,
-            Err(_) => return None,
-        };
-
-        let mut cache = Cache::default();
-        let mut found_cache = false;
-        let mut l1_size: u32 = 0;
-        let mut l2_size: u32 = 0;
-        let mut l2_assoc: u32 = 0;
-        let mut l3_size: u32 = 0;
-        let mut l3_assoc: u32 = 0;
-
-        for line in output.lines() {
-            let line = line.trim();
-
-            // Look for cache size (typically reports L2 cache size in KB)
-            if line.starts_with("cache") && line.contains("cache") {
-                let parts: Vec<&str> = line.split(':').collect();
-                if parts.len() != 2 {
-                    continue;
-                }
-
-                // let key = parts[0].trim();
-                let value = parts[1].trim().trim_end_matches(" KB");
-
-                // Try to parse as L2 or L3 based on typicalPowerPC conventions
-                // PowerPC /proc/cpuinfo often uses "cache size" for L2
-                if let Ok(size) = value.parse::<u32>() {
-                    let size_bytes = size * 1024;
-                    if l2_size == 0 {
-                        l2_size = size_bytes;
-                        l2_assoc = 8; // Default assumption for PowerPC
-                        found_cache = true;
-                    } else if l3_size == 0 {
-                        l3_size = size_bytes;
-                        l3_assoc = 8;
-                    }
-                }
-            }
-
-            // Try to parse more specific cache info lines if available
-            if (line.starts_with("l1-dcache-size") || line.starts_with("L1-dcache-size"))
-                && let Some(size) = Self::parse_cache_value(line)
-            {
-                l1_size = size;
-                if let Level1Cache::Split { data, .. } = &mut cache.l1 {
-                    data.size = size;
-                    found_cache = true;
-                }
-            }
-            if (line.starts_with("l1-icache-size") || line.starts_with("L1-icache-size"))
-                && let Some(size) = Self::parse_cache_value(line)
-                && let Level1Cache::Split { instruction, .. } = &mut cache.l1
-            {
-                instruction.size = size;
-                instruction.kind = CacheType::Instruction;
-                found_cache = true;
-            }
-            if (line.starts_with("l2-cache-size") || line.starts_with("L2-cache-size"))
-                && let Some(size) = Self::parse_cache_value(line)
-            {
-                l2_size = size;
-                cache.l2 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
-                found_cache = true;
-            }
-            if (line.starts_with("l3-cache-size") || line.starts_with("L3-cache-size"))
-                && let Some(size) = Self::parse_cache_value(line)
-            {
-                l3_size = size;
-                cache.l3 = Some(CacheLevel::new(size, CacheType::Unified, 8, 0));
-                found_cache = true;
-            }
-        }
-
-        // If we found cache info from generic "cache size" but no structured info
-        if found_cache && l1_size == 0 && l2_size > 0 {
-            let l1_size = 32 * 1024; // Assume 32KB L1 for most PowerPC
-            cache.l1 = Level1Cache::Split {
-                data: CacheLevel::new(l1_size, CacheType::Data, 8, 0),
-                instruction: CacheLevel::new(l1_size, CacheType::Instruction, 8, 0),
-            };
-
-            if l2_size > 0 {
-                cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, l2_assoc, 0));
-            }
-            if l3_size > 0 {
-                cache.l3 = Some(CacheLevel::new(l3_size, CacheType::Unified, l3_assoc, 0));
-            }
         }
 
         if found_cache { Some(cache) } else { None }
