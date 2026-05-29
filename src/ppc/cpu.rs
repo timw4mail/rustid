@@ -250,7 +250,6 @@ impl TDetect for Cpu {
 }
 
 impl TCpu for Cpu {
-
     fn debug(&self) {
         println!("{:#?}", self);
     }

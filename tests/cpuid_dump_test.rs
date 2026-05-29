@@ -1,7 +1,7 @@
 #![cfg(x86_cpu)]
 
-use rustid::common::*;
 use rustid::common::TDetect;
+use rustid::common::*;
 use rustid::cpuid::provider::*;
 use rustid::cpuid::*;
 use std::path::PathBuf;
