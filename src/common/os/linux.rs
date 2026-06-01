@@ -7,7 +7,7 @@ use std::path::Path;
 #[cfg(not(x86_cpu))]
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
-#[cfg(not(x86_cpu))]
+#[cfg(arm_cpu)]
 use std::collections::BTreeMap;
 
 /// Parse a Linux CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
