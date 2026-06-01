@@ -260,6 +260,7 @@ impl Cache {
     /// from sysfs and returns a map keyed by MIDR value.
     ///
     /// Returns `None` if `midr_el1` is unavailable (non-ARM or older kernel).
+    #[cfg(arm_cpu)]
     pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
         let cpu_root = Path::new("/sys/devices/system/cpu");
         if !cpu_root.exists() {
