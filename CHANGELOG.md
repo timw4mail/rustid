@@ -9,6 +9,7 @@
 - Fixed detection of KVM hypervisor
 - Fixed detection of cache for multiple core types on linux arm
 - Fixed crash when `lscpu -C` produces no output
+- Fix crash for Cyrix cpus in dos due to excessive memory allocations
 
 ## [1.2.0]
 
