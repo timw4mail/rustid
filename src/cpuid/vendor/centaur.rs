@@ -4,9 +4,6 @@ use crate::cpuid::micro_arch::{CpuArch, MicroArch};
 use crate::cpuid::vendor::TMicroArch;
 use crate::cpuid::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
 
-#[cfg(not(dos))]
-use alloc::collections::BTreeMap;
-
 pub struct Centaur;
 
 fn centaur_cpu_brand() -> CpuBrand {
@@ -218,7 +215,7 @@ pub type CentaurFeatureMap<'a> = &'a [(
 
 #[cfg(not(dos))]
 impl Centaur {
-    pub fn get_feature_list() -> BTreeMap<&'static str, bool> {
+    pub fn get_feature_list() -> Vec<(&'static str, bool)> {
         const CENTAUR_FEATURES: CentaurFeatureMap = &[
             ("AIS", has_ais, ais_enabled),
             ("CCS_SM2", has_sm2, sm2_enabled),
@@ -233,12 +230,12 @@ impl Centaur {
             ("RSA", has_rsa, rsa_enabled),
         ];
 
-        let mut map: BTreeMap<&'static str, bool> = BTreeMap::new();
+        let mut map: Vec<_> = Vec::new();
 
         for (name, exists, enabled) in CENTAUR_FEATURES {
             if exists() {
                 let active = enabled();
-                map.insert(*name, active);
+                map.push((*name, active));
             }
         }
 

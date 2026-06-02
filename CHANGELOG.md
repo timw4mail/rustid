@@ -12,6 +12,7 @@
 - Fixed detection of KVM hypervisor
 - Fixed crash when `lscpu -C` produces no output
 - Fix crash for Cyrix cpus in dos due to excessive memory allocations
+- Fix other memory allocation crash for dos
 
 ## [1.2.0]
 
