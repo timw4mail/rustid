@@ -7,8 +7,7 @@ pub mod count;
 
 pub mod display;
 
-#[cfg(all(target_family = "unix", not(target_os = "haiku")))]
-pub mod sysctl;
+pub mod os;
 
 pub use cache::*;
 
@@ -19,8 +18,8 @@ pub use count::*;
 
 pub use display::*;
 
-#[cfg(all(target_family = "unix", not(target_os = "haiku")))]
-pub use sysctl::*;
+#[cfg(not(dos))]
+pub use os::*;
 
 use alloc::string::String;
 
@@ -30,10 +29,11 @@ pub struct CliFlags {
     pub verbose: bool,
 }
 
-pub trait TCpu {
-    /// Detect the CPU
+pub trait TDetect {
     fn detect() -> Self;
+}
 
+pub trait TCpu: TDetect {
     /// Display the Rust debug output of the CPU object
     fn debug(&self);
 
@@ -106,4 +106,21 @@ pub struct Speed {
     pub boost: u32,
     /// Whether the frequency was measured (vs reported by CPU)
     pub measured: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct TopologyCount {
+    pub sockets: u32,
+    pub cores: u32,
+    pub threads: u32,
+}
+
+impl Default for TopologyCount {
+    fn default() -> Self {
+        TopologyCount {
+            sockets: 1,
+            cores: 1,
+            threads: 1,
+        }
+    }
 }

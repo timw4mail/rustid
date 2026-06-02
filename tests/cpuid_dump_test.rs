@@ -1,5 +1,6 @@
-#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#![cfg(x86_cpu)]
 
+use rustid::common::TDetect;
 use rustid::common::*;
 use rustid::cpuid::provider::*;
 use rustid::cpuid::*;
@@ -112,7 +113,6 @@ mod tm5700 {
     #[test]
     fn test_threads() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 1);
         });
@@ -121,7 +121,6 @@ mod tm5700 {
     #[test]
     fn test_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 1);
         });
@@ -149,8 +148,6 @@ mod ppro {
     #[test]
     fn test_model_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("Pentium Pro"));
@@ -191,8 +188,6 @@ mod m3_8100y {
     #[test]
     fn test_intel_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Intel"));
             assert!(brand.contains("m3-8100Y"));
@@ -237,8 +232,6 @@ mod m3_8100y {
     #[test]
     fn test_intel_threads() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
@@ -247,8 +240,6 @@ mod m3_8100y {
     #[test]
     fn test_intel_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 2);
         });
@@ -278,7 +269,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_cache_detection() {
         with_mock_cpu(|| {
-            use rustid::common::{TCpu, cache::CacheType};
+            use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -299,7 +290,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_cache_assoc() {
         with_mock_cpu(|| {
-            use rustid::common::{TCpu, cache::Level1Cache};
+            use rustid::common::cache::Level1Cache;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -432,7 +423,7 @@ mod amd_7950x3d {
     #[test]
     fn test_topology() {
         set_file_cpuid_provider("dump/7950x3d.txt");
-        use rustid::common::TCpu;
+
         let cpu = Cpu::detect();
 
         assert_eq!(cpu.topology.dies, 2);
@@ -461,8 +452,6 @@ mod amd_5900xt {
     #[test]
     fn test_amd_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("AMD"));
             assert!(brand.contains("5900"));
@@ -505,7 +494,6 @@ mod amd_5900xt {
     #[test]
     fn test_amd_logical_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 32);
         });
@@ -514,8 +502,6 @@ mod amd_5900xt {
     #[test]
     fn test_amd_threads() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 32);
         });
@@ -524,8 +510,6 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 16);
         });
@@ -542,7 +526,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cache_detection() {
         with_mock_cpu(|| {
-            use rustid::common::{TCpu, cache::CacheType};
+            use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -571,7 +555,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_cache_assoc() {
         with_mock_cpu(|| {
-            use rustid::common::{TCpu, cache::Level1Cache};
+            use rustid::common::cache::Level1Cache;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -703,8 +687,6 @@ mod amd_2700u {
     #[test]
     fn test_amd_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("2700U"));
         });
@@ -725,8 +707,6 @@ mod amd_2700u {
     #[test]
     fn test_amd_topology() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 8);
             assert_eq!(cpu.topology.cores, 4);
@@ -755,8 +735,6 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("KX-5640") || brand.contains("ZHAOXIN"));
         });
@@ -798,8 +776,6 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_threads() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 4);
         });
@@ -808,8 +784,6 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 4);
         });
@@ -818,7 +792,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_cache_detection() {
         with_mock_cpu(|| {
-            use rustid::common::{Level1Cache, TCpu, cache::CacheType};
+            use rustid::common::{Level1Cache, cache::CacheType};
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -907,8 +881,6 @@ mod via_c7d {
     #[test]
     fn test_via_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("C7") || !brand.is_empty());
         });
@@ -948,7 +920,7 @@ mod via_c7d {
     #[test]
     fn test_via_cache_detection() {
         with_mock_cpu(|| {
-            use rustid::common::{TCpu, cache::CacheType};
+            use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
@@ -1083,8 +1055,6 @@ mod vortex86dx3 {
     #[test]
     fn test_vortex86_brand_string() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
-
             let brand = Cpu::detect().display_model_string();
             assert!(brand.contains("Vortex86"));
         });
@@ -1127,7 +1097,6 @@ mod vortex86dx3 {
     #[test]
     fn test_vortex86_threads() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads, 1);
         });
@@ -1136,7 +1105,6 @@ mod vortex86dx3 {
     #[test]
     fn test_vortex86_cores() {
         with_mock_cpu(|| {
-            use rustid::common::TCpu;
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.cores, 1);
         });
@@ -1145,7 +1113,7 @@ mod vortex86dx3 {
     #[test]
     fn test_vortex86_cache_detection() {
         with_mock_cpu(|| {
-            use rustid::common::{Level1Cache, TCpu, cache::CacheType};
+            use rustid::common::{Level1Cache, cache::CacheType};
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 

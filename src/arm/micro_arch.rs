@@ -286,15 +286,6 @@ impl MicroArch {
                 l3: None,
             }),
 
-            MicroArch::ArmCortexA53 => Some(Cache {
-                l1: Level1Cache::Split {
-                    data: CacheLevel::new(32768, CacheType::Data, 4, 4),
-                    instruction: CacheLevel::new(32768, CacheType::Instruction, 4, 4),
-                },
-                l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
-                l3: None,
-            }),
-
             MicroArch::ArmCortexA55 => Some(Cache {
                 l1: Level1Cache::Split {
                     data: CacheLevel::new(32768, CacheType::Data, 4, 4),
@@ -555,6 +546,8 @@ impl MicroArch {
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
             }),
+
+            _ => None,
         }
     }
 }
@@ -577,7 +570,7 @@ impl From<MicroArch> for String {
             MicroArch::ArmCortexA17 => "Cortex-A17",
             MicroArch::ArmCortexA32 => "Cortex-A32",
             MicroArch::ArmCortexA35 => "Cortex-A35",
-            MicroArch::ArmCortexA53 => "Cortex-A53",
+            MicroArch::ArmCortexA53 => "Apollo", // See https://en.wikipedia.org/wiki/ARM_Cortex-A53
             MicroArch::ArmCortexA55 => "Cortex-A55",
             MicroArch::ArmCortexA65 => "Cortex-A65",
             MicroArch::ArmCortexA72 => "Cortex-A72",

@@ -17,7 +17,7 @@ pub struct Cpu {
     pub features: BTreeMap<&'static str, String>,
 }
 
-impl TCpu for Cpu {
+impl TDetect for Cpu {
     fn detect() -> Self {
         let mut raw_midr: HashSet<usize> = HashSet::new();
         let mut midrs: HashSet<Midr> = HashSet::new();
@@ -109,7 +109,9 @@ impl TCpu for Cpu {
             features,
         }
     }
+}
 
+impl TCpu for Cpu {
     fn debug(&self)
     where
         Self: std::fmt::Debug,
@@ -242,6 +244,10 @@ impl Cpu {
         let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
 
         let runtime_cache = Cache::detect();
+
+        #[cfg(target_os = "linux")]
+        let sysfs_per_type = Cache::from_sys_fs_per_type();
+
         let mut core_cache_map: BTreeMap<usize, Option<Cache>> = BTreeMap::new();
 
         let mut unique_midrs: Vec<Midr> = midrs.to_vec();
@@ -250,7 +256,17 @@ impl Cpu {
 
         for midr in &unique_midrs {
             let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
+
+            #[cfg(target_os = "linux")]
+            let cache = sysfs_per_type
+                .as_ref()
+                .and_then(|m| m.get(&midr.to_bits()).copied())
+                .or_else(|| runtime_cache)
+                .or_else(|| arch.micro_arch.cache());
+
+            #[cfg(not(target_os = "linux"))]
             let cache = runtime_cache.or_else(|| arch.micro_arch.cache());
+
             core_cache_map.insert(midr.to_bits(), cache);
         }
 

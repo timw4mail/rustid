@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
-use crate::common::{CliFlags, CpuDisplay, TCpu};
+use crate::common::{CliFlags, CpuDisplay, TCpu, TDetect};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
 use std::path::Path;
@@ -229,7 +229,7 @@ impl Cpu {
     }
 }
 
-impl TCpu for Cpu {
+impl TDetect for Cpu {
     fn detect() -> Self {
         let pvr = super::get_pvr();
         let version = (pvr >> 16) as u16;
@@ -247,7 +247,9 @@ impl TCpu for Cpu {
             clock_speed,
         }
     }
+}
 
+impl TCpu for Cpu {
     fn debug(&self) {
         println!("{:#?}", self);
     }

@@ -137,13 +137,9 @@ pub struct Cyrix {
     /// CPU stepping
     pub stepping: u8,
     /// Bus multiplier factor
-    pub multiplier: String,
+    pub multiplier: &'static str,
     /// Model enum
     pub emodel: CyrixModel,
-    /// Model name
-    pub model: String,
-    /// Code name
-    pub code_name: String,
 }
 
 impl Cyrix {
@@ -159,8 +155,6 @@ impl Cyrix {
         let stepping = dir1 >> 4;
         let multiplier = Self::multiplier();
         let emodel = CyrixModel::detect();
-        let model = Self::model_string();
-        let code_name = String::from(Self::codename());
 
         Cyrix {
             dir0,
@@ -168,8 +162,6 @@ impl Cyrix {
             stepping,
             multiplier,
             emodel,
-            model,
-            code_name,
         }
     }
 
@@ -349,14 +341,14 @@ impl Cyrix {
     /// Get bus multiplier for the current cpu
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
-    fn multiplier() -> String {
+    fn multiplier() -> &'static str {
         if !crate::cpuid::is_cyrix() {
-            return String::from("0");
+            return "0";
         }
 
         let (dir0, _) = Self::get_device_ids();
 
-        let s = match dir0 {
+        match dir0 {
             0x28 | 0x2A | 0x30 | 0x50 | 0x58 => "1",
             0x1B | 0x29 | 0x2B | 0x31 | 0x51 | 0x59 => "2",
             0x52 | 0x5A => "2.5",
@@ -369,9 +361,7 @@ impl Cyrix {
             0x44 | 0x46 => "7",
             0x45 => "8",
             _ => "0",
-        };
-
-        String::from(s)
+        }
     }
 
     /// Get Cyrix processor model via registers

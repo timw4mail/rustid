@@ -63,7 +63,7 @@ impl MpTable {
         let key = "hw.acpi.cpu.dynamic";
 
         if let Some(sockets) = crate::common::get_sysctl_int_value(key) {
-            table.sockets = *sockets;
+            table.sockets = sockets;
         }
 
         table

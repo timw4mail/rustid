@@ -13,6 +13,7 @@ pub mod cache;
 pub mod constants;
 pub mod count;
 pub mod cpu;
+pub mod display;
 
 #[cfg(dos)]
 pub mod dos;
