@@ -93,6 +93,7 @@ impl Intel {
             (0, 6, 5, 14, 3) => brand_arch(MicroArch::Skylake, "Skylake-S", Some(N14)),
             (0, 6, 7, 10, 8) => brand_arch(MicroArch::GoldmontPlus, "Gemini Lake", Some(N14)),
             (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some(N14)),
+            (0, 6, 9, 10, 3) => brand_arch(MicroArch::AlderLake, "Alder Lake-H", Some(N10)),
             (0, 6, 11, 14, _) => brand_arch(MicroArch::AlderLake, "Alder Lake-N", Some(N10)),
             _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
