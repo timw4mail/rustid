@@ -27,7 +27,7 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(dos)]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
-    use rustid::common::{CliFlags, TCpu, TDetect};
+    use rustid::common::{CliFlags, TCpuDisplay, TDetect};
     use rustid::cpuid::dos::{exit, init_heap};
     use rustid::{Cpu, cyrix_cpuid_check, version};
 

@@ -1,6 +1,6 @@
 #![cfg(not(dos))]
 
-use rustid::common::{TCpu, TDetect};
+use rustid::common::{TCpuDisplay, TDetect};
 use rustid::{Cpu, version};
 
 #[cfg(target_arch = "x86")]

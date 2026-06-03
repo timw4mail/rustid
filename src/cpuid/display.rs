@@ -2,11 +2,11 @@ use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
 use super::*;
 
-use crate::common::{CliFlags, CpuDisplay, TCpu, UNK};
+use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
 use crate::println;
 use alloc::string::String;
 
-impl TCpu for Cpu {
+impl TCpuDisplay for Cpu {
     fn debug(&self) {
         #[cfg(not(dos))]
         println!("{:#?}", self);

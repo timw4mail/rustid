@@ -33,7 +33,7 @@ pub trait TDetect {
     fn detect() -> Self;
 }
 
-pub trait TCpu: TDetect {
+pub trait TCpuDisplay: TDetect {
     /// Display the Rust debug output of the CPU object
     fn debug(&self);
 

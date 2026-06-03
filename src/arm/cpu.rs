@@ -4,7 +4,7 @@ use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
 use crate::common::*;
-use crate::common::{CliFlags, CpuDisplay, TCpu};
+use crate::common::{CliFlags, CpuDisplay, TCpuDisplay};
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Default, PartialEq)]
@@ -111,7 +111,7 @@ impl TDetect for Cpu {
     }
 }
 
-impl TCpu for Cpu {
+impl TCpuDisplay for Cpu {
     fn debug(&self)
     where
         Self: std::fmt::Debug,

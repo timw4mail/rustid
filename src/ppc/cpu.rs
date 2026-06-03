@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
-use crate::common::{CliFlags, CpuDisplay, TCpu, TDetect};
+use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, TDetect};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
 use std::path::Path;
@@ -249,7 +249,7 @@ impl TDetect for Cpu {
     }
 }
 
-impl TCpu for Cpu {
+impl TCpuDisplay for Cpu {
     fn debug(&self) {
         println!("{:#?}", self);
     }

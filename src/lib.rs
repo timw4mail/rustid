@@ -14,7 +14,7 @@
 //!
 //! ```
 //! use rustid::Cpu;
-//! use rustid::common::{CliFlags, TCpu, TDetect};
+//! use rustid::common::{CliFlags, TCpuDisplay, TDetect};
 //!
 //! let cpu = Cpu::detect();
 //! let flags = CliFlags::default();

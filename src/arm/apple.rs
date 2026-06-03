@@ -479,7 +479,7 @@ impl TDetect for Cpu {
     }
 }
 
-impl TCpu for Cpu {
+impl TCpuDisplay for Cpu {
     fn debug(&self)
     where
         Self: std::fmt::Debug,
