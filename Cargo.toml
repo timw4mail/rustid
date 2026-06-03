@@ -57,3 +57,4 @@ unwrap_used = "warn"
 default = []
 debug = []
 dos-build = []
+dos32a = []

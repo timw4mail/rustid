@@ -6,6 +6,7 @@
 #[unsafe(link_section = ".startup")]
 #[unsafe(naked)]
 pub unsafe extern "C" fn _start() -> ! {
+    #[cfg(not(feature = "dos32a"))]
     core::arch::naked_asm!(
         ".code16",
         // Basic segment setup
@@ -22,6 +23,14 @@ pub unsafe extern "C" fn _start() -> ! {
         "1:",
         ".align 4"
     );
+
+    #[cfg(feature = "dos32a")]
+    core::arch::naked_asm!(
+        // In protected mode, we don't need to set segments like in real mode.
+        // The extender will have already done some setup.
+        // We just jump to rust_main.
+        "jmp rust_main"
+    );
 }
 
 #[cfg(dos)]
@@ -31,7 +40,11 @@ pub extern "C" fn rust_main() -> ! {
     use rustid::cpuid::dos::{exit, init_heap};
     use rustid::{Cpu, cyrix_cpuid_check, version};
 
-    unsafe { init_heap() };
+    #[cfg(not(feature = "dos32a"))]
+    unsafe {
+        use rustid::cpuid::dos::init_heap;
+        init_heap()
+    };
 
     cyrix_cpuid_check();
 
@@ -41,7 +54,21 @@ pub extern "C" fn rust_main() -> ! {
     version();
     cpu.display_table(flags);
 
-    exit(0);
+    #[cfg(not(feature = "dos32a"))]
+    {
+        use rustid::cpuid::dos::exit;
+        exit(0);
+    }
+
+    #[cfg(feature = "dos32a")]
+    {
+        // In 32-bit mode, we might need a different way to exit.
+        // For now, let's just loop if we don't have an exit function.
+        // But DOS32A should support INT 21h AH=4Ch.
+        unsafe {
+            core::arch::asm!("int 0x21", "mov ah, 0x4C", "mov al, 0", options(noreturn));
+        }
+    }
 }
 
 #[cfg(not(dos))]

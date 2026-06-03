@@ -32,7 +32,7 @@ impl DosAllocator {
     /// Initializes the allocator with a memory range.
     ///
     /// # Safety
-    /// This function must be called only once and with a valid memory range.
+    /// This function must be called only once with a valid memory range.
     pub unsafe fn init(&self, start: usize, size: usize) {
         unsafe {
             *self.start.get() = start;
@@ -89,8 +89,13 @@ unsafe extern "C" {
 pub unsafe fn init_heap() {
     let heap_start = &raw mut _heap as usize;
 
-    // Use a safe default for Real Mode (within the current 64KB segment)
+    #[cfg(not(feature = "dos32a"))]
     let heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
 
-    unsafe { ALLOCATOR.init(heap_start, heap_size) };
+    #[cfg(feature = "dos32a")]
+    let heap_size = 0x100000usize;
+
+    unsafe {
+        ALLOCATOR.init(heap_start, heap_size);
+    }
 }

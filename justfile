@@ -62,6 +62,14 @@ build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
 	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
+# Build for DOS32/A (LE format)
+build-dos32a: _build-dos-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i386-dos32a.json --release --features dos-build,dos32a --bin dos_rustid
+	@echo "Build complete. The resulting ELF file is in target/i386-dos32a/release/dos_rustid"
+	@echo "To create an LE executable, use an elf2le converter on the ELF file above."
+	@cargo run --manifest-path tools/elf2le/Cargo.toml -- ./target/i386-dos32a/release/dos_rustid
+	@cp ./tools/elf2le/a.exe ./lerustid.exe
+
 # Build for modern windows (cli),  requires visual studio to be installed
 [windows]
 build-windows:
