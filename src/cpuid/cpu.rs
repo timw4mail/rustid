@@ -290,7 +290,7 @@ pub struct Cpu {
     /// Speed, threads, cores, sockets
     pub topology: Topology,
     /// Per-core-type breakdown of CPU cores
-    pub cores: BTreeMap<(CoreType, Option<String>), CpuCore>,
+    pub cores: Vec<CpuCore>,
 }
 
 impl Cpu {
@@ -566,11 +566,11 @@ impl TDetect for Cpu {
         let cores = if is_intel() {
             Self::detect_core_types()
         } else {
-            BTreeMap::new()
+            Vec::new()
         };
 
         #[cfg(dos)]
-        let cores = BTreeMap::new();
+        let cores = Vec::new();
 
         Self {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
@@ -602,12 +602,39 @@ impl Cpu {
     /// leaf 0x1A to detect core type, aggregating separate entries for
     /// hybrid architectures (e.g., Intel P-cores and E-cores).
     /// Falls back to a single entry for DOS or if enumeration fails.
-    pub fn detect_core_types() -> BTreeMap<(CoreType, Option<String>), CpuCore> {
-        let mut cores: BTreeMap<(CoreType, Option<String>), CpuCore> = BTreeMap::new();
+    pub fn detect_core_types() -> Vec<CpuCore> {
+        let mut cores: Vec<CpuCore> = Vec::new();
+
+        fn find_or_push(
+            cores: &mut Vec<CpuCore>,
+            core_type: CoreType,
+            name: Option<String>,
+            micro_arch: MicroArch,
+            cache: Option<Cache>,
+            count: u32,
+            threads: u32,
+        ) {
+            if let Some(c) = cores
+                .iter_mut()
+                .find(|c| c.kind == core_type && c.name == name)
+            {
+                c.count += count;
+                c.threads += threads;
+            } else {
+                cores.push(CpuCore {
+                    kind: core_type,
+                    micro_arch,
+                    name,
+                    cache,
+                    count,
+                    threads,
+                });
+            }
+        }
 
         if provider::info_source() == provider::CpuidInfoSource::DumpFile {
             let dump_count = provider::dump_cpu_count();
-            let runtime_cache = Cache::detect();
+            let cache = Cache::detect();
             for cpu_idx in 0..dump_count {
                 provider::set_dump_cpu(cpu_idx);
 
@@ -619,6 +646,12 @@ impl Cpu {
                 } else {
                     arch.micro_arch
                 };
+
+                // Make sure we know the MicroArch before pushing to core types
+                if micro_arch == MicroArch::Unknown {
+                    continue;
+                }
+
                 let name_str: String = micro_arch.into();
                 let name = if name_str != UNK {
                     Some(name_str)
@@ -626,23 +659,14 @@ impl Cpu {
                     None
                 };
 
-                cores
-                    .entry((core_type, name.clone()))
-                    .and_modify(|c| {
-                        c.count += 1;
-                        c.threads += 1;
-                    })
-                    .or_insert(CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        cache: runtime_cache,
-                        count: 1,
-                        threads: 1,
-                    });
+                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
             }
-        } else if let Some(core_ids) = core_affinity::get_core_ids() {
-            let runtime_cache = Cache::detect();
+
+            return cores;
+        }
+
+        if let Some(core_ids) = core_affinity::get_core_ids() {
+            let cache = Cache::detect();
 
             for core_id in core_ids {
                 core_affinity::set_for_current(core_id);
@@ -655,6 +679,12 @@ impl Cpu {
                 } else {
                     arch.micro_arch
                 };
+
+                // Make sure we know the MicroArch before pushing to core types
+                if micro_arch == MicroArch::Unknown {
+                    continue;
+                }
+
                 let name_str: String = micro_arch.into();
                 let name = if name_str != UNK {
                     Some(name_str)
@@ -662,46 +692,8 @@ impl Cpu {
                     None
                 };
 
-                cores
-                    .entry((core_type, name.clone()))
-                    .and_modify(|c| {
-                        c.count += 1;
-                        c.threads += 1;
-                    })
-                    .or_insert(CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        cache: runtime_cache,
-                        count: 1,
-                        threads: 1,
-                    });
+                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
             }
-        }
-
-        // Fallback: single entry from current core
-        if cores.is_empty() {
-            let topology = Topology::detect();
-            let core_type = core_type_from_cpuid();
-            let sig = CpuSignature::detect();
-            let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
-            let name_str: String = arch.micro_arch.into();
-            let name = if name_str != UNK {
-                Some(name_str)
-            } else {
-                None
-            };
-            cores.insert(
-                (core_type, name.clone()),
-                CpuCore {
-                    kind: core_type,
-                    micro_arch: arch.micro_arch,
-                    name,
-                    cache: topology.cache,
-                    count: topology.cores,
-                    threads: topology.threads,
-                },
-            );
         }
 
         cores

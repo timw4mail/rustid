@@ -60,7 +60,7 @@ impl Cpu {
             );
             CpuDisplay::newline();
 
-            for (i, ((_kind, _name), core)) in self.cores.iter().enumerate() {
+            for (i, core) in self.cores.iter().enumerate() {
                 let core_label = alloc::format!("Core #{}", i + 1);
                 println!("{}", disp.label(&core_label));
 
@@ -329,7 +329,7 @@ impl TCpuDisplay for Cpu {
         self.print_topology(flags, &disp);
 
         // Cache
-        if self.cores.len() <= 1 {
+        if self.cores.is_empty() {
             let cache_count = |share_count: u32| -> String {
                 #[allow(clippy::manual_checked_ops)]
                 let count = if share_count == 0 {
