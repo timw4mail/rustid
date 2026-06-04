@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0]
+
+### Added
+- Support for showing core type details for hybrid x86 cpus
+
+### Changed
+- Updated cpuid dump feature to dump information from each thread, rather than the same output for each thread
+
 ## [1.3.0]
 
 ### Added

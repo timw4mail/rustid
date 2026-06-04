@@ -3,9 +3,12 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::vendor::Cyrix;
+use super::vendor::{Cyrix, Intel};
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
+
+#[cfg(not(dos))]
+use super::provider;
 
 use crate::common::{Cache, CoreType, TDetect, UNK};
 use alloc::collections::BTreeMap;
@@ -559,25 +562,15 @@ impl TDetect for Cpu {
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect();
 
-        let mut cores = BTreeMap::new();
-        let core_type = core_type_from_cpuid();
-        let name_str: String = arch.micro_arch.into();
-        let name = if name_str != UNK {
-            Some(name_str)
+        #[cfg(not(dos))]
+        let cores = if is_intel() {
+            Self::detect_core_types()
         } else {
-            None
+            BTreeMap::new()
         };
-        cores.insert(
-            (core_type, name.clone()),
-            CpuCore {
-                kind: core_type,
-                micro_arch: arch.micro_arch,
-                name,
-                cache: topology.cache,
-                count: topology.cores,
-                threads: topology.threads,
-            },
-        );
+
+        #[cfg(dos)]
+        let cores = BTreeMap::new();
 
         Self {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
@@ -598,6 +591,120 @@ impl TDetect for Cpu {
             topology,
             cores,
         }
+    }
+}
+
+#[cfg(not(dos))]
+impl Cpu {
+    /// Enumerates all logical processors to discover unique core types.
+    ///
+    /// On non-DOS systems, pins to each logical processor and reads CPUID
+    /// leaf 0x1A to detect core type, aggregating separate entries for
+    /// hybrid architectures (e.g., Intel P-cores and E-cores).
+    /// Falls back to a single entry for DOS or if enumeration fails.
+    pub fn detect_core_types() -> BTreeMap<(CoreType, Option<String>), CpuCore> {
+        let mut cores: BTreeMap<(CoreType, Option<String>), CpuCore> = BTreeMap::new();
+
+        if provider::info_source() == provider::CpuidInfoSource::DumpFile {
+            let dump_count = provider::dump_cpu_count();
+            let runtime_cache = Cache::detect();
+            for cpu_idx in 0..dump_count {
+                provider::set_dump_cpu(cpu_idx);
+
+                let core_type = core_type_from_cpuid();
+                let sig = CpuSignature::detect();
+                let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
+                let micro_arch = if is_intel() {
+                    Intel::core_micro_arch(arch.micro_arch, core_type)
+                } else {
+                    arch.micro_arch
+                };
+                let name_str: String = micro_arch.into();
+                let name = if name_str != UNK {
+                    Some(name_str)
+                } else {
+                    None
+                };
+
+                cores
+                    .entry((core_type, name.clone()))
+                    .and_modify(|c| {
+                        c.count += 1;
+                        c.threads += 1;
+                    })
+                    .or_insert(CpuCore {
+                        kind: core_type,
+                        micro_arch,
+                        name,
+                        cache: runtime_cache,
+                        count: 1,
+                        threads: 1,
+                    });
+            }
+        } else if let Some(core_ids) = core_affinity::get_core_ids() {
+            let runtime_cache = Cache::detect();
+
+            for core_id in core_ids {
+                core_affinity::set_for_current(core_id);
+
+                let core_type = core_type_from_cpuid();
+                let sig = CpuSignature::detect();
+                let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
+                let micro_arch = if is_intel() {
+                    Intel::core_micro_arch(arch.micro_arch, core_type)
+                } else {
+                    arch.micro_arch
+                };
+                let name_str: String = micro_arch.into();
+                let name = if name_str != UNK {
+                    Some(name_str)
+                } else {
+                    None
+                };
+
+                cores
+                    .entry((core_type, name.clone()))
+                    .and_modify(|c| {
+                        c.count += 1;
+                        c.threads += 1;
+                    })
+                    .or_insert(CpuCore {
+                        kind: core_type,
+                        micro_arch,
+                        name,
+                        cache: runtime_cache,
+                        count: 1,
+                        threads: 1,
+                    });
+            }
+        }
+
+        // Fallback: single entry from current core
+        if cores.is_empty() {
+            let topology = Topology::detect();
+            let core_type = core_type_from_cpuid();
+            let sig = CpuSignature::detect();
+            let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
+            let name_str: String = arch.micro_arch.into();
+            let name = if name_str != UNK {
+                Some(name_str)
+            } else {
+                None
+            };
+            cores.insert(
+                (core_type, name.clone()),
+                CpuCore {
+                    kind: core_type,
+                    micro_arch: arch.micro_arch,
+                    name,
+                    cache: topology.cache,
+                    count: topology.cores,
+                    threads: topology.threads,
+                },
+            );
+        }
+
+        cores
     }
 }
 

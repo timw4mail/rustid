@@ -1,3 +1,4 @@
+use crate::common::CoreType;
 use crate::cpuid::CpuSignature;
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
@@ -96,6 +97,21 @@ impl Intel {
             (0, 6, 9, 10, 3) => brand_arch(MicroArch::AlderLake, "Alder Lake-H", Some(N10)),
             (0, 6, 11, 14, _) => brand_arch(MicroArch::AlderLake, "Alder Lake-N", Some(N10)),
             _ => brand_arch(MicroArch::Unknown, UNK, None),
+        }
+    }
+
+    pub fn core_micro_arch(parent: MicroArch, core_type: CoreType) -> MicroArch {
+        match (parent, core_type) {
+            (MicroArch::Lakefield, CoreType::Efficiency) => MicroArch::Tremont,
+            (MicroArch::Lakefield, CoreType::Performance) => MicroArch::SunnyCove,
+
+            (MicroArch::AlderLake, CoreType::Performance) => MicroArch::GoldenCove,
+            (MicroArch::AlderLake, CoreType::Efficiency) => MicroArch::Goldmont,
+
+            (MicroArch::RaptorCove, CoreType::Performance) => MicroArch::RaptorCove,
+            (MicroArch::RaptorCove, CoreType::Efficiency) => MicroArch::Gracemont,
+
+            _ => MicroArch::Unknown,
         }
     }
 }
