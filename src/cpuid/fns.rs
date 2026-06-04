@@ -14,6 +14,7 @@ use super::constants::*;
 use super::quirks::get_vendor_by_quirk;
 
 use super::is_hypervisor_guest;
+use crate::common::CoreType;
 use alloc::string::String;
 
 /// Represents the result of a CPUID instruction call.
@@ -158,6 +159,30 @@ pub fn is_valid_leaf(leaf: u32) -> bool {
         0..EXT_LEAF_0 => leaf <= max_leaf(),
         EXT_LEAF_0..=EXT_LEAF_MAX => leaf <= max_extended_leaf(),
         _ => leaf <= max_vendor_leaf(),
+    }
+}
+
+const CORE_TYPE_PERFORMANCE: u32 = 0x40;
+const CORE_TYPE_EFFICIENCY: u32 = 0x20;
+
+/// Detects the CPU core type from CPUID leaf 0x1A (Hybrid Information).
+///
+/// This is the authoritative source for distinguishing P-cores from E-cores
+/// on Intel hybrid architectures (Alder Lake and later).
+/// Falls back to `CoreType::Performance` if leaf 0x1A is not available.
+#[must_use]
+pub fn core_type_from_cpuid() -> CoreType {
+    if !is_valid_leaf(LEAF_1A) {
+        return CoreType::Performance;
+    }
+
+    let res = x86_cpuid(LEAF_1A);
+    let core_type = (res.eax >> 24) & 0xFF;
+
+    match core_type {
+        CORE_TYPE_EFFICIENCY => CoreType::Efficiency,
+        CORE_TYPE_PERFORMANCE => CoreType::Performance,
+        _ => CoreType::Performance,
     }
 }
 

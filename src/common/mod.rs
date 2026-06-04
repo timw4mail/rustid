@@ -70,14 +70,12 @@ impl From<CoreType> for &str {
     }
 }
 
-#[cfg(not(x86_cpu))]
 impl From<String> for CoreType {
     fn from(val: String) -> Self {
         Self::from(val.as_str())
     }
 }
 
-#[cfg(not(x86_cpu))]
 impl From<CoreType> for String {
     fn from(val: CoreType) -> String {
         let s: &str = val.into();

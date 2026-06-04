@@ -7,7 +7,7 @@ use super::vendor::Cyrix;
 use super::*;
 use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 
-use crate::common::{TDetect, UNK};
+use crate::common::{Cache, CoreType, TDetect, UNK};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 
@@ -249,6 +249,23 @@ impl ExtendedSignature {
     }
 }
 
+/// Information about a specific core type/cluster in the CPU.
+#[derive(Debug, Default, PartialEq)]
+pub struct CpuCore {
+    /// Classification of this core (Performance, Efficiency, Super)
+    pub kind: CoreType,
+    /// Microarchitecture variant of this core type
+    pub micro_arch: MicroArch,
+    /// Human-readable name for this microarchitecture (e.g., "Golden Cove")
+    pub name: Option<String>,
+    /// Cache hierarchy specific to this core type
+    pub cache: Option<Cache>,
+    /// Number of physical cores of this type
+    pub count: u32,
+    /// Number of logical threads of this type
+    pub threads: u32,
+}
+
 /// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
@@ -269,6 +286,8 @@ pub struct Cpu {
     pub features: BTreeMap<&'static str, String>,
     /// Speed, threads, cores, sockets
     pub topology: Topology,
+    /// Per-core-type breakdown of CPU cores
+    pub cores: BTreeMap<(CoreType, Option<String>), CpuCore>,
 }
 
 impl Cpu {
@@ -537,9 +556,32 @@ impl TDetect for Cpu {
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
         let sig = CpuSignature::detect();
+        let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
+        let topology = Topology::detect();
+
+        let mut cores = BTreeMap::new();
+        let core_type = core_type_from_cpuid();
+        let name_str: String = arch.micro_arch.into();
+        let name = if name_str != UNK {
+            Some(name_str)
+        } else {
+            None
+        };
+        cores.insert(
+            (core_type, name.clone()),
+            CpuCore {
+                kind: core_type,
+                micro_arch: arch.micro_arch,
+                name,
+                cache: topology.cache,
+                count: topology.cores,
+                threads: topology.threads,
+            },
+        );
+
         Self {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
-            arch: CpuArch::find(&Self::raw_model_string(), sig, &vendor_str()),
+            arch,
             hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
                 Some(hypervisor_str())
             } else {
@@ -553,7 +595,8 @@ impl TDetect for Cpu {
                 false => None,
             },
             features: get_feature_list(),
-            topology: Topology::detect(),
+            topology,
+            cores,
         }
     }
 }

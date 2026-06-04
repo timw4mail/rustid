@@ -77,6 +77,12 @@ pub const LEAF_17: u32 = 0x17;
 /// CPUID leaf 0x00000018 - Deterministic Address Translation Parameters
 pub const LEAF_18: u32 = 0x18;
 
+/// CPUID leaf 0x0000001A - Intel Hybrid Information
+///
+/// EAX[31:24]: Core type (0x20 = Atom/E-core, 0x40 = Core/P-core)
+/// EAX[23:0]:  Native Model ID
+pub const LEAF_1A: u32 = 0x1A;
+
 /// Intel extended topology v2
 pub const LEAF_1F: u32 = 0x1F;
 

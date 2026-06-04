@@ -101,7 +101,28 @@ impl TCpuDisplay for Cpu {
         }
 
         // Sockets / Cores / Threads
-        if multi_core {
+        if self.cores.len() > 1 {
+            println!(
+                "{} {} cores ({} threads) across {} core types",
+                disp.label("Topology"),
+                self.topology.cores,
+                self.topology.threads,
+                self.cores.len()
+            );
+
+            for (i, ((_kind, _name), core)) in self.cores.iter().enumerate() {
+                let core_label = alloc::format!("Core #{}", i + 1);
+                println!("{}", disp.label(&core_label));
+                println!("{}{}", disp.label("Count"), core.count);
+                let type_str: String = core.kind.into();
+                println!("{}{}", disp.label("Type"), type_str);
+                if let Some(name) = &core.name {
+                    println!("{}{}", disp.label("Codename"), name);
+                }
+                let cc = |s: u32| CpuDisplay::cache_count(s, core.count);
+                disp.display_cache(core.cache, &cc, self.topology.sockets);
+            }
+        } else if multi_core {
             let lbl = disp.label("Topology");
             if self.topology.sockets > 1 {
                 println!(
@@ -121,22 +142,24 @@ impl TCpuDisplay for Cpu {
         }
 
         // Cache
-        let cache_count = |share_count: u32| -> String {
-            #[allow(clippy::manual_checked_ops)]
-            let count = if share_count == 0 {
-                self.topology.sockets
-            } else {
-                self.topology.threads / share_count
+        if self.cores.len() <= 1 {
+            let cache_count = |share_count: u32| -> String {
+                #[allow(clippy::manual_checked_ops)]
+                let count = if share_count == 0 {
+                    self.topology.sockets
+                } else {
+                    self.topology.threads / share_count
+                };
+
+                if count < 2 {
+                    String::new()
+                } else {
+                    alloc::format!("{}x ", count)
+                }
             };
 
-            if count < 2 {
-                String::new()
-            } else {
-                alloc::format!("{}x ", count)
-            }
-        };
-
-        disp.display_cache(self.topology.cache, &cache_count, self.topology.sockets);
+            disp.display_cache(self.topology.cache, &cache_count, self.topology.sockets);
+        }
 
         // Clock Speed (Base/Boost)
         if self.topology.speed.base > 0 {

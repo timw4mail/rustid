@@ -7,14 +7,16 @@ use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
 use super::{CpuBrand, CpuSignature, is_centaur, is_zhaoxin};
+use crate::common::CoreType;
 use alloc::string::String;
 
 /// CPU Microarchitecture enumeration.
 ///
 /// Lists all known x86/x86_64 microarchitectures from various vendors
 /// including Intel, AMD, VIA/Centaur, Cyrix, and others.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum MicroArch {
+    #[default]
     Unknown,
 
     // AMD
