@@ -84,17 +84,6 @@ impl From<CoreType> for String {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-pub struct CpuArch {
-    pub kind: CoreType,
-
-    pub name: Option<String>,
-
-    pub cache: Option<Cache>,
-
-    pub count: usize,
-}
-
 /// CPU speed information (base and boost frequencies).
 #[derive(Debug, Default, PartialEq)]
 pub struct Speed {
