@@ -7,6 +7,8 @@ use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
 use super::{CpuBrand, CpuSignature, is_centaur, is_zhaoxin};
+#[cfg(test)]
+use crate::common::DataSource;
 use alloc::string::String;
 
 /// CPU Microarchitecture enumeration.
@@ -491,7 +493,7 @@ pub(crate) mod tests {
             display_family: family, // Simplified for tests
             display_model: model,   // Simplified for tests
             is_overdrive: false,
-            from_cpuid: false,
+            source: DataSource::DefaultValue,
         }
     }
 

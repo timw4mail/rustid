@@ -1,7 +1,7 @@
 use crate::arm::CoreType;
 use crate::arm::brand::*;
 use crate::common::constants::*;
-use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
+use crate::common::{Cache, CacheLevel, CacheType, DataSource, Level1Cache};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -176,6 +176,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(12 * 1024 * 1024, CacheType::Unified, 8, 8)),
                 l3: Some(CacheLevel::new(24 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::AppleIcestorm => Some(Cache {
@@ -185,6 +186,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::AppleAvalanche => Some(Cache {
@@ -194,6 +196,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(16 * 1024 * 1024, CacheType::Unified, 8, 8)),
                 l3: Some(CacheLevel::new(32 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::AppleBlizzard => Some(Cache {
@@ -203,6 +206,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::AppleEverest => Some(Cache {
@@ -212,6 +216,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(16 * 1024 * 1024, CacheType::Unified, 8, 8)),
                 l3: Some(CacheLevel::new(32 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::AppleSawtooth => Some(Cache {
@@ -221,6 +226,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA7 => Some(Cache {
@@ -230,6 +236,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA8 => Some(Cache {
@@ -239,6 +246,7 @@ impl MicroArch {
                 },
                 l2: None,
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA9 => Some(Cache {
@@ -248,6 +256,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA12 => Some(Cache {
@@ -257,6 +266,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA15 => Some(Cache {
@@ -266,6 +276,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA17 => Some(Cache {
@@ -275,6 +286,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA32 | MicroArch::ArmCortexA35 => Some(Cache {
@@ -284,6 +296,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA55 => Some(Cache {
@@ -293,6 +306,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA65 => Some(Cache {
@@ -302,6 +316,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA72 => Some(Cache {
@@ -311,6 +326,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA73 => Some(Cache {
@@ -320,6 +336,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA75 => Some(Cache {
@@ -329,6 +346,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA76 => Some(Cache {
@@ -338,6 +356,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA77 => Some(Cache {
@@ -347,6 +366,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA78 => Some(Cache {
@@ -356,6 +376,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA510 => Some(Cache {
@@ -365,6 +386,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
                 l3: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA520 => Some(Cache {
@@ -374,6 +396,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(128 * 1024, CacheType::Unified, 4, 4)),
                 l3: Some(CacheLevel::new(2 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA710 => Some(Cache {
@@ -383,6 +406,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA715 => Some(Cache {
@@ -392,6 +416,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA720 => Some(Cache {
@@ -401,6 +426,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexA725 => Some(Cache {
@@ -410,6 +436,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexX1 => Some(Cache {
@@ -419,6 +446,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexX2 => Some(Cache {
@@ -428,6 +456,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexX3 => Some(Cache {
@@ -437,6 +466,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmCortexX4 => Some(Cache {
@@ -446,6 +476,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmNeoverseE1 => Some(Cache {
@@ -455,6 +486,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmNeoverseN1 => Some(Cache {
@@ -464,6 +496,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmNeoverseN2 => Some(Cache {
@@ -473,6 +506,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmNeoverseV1 => Some(Cache {
@@ -482,6 +516,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 16, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::ArmNeoverseV2 => Some(Cache {
@@ -491,6 +526,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 16, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCScorpion => Some(Cache {
@@ -500,6 +536,7 @@ impl MicroArch {
                 },
                 l2: None,
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCKrait => Some(Cache {
@@ -509,6 +546,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCKryo => Some(Cache {
@@ -518,6 +556,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 4, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCFalkor => Some(Cache {
@@ -527,6 +566,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCSaphira => Some(Cache {
@@ -536,6 +576,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(4 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             MicroArch::QCOryon => Some(Cache {
@@ -545,6 +586,7 @@ impl MicroArch {
                 },
                 l2: Some(CacheLevel::new(1024 * 1024, CacheType::Unified, 8, 4)),
                 l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 8, 0)),
+                source: DataSource::LookupTable,
             }),
 
             _ => None,

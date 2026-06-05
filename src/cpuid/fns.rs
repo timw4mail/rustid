@@ -14,7 +14,7 @@ use super::constants::*;
 use super::quirks::get_vendor_by_quirk;
 
 use super::is_hypervisor_guest;
-use crate::common::CoreType;
+use crate::common::{CoreType, DataSource};
 use alloc::string::String;
 
 /// Represents the result of a CPUID instruction call.
@@ -76,6 +76,20 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 #[must_use]
 pub fn info_source() -> super::provider::CpuidInfoSource {
     super::provider::info_source()
+}
+
+/// Returns whether CPUID data is coming from the real CPU instruction
+/// or from a previously captured dump file.
+#[must_use]
+pub fn cpuid_data_source() -> DataSource {
+    #[cfg(dos)]
+    return DataSource::Cpuid;
+
+    #[cfg(not(dos))]
+    match info_source() {
+        super::provider::CpuidInfoSource::Cpu => DataSource::Cpuid,
+        super::provider::CpuidInfoSource::DumpFile => DataSource::CpuidDump,
+    }
 }
 
 /// Returns true if the CPUID instruction is supported.

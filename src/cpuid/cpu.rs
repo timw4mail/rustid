@@ -10,7 +10,7 @@ use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86
 #[cfg(not(dos))]
 use super::provider;
 
-use crate::common::{Cache, CoreType, TDetect, UNK};
+use crate::common::{Cache, CoreType, DataSource, TDetect, UNK};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 
@@ -141,8 +141,8 @@ pub struct CpuSignature {
     pub display_model: u32,
     /// Is this an Intel Overdrive CPU?
     pub is_overdrive: bool,
-    /// Is the signature detected from CPUID?
-    pub from_cpuid: bool,
+    /// Where did this signature information come from?
+    pub source: DataSource,
 }
 
 impl CpuSignature {
@@ -152,7 +152,7 @@ impl CpuSignature {
         extended_model: u32,
         model: u32,
         stepping: u32,
-        from_cpuid: bool,
+        source: DataSource,
     ) -> Self {
         let display_family = if family == 0xF {
             family + extended_family
@@ -177,32 +177,32 @@ impl CpuSignature {
             display_family,
             display_model,
             is_overdrive,
-            from_cpuid,
+            source,
         }
     }
 
     pub fn new_synth(family: u32, model: u32, stepping: u32) -> Self {
-        Self::new(0, family, 0, model, stepping, false)
+        Self::new(0, family, 0, model, stepping, DataSource::DefaultValue)
     }
 
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
-        let from_cpuid = has_cpuid();
-
         #[cfg(dos)]
-        if !from_cpuid {
+        if !has_cpuid() {
             use super::vendor::cyrix::Cyrix;
 
             if super::is_cyrix() {
                 if Cyrix::detect().dir0 > 0x13 {
-                    let sig = Cyrix::get_signature_from_device_id();
+                    let mut sig = Cyrix::get_signature_from_device_id();
                     if sig != CpuSignature::default() {
+                        sig.source = DataSource::CpuMsr;
                         return sig;
                     }
                 }
             }
 
-            if let Some(reset_sig) = super::get_reset_signature() {
+            if let Some(mut reset_sig) = super::get_reset_signature() {
+                reset_sig.source = DataSource::CpuReset;
                 return reset_sig;
             }
         }
@@ -220,7 +220,7 @@ impl CpuSignature {
             extended_model,
             model,
             stepping,
-            from_cpuid,
+            cpuid_data_source(),
         )
     }
 }
@@ -291,6 +291,8 @@ pub struct Cpu {
     pub topology: Topology,
     /// Per-core-type breakdown of CPU cores
     pub cores: Vec<CpuCore>,
+    /// Where did this CPU information come from?
+    pub data_source: DataSource,
 }
 
 impl Cpu {
@@ -590,6 +592,7 @@ impl TDetect for Cpu {
             features: get_feature_list(),
             topology,
             cores,
+            data_source: cpuid_data_source(),
         }
     }
 }
@@ -794,7 +797,7 @@ mod tests {
                 display_family: 0,
                 display_model: 0,
                 is_overdrive: false,
-                from_cpuid: false,
+                source: DataSource::DefaultValue,
             },
             ext_signature: None,
             features: get_feature_list(),
@@ -820,7 +823,7 @@ mod tests {
                 display_family: 1,
                 display_model: 1,
                 is_overdrive: false,
-                from_cpuid: false,
+                source: DataSource::DefaultValue,
             },
             ext_signature: None,
             features: get_feature_list(),

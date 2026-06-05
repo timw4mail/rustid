@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 
 #[cfg(not(x86_cpu))]
-use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
+use crate::common::{Cache, CacheLevel, CacheType, DataSource, Level1Cache};
 
 #[cfg(arm_cpu)]
 use std::collections::BTreeMap;
@@ -148,6 +148,7 @@ impl Cache {
         }
 
         let mut cache = Cache::default();
+        cache.source = DataSource::LinuxSysFs;
         let mut found_cache = false;
 
         let dir = fs::read_dir(&root).ok()?;
@@ -319,6 +320,7 @@ impl Cache {
         };
 
         let mut cache = Cache::default();
+        cache.source = DataSource::Lscpu;
         let mut found_cache = false;
 
         let lines: Vec<&str> = output_str.lines().collect();

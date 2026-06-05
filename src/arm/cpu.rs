@@ -15,6 +15,8 @@ pub struct Cpu {
     pub cpu_arch: CpuArch,
     pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
     pub features: BTreeMap<&'static str, String>,
+    pub midr_source: DataSource,
+    pub features_source: DataSource,
 }
 
 impl TDetect for Cpu {
@@ -22,6 +24,7 @@ impl TDetect for Cpu {
         let mut raw_midr: HashSet<usize> = HashSet::new();
         let mut midrs: HashSet<Midr> = HashSet::new();
         let mut all_midrs: Vec<Midr> = Vec::new();
+        let mut midr_source = DataSource::CpuLookupTable;
 
         #[cfg(not(target_os = "macos"))]
         {
@@ -58,6 +61,7 @@ impl TDetect for Cpu {
                         midrs.insert(midr);
                         all_midrs.push(midr);
                     }
+                    midr_source = DataSource::LinuxSysFs;
                 }
             }
 
@@ -76,6 +80,7 @@ impl TDetect for Cpu {
                         midrs.insert(midr);
                         all_midrs.push(midr);
                     }
+                    midr_source = DataSource::WindowsRegistry;
                 }
             }
         }
@@ -87,6 +92,7 @@ impl TDetect for Cpu {
             midrs.insert(Midr::new(midr_val));
             // macOS core count is handled in apple.rs, but we'll fill all_midrs for consistency
             all_midrs.push(Midr::new(midr_val));
+            midr_source = DataSource::Sysctrl;
         }
 
         let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
@@ -100,6 +106,14 @@ impl TDetect for Cpu {
         let cores = Self::detect_cores(&all_midrs);
         let features = super::get_all_features();
 
+        let features_source = if cfg!(target_os = "linux") {
+            DataSource::LinuxProcCpuinfo
+        } else if cfg!(target_os = "windows") {
+            DataSource::SystemCall
+        } else {
+            DataSource::Sysctrl
+        };
+
         Self {
             raw_midr,
             midrs,
@@ -107,6 +121,8 @@ impl TDetect for Cpu {
             cpu_arch,
             cores,
             features,
+            midr_source,
+            features_source,
         }
     }
 }

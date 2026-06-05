@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::DataSource;
 use crate::common::cache::*;
 use alloc::vec::Vec;
 
@@ -21,7 +22,12 @@ enum CacheDescTarget {
 impl Cache {
     #[must_use]
     pub fn new(l1: Level1Cache, l2: Option<CacheLevel>, l3: Option<CacheLevel>) -> Cache {
-        Cache { l1, l2, l3 }
+        Cache {
+            l1,
+            l2,
+            l3,
+            source: DataSource::DefaultValue,
+        }
     }
 
     /// Detects and returns the cache configuration for this CPU.
@@ -83,6 +89,7 @@ impl Cache {
             l1: Level1Cache::default_split(),
             l2: None,
             l3: None,
+            source: cpuid_data_source(),
         };
 
         let res5 = x86_cpuid(EXT_LEAF_5);
@@ -154,7 +161,10 @@ impl Cache {
             return None;
         }
 
-        let mut c = Cache::default();
+        let mut c = Cache {
+            source: DataSource::CpuLookupTable,
+            ..Default::default()
+        };
 
         let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
@@ -379,7 +389,10 @@ impl Cache {
     /// `EXT_LEAF_1D` for AMD
     /// `LEAF_4` for Intel
     fn detect_general(leaf: u32) -> Option<Self> {
-        let mut c = Cache::default();
+        let mut c = Cache {
+            source: cpuid_data_source(),
+            ..Default::default()
+        };
 
         for level in 0u32..32 {
             let res = x86_cpuid_count(leaf, level);

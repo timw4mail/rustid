@@ -2,7 +2,7 @@ use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
 use super::*;
 
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
+use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
 use alloc::string::String;
 
@@ -140,7 +140,9 @@ impl Cpu {
     }
     fn print_signature(&self, flags: CliFlags, disp: &CpuDisplay) {
         if self.signature != CpuSignature::default() {
-            let key = if self.signature.from_cpuid {
+            let key = if self.signature.source == DataSource::Cpuid
+                || self.signature.source == DataSource::CpuidDump
+            {
                 "Signature"
             } else {
                 "Synthetic Sig"

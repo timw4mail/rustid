@@ -1,7 +1,7 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, TDetect};
+use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, TDetect};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
 use std::path::Path;
@@ -14,6 +14,8 @@ pub struct Cpu {
     pub cpu_arch: CpuArch,
     pub cache: Option<Cache>,
     pub clock_speed: Option<u64>,
+    pub cache_source: DataSource,
+    pub clock_speed_source: DataSource,
 }
 
 impl Default for Cpu {
@@ -23,14 +25,20 @@ impl Default for Cpu {
 }
 
 impl Cpu {
-    fn detect_cache(pvr: u32) -> Option<Cache> {
+    fn detect_cache(pvr: u32) -> (Option<Cache>, DataSource) {
         #[cfg(any(target_os = "linux", target_family = "unix"))]
         if let Some(cache) = Cache::detect() {
-            return Some(cache);
+            return (Some(cache), cache.source);
         }
 
         // Fallback to hardcoded values based on PVR
-        Self::detect_cache_from_pvr(pvr)
+        let cache = Self::detect_cache_from_pvr(pvr);
+        let source = if cache.is_some() {
+            DataSource::LookupTable
+        } else {
+            DataSource::DefaultValue
+        };
+        (cache, source)
     }
 
     fn detect_cache_from_pvr(pvr: u32) -> Option<Cache> {
@@ -43,6 +51,7 @@ impl Cpu {
                 l1: Level1Cache::new_unified(32 * 1024, 8), // 32KB unified L1, 8-way
                 l2: None,
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // IBM/Motorola PowerPC 603/603e/603ev
@@ -53,6 +62,7 @@ impl Cpu {
                 },
                 l2: None,
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // IBM/Motorola PowerPC 604/604e/604r
@@ -63,6 +73,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // IBM/Motorola PowerPC 620
@@ -73,6 +84,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 0)), // 512KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // PowerPC 750 (G3) series
@@ -83,6 +95,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // PowerPC 7400 (G4) series
@@ -93,6 +106,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // G4s with more cache
@@ -103,6 +117,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 0)),
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // Apple G4 variants
@@ -113,6 +128,7 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(256 * 1024, CacheType::Unified, 8, 0)), // 256KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             // PowerPC 970 / G5 series
@@ -123,25 +139,32 @@ impl Cpu {
                 },
                 l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 0)), // 512KB unified L2, 8-way
                 l3: None,
+                source: DataSource::LookupTable,
             }),
 
             _ => None,
         }
     }
 
-    fn detect_clock_speed() -> Option<u64> {
+    fn detect_clock_speed() -> (Option<u64>, DataSource) {
         // Try to get clock speed from device tree first
         if let Some(speed) = Self::detect_clock_speed_from_device_tree() {
-            return Some(speed);
+            return (Some(speed), DataSource::DeviceTree);
         }
 
         // Try lscpu for clock speed
         if let Some(speed) = Self::detect_clock_speed_from_lscpu() {
-            return Some(speed);
+            return (Some(speed), DataSource::Lscpu);
         }
 
         // Fallback to /proc/cpuinfo
-        Self::detect_clock_speed_from_cpuinfo()
+        let speed = Self::detect_clock_speed_from_cpuinfo();
+        let source = if speed.is_some() {
+            DataSource::LinuxProcCpuinfo
+        } else {
+            DataSource::DefaultValue
+        };
+        (speed, source)
     }
 
     fn detect_clock_speed_from_device_tree() -> Option<u64> {
@@ -235,8 +258,8 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
-        let cache = Self::detect_cache(pvr);
-        let clock_speed = Self::detect_clock_speed();
+        let (cache, cache_source) = Self::detect_cache(pvr);
+        let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
 
         Self {
             pvr,
@@ -245,6 +268,8 @@ impl TDetect for Cpu {
             cpu_arch,
             cache,
             clock_speed,
+            cache_source,
+            clock_speed_source,
         }
     }
 }

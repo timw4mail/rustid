@@ -111,3 +111,41 @@ impl Default for TopologyCount {
         }
     }
 }
+
+/// Where did this cpu information come from?
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+pub enum DataSource {
+    /// A default value , when lookup fails
+    #[default]
+    DefaultValue,
+    /// x86 cpuid instruction
+    Cpuid,
+    /// x86 cpuid instruction dump
+    CpuidDump,
+    /// Magic values from the cpu that need to be mapped to a readable value
+    CpuLookupTable,
+    /// model-specific registers (MSR)
+    CpuMsr,
+    /// value in cpu register on cpu reset
+    CpuReset,
+    /// from device tree
+    DeviceTree,
+    /// sysinfo command on Haiku
+    HaikuSysinfo,
+    /// /proc/cpuinfo
+    LinuxProcCpuinfo,
+    /// Linux virtual /sys directory tree
+    LinuxSysFs,
+    /// Determined from a set of pre-defined values
+    LookupTable,
+    /// Linux lscpu command
+    Lscpu,
+    /// x86 MpTable
+    MpTable,
+    /// value from sysctrl tool
+    Sysctrl,
+    /// value from system call
+    SystemCall,
+    /// value from Windows registry
+    WindowsRegistry,
+}

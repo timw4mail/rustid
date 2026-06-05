@@ -1,3 +1,5 @@
+use super::DataSource;
+
 /// Cache type enumeration.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum CacheType {
@@ -154,11 +156,12 @@ impl Default for Level1Cache {
 }
 
 /// Complete cache hierarchy information for a processor.
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct Cache {
     pub l1: Level1Cache,
     pub l2: Option<CacheLevel>,
     pub l3: Option<CacheLevel>,
+    pub source: DataSource,
 }
 
 #[cfg(not(x86_cpu))]

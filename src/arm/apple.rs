@@ -386,6 +386,7 @@ pub struct Cpu {
     pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
     pub raw: BTreeMap<String, String>,
     pub features: BTreeMap<&'static str, String>,
+    pub data_source: DataSource,
 }
 
 impl TDetect for Cpu {
@@ -475,6 +476,7 @@ impl TDetect for Cpu {
             cores,
             raw: values,
             features,
+            data_source: DataSource::Sysctrl,
         }
     }
 }
