@@ -79,6 +79,15 @@ fn dump_leaf_maybe_subleaves(f: &mut impl Write, leaf: u32, indent: usize) {
 }
 
 pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
+    // Make sure to query each thread/cpu individually, to capture the full dump
+    // This is especially important for hybrid cpus
+    #[cfg(not(dos))]
+    if let Some(core_ids) = core_affinity::get_core_ids()
+        && let Some(core_id) = core_ids.get(cpu_idx)
+    {
+        core_affinity::set_for_current(*core_id);
+    }
+
     let _ = writeln!(f, "CPU {}:", cpu_idx);
 
     let max_leaf = max_leaf();
