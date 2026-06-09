@@ -108,8 +108,21 @@ impl Intel {
             (MicroArch::AlderLake, CoreType::Performance) => MicroArch::GoldenCove,
             (MicroArch::AlderLake, CoreType::Efficiency) => MicroArch::Goldmont,
 
-            (MicroArch::RaptorCove, CoreType::Performance) => MicroArch::RaptorCove,
-            (MicroArch::RaptorCove, CoreType::Efficiency) => MicroArch::Gracemont,
+            (MicroArch::RaptorLake, CoreType::Performance) => MicroArch::RaptorCove,
+            (MicroArch::RaptorLake, CoreType::Efficiency) => MicroArch::Gracemont,
+
+            (MicroArch::MeteorLake, CoreType::Performance) => MicroArch::RedwoodCove,
+            (MicroArch::MeteorLake, CoreType::Efficiency) => MicroArch::Crestmont,
+
+            (MicroArch::ArrowLake | MicroArch::LunarLake, CoreType::Performance) => {
+                MicroArch::LionCove
+            }
+            (MicroArch::ArrowLake | MicroArch::LunarLake, CoreType::Efficiency) => {
+                MicroArch::Skymont
+            }
+
+            (MicroArch::PantherLake, CoreType::Performance) => MicroArch::CougarCove,
+            (MicroArch::PantherLake, CoreType::Efficiency) => MicroArch::Darkmont,
 
             _ => MicroArch::Unknown,
         }
