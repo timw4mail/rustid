@@ -13,6 +13,7 @@ use super::provider;
 use crate::common::{Cache, CoreType, DataSource, TDetect, UNK};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 /// CPU feature class/level enumeration.
 ///

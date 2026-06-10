@@ -168,7 +168,7 @@ impl Cache {
 
         let res = x86_cpuid(LEAF_2);
         let iteration_count = res.eax & 0xFF;
-        let mut desc_list: Vec<u32> = Vec::new();
+        let mut desc_list: Vec<u32> = Vec::with_capacity(16);
 
         for i in 0..=iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);
