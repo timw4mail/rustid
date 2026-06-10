@@ -261,7 +261,7 @@ impl Topology {
     }
 
     fn detect_domains_leaf(leaf: u32) -> DomainList {
-        let mut d: DomainList = Vec::with_capacity(8);
+        let mut d: DomainList = Vec::new();
 
         if !is_valid_leaf(leaf) {
             return d;

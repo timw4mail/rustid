@@ -17,19 +17,19 @@ pub use allocator::init_heap;
 #[cfg(not(test))]
 #[cold]
 #[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    // crate::println!("PANIC: {}", info);
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     use crate::println;
-    if let Some(location) = info.location() {
-        println!(
-            "Panic in file '{}' at line {}:{}",
-            location.file(),
-            location.line(),
-            location.column(),
-        );
-    } else {
-        println!("Panic for unknown reason.");
-    }
+    // if let Some(location) = info.location() {
+    //     println!(
+    //         "Panic in file '{}' at line {}:{}",
+    //         location.file(),
+    //         location.line(),
+    //         location.column(),
+    //     );
+    // } else {
+    //     println!("Panic for unknown reason.");
+    // }
+    println!("Panic!");
     exit(1);
 }
 
