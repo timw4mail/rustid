@@ -18,7 +18,7 @@ pub fn get_socket_count() -> (u32, DataSource) {
     let sockets_detected = if info_source() == CpuidInfoSource::Cpu {
         crate::common::os::get_socket_count()
     } else {
-        (1, DataSource::DefaultValue)
+        (1u32, DataSource::DefaultValue)
     };
 
     sockets_detected
