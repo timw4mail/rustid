@@ -76,13 +76,7 @@ impl From<String> for CoreType {
     }
 }
 
-impl From<CoreType> for String {
-    fn from(val: CoreType) -> String {
-        let s: &str = val.into();
 
-        String::from(s)
-    }
-}
 
 /// CPU speed information (base and boost frequencies).
 #[derive(Debug, Default, PartialEq)]

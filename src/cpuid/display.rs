@@ -64,7 +64,7 @@ impl Cpu {
                 let core_label = alloc::format!("Core #{}", i + 1);
                 println!("{}", disp.label(&core_label));
 
-                let type_str: String = core.kind.into();
+                let type_str: &str = core.kind.into();
                 println!("{}{}", disp.label("Type"), type_str);
 
                 if let Some(name) = &core.name {

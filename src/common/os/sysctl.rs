@@ -9,7 +9,7 @@ pub fn get_int_sysctl_map(prefix: &str, strip_prefix: &str) -> HashMap<String, u
 
     for (key, value) in get_sysctl_map_by_prefix(prefix, strip_prefix) {
         if let Ok(v) = value.parse::<u32>() {
-            map.insert(key.clone(), v);
+            map.insert(key, v);
         }
     }
 
