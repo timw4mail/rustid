@@ -76,8 +76,6 @@ impl From<String> for CoreType {
     }
 }
 
-
-
 /// CPU speed information (base and boost frequencies).
 #[derive(Debug, Default, PartialEq)]
 pub struct Speed {

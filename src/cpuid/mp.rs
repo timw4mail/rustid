@@ -116,17 +116,8 @@ impl MpTable {
     /// Detects the number of sockets via platform-specific means
     #[must_use]
     pub fn detect() -> MpTable {
-        #[cfg(target_os = "linux")]
-        return Self::detect_cpuinfo("/proc/cpuinfo");
-
-        #[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
-        return Self::detect_sysctl();
-
-        #[cfg(target_os = "haiku")]
-        return Self::detect_sysinfo("sysinfo");
-
         #[allow(unreachable_code)]
-        MpTable::default()
+        MpTable { sockets: 1u32 }
     }
 }
 

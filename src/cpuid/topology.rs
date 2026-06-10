@@ -1,6 +1,6 @@
 use super::constants::*;
 use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
-use crate::common::{Cache, Speed};
+use crate::common::{Cache, DataSource, Speed};
 use crate::cpuid::count::{get_core_count, get_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
@@ -144,6 +144,8 @@ pub type DomainList = Vec<TopologyDomain>;
 pub struct Topology {
     /// Number of processor sockets
     pub sockets: u32,
+    /// Where we get the number of sockets
+    pub socket_source: DataSource,
     /// Number of dies per socket
     pub dies: u32,
     /// Number of physical cores
@@ -166,7 +168,7 @@ impl Topology {
         let speed = Speed::detect();
         let cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
-        let (sockets, cores, threads) = Self::count_domains(&domains);
+        let (sockets, socket_source, cores, threads) = Self::count_domains(&domains);
 
         let mut threads_per_socket = 0;
         let mut threads_per_die = 0;
@@ -188,6 +190,7 @@ impl Topology {
 
         Topology {
             sockets,
+            socket_source,
             dies,
             cores,
             threads,
@@ -198,15 +201,16 @@ impl Topology {
     }
 
     /// Returns (sockets, total_cores, total_threads)
-    fn count_domains(domains: &DomainList) -> (u32, u32, u32) {
+    fn count_domains(domains: &DomainList) -> (u32, DataSource, u32, u32) {
         // 1. Get raw counts from fallback sources
-        let sockets_detected = get_socket_count();
+        let (sockets_detected, sockets_source) = get_socket_count();
         let threads_detected = get_thread_count();
         let cores_detected = get_core_count();
 
         if domains.is_empty() {
             return (
                 sockets_detected,
+                sockets_source,
                 cores_detected * sockets_detected,
                 threads_detected * sockets_detected,
             );
@@ -235,6 +239,7 @@ impl Topology {
 
         (
             sockets_detected,
+            sockets_source,
             c_per_pkg * sockets_detected,
             t_per_pkg * sockets_detected,
         )

@@ -9,10 +9,16 @@ pub mod macos;
 #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
 pub mod sysctl;
 
+#[cfg(target_os = "haiku")]
+pub mod haiku;
+
 // ----------------------------------------------------------------------------
 
 #[cfg(target_os = "macos")]
 pub use macos::*;
+
+#[cfg(target_os = "haiku")]
+pub use haiku::*;
 
 #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
 pub use sysctl::*;

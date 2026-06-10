@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 use std::process::Command;
 
+use crate::common::DataSource;
+
 /// Return a map of sysctl output with keys matching the `prefix`,
 /// with the values parsed as u32. The keys are the original sysctl keys
 /// after the `strip_prefix` value is removed
@@ -47,6 +49,23 @@ pub fn get_sysctl_value(name: &str) -> Option<String> {
     }
 
     None
+}
+
+pub fn get_socket_count() -> (u32, DataSource) {
+    #[cfg(not(any(target_os = "freebsd", target_os = "netbsd")))]
+    let key = "";
+
+    #[cfg(target_os = "freebsd")]
+    let key = "kern.smp.cpus";
+
+    #[cfg(target_os = "netbsd")]
+    let key = "hw.acpi.cpu.dynamic";
+
+    if let Some(sockets) = get_sysctl_int_value(key) {
+        return (sockets, DataSource::Sysctrl);
+    }
+
+    (1, DataSource::DefaultValue)
 }
 
 fn get_sysctl_map_by_prefix(prefix: &str, strip_prefix: &str) -> HashMap<String, String> {
