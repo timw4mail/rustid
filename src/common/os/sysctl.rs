@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::process::Command;
 
+#[cfg(not(target_os = "macos"))]
 use crate::common::DataSource;
 
 /// Return a map of sysctl output with keys matching the `prefix`,
@@ -51,6 +52,7 @@ pub fn get_sysctl_value(name: &str) -> Option<String> {
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 pub fn get_socket_count() -> (u32, DataSource) {
     #[cfg(not(any(target_os = "freebsd", target_os = "netbsd")))]
     let key = "";
@@ -62,7 +64,7 @@ pub fn get_socket_count() -> (u32, DataSource) {
     let key = "hw.acpi.cpu.dynamic";
 
     if let Some(sockets) = get_sysctl_int_value(key) {
-        return (sockets, DataSource::Sysctrl);
+        return (sockets, DataSource::Sysctrl(key));
     }
 
     (1, DataSource::DefaultValue)

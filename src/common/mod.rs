@@ -92,6 +92,7 @@ pub struct TopologyCount {
     pub sockets: u32,
     pub cores: u32,
     pub threads: u32,
+    pub source: DataSource,
 }
 
 impl Default for TopologyCount {
@@ -100,6 +101,7 @@ impl Default for TopologyCount {
             sockets: 1,
             cores: 1,
             threads: 1,
+            source: DataSource::DefaultValue,
         }
     }
 }
@@ -135,7 +137,7 @@ pub enum DataSource {
     /// x86 MpTable
     MpTable,
     /// value from sysctrl tool
-    Sysctrl,
+    Sysctrl(&'static str),
     /// value from system call
     SystemCall,
     /// value from Windows registry

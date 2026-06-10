@@ -4,7 +4,7 @@ use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
 use crate::common::*;
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay};
+use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Default, PartialEq)]
@@ -24,7 +24,12 @@ impl TDetect for Cpu {
         let mut raw_midr: HashSet<usize> = HashSet::new();
         let mut midrs: HashSet<Midr> = HashSet::new();
         let mut all_midrs: Vec<Midr> = Vec::new();
+
+        #[cfg(not(target_os = "macos"))]
         let mut midr_source = DataSource::CpuLookupTable;
+
+        #[cfg(target_os = "macos")]
+        let midr_source = DataSource::Sysctrl("hw.cpufamily");
 
         #[cfg(not(target_os = "macos"))]
         {
@@ -92,7 +97,6 @@ impl TDetect for Cpu {
             midrs.insert(Midr::new(midr_val));
             // macOS core count is handled in apple.rs, but we'll fill all_midrs for consistency
             all_midrs.push(Midr::new(midr_val));
-            midr_source = DataSource::Sysctrl;
         }
 
         let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
@@ -110,8 +114,10 @@ impl TDetect for Cpu {
             DataSource::LinuxProcCpuinfo
         } else if cfg!(target_os = "windows") {
             DataSource::SystemCall
+        } else if cfg!(target_os = "macos") {
+            DataSource::Sysctrl("hw.optional.*")
         } else {
-            DataSource::Sysctrl
+            DataSource::Sysctrl(UNK)
         };
 
         Self {

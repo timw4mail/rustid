@@ -476,7 +476,7 @@ impl TDetect for Cpu {
             cores,
             raw: values,
             features,
-            data_source: DataSource::Sysctrl,
+            data_source: DataSource::Sysctrl("hw.*, machdep.cpu.*"),
         }
     }
 }

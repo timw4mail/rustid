@@ -82,8 +82,8 @@ impl CpuDisplay {
                 let core_num = format!("Core #{i}");
                 println!("{}", cpu.label(&core_num));
                 println!("{}{}", cpu.label("Count"), core.count);
-                let name = Into::<String>::into(*kind);
-                println!("{}{}", cpu.label("Type"), &name);
+                let name = Into::<&str>::into(*kind);
+                println!("{}{}", cpu.label("Type"), name);
 
                 if let Some(name) = core.name.clone() {
                     println!("{}{}", cpu.label("Codename"), name);
