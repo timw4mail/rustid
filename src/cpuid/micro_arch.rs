@@ -337,11 +337,11 @@ pub struct CpuArch {
     /// Specific code name (e.g., "Skylake", "Zen 3")
     pub code_name: &'static str,
     /// Brand name (e.g., "Intel", "AMD")
-    pub brand_name: String,
+    pub brand_name: &'static str,
     /// Raw vendor string from CPUID
     pub vendor_string: String,
     /// Process technology node (e.g., "14nm", "7nm")
-    pub technology: Option<String>,
+    pub technology: Option<&'static str>,
 }
 
 impl Default for CpuArch {
@@ -356,21 +356,18 @@ impl CpuArch {
         model: &str,
         micro_arch: MicroArch,
         code_name: &'static str,
-        brand_name: &str,
+        brand_name: &'static str,
         vendor_string: &str,
-        technology: Option<&str>,
+        technology: Option<&'static str>,
     ) -> Self {
         let model_s: String = String::from(model);
-        let brand_s: String = String::from(brand_name);
         let vendor_s: String = String::from(vendor_string);
-
-        let technology = technology.map(String::from);
 
         CpuArch {
             model: model_s,
             micro_arch,
             code_name,
-            brand_name: brand_s,
+            brand_name,
             vendor_string: vendor_s,
             technology,
         }
@@ -383,16 +380,17 @@ impl CpuArch {
     pub fn find(model: &str, s: CpuSignature, vendor_string: &str) -> Self {
         let arch = |ma: MicroArch,
                     code_name: &'static str,
-                    brand_name: &str,
-                    tech: Option<&str>|
+                    brand_name: &'static str,
+                    tech: Option<&'static str>|
          -> Self {
             CpuArch::new(model, ma, code_name, brand_name, vendor_string, tech)
         };
 
         let brand = CpuBrand::from(vendor_string);
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> Self {
-            arch(ma, code_name, brand.to_brand_name(), tech)
-        };
+        let brand_arch = |ma: MicroArch,
+                          code_name: &'static str,
+                          tech: Option<&'static str>|
+         -> Self { arch(ma, code_name, brand.to_brand_name(), tech) };
 
         let unknown_model = brand_arch(MicroArch::Unknown, UNK, None);
 

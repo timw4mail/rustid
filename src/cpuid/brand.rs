@@ -74,7 +74,7 @@ impl CpuBrand {
 
     /// Converts the CPU brand to a human-readable name (e.g., "AMD", "Intel").
     #[must_use]
-    pub fn to_brand_name(&self) -> &str {
+    pub fn to_brand_name(&self) -> &'static str {
         match self {
             CpuBrand::AMD => "AMD",
 

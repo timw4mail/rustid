@@ -395,16 +395,17 @@ impl Cyrix {
 impl TMicroArch for Cyrix {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand = CpuBrand::Cyrix;
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
-            CpuArch::new(
-                model,
-                ma,
-                code_name,
-                brand.to_brand_name(),
-                VENDOR_CYRIX,
-                tech,
-            )
-        };
+        let brand_arch =
+            |ma: MicroArch, code_name: &'static str, tech: Option<&'static str>| -> CpuArch {
+                CpuArch::new(
+                    model,
+                    ma,
+                    code_name,
+                    brand.to_brand_name(),
+                    VENDOR_CYRIX,
+                    tech,
+                )
+            };
 
         match (s.family, s.model, s.stepping) {
             (3, 2, _) => brand_arch(MicroArch::Cx486DLC, Cyrix::codename(), None),

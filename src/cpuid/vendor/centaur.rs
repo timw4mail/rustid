@@ -23,16 +23,17 @@ impl TMicroArch for Centaur {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand = centaur_cpu_brand();
 
-        let brand_arch = |ma: MicroArch, code_name: &'static str, tech: Option<&str>| -> CpuArch {
-            CpuArch::new(
-                model,
-                ma,
-                code_name,
-                brand.to_brand_name(),
-                VENDOR_CENTAUR,
-                tech,
-            )
-        };
+        let brand_arch =
+            |ma: MicroArch, code_name: &'static str, tech: Option<&'static str>| -> CpuArch {
+                CpuArch::new(
+                    model,
+                    ma,
+                    code_name,
+                    brand.to_brand_name(),
+                    VENDOR_CENTAUR,
+                    tech,
+                )
+            };
 
         match (
             s.extended_family,

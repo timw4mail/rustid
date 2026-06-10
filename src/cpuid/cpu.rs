@@ -302,7 +302,7 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
-    fn intel_brand_index(&self) -> Option<String> {
+    fn intel_brand_index(&self) -> Option<&'static str> {
         let brand_id = get_brand_id();
 
         const CELERON: &str = "Intel(R) Celeron(R) processor";
@@ -348,7 +348,7 @@ impl Cpu {
 
         match str {
             UNK => None,
-            _ => Some(String::from(str)),
+            _ => Some(str),
         }
     }
 
@@ -401,7 +401,7 @@ impl Cpu {
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
                 if let Some(model_name) = self.intel_brand_index() {
-                    return model_name;
+                    return String::from(model_name);
                 }
             }
             CpuBrand::SiS => return String::from("SiS 550/551/552 SoC"),
