@@ -1,4 +1,3 @@
-use super::TOSInfo;
 use crate::common::DataSource;
 
 pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
@@ -8,7 +7,7 @@ pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
         for line in s.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if let Ok(num) = parts[0].parse::<u32>() {
-                return (num, DataSource::HaikuSysInfo);
+                return (num, DataSource::HaikuSysinfo);
             }
         }
     }
