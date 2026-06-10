@@ -58,7 +58,7 @@ pub fn get_socket_count() -> (u32, DataSource) {
     let key = "";
 
     #[cfg(target_os = "freebsd")]
-    let key = "kern.smp.cpus";
+    let key = "kern.smp.active";
 
     #[cfg(target_os = "netbsd")]
     let key = "hw.acpi.cpu.dynamic";
