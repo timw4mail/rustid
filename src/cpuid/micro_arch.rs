@@ -170,9 +170,9 @@ pub enum MicroArch {
     U5D,
 }
 
-impl From<MicroArch> for String {
-    fn from(ma: MicroArch) -> String {
-        let s = match ma {
+impl MicroArch {
+    pub fn as_str(self) -> &'static str {
+        match self {
             MicroArch::Unknown => UNK,
 
             // AMD
@@ -317,9 +317,13 @@ impl From<MicroArch> for String {
             // UMC
             MicroArch::U5S => "U5S",
             MicroArch::U5D => "U5D",
-        };
+        }
+    }
+}
 
-        String::from(s)
+impl From<MicroArch> for String {
+    fn from(ma: MicroArch) -> String {
+        String::from(ma.as_str())
     }
 }
 

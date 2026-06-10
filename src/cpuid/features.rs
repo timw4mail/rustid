@@ -404,7 +404,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("SHA", has_sha),
     ];
 
-    let mut features: Vec<&'static str> = Vec::new();
+    let mut features: Vec<&'static str> = Vec::with_capacity(FEATURES.len());
 
     for (name, check) in FEATURES {
         if check() {
@@ -494,13 +494,13 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
     let mut map = BTreeMap::new();
 
-    let mut basic: Vec<&'static str> = Vec::new();
-    let mut sse: Vec<&'static str> = Vec::new();
-    let mut avx: Vec<&'static str> = Vec::new();
-    let mut avx512: Vec<&'static str> = Vec::new();
-    let mut encryption: Vec<&'static str> = Vec::new();
-    let mut math: Vec<&'static str> = Vec::new();
-    let mut other: Vec<&'static str> = Vec::new();
+    let mut basic: Vec<&'static str> = Vec::with_capacity(BASIC_FEATURES.len());
+    let mut sse: Vec<&'static str> = Vec::with_capacity(SSE_FEATURES.len());
+    let mut avx: Vec<&'static str> = Vec::with_capacity(AVX_FEATURES.len());
+    let mut avx512: Vec<&'static str> = Vec::with_capacity(AVX512_FEATURES.len());
+    let mut encryption: Vec<&'static str> = Vec::with_capacity(SECURITY_FEATURES.len());
+    let mut math: Vec<&'static str> = Vec::with_capacity(MATH_FEATURES.len());
+    let mut other: Vec<&'static str> = Vec::with_capacity(OTHER_FEATURES.len());
 
     for (v, key, checks) in [
         (&mut basic, "Base", BASIC_FEATURES),

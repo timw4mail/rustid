@@ -261,7 +261,7 @@ pub struct CpuCore {
     /// Microarchitecture variant of this core type
     pub micro_arch: MicroArch,
     /// Human-readable name for this microarchitecture (e.g., "Golden Cove")
-    pub name: Option<String>,
+    pub name: Option<&'static str>,
     /// Cache hierarchy specific to this core type
     pub cache: Option<Cache>,
     /// Number of physical cores of this type
@@ -356,19 +356,26 @@ impl Cpu {
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
 
-        // Remove excess whitespace
-        let filtered: Vec<&str> = str
-            .split_ascii_whitespace()
-            .filter(|p| !p.is_empty())
-            .collect();
-        let str: String = filtered.join(" ").as_str().into();
-
-        // Remove speed
-        if let Some(idx) = str.find('@') {
-            String::from(str[..idx].trim())
-        } else {
-            str
+        // Single-pass: build result without intermediate Vec
+        let mut result = String::with_capacity(str.len());
+        for part in str.split_ascii_whitespace() {
+            if !part.is_empty() {
+                if !result.is_empty() {
+                    result.push(' ');
+                }
+                result.push_str(part);
+            }
         }
+
+        // Remove speed suffix after '@'
+        if let Some(idx) = result.find('@') {
+            result.truncate(idx);
+            while result.ends_with(' ') {
+                result.pop();
+            }
+        }
+
+        result
     }
 
     /// Returns a human-readable display name for the CPU model.
@@ -612,7 +619,7 @@ impl Cpu {
         fn find_or_push(
             cores: &mut Vec<CpuCore>,
             core_type: CoreType,
-            name: Option<String>,
+            name: Option<&'static str>,
             micro_arch: MicroArch,
             cache: Option<Cache>,
             count: u32,
@@ -656,7 +663,7 @@ impl Cpu {
                     continue;
                 }
 
-                let name_str: String = micro_arch.into();
+                let name_str = micro_arch.as_str();
                 let name = if name_str != UNK {
                     Some(name_str)
                 } else {
@@ -689,7 +696,7 @@ impl Cpu {
                     continue;
                 }
 
-                let name_str: String = micro_arch.into();
+                let name_str = micro_arch.as_str();
                 let name = if name_str != UNK {
                     Some(name_str)
                 } else {
