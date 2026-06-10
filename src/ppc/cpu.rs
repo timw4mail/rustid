@@ -14,7 +14,6 @@ pub struct Cpu {
     pub cpu_arch: CpuArch,
     pub cache: Option<Cache>,
     pub clock_speed: Option<u64>,
-    pub cache_source: DataSource,
     pub clock_speed_source: DataSource,
 }
 
@@ -258,7 +257,7 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
-        let (cache, cache_source) = Self::detect_cache(pvr);
+        let (cache, _) = Self::detect_cache(pvr);
         let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
 
         Self {
@@ -268,7 +267,6 @@ impl TDetect for Cpu {
             cpu_arch,
             cache,
             clock_speed,
-            cache_source,
             clock_speed_source,
         }
     }
