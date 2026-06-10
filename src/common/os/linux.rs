@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 
 #[cfg(not(x86_cpu))]
-use crate::common::{Cache, CacheLevel, CacheType, DataSource, Level1Cache};
+use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
 #[cfg(arm_cpu)]
 use std::collections::BTreeMap;
