@@ -133,6 +133,8 @@ pub enum DataSource {
     /// A default value , when lookup fails
     #[default]
     DefaultValue,
+    /// Value generated from other inputs
+    Calculated(&'static str),
     /// x86 cpuid instruction
     Cpuid,
     /// x86 cpuid instruction dump
