@@ -21,9 +21,6 @@ pub mod windows;
 
 // ----------------------------------------------------------------------------
 
-#[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
-pub use bsd::*;
-
 #[cfg(target_os = "macos")]
 pub use macos::*;
 

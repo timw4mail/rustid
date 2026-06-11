@@ -8,7 +8,6 @@ impl TOSData for OS {
 
         #[cfg(target_os = "freebsd")]
         let key = "kern.smp.active";
-        use crate::common::DataSource;
 
         #[cfg(target_os = "netbsd")]
         let key = "hw.acpi.cpu.dynamic";
