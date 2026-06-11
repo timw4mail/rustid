@@ -1,6 +1,9 @@
 //! Os-specific data gathering
 use crate::common::DataSource;
 
+#[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
+pub mod bsd;
+
 #[cfg(target_os = "linux")]
 pub mod linux;
 
@@ -17,6 +20,9 @@ pub mod haiku;
 pub mod windows;
 
 // ----------------------------------------------------------------------------
+
+#[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
+pub use bsd::*;
 
 #[cfg(target_os = "macos")]
 pub use macos::*;
@@ -35,5 +41,5 @@ pub use windows::*;
 pub struct OS;
 
 pub trait TOSData {
-    fn get_socket_count(&self) -> (u32, DataSource);
+    fn get_socket_count() -> (u32, DataSource);
 }

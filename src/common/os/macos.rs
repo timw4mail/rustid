@@ -1,6 +1,4 @@
-#![cfg(target_os = "macos")]
-
-use crate::common::{DataSource, TDetect, TopologyCount};
+use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount};
 
 use super::sysctl::*;
 
@@ -17,29 +15,31 @@ impl TDetect for TopologyCount {
     }
 }
 
-pub fn get_socket_count() -> (u32, DataSource) {
-    let hw_packages = get_sysctl_int_value("hw.packages");
+impl TOSData for OS {
+    fn get_socket_count() -> (u32, DataSource) {
+        let hw_packages = get_sysctl_int_value("hw.packages");
 
-    match hw_packages {
-        Some(packages) => (packages, DataSource::Sysctrl("hw.packages")),
-        None => {
-            let map = get_int_sysctl_map("machdep.cpu", "machdep.cpu.");
-            let cores_per_package = map.get("cores_per_package");
-            let core_count = map.get("core_count");
+        match hw_packages {
+            Some(packages) => (packages, DataSource::Sysctrl("hw.packages")),
+            None => {
+                let map = get_int_sysctl_map("machdep.cpu", "machdep.cpu.");
+                let cores_per_package = map.get("cores_per_package");
+                let core_count = map.get("core_count");
 
-            if let Some(cores_per) = cores_per_package
-                && let Some(core_count) = core_count
-            {
-                let sockets = if cores_per >= core_count {
-                    1
-                } else {
-                    core_count / cores_per
-                };
+                if let Some(cores_per) = cores_per_package
+                    && let Some(core_count) = core_count
+                {
+                    let sockets = if cores_per >= core_count {
+                        1
+                    } else {
+                        core_count / cores_per
+                    };
 
-                return (sockets, DataSource::Sysctrl("machdep.cpu.*"));
+                    return (sockets, DataSource::Sysctrl("machdep.cpu.*"));
+                }
+
+                (1, DataSource::DefaultValue)
             }
-
-            (1, DataSource::DefaultValue)
         }
     }
 }

@@ -1,6 +1,6 @@
 #![cfg(target_os = "linux")]
 
-use crate::common::{DataSource, TDetect, TopologyCount};
+use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount};
 use std::fs;
 use std::path::Path;
 
@@ -49,45 +49,47 @@ fn expand_cpu_list(s: &str) -> Vec<u32> {
     cpus
 }
 
-pub fn get_socket_count() -> (u32, DataSource) {
-    use std::collections::HashSet;
+impl TOSData for OS {
+    fn get_socket_count() -> (u32, DataSource) {
+        use std::collections::HashSet;
 
-    // Fallback: /proc/cpuinfo unique physical ids
-    if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-        let mut entries = 0;
-        let mut physical_ids = HashSet::new();
-        let mut core_ids = HashSet::new();
+        // Fallback: /proc/cpuinfo unique physical ids
+        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+            let mut entries = 0;
+            let mut physical_ids = HashSet::new();
+            let mut core_ids = HashSet::new();
 
-        for line in content.lines() {
-            if line.starts_with("physical id")
-                && let Some(id) = line.split(':').nth(1)
-            {
-                physical_ids.insert(id.trim());
-                entries += 1;
+            for line in content.lines() {
+                if line.starts_with("physical id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    physical_ids.insert(id.trim());
+                    entries += 1;
+                }
+
+                if line.starts_with("core id")
+                    && let Some(id) = line.split(':').nth(1)
+                {
+                    core_ids.insert(id.trim());
+                }
             }
 
-            if line.starts_with("core id")
-                && let Some(id) = line.split(':').nth(1)
-            {
-                core_ids.insert(id.trim());
+            // For the Pentium Pro, all the rules seem to be broken.
+            // There might be multiple entries in /proc/cpuinfo, all with identical ids
+            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
+                (entries, DataSource::LinuxProcCpuinfo)
+            } else {
+                (physical_ids.len() as u32, DataSource::LinuxProcCpuinfo)
             }
-        }
-
-        // For the Pentium Pro, all the rules seem to be broken.
-        // There might be multiple entries in /proc/cpuinfo, all with identical ids
-        if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-            (entries, DataSource::LinuxProcCpuinfo)
         } else {
-            (physical_ids.len() as u32, DataSource::LinuxProcCpuinfo)
+            (1, DataSource::DefaultValue)
         }
-    } else {
-        (1, DataSource::DefaultValue)
     }
 }
 
 impl TDetect for TopologyCount {
     fn detect() -> Self {
-        let (sockets, _) = get_socket_count();
+        let (sockets, _) = OS::get_socket_count();
 
         let mut topo = TopologyCount {
             sockets,

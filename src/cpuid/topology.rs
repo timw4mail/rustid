@@ -1,7 +1,7 @@
 use super::constants::*;
 use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, DataSource, Speed};
-use crate::cpuid::count::{get_core_count, get_socket_count, get_thread_count};
+use crate::cpuid::count::{get_core_count, get_platform_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
 #[cfg(not(dos))]
@@ -203,7 +203,7 @@ impl Topology {
     /// Returns (sockets, total_cores, total_threads)
     fn count_domains(domains: &DomainList) -> (u32, DataSource, u32, u32) {
         // 1. Get raw counts from fallback sources
-        let (sockets_detected, sockets_source) = get_socket_count();
+        let (sockets_detected, sockets_source) = get_platform_socket_count();
         let threads_detected = get_thread_count();
         let cores_detected = get_core_count();
 
@@ -217,6 +217,7 @@ impl Topology {
         }
 
         // 2. Extract domain counts
+        // @TODO: parse socket count from domains for cpus that support it
         let mut threads_per_core = 1;
         let mut threads_per_package = 0;
 

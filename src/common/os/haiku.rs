@@ -1,4 +1,4 @@
-use crate::common::DataSource;
+use crate::common::{DataSource, OS, TOSData};
 
 pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
     if let Ok(o) = std::process::Command::new(cmd).output()
@@ -15,6 +15,8 @@ pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
     (1, DataSource::DefaultValue)
 }
 
-pub fn get_socket_count() -> (u32, DataSource) {
-    socket_count_from_sysinfo("sysinfo")
+impl TOSData for OS {
+    fn get_socket_count() -> (u32, DataSource) {
+        socket_count_from_sysinfo("sysinfo")
+    }
 }
