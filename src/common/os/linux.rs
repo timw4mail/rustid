@@ -1,6 +1,6 @@
 #![cfg(target_os = "linux")]
 
-use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount};
+use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier};
 use std::fs;
 use std::path::Path;
 
@@ -50,7 +50,7 @@ fn expand_cpu_list(s: &str) -> Vec<u32> {
 }
 
 impl TOSData for OS {
-    fn get_socket_count() -> (u32, DataSource) {
+    fn get_socket_count() -> TopologyTier {
         use std::collections::HashSet;
 
         // Fallback: /proc/cpuinfo unique physical ids
@@ -77,19 +77,19 @@ impl TOSData for OS {
             // For the Pentium Pro, all the rules seem to be broken.
             // There might be multiple entries in /proc/cpuinfo, all with identical ids
             if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-                (entries, DataSource::LinuxProcCpuinfo)
+                TopologyTier::new(entries, DataSource::LinuxProcCpuinfo)
             } else {
-                (physical_ids.len() as u32, DataSource::LinuxProcCpuinfo)
+                TopologyTier::new(physical_ids.len() as u32, DataSource::LinuxProcCpuinfo)
             }
         } else {
-            (1, DataSource::DefaultValue)
+            TopologyTier::default()
         }
     }
 }
 
 impl TDetect for TopologyCount {
     fn detect() -> Self {
-        let (sockets, _) = OS::get_socket_count();
+        let sockets = OS::get_socket_count();
 
         let mut topo = TopologyCount {
             sockets,

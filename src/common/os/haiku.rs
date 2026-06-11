@@ -1,4 +1,4 @@
-use crate::common::{DataSource, OS, TOSData};
+use crate::common::{DataSource, OS, TOSData, TopologyTier};
 
 pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
     if let Ok(o) = std::process::Command::new(cmd).output()
@@ -16,7 +16,9 @@ pub fn socket_count_from_sysinfo(cmd: &str) -> (u32, DataSource) {
 }
 
 impl TOSData for OS {
-    fn get_socket_count() -> (u32, DataSource) {
-        socket_count_from_sysinfo("sysinfo")
+    fn get_socket_count() -> TopologyTier {
+        let (count, source) = socket_count_from_sysinfo("sysinfo");
+
+        TopologyTier::new(count, source)
     }
 }

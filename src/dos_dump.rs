@@ -38,7 +38,7 @@ pub extern "C" fn rust_main() -> ! {
 
         let topo = Topology::detect();
 
-        let logical_cores = topo.threads as usize;
+        let logical_cores = topo.threads.count as usize;
         for i in 0..logical_cores {
             dump_cpu(&mut output, i);
         }

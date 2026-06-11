@@ -54,8 +54,8 @@ impl Cpu {
             println!(
                 "{}{} cores ({} threads) across {} core types",
                 disp.label("Cpu Topology"),
-                self.topology.cores,
-                self.topology.threads,
+                self.topology.cores.count,
+                self.topology.threads.count,
                 self.cores.len()
             );
             CpuDisplay::newline();
@@ -83,28 +83,31 @@ impl Cpu {
                 }
 
                 let cc = |s: u32| CpuDisplay::cache_count(s, core.count);
-                disp.display_cache(core.cache, &cc, self.topology.sockets);
+                disp.display_cache(core.cache, &cc, self.topology.sockets.count);
             }
 
             return;
         }
 
-        let multi_core = self.topology.cores > 1 || self.topology.sockets > 1;
+        let multi_core = self.topology.cores.count > 1 || self.topology.sockets.count > 1;
 
         if multi_core || flags.verbose {
             let lbl = disp.label("Topology");
-            if self.topology.sockets > 1 || flags.verbose {
+            if self.topology.sockets.count > 1 || flags.verbose {
                 println!(
                     "{}{} sockets, {} cores, {} threads",
-                    lbl, self.topology.sockets, self.topology.cores, self.topology.threads
+                    lbl,
+                    self.topology.sockets.count,
+                    self.topology.cores.count,
+                    self.topology.threads.count
                 );
-            } else if self.topology.cores != self.topology.threads {
+            } else if self.topology.cores.count != self.topology.threads.count {
                 println!(
                     "{}{} cores ({} threads)",
-                    lbl, self.topology.cores, self.topology.threads
+                    lbl, self.topology.cores.count, self.topology.threads.count
                 );
             } else {
-                println!("{}{} cores", lbl, self.topology.cores);
+                println!("{}{} cores", lbl, self.topology.cores.count);
             }
 
             CpuDisplay::newline();
@@ -334,9 +337,9 @@ impl TCpuDisplay for Cpu {
             let cache_count = |share_count: u32| -> String {
                 #[allow(clippy::manual_checked_ops)]
                 let count = if share_count == 0 {
-                    self.topology.sockets
+                    self.topology.sockets.count
                 } else {
-                    self.topology.threads / share_count
+                    self.topology.threads.count / share_count
                 };
 
                 if count < 2 {
@@ -346,7 +349,11 @@ impl TCpuDisplay for Cpu {
                 }
             };
 
-            disp.display_cache(self.topology.cache, &cache_count, self.topology.sockets);
+            disp.display_cache(
+                self.topology.cache,
+                &cache_count,
+                self.topology.sockets.count,
+            );
         }
 
         // Clock Speed (Base/Boost)

@@ -1,10 +1,10 @@
-use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount};
+use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier};
 
 use super::sysctl::*;
 
 impl TDetect for TopologyCount {
     fn detect() -> Self {
-        let (sockets, _) = get_socket_count();
+        let sockets = OS::get_socket_count();
 
         TopologyCount {
             sockets,
@@ -16,11 +16,11 @@ impl TDetect for TopologyCount {
 }
 
 impl TOSData for OS {
-    fn get_socket_count() -> (u32, DataSource) {
+    fn get_socket_count() -> TopologyTier {
         let hw_packages = get_sysctl_int_value("hw.packages");
 
         match hw_packages {
-            Some(packages) => (packages, DataSource::Sysctrl("hw.packages")),
+            Some(packages) => TopologyTier::new(packages, DataSource::Sysctrl("hw.packages")),
             None => {
                 let map = get_int_sysctl_map("machdep.cpu", "machdep.cpu.");
                 let cores_per_package = map.get("cores_per_package");
@@ -35,10 +35,10 @@ impl TOSData for OS {
                         core_count / cores_per
                     };
 
-                    return (sockets, DataSource::Sysctrl("machdep.cpu.*"));
+                    return TopologyTier::new(sockets, DataSource::Sysctrl("machdep.cpu.*"));
                 }
 
-                (1, DataSource::DefaultValue)
+                TopologyTier::default()
             }
         }
     }

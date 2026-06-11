@@ -1,6 +1,6 @@
 use super::constants::*;
 use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
-use crate::common::{Cache, DataSource, Speed};
+use crate::common::{Cache, Speed, TopologyTier};
 use crate::cpuid::count::{get_core_count, get_platform_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
@@ -143,15 +143,13 @@ pub type DomainList = Vec<TopologyDomain>;
 #[derive(Debug, Default, PartialEq)]
 pub struct Topology {
     /// Number of processor sockets
-    pub sockets: u32,
-    /// Where we get the number of sockets
-    pub socket_source: DataSource,
+    pub sockets: TopologyTier,
     /// Number of dies per socket
-    pub dies: u32,
+    pub dies: TopologyTier,
     /// Number of physical cores
-    pub cores: u32,
+    pub cores: TopologyTier,
     /// Number of logical threads (includes SMT)
-    pub threads: u32,
+    pub threads: TopologyTier,
     /// CPU speed information
     pub speed: Speed,
     /// Cache hierarchy information
@@ -168,10 +166,10 @@ impl Topology {
         let speed = Speed::detect();
         let cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
-        let (sockets, socket_source, cores, threads) = Self::count_domains(&domains);
+        let (sockets, cores, threads) = Self::count_domains(&domains);
 
-        let mut threads_per_socket = 0;
-        let mut threads_per_die = 0;
+        let mut threads_per_socket = 0u32;
+        let mut threads_per_die = 0u32;
 
         for d in &domains {
             if d.count > threads_per_socket {
@@ -182,7 +180,7 @@ impl Topology {
             }
         }
 
-        let dies = if threads_per_die > 0 && threads_per_socket > 0 {
+        let die_count = if threads_per_die > 0 && threads_per_socket > 0 {
             (threads_per_socket / threads_per_die).max(1)
         } else {
             1
@@ -190,8 +188,7 @@ impl Topology {
 
         Topology {
             sockets,
-            socket_source,
-            dies,
+            dies: TopologyTier::new(die_count, sockets.source),
             cores,
             threads,
             speed,
@@ -201,23 +198,21 @@ impl Topology {
     }
 
     /// Returns (sockets, total_cores, total_threads)
-    fn count_domains(domains: &DomainList) -> (u32, DataSource, u32, u32) {
+    fn count_domains(domains: &DomainList) -> (TopologyTier, TopologyTier, TopologyTier) {
         // 1. Get raw counts from fallback sources
-        let (sockets_detected, sockets_source) = get_platform_socket_count();
+        let sockets = get_platform_socket_count();
         let threads_detected = get_thread_count();
         let cores_detected = get_core_count();
 
         if domains.is_empty() {
             return (
-                sockets_detected,
-                sockets_source,
-                cores_detected * sockets_detected,
-                threads_detected * sockets_detected,
+                sockets,
+                TopologyTier::new(cores_detected * sockets.count, sockets.source),
+                TopologyTier::new(threads_detected * sockets.count, sockets.source),
             );
         }
 
         // 2. Extract domain counts
-        // @TODO: parse socket count from domains for cpus that support it
         let mut threads_per_core = 1;
         let mut threads_per_package = 0;
 
@@ -239,10 +234,9 @@ impl Topology {
         let c_per_pkg = t_per_pkg / t_per_core;
 
         (
-            sockets_detected,
-            sockets_source,
-            c_per_pkg * sockets_detected,
-            t_per_pkg * sockets_detected,
+            sockets,
+            TopologyTier::new(c_per_pkg * sockets.count, sockets.source),
+            TopologyTier::new(t_per_pkg * sockets.count, sockets.source),
         )
     }
 

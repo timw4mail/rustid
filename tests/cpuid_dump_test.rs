@@ -114,7 +114,7 @@ mod tm5700 {
     fn test_threads() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
         });
     }
 
@@ -122,7 +122,7 @@ mod tm5700 {
     fn test_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
         });
     }
 }
@@ -233,7 +233,7 @@ mod m3_8100y {
     fn test_intel_threads() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 4);
+            assert_eq!(cpu.topology.threads.count, 4);
         });
     }
 
@@ -241,7 +241,7 @@ mod m3_8100y {
     fn test_intel_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 2);
+            assert_eq!(cpu.topology.cores.count, 2);
         });
     }
 
@@ -426,10 +426,10 @@ mod amd_7950x3d {
 
         let cpu = Cpu::detect();
 
-        assert_eq!(cpu.topology.dies, 2);
-        assert_eq!(cpu.topology.threads, 32);
-        assert_eq!(cpu.topology.cores, 16);
-        assert_eq!(cpu.topology.sockets, 1);
+        assert_eq!(cpu.topology.dies.count, 2);
+        assert_eq!(cpu.topology.threads.count, 32);
+        assert_eq!(cpu.topology.cores.count, 16);
+        assert_eq!(cpu.topology.sockets.count, 1);
     }
 }
 
@@ -495,7 +495,7 @@ mod amd_5900xt {
     fn test_amd_logical_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 32);
+            assert_eq!(cpu.topology.threads.count, 32);
         });
     }
 
@@ -503,7 +503,7 @@ mod amd_5900xt {
     fn test_amd_threads() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 32);
+            assert_eq!(cpu.topology.threads.count, 32);
         });
     }
 
@@ -511,7 +511,7 @@ mod amd_5900xt {
     fn test_amd_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 16);
+            assert_eq!(cpu.topology.cores.count, 16);
         });
     }
 
@@ -708,10 +708,10 @@ mod amd_2700u {
     fn test_amd_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 8);
-            assert_eq!(cpu.topology.cores, 4);
-            assert_eq!(cpu.topology.sockets, 1);
-            assert_eq!(cpu.topology.dies, 1);
+            assert_eq!(cpu.topology.threads.count, 8);
+            assert_eq!(cpu.topology.cores.count, 4);
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.dies.count, 1);
         });
     }
 }
@@ -777,7 +777,7 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_threads() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 4);
+            assert_eq!(cpu.topology.threads.count, 4);
         });
     }
 
@@ -785,7 +785,7 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 4);
+            assert_eq!(cpu.topology.cores.count, 4);
         });
     }
 
@@ -1098,7 +1098,7 @@ mod vortex86dx3 {
     fn test_vortex86_threads() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
         });
     }
 
@@ -1106,7 +1106,7 @@ mod vortex86dx3 {
     fn test_vortex86_cores() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
         });
     }
 

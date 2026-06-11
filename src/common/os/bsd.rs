@@ -1,8 +1,8 @@
 use super::sysctl::get_sysctl_int_value;
-use crate::common::{DataSource, OS, TOSData};
+use crate::common::{DataSource, OS, TOSData, TopologyTier};
 
 impl TOSData for OS {
-    fn get_socket_count() -> (u32, DataSource) {
+    fn get_socket_count() -> TopologyTier {
         #[cfg(not(any(target_os = "freebsd", target_os = "netbsd")))]
         let key = "";
 
@@ -14,9 +14,9 @@ impl TOSData for OS {
         let key = "hw.acpi.cpu.dynamic";
 
         if let Some(sockets) = get_sysctl_int_value(key) {
-            return (sockets, DataSource::Sysctrl(key));
+            return TopologyTier::new(sockets, DataSource::Sysctrl(key));
         }
 
-        (1, DataSource::DefaultValue)
+        TopologyTier::default()
     }
 }

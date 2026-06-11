@@ -1,6 +1,8 @@
 //! Let's count sockets/cores/threads
+#[cfg(dos)]
+use crate::common::DataSource;
 use crate::common::os::OS;
-use crate::common::{DataSource, TOSData};
+use crate::common::{TOSData, TopologyTier};
 use crate::cpuid::{amd_threads_per_core, has_ht};
 
 use super::{amd_logical_cores, is_amd};
@@ -8,9 +10,9 @@ use super::{amd_logical_cores, is_amd};
 #[cfg(not(dos))]
 use super::{info_source, provider::CpuidInfoSource};
 
-pub fn get_platform_socket_count() -> (u32, DataSource) {
+pub fn get_platform_socket_count() -> TopologyTier {
     #[cfg(dos)]
-    let sockets_detected = (
+    let sockets_detected = TopologyTier::new(
         super::mp::MpTable::detect().socket_count(),
         DataSource::MpTable,
     );
@@ -19,7 +21,7 @@ pub fn get_platform_socket_count() -> (u32, DataSource) {
     let sockets_detected = if info_source() == CpuidInfoSource::Cpu {
         OS::get_socket_count()
     } else {
-        (1u32, DataSource::DefaultValue)
+        TopologyTier::default()
     };
 
     sockets_detected

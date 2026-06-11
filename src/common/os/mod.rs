@@ -1,5 +1,5 @@
 //! Os-specific data gathering
-use crate::common::DataSource;
+use crate::common::TopologyTier;
 
 #[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
 pub mod bsd;
@@ -33,13 +33,10 @@ pub use haiku::*;
 #[cfg(all(target_family = "unix", not(target_os = "haiku")))]
 pub use sysctl::*;
 
-#[cfg(target_os = "windows")]
-pub use windows::*;
-
 // ----------------------------------------------------------------------------
 
 pub struct OS;
 
 pub trait TOSData {
-    fn get_socket_count() -> (u32, DataSource);
+    fn get_socket_count() -> TopologyTier;
 }

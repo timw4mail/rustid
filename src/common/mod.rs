@@ -87,9 +87,30 @@ pub struct Speed {
     pub measured: bool,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TopologyTier {
+    pub count: u32,
+    pub source: DataSource,
+}
+
+impl TopologyTier {
+    pub fn new(count: u32, source: DataSource) -> Self {
+        Self { count, source }
+    }
+}
+
+impl Default for TopologyTier {
+    fn default() -> Self {
+        Self {
+            count: 1,
+            source: DataSource::default(),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct TopologyCount {
-    pub sockets: u32,
+    pub sockets: TopologyTier,
     pub cores: u32,
     pub threads: u32,
     pub source: DataSource,
@@ -98,7 +119,7 @@ pub struct TopologyCount {
 impl Default for TopologyCount {
     fn default() -> Self {
         TopologyCount {
-            sockets: 1,
+            sockets: TopologyTier::default(),
             cores: 1,
             threads: 1,
             source: DataSource::DefaultValue,
