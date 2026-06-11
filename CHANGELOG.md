@@ -4,9 +4,14 @@
 
 ### Added
 - Support for showing core type details for hybrid x86 cpus
+- More detailed documentation for DOS version (DOS.md)
 
 ### Changed
 - Updated cpuid dump feature to dump information from each thread, rather than the same output for each thread
+- Optimized allocations and memory usage for DOS version
+
+### Fixed
+- Corrected ARM cpu mapping for Cortex-A76 (found in Raspberry Pi 5)
 
 ## [1.3.0]
 

@@ -815,12 +815,12 @@ impl CpuArch {
                 None,
             ),
 
-            // Cortex-A72 series
+            // Cortex-A76 series
             0xD0B => Self::new(
                 Implementer::Arm,
-                "ARM Cortex-A72",
-                MicroArch::ArmCortexA72,
-                "Cortex-A72",
+                "ARM Cortex-A76",
+                MicroArch::ArmCortexA76,
+                "Cortex-A76",
                 0xD0B,
                 None,
             ),
