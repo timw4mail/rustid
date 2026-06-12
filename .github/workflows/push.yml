@@ -1,24 +1,23 @@
 name: Rust
 
 on:
-    push:
-        branches: [ "master" ]
-    pull_request:
-        branches: [ "master" ]
+  push:
+    branches: ["master", "develop"]
+  pull_request:
+    branches: ["master", "develop"]
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    test:
+  test:
+    runs-on: ubuntu-latest
 
-        runs-on: ubuntu-latest
+    steps:
+      - name: Install just
+        run: |
+          curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
-        steps:
-            - name: Install just
-              run: |
-                    curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
-
-            - uses: actions/checkout@v6
-            - name: Run tests
-              run: just test
+      - uses: actions/checkout@v6
+      - name: Run tests
+        run: just test
