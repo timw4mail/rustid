@@ -5,7 +5,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::vendor::{Cyrix, Intel};
 use super::*;
-use super::{EXT_LEAF_1, EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
+use super::{EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 
 #[cfg(not(dos))]
 use super::provider;
@@ -226,33 +226,6 @@ impl CpuSignature {
     }
 }
 
-/// Extended CPU signature information from AMD processors.
-///
-/// Contains additional CPU identification data available on AMD processors
-/// via the extended CPUID leaf 0x80000001.
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
-pub struct ExtendedSignature {
-    pub base_brand_id: u32,
-    pub brand_id: u32,
-    pub pkg_type: u32,
-}
-
-impl ExtendedSignature {
-    /// Detects the CPU signature from CPUID leaf 1.
-    pub fn detect() -> Self {
-        let res = x86_cpuid(EXT_LEAF_1);
-
-        let brand_id = res.ebx & 0xFFFF;
-        let pkg_type = (res.ebx >> 28) & 0xF;
-
-        Self {
-            base_brand_id: super::get_brand_id(),
-            brand_id,
-            pkg_type,
-        }
-    }
-}
-
 /// Information about a specific core type/cluster in the CPU.
 #[derive(Debug, Default, PartialEq)]
 pub struct CpuCore {
@@ -284,8 +257,6 @@ pub struct Cpu {
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
-    /// AMD extended cpu signature
-    pub ext_signature: Option<ExtendedSignature>,
     /// Detected CPU features
     pub features: BTreeMap<&'static str, String>,
     /// Speed, threads, cores, sockets
@@ -593,10 +564,6 @@ impl TDetect for Cpu {
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
-            ext_signature: match is_amd() {
-                true => Some(ExtendedSignature::detect()),
-                false => None,
-            },
             features: get_feature_list(),
             topology,
             cores,
@@ -751,7 +718,6 @@ mod tests {
             brand_id: 0,
             easter_egg: None,
             signature: CpuSignature::detect(), // Signature doesn't affect this path
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -764,7 +730,6 @@ mod tests {
             brand_id: 0,
             easter_egg: None,
             signature: CpuSignature::detect(),
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -784,7 +749,6 @@ mod tests {
             brand_id: 0,
             easter_egg: None,
             signature: CpuSignature::detect(),
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -807,7 +771,6 @@ mod tests {
                 is_overdrive: false,
                 source: DataSource::DefaultValue,
             },
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -833,7 +796,6 @@ mod tests {
                 is_overdrive: false,
                 source: DataSource::DefaultValue,
             },
-            ext_signature: None,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()

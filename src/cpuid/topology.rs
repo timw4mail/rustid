@@ -1,6 +1,6 @@
 use super::constants::*;
 use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
-use crate::common::{Cache, Speed, TopologyTier};
+use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::cpuid::count::{get_core_count, get_platform_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
@@ -188,7 +188,7 @@ impl Topology {
 
         Topology {
             sockets,
-            dies: TopologyTier::new(die_count, sockets.source),
+            dies: TopologyTier::new(die_count, DataSource::Calculated("Cpuid")),
             cores,
             threads,
             speed,
@@ -201,14 +201,14 @@ impl Topology {
     fn count_domains(domains: &DomainList) -> (TopologyTier, TopologyTier, TopologyTier) {
         // 1. Get raw counts from fallback sources
         let sockets = get_platform_socket_count();
-        let threads_detected = get_thread_count();
-        let cores_detected = get_core_count();
+        let threads = get_thread_count();
+        let cores = get_core_count();
 
         if domains.is_empty() {
             return (
                 sockets,
-                TopologyTier::new(cores_detected * sockets.count, sockets.source),
-                TopologyTier::new(threads_detected * sockets.count, sockets.source),
+                TopologyTier::new(cores.count * sockets.count, cores.source),
+                TopologyTier::new(threads.count * sockets.count, threads.source),
             );
         }
 
@@ -226,7 +226,7 @@ impl Topology {
         }
 
         if threads_per_package == 0 {
-            threads_per_package = threads_detected;
+            threads_per_package = threads.count;
         }
 
         let t_per_core = threads_per_core.max(1);
@@ -235,8 +235,8 @@ impl Topology {
 
         (
             sockets,
-            TopologyTier::new(c_per_pkg * sockets.count, sockets.source),
-            TopologyTier::new(t_per_pkg * sockets.count, sockets.source),
+            TopologyTier::new(c_per_pkg * sockets.count, DataSource::Calculated("Cpuid")),
+            TopologyTier::new(t_per_pkg * sockets.count, DataSource::Calculated("Cpuid")),
         )
     }
 
