@@ -5,6 +5,7 @@
 ### Added
 - Support for showing core type details for hybrid x86 cpus
 - More detailed documentation for DOS version (DOS.md)
+- Data source properties to debug output
 
 ### Changed
 - Updated cpuid dump feature to dump information from each thread, rather than the same output for each thread
