@@ -3,7 +3,7 @@
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
-use super::vendor::{Cyrix, Intel};
+use super::vendor::Cyrix;
 use super::*;
 use super::{EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 
@@ -71,7 +71,7 @@ impl FeatureClass {
 
         #[cfg(target_arch = "x86")]
         if is_cyrix() {
-            return vendor::Cyrix::get_feature_class();
+            return Cyrix::get_feature_class();
         }
 
         if has_sse3() {
@@ -182,8 +182,8 @@ impl CpuSignature {
         }
     }
 
-    pub fn new_synth(family: u32, model: u32, stepping: u32) -> Self {
-        Self::new(0, family, 0, model, stepping, DataSource::DefaultValue)
+    pub fn new_synth(family: u32, model: u32, stepping: u32, source: DataSource) -> Self {
+        Self::new(0, family, 0, model, stepping, source)
     }
 
     /// Detects the CPU signature from CPUID leaf 1.
@@ -263,8 +263,6 @@ pub struct Cpu {
     pub topology: Topology,
     /// Per-core-type breakdown of CPU cores
     pub cores: Vec<CpuCore>,
-    /// Where did this CPU information come from?
-    pub data_source: DataSource,
 }
 
 impl Cpu {
@@ -367,7 +365,7 @@ impl Cpu {
                 }
             CpuBrand::Cyrix => {
                 // Cyrix MSR model lookup is more accurate than the 'generic' way
-                return vendor::Cyrix::model_string();
+                return Cyrix::model_string();
             }
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
@@ -567,7 +565,6 @@ impl TDetect for Cpu {
             features: get_feature_list(),
             topology,
             cores,
-            data_source: cpuid_data_source(),
         }
     }
 }
@@ -581,6 +578,8 @@ impl Cpu {
     /// hybrid architectures (e.g., Intel P-cores and E-cores).
     /// Falls back to a single entry for DOS or if enumeration fails.
     pub fn detect_core_types() -> Vec<CpuCore> {
+        use super::vendor::Intel;
+
         let mut cores: Vec<CpuCore> = Vec::new();
 
         fn find_or_push(

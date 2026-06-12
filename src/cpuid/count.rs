@@ -1,9 +1,9 @@
 //! Let's count sockets/cores/threads
-#[cfg(dos)]
-use crate::common::DataSource;
-use crate::common::os::OS;
-use crate::common::{DataSource, TOSData, TopologyTier};
-use crate::cpuid::{amd_threads_per_core, has_ht};
+use crate::common::{DataSource, TopologyTier};
+use crate::cpuid::{amd_threads_per_core, cpuid_data_source, has_ht};
+
+#[cfg(not(dos))]
+use crate::common::{OS, TOSData};
 
 use super::{amd_logical_cores, is_amd};
 
@@ -29,7 +29,7 @@ pub fn get_platform_socket_count() -> TopologyTier {
 
 pub fn get_thread_count() -> TopologyTier {
     if is_amd() {
-        TopologyTier::new(amd_logical_cores(), DataSource::Cpuid)
+        TopologyTier::new(amd_logical_cores(), cpuid_data_source())
     } else {
         get_platform_thread_count()
     }
@@ -43,7 +43,7 @@ pub fn get_core_count() -> TopologyTier {
     if is_amd() {
         TopologyTier::new(
             amd_logical_cores() / amd_threads_per_core(),
-            DataSource::Calculated("AMD Cpujd"),
+            DataSource::Calculated("AMD Cpuid"),
         )
     } else {
         get_platform_core_count()

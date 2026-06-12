@@ -141,6 +141,7 @@ impl Cpu {
             CpuDisplay::newline();
         }
     }
+
     fn print_signature(&self, flags: CliFlags, disp: &CpuDisplay) {
         if self.signature != CpuSignature::default() {
             let key = if self.signature.source == DataSource::Cpuid
@@ -192,68 +193,84 @@ impl Cpu {
             CpuDisplay::newline();
         }
     }
+}
 
+// Cpu features display
+impl Cpu {
+    fn print_simple_features_list(&self, disp: &CpuDisplay) {
+        disp.simple_line(
+            "Features",
+            self.features
+                .get("Base")
+                .expect("There should be at least one key in the features BTreeMap."),
+        );
+    }
+
+    fn print_full_features_list(&self, disp: &CpuDisplay) {
+        let keys = [
+            "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
+        ];
+        for key in keys {
+            if self.features.contains_key(key) {
+                if key == "Base" {
+                    println!(
+                        "{}{}",
+                        disp.inline_sublabel("Features", "Base"),
+                        self.features.get(key).expect("Missing Base key?")
+                    )
+                } else {
+                    println!(
+                        "{}{}",
+                        disp.sublabel(key),
+                        self.features
+                            .get(key)
+                            .expect("Somehow the key in the features BTreeMap disappeared!")
+                    );
+                }
+            }
+        }
+    }
+
+    #[cfg(not(dos))]
+    fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
+        let centaur_map = super::vendor::Centaur::get_feature_list();
+        if !centaur_map.is_empty() {
+            let mut list: Vec<String> = Vec::new();
+            for (name, enabled) in &centaur_map {
+                if *enabled {
+                    list.push(String::from(*name));
+                } else {
+                    if flags.color {
+                        list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name))
+                    } else {
+                        list.push(format!("{name}(disabled)"));
+                    }
+                }
+            }
+
+            if !list.is_empty() {
+                println!("{}{}", disp.sublabel("Centaur"), list.join(", "));
+            }
+        }
+    }
+
+    #[allow(unused_variables)]
     fn print_features(&self, flags: CliFlags, disp: &CpuDisplay) {
         if !self.features.is_empty() {
+            // Simple features list
             if self.features.len() == 1 {
-                disp.simple_line(
-                    "Features",
-                    self.features
-                        .get("Base")
-                        .expect("There should be at least one key in the features BTreeMap."),
-                );
+                self.print_simple_features_list(disp);
             } else {
-                let keys = [
-                    "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
-                ];
-                for key in keys {
-                    if self.features.contains_key(key) {
-                        if key == "Base" {
-                            println!(
-                                "{}{}",
-                                disp.inline_sublabel("Features", "Base"),
-                                self.features.get(key).expect("Missing Base key?")
-                            )
-                        } else {
-                            println!(
-                                "{}{}",
-                                disp.sublabel(key),
-                                self.features.get(key).expect(
-                                    "Somehow the key in the features BTreeMap disappeared!"
-                                )
-                            );
-                        }
-                    }
-                }
-
-                #[cfg(not(dos))]
-                if is_centaur() {
-                    use alloc::format;
-                    use alloc::vec::Vec;
-
-                    let centaur_map = super::vendor::Centaur::get_feature_list();
-                    if !centaur_map.is_empty() {
-                        let mut list: Vec<String> = Vec::new();
-                        for (name, enabled) in &centaur_map {
-                            if *enabled {
-                                list.push(String::from(*name));
-                            } else {
-                                if flags.color {
-                                    list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name))
-                                } else {
-                                    list.push(format!("{name}(disabled)"));
-                                }
-                            }
-                        }
-
-                        if !list.is_empty() {
-                            println!("{}{}", disp.sublabel("Centaur"), list.join(", "));
-                        }
-                    }
-                }
-
-                CpuDisplay::newline();
+                self.print_full_features_list(disp);
             }
+
+            // Centaur features list
+            #[cfg(not(dos))]
+            if is_centaur() {
+                self.print_centaur_features(flags, disp);
+            }
+
+            CpuDisplay::newline();
         }
     }
 }

@@ -18,7 +18,6 @@ pub use count::*;
 
 pub use display::*;
 
-#[cfg(not(dos))]
 pub use os::*;
 
 use alloc::string::String;

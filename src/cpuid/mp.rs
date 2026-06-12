@@ -44,31 +44,6 @@ impl MpTable {
         table
     }
 
-    /// Detects the number of sockets by parsing sysctl on various unix/unix-like OSes
-    #[cfg(all(
-        target_family = "unix",
-        not(any(target_os = "linux", target_os = "haiku"))
-    ))]
-    #[must_use]
-    pub fn detect_sysctl() -> MpTable {
-        let mut table = MpTable { sockets: 1 };
-
-        #[cfg(not(any(target_os = "freebsd", target_os = "netbsd")))]
-        let key = "";
-
-        #[cfg(target_os = "freebsd")]
-        let key = "kern.smp.cpus";
-
-        #[cfg(target_os = "netbsd")]
-        let key = "hw.acpi.cpu.dynamic";
-
-        if let Some(sockets) = crate::common::get_sysctl_int_value(key) {
-            table.sockets = sockets;
-        }
-
-        table
-    }
-
     /// Detects the number of sockets by reading /proc/cpuinfo
     #[cfg(not(dos))]
     #[must_use]

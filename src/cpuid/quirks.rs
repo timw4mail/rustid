@@ -235,7 +235,12 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     let model = (raw_sig >> 4) & 0xF;
     let family = (raw_sig >> 8) & 0xF;
 
-    Some(CpuSignature::new_synth(family, model, stepping))
+    Some(CpuSignature::new_synth(
+        family,
+        model,
+        stepping,
+        crate::common::DataSource::CpuReset,
+    ))
 }
 
 #[cfg(feature = "debug")]

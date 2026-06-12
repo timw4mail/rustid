@@ -180,15 +180,18 @@ impl Topology {
             }
         }
 
-        let die_count = if threads_per_die > 0 && threads_per_socket > 0 {
-            (threads_per_socket / threads_per_die).max(1)
+        let dies = if threads_per_die > 0 && threads_per_socket > 0 {
+            TopologyTier::new(
+                (threads_per_socket / threads_per_die).max(1),
+                DataSource::Calculated("Cpuid"),
+            )
         } else {
-            1
+            TopologyTier::default()
         };
 
         Topology {
             sockets,
-            dies: TopologyTier::new(die_count, DataSource::Calculated("Cpuid")),
+            dies,
             cores,
             threads,
             speed,

@@ -238,18 +238,22 @@ impl Cyrix {
 
     #[must_use]
     pub fn get_signature_from_device_id() -> CpuSignature {
+        use crate::common::DataSource;
+
         if !crate::cpuid::is_cyrix() {
             return CpuSignature::default();
         }
 
+        let source = DataSource::CpuMsr;
+
         match CyrixModel::detect() {
             CyrixModel::Cx486DX | CyrixModel::Cx486DX2 | CyrixModel::Cx486DX4 => {
-                CpuSignature::new_synth(4, 8, 0)
+                CpuSignature::new_synth(4, 8, 0, source)
             }
-            CyrixModel::Cx5x86 => CpuSignature::new_synth(4, 9, 0),
-            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => CpuSignature::new_synth(5, 2, 0),
-            CyrixModel::MediaGx => CpuSignature::new_synth(5, 4, 0),
-            CyrixModel::M2 => CpuSignature::new_synth(6, 0, 0),
+            CyrixModel::Cx5x86 => CpuSignature::new_synth(4, 9, 0, source),
+            CyrixModel::Cx6x86 | CyrixModel::Cx6x86L => CpuSignature::new_synth(5, 2, 0, source),
+            CyrixModel::MediaGx => CpuSignature::new_synth(5, 4, 0, source),
+            CyrixModel::M2 => CpuSignature::new_synth(6, 0, 0, source),
             _ => CpuSignature::default(),
         }
     }
