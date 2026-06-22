@@ -24,15 +24,15 @@ impl Default for Cpu {
 }
 
 impl Cpu {
-    fn detect_cache() -> (Option<Cache>, DataSource) {
+    fn detect_cache() -> Option<Cache> {
         #[cfg(any(target_os = "linux", target_family = "unix"))]
         if let Some(cache) = Cache::detect() {
-            return (Some(cache), cache.source);
+            return Some(cache);
         }
 
         // Let's just fall back to no cache, rather than
         // potentially returning incorrect values
-        (None, DataSource::DefaultValue)
+        None
     }
 
     fn detect_clock_speed() -> (Option<u64>, DataSource) {
@@ -147,7 +147,7 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
-        let (cache, _) = Self::detect_cache(pvr);
+        let cache = Self::detect_cache();
         let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
 
         Self {
