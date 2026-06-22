@@ -277,8 +277,6 @@ impl Cpu {
         unique_midrs.dedup();
 
         for midr in &unique_midrs {
-            let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
-
             #[cfg(target_os = "linux")]
             let cache = sysfs_per_type
                 .as_ref()
@@ -287,7 +285,7 @@ impl Cpu {
                 .or_else(|| arch.micro_arch.cache());
 
             #[cfg(not(target_os = "linux"))]
-            let cache = runtime_cache.or_else(|| arch.micro_arch.cache());
+            let cache = runtime_cache.or(None);
 
             core_cache_map.insert(midr.to_bits(), cache);
         }
