@@ -1,13 +1,11 @@
-set unstable
-
 # Lists the available actions
 default:
 	@echo "This is an {{arch()}} machine, running {{os()}} on {{num_cpus()}} cpus/cores/threads"
 	@rustup default
 	@just --list
 
-base_run := if arch() == "powerpc" || "powerpc64" { "cargo +nightly run -Z build-std" } else { "cargo run" }
-base_check := if arch() == "powerpc" || "powerpc64" { "cargo +nightly check -Z build-std --all-targets" } else { "cargo check --all-targets" }
+base_run := if arch() == "powerpc" { "cargo +nightly run -Z build-std" } else { "cargo run" }
+base_check := if arch() == "powerpc" { "cargo +nightly check -Z build-std --all-targets" } else { "cargo check --all-targets" }
 
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
