@@ -373,6 +373,16 @@ impl CpuArch {
         }
     }
 
+    pub fn brand_arch<'a>(
+        model: &'a str,
+        brand_name: &'static str,
+        vendor_string: &'a str,
+    ) -> impl 'a + Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch {
+        move |ma, code_name, tech| {
+            CpuArch::new(model, ma, code_name, brand_name, vendor_string, tech)
+        }
+    }
+
     /// Finds and returns the CPU architecture based on model string, signature, and vendor.
     ///
     /// Uses CPUID information to determine the microarchitecture and code name.

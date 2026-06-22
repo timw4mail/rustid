@@ -2,18 +2,15 @@ use crate::common::CoreType;
 use crate::cpuid::CpuSignature;
 use crate::cpuid::constants::*;
 use crate::cpuid::micro_arch::{CpuArch, MicroArch};
+use crate::cpuid::vendor::TMicroArch;
 
 /// Intel-specific microarchitecture detection.
 pub struct Intel;
 
-impl Intel {
+impl TMicroArch for Intel {
     /// Detects the Intel microarchitecture based on the CPU model string and signature.
-    #[must_use]
-    pub fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand_arch =
-            |ma: MicroArch, code_name: &'static str, tech: Option<&'static str>| -> CpuArch {
-                CpuArch::new(model, ma, code_name, "Intel", VENDOR_INTEL, tech)
-            };
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+        let brand_arch = CpuArch::brand_arch(model, "Intel", VENDOR_INTEL);
 
         match (
             s.extended_family,
@@ -100,7 +97,9 @@ impl Intel {
             _ => brand_arch(MicroArch::Unknown, UNK, None),
         }
     }
+}
 
+impl Intel {
     pub fn core_micro_arch(parent: MicroArch, core_type: CoreType) -> MicroArch {
         match (parent, core_type) {
             (MicroArch::Lakefield, CoreType::Efficiency) => MicroArch::Tremont,

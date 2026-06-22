@@ -8,10 +8,7 @@ pub struct Amd;
 
 impl TMicroArch for Amd {
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand_arch =
-            |ma: MicroArch, code_name: &'static str, tech: Option<&'static str>| -> CpuArch {
-                CpuArch::new(model, ma, code_name, "AMD", VENDOR_AMD, tech)
-            };
+        let brand_arch = CpuArch::brand_arch(model, "AMD", VENDOR_AMD);
 
         match (
             s.extended_family,
