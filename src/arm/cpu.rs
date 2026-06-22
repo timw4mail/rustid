@@ -282,7 +282,7 @@ impl Cpu {
                 .as_ref()
                 .and_then(|m| m.get(&midr.to_bits()).copied())
                 .or_else(|| runtime_cache)
-                .or_else(|| arch.micro_arch.cache());
+                .or(None);
 
             #[cfg(not(target_os = "linux"))]
             let cache = runtime_cache.or(None);
