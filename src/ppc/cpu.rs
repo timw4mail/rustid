@@ -1,6 +1,6 @@
 //! Contains the Cpu struct for PowerPC.
 
-use crate::common::cache::{Cache, CacheLevel, CacheType, Level1Cache};
+use crate::common::cache::Cache;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, TDetect};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
@@ -24,7 +24,7 @@ impl Default for Cpu {
 }
 
 impl Cpu {
-    fn detect_cache(pvr: u32) -> (Option<Cache>, DataSource) {
+    fn detect_cache() -> (Option<Cache>, DataSource) {
         #[cfg(any(target_os = "linux", target_family = "unix"))]
         if let Some(cache) = Cache::detect() {
             return (Some(cache), cache.source);
