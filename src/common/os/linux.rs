@@ -1,8 +1,10 @@
 #![cfg(target_os = "linux")]
 
 use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
+use std::vec::Vec;
 
 #[cfg(not(x86_cpu))]
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
@@ -49,29 +51,50 @@ fn expand_cpu_list(s: &str) -> Vec<u32> {
     cpus
 }
 
+pub fn get_proc_cpuinfo_data() -> Vec<HashMap<String, String>> {
+    let mut sections: Vec<_> = Vec::new();
+
+    if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+        let raw: Vec<String> = content.split("\n\n").map(String::from).collect();
+        for section in raw {
+            let mut map: HashMap<String, String> = HashMap::new();
+
+            for line in section.lines() {
+                let parts: Vec<_> = line.split(": ").collect();
+                if parts.len() > 1 {
+                    let key = parts[0].trim();
+                    let val = parts[1].trim();
+
+                    map.insert(key.to_string(), val.to_string());
+                }
+            }
+
+            sections.push(map);
+        }
+    }
+
+    sections
+}
+
 impl TOSData for OS {
     fn get_socket_count() -> TopologyTier {
-        use std::collections::HashSet;
-
         // Fallback: /proc/cpuinfo unique physical ids
-        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+        let cpuinfo = get_proc_cpuinfo_data();
+        if !cpuinfo.is_empty() {
             let mut entries = 0;
             let mut physical_ids = HashSet::new();
             let mut core_ids = HashSet::new();
 
-            for line in content.lines() {
-                if line.starts_with("physical id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    physical_ids.insert(id.trim());
-                    entries += 1;
+            for cpu_map in cpuinfo {
+                if let Some(id) = cpu_map.get("physical id") {
+                    physical_ids.insert(id.trim().to_string());
                 }
 
-                if line.starts_with("core id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    core_ids.insert(id.trim());
+                if let Some(id) = cpu_map.get("core id") {
+                    core_ids.insert(id.trim().to_string());
                 }
+
+                entries += 1;
             }
 
             // For the Pentium Pro, all the rules seem to be broken.

@@ -3,6 +3,7 @@
 //! Uses text-based parsing of `/proc/cpuinfo` "Features" line and
 //! `getauxval(AT_HWCAP/AT_HWCAP2/AT_HWCAP3)` when available.
 
+use crate::common::get_proc_cpuinfo_data;
 use std::collections::BTreeMap;
 
 // ----------------------------------------------------------------------------
@@ -14,17 +15,11 @@ use std::collections::BTreeMap;
 pub fn get_features_from_cpuinfo() -> BTreeMap<String, bool> {
     let mut features: BTreeMap<String, bool> = BTreeMap::new();
 
-    if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-        for line in content.lines() {
-            let line = line.trim();
-            if line.starts_with("Features") {
-                if let Some(rest) = line.split(':').nth(1) {
-                    for feat in rest.split_whitespace() {
-                        let normalized = feat.to_lowercase();
-                        features.insert(normalized, true);
-                    }
-                }
-                break;
+    let cpuinfo = get_proc_cpuinfo_data();
+    if let Some(first) = cpuinfo.first() {
+        if let Some(features_str) = first.get("Features") {
+            for feat in features_str.split_whitespace() {
+                features.insert(feat.to_lowercase(), true);
             }
         }
     }

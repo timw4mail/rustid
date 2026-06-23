@@ -1,6 +1,8 @@
 //! Contains the Cpu struct for PowerPC.
 
 use crate::common::cache::Cache;
+#[cfg(target_os = "linux")]
+use crate::common::get_proc_cpuinfo_data;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, TDetect};
 use crate::ppc::micro_arch::CpuArch;
 use std::fs;
@@ -90,8 +92,10 @@ impl Cpu {
 
         for line in output_str.lines() {
             if line.starts_with("CPU max MHz") || line.starts_with("CPU MHz") {
-                if let Some(freq) = Self::parse_mhz(line) {
-                    return Some(freq);
+                if let Some(value) = line.split(':').nth(1) {
+                    if let Some(freq) = Self::parse_mhz_value(value) {
+                        return Some(freq);
+                    }
                 }
             }
         }
@@ -100,16 +104,11 @@ impl Cpu {
     }
 
     fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
-        let output = match fs::read_to_string("/proc/cpuinfo") {
-            Ok(o) => o,
-            Err(_) => return None,
-        };
-
-        for line in output.lines() {
-            let line = line.trim();
-            if line.starts_with("cpu MHz") || line.starts_with("clock") {
-                if let Some(freq) = Self::parse_mhz(line) {
-                    return Some(freq as u64);
+        let cpuinfo = get_proc_cpuinfo_data();
+        for map in &cpuinfo {
+            if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock")) {
+                if let Some(freq) = Self::parse_mhz_value(val) {
+                    return Some(freq);
                 }
             }
         }
@@ -117,13 +116,8 @@ impl Cpu {
         None
     }
 
-    fn parse_mhz(line: &str) -> Option<u64> {
-        let parts: Vec<&str> = line.split(':').collect();
-        if parts.len() != 2 {
-            return None;
-        }
-
-        let value = parts[1].trim();
+    fn parse_mhz_value(value: &str) -> Option<u64> {
+        let value = value.trim();
         let value = value.trim_end_matches("MHz").trim().trim_end_matches("MHz");
         let value = value.trim_end_matches("GHz");
 

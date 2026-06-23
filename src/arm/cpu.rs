@@ -3,6 +3,8 @@ use super::brand::Vendor;
 use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
+#[cfg(target_os = "linux")]
+use crate::common::get_proc_cpuinfo_data;
 use crate::common::*;
 use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
 use std::collections::{BTreeMap, HashSet};
@@ -198,58 +200,46 @@ impl Cpu {
         }
 
         // 2. Fallback to /proc/cpuinfo
-        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-            let mut impl_ = None;
-            let mut var = None;
-            let mut arch = None;
-            let mut part = None;
-            let mut rev = None;
-
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with("processor") {
-                    if let (Some(i), Some(p)) = (impl_, part) {
-                        let m = (i << 24)
-                            | (var.unwrap_or(0) << 20)
-                            | (arch.unwrap_or(0) << 16)
-                            | (p << 4)
-                            | rev.unwrap_or(0);
-                        midrs.push(m);
-
-                        impl_ = None;
-                        var = None;
-                        arch = None;
-                        part = None;
-                        rev = None;
-                    }
-                    continue;
-                }
-
-                let parts: Vec<&str> = line.split(':').collect();
-                if parts.len() != 2 {
-                    continue;
-                }
-                let key = parts[0].trim();
-                let val = parts[1].trim();
-                let first_word = val.split_whitespace().next().unwrap_or("");
-
-                match key {
-                    "CPU implementer" => {
-                        impl_ = usize::from_str_radix(first_word.trim_start_matches("0x"), 16).ok()
-                    }
-                    "CPU variant" => {
-                        var = usize::from_str_radix(first_word.trim_start_matches("0x"), 16).ok()
-                    }
-                    "CPU architecture" => arch = first_word.parse().ok(),
-                    "CPU part" => {
-                        part = usize::from_str_radix(first_word.trim_start_matches("0x"), 16).ok()
-                    }
-                    "CPU revision" => rev = first_word.parse().ok(),
-                    _ => {}
-                }
-            }
-            // Handle last entry
+        let cpuinfo = get_proc_cpuinfo_data();
+        for map in &cpuinfo {
+            let impl_ = map.get("CPU implementer").and_then(|s| {
+                usize::from_str_radix(
+                    s.split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim_start_matches("0x"),
+                    16,
+                )
+                .ok()
+            });
+            let part = map.get("CPU part").and_then(|s| {
+                usize::from_str_radix(
+                    s.split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim_start_matches("0x"),
+                    16,
+                )
+                .ok()
+            });
             if let (Some(i), Some(p)) = (impl_, part) {
+                let var = map.get("CPU variant").and_then(|s| {
+                    usize::from_str_radix(
+                        s.split_whitespace()
+                            .next()
+                            .unwrap_or("")
+                            .trim_start_matches("0x"),
+                        16,
+                    )
+                    .ok()
+                });
+                let arch = map
+                    .get("CPU architecture")
+                    .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
+                let rev = map
+                    .get("CPU revision")
+                    .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
+
                 let m = (i << 24)
                     | (var.unwrap_or(0) << 20)
                     | (arch.unwrap_or(0) << 16)
