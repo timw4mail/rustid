@@ -224,6 +224,7 @@ impl From<MicroArch> for String {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     pub implementer: Implementer,
+    pub soc_model: Option<String>,
     pub model: String,
     pub micro_arch: MicroArch,
     pub code_name: &'static str,
@@ -235,6 +236,7 @@ impl Default for CpuArch {
     fn default() -> Self {
         Self::new(
             Implementer::default(),
+            None,
             UNK,
             MicroArch::default(),
             UNK,
@@ -248,6 +250,7 @@ impl CpuArch {
     pub fn new(
         implementer: Implementer,
         model: &str,
+        soc_model: Option<&str>,
         micro_arch: MicroArch,
         code_name: &'static str,
         part_number: usize,
@@ -256,6 +259,10 @@ impl CpuArch {
         CpuArch {
             implementer,
             model: String::from(model),
+            soc_model: match soc_model {
+                Some(m) => Some(String::from(m)),
+                None => None,
+            },
             micro_arch,
             code_name,
             part_number,
