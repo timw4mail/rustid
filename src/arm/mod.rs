@@ -67,6 +67,10 @@ impl CpuDisplay {
             <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
 
+        if let Some(soc_model) = &cpu_arch.soc_model {
+            cpu.simple_line("SoC/System", soc_model);
+        }
+
         cpu.simple_line("Model", &cpu_arch.model);
 
         cpu.simple_line("Codename", cpu_arch.code_name);

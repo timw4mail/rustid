@@ -236,8 +236,8 @@ impl Default for CpuArch {
     fn default() -> Self {
         Self::new(
             Implementer::default(),
-            None,
             UNK,
+            None,
             MicroArch::default(),
             UNK,
             0,
@@ -259,10 +259,7 @@ impl CpuArch {
         CpuArch {
             implementer,
             model: String::from(model),
-            soc_model: match soc_model {
-                Some(m) => Some(String::from(m)),
-                None => None,
-            },
+            soc_model: soc_model.map(String::from),
             micro_arch,
             code_name,
             part_number,
@@ -280,6 +277,17 @@ impl CpuArch {
                 ..Self::default()
             },
         }
+    }
+
+    fn find_soc<'a>() -> Option<&'a str> {
+        #[cfg(target_os = "linux")]
+        {
+            // @TODO try to find in /proc/cpuinfo
+            None
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        None
     }
 
     fn find_arm(part: usize) -> Self {
@@ -442,10 +450,13 @@ impl CpuArch {
                 "Neoverse V2",
             ),
         ];
+        let soc_model = CpuArch::find_soc();
         PARTS
             .iter()
             .find(|(p, _, _, _)| *p == part)
-            .map(|&(_, model, ma, name)| Self::new(Implementer::Arm, model, ma, name, part, None))
+            .map(|&(_, model, ma, name)| {
+                Self::new(Implementer::Arm, model, soc_model, ma, name, part, None)
+            })
             .unwrap_or_else(|| Self {
                 implementer: Implementer::Arm,
                 ..Self::default()
@@ -546,11 +557,20 @@ impl CpuArch {
                 N3,
             ),
         ];
+        let soc_model = CpuArch::find_soc();
         PARTS
             .iter()
             .find(|(p, _, _, _, _)| *p == part)
             .map(|&(_, model, ma, name, tech)| {
-                Self::new(Implementer::Apple, model, ma, name, part, Some(tech))
+                Self::new(
+                    Implementer::Apple,
+                    model,
+                    soc_model,
+                    ma,
+                    name,
+                    part,
+                    Some(tech),
+                )
             })
             .unwrap_or_else(|| Self {
                 implementer: Implementer::Apple,
@@ -673,11 +693,20 @@ impl CpuArch {
                 None,
             ),
         ];
+        let soc_model = CpuArch::find_soc();
         PARTS
             .iter()
             .find(|(p, _, _, _, _)| *p == part)
             .map(|&(_, model, ma, name, tech)| {
-                Self::new(Implementer::Qualcomm, model, ma, name, part, tech)
+                Self::new(
+                    Implementer::Qualcomm,
+                    model,
+                    soc_model,
+                    ma,
+                    name,
+                    part,
+                    tech,
+                )
             })
             .unwrap_or_else(|| Self {
                 implementer: Implementer::Qualcomm,
