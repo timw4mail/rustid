@@ -4,7 +4,6 @@ use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTie
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
-use std::vec::Vec;
 
 #[cfg(not(x86_cpu))]
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
@@ -52,28 +51,24 @@ fn expand_cpu_list(s: &str) -> Vec<u32> {
 }
 
 pub fn get_proc_cpuinfo_data() -> Vec<HashMap<String, String>> {
-    let mut sections: Vec<_> = Vec::new();
+    let content = match std::fs::read_to_string("/proc/cpuinfo") {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
 
-    if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-        let raw: Vec<String> = content.split("\n\n").map(String::from).collect();
-        for section in raw {
-            let mut map: HashMap<String, String> = HashMap::new();
-
+    content
+        .split("\n\n")
+        .filter(|s| !s.trim().is_empty())
+        .map(|section| {
+            let mut map = HashMap::new();
             for line in section.lines() {
-                let parts: Vec<_> = line.split(": ").collect();
-                if parts.len() > 1 {
-                    let key = parts[0].trim();
-                    let val = parts[1].trim();
-
-                    map.insert(key.to_string(), val.to_string());
+                if let Some((key, val)) = line.split_once(':') {
+                    map.insert(key.trim().to_string(), val.trim().to_string());
                 }
             }
-
-            sections.push(map);
-        }
-    }
-
-    sections
+            map
+        })
+        .collect()
 }
 
 impl TOSData for OS {
