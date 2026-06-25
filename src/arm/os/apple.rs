@@ -1,10 +1,8 @@
-use super::CpuDisplay;
-use super::brand::*;
-use super::micro_arch::CpuArch;
-use super::micro_arch::*;
-use crate::arm::TArmCpu;
-use crate::common::*;
-use crate::common::{UNK, get_full_raw_sysctl_map};
+use super::OsCpuInfo;
+use crate::arm::brand::*;
+use crate::arm::micro_arch::*;
+use crate::common::get_full_raw_sysctl_map;
+use crate::common::{Cache, CacheLevel, CacheType, CoreType, DataSource, Level1Cache, UNK};
 use std::collections::{BTreeMap, HashSet};
 
 // ----------------------------------------------------------------------------
@@ -277,7 +275,7 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
     detected.insert("sve2", features.get("sve2").copied().unwrap_or(false));
     detected.insert("sme", features.get("sme").copied().unwrap_or(false));
 
-    super::features::build_feature_map(&detected)
+    crate::arm::features::build_feature_map(&detected)
 }
 
 const CPUFAMILY_ARM_FIRESTORM_ICESTORM: usize = 0x1b588bb3;
@@ -285,7 +283,7 @@ const CPUFAMILY_ARM_BLIZZARD_AVALANCHE: usize = 0xda33d83d;
 const CPUFAMILY_ARM_EVEREST_SAWTOOTH: usize = 0x8765edea;
 
 /// Get all the juicy cpu details from sysctl
-fn get_sysctl_map() -> BTreeMap<String, String> {
+pub(crate) fn get_sysctl_map() -> BTreeMap<String, String> {
     let mut values: BTreeMap<String, String> = BTreeMap::new();
 
     for (key, value) in get_full_raw_sysctl_map() {
@@ -376,174 +374,119 @@ fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-pub struct Cpu {
-    pub raw_midr: HashSet<usize>,
-    pub midrs: HashSet<Midr>,
-    pub vendor: String,
-    pub cpu_arch: CpuArch,
-    pub model: String,
-    pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
-    pub raw: BTreeMap<String, String>,
-    pub features: BTreeMap<&'static str, String>,
-    pub data_source: DataSource,
+/// Maps an Apple MIDR part number and core type to a core codename.
+/// This is macOS-specific because sysctl provides perflevels (core types)
+/// while the synthesized MIDR only represents one part number per family.
+fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
+    let str = match (midr.part, kind) {
+        // M1
+        (0x022..=0x029, CoreType::Performance) => "FireStorm",
+        (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
+
+        // M2
+        (0x030..=0x039, CoreType::Performance) => "Avalanche",
+        (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
+
+        // M3+, A18 Pro
+        (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
+        (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
+
+        _ => UNK,
+    };
+
+    if str == UNK {
+        None
+    } else {
+        Some(String::from(str))
+    }
 }
 
-impl TDetect for Cpu {
-    fn detect() -> Self {
-        let mut raw_midr: HashSet<usize> = HashSet::new();
-        let mut midrs: HashSet<Midr> = HashSet::new();
+/// macOS-specific CPU detection via sysctl.
+pub fn detect() -> OsCpuInfo {
+    let midr_val = get_synth_midr();
+    let mut raw_midr = HashSet::new();
+    raw_midr.insert(midr_val);
+    let midr = Midr::new(midr_val);
+    let mut midrs = HashSet::new();
+    midrs.insert(midr);
 
-        let midr_val = get_synth_midr();
-        raw_midr.insert(midr_val);
-        let midr = Midr::new(midr_val);
-        midrs.insert(midr);
+    let vendor: String = Vendor::from(midr.implementer).into();
+    let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
+    let values = get_sysctl_map();
+    let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
 
-        let vendor = Vendor::from(midr.implementer);
-        let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
-        let values = get_sysctl_map();
-        let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
+    let perf_levels: usize = values
+        .get("hw.nperflevels")
+        .expect("sysctl hw.nperflevels missing")
+        .parse()
+        .expect("sysctl hw.nperflevels not a valid usize");
 
-        let perf_levels: usize = values
-            .get("hw.nperflevels")
-            .expect("sysctl hw.nperflevels missing")
+    for i in 0..perf_levels {
+        let kind_type = values.get(&format!("hw.perflevel{}.name", i));
+        let kind = CoreType::from(kind_type.expect("sysctl perflevel name missing").clone());
+        let mut cache = Cache::default();
+        let mut l1 = Level1Cache::default_split();
+
+        let cpus_per_l2: u32 = values
+            .get(&format!("hw.perflevel{}.cpusperl2", i))
+            .expect("sysctl perflevel cpusperl2 missing")
             .parse()
-            .expect("sysctl hw.nperflevels not a valid usize");
+            .expect("sysctl perflevel cpusperl2 not a valid u32");
+        let l1d_size: u32 = values
+            .get(&format!("hw.perflevel{}.l1dcachesize", i))
+            .expect("sysctl perflevel l1dcachesize missing")
+            .parse()
+            .expect("sysctl perflevel l1dcachesize not a valid u32");
+        let l1i_size: u32 = values
+            .get(&format!("hw.perflevel{}.l1icachesize", i))
+            .expect("sysctl perflevel l1icachesize missing")
+            .parse()
+            .expect("sysctl perflevel l1icachesize not a valid u32");
+        let l2_size: u32 = values
+            .get(&format!("hw.perflevel{}.l2cachesize", i))
+            .expect("sysctl perflevel l2cachesize missing")
+            .parse()
+            .expect("sysctl perflevel l2cachesize not a valid u32");
+        let count: u32 = values
+            .get(&format!("hw.perflevel{}.physicalcpu", i))
+            .expect("sysctl perflevel physicalcpu missing")
+            .parse()
+            .expect("sysctl perflevel physicalcpu not a valid u32");
 
-        for i in 0..perf_levels {
-            let kind_type = values.get(&format!("hw.perflevel{}.name", i));
-            let kind = CoreType::from(kind_type.expect("sysctl perflevel name missing").clone());
-            let mut cache = Cache::default();
-            let mut l1 = Level1Cache::default_split();
+        l1.set_data(l1d_size, 0);
+        l1.set_data_share_count(1);
+        l1.set_instruction(l1i_size, 0);
+        l1.set_instruction_share_count(1);
+        cache.l1 = l1;
+        cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, 0, cpus_per_l2));
 
-            let cpus_per_l2: u32 = values
-                .get(&format!("hw.perflevel{}.cpusperl2", i))
-                .expect("sysctl perflevel cpusperl2 missing")
-                .parse()
-                .expect("sysctl perflevel cpusperl2 not a valid u32");
-            let l1d_size: u32 = values
-                .get(&format!("hw.perflevel{}.l1dcachesize", i))
-                .expect("sysctl perflevel l1dcachesize missing")
-                .parse()
-                .expect("sysctl perflevel l1dcachesize not a valid u32");
-            let l1i_size: u32 = values
-                .get(&format!("hw.perflevel{}.l1icachesize", i))
-                .expect("sysctl perflevel l1icachesize missing")
-                .parse()
-                .expect("sysctl perflevel l1icachesize not a valid u32");
-            let l2_size: u32 = values
-                .get(&format!("hw.perflevel{}.l2cachesize", i))
-                .expect("sysctl perflevel l2cachesize missing")
-                .parse()
-                .expect("sysctl perflevel l2cachesize not a valid u32");
-            let count: u32 = values
-                .get(&format!("hw.perflevel{}.physicalcpu", i))
-                .expect("sysctl perflevel physicalcpu missing")
-                .parse()
-                .expect("sysctl perflevel physicalcpu not a valid u32");
+        let name = find_core_codename(&midr, kind);
 
-            l1.set_data(l1d_size, 0);
-            l1.set_data_share_count(1);
-            l1.set_instruction(l1i_size, 0);
-            l1.set_instruction_share_count(1);
-            cache.l1 = l1;
-            cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, 0, cpus_per_l2));
-
-            let name = Self::find_core_codename(&midr, kind);
-
-            cores.insert(
-                (kind, name.clone(), midr),
-                CpuCore {
-                    kind,
-                    name,
-                    cache: Some(cache),
-                    count,
-                },
-            );
-        }
-
-        let features = super::get_all_features();
-
-        Self {
-            model: values
-                .get("machdep.cpu.brand_string")
-                .expect("sysctl machdep.cpu.brand_string missing")
-                .to_string(),
-            raw_midr,
-            midrs,
-            vendor: vendor.into(),
-            cpu_arch,
-            cores,
-            raw: values,
-            features,
-            data_source: DataSource::Sysctrl("hw.*, machdep.cpu.*"),
-        }
-    }
-}
-
-impl TCpuDisplay for Cpu {
-    fn debug(&self)
-    where
-        Self: std::fmt::Debug,
-    {
-        println!(
-            "Main ID Register (MIDR): 0x{:X}",
-            self.raw_midr().iter().next().unwrap_or(&0)
+        cores.insert(
+            (kind, name.clone(), midr),
+            CpuCore {
+                kind,
+                name,
+                cache: Some(cache),
+                count,
+            },
         );
-        if let Some(midr) = self.midr() {
-            println!("Implementer: 0x{:X} ({})", midr.implementer, self.vendor());
-            println!("Variant: 0x{:X}", midr.variant);
-            println!("Part Number: 0x{:X}", midr.part);
-            println!("Revision: 0x{:X}", midr.revision);
-        }
-        println!("{:#?}", self);
     }
 
-    fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display(&self.cpu_arch, &self.cores, &self.features, flags);
-    }
-}
+    let model = values
+        .get("machdep.cpu.brand_string")
+        .expect("sysctl machdep.cpu.brand_string missing")
+        .to_string();
 
-impl TArmCpu for Cpu {
-    fn model(&self) -> Option<&str> {
-        Some(&self.model)
-    }
-
-    fn raw_midr(&self) -> HashSet<usize> {
-        self.raw_midr.clone()
-    }
-
-    fn midr(&self) -> Option<&Midr> {
-        self.midrs.iter().next()
-    }
-
-    fn vendor(&self) -> &str {
-        &self.vendor
-    }
-}
-
-impl Cpu {
-    fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
-        let str = match (midr.part, kind) {
-            // M1
-            (0x022..=0x029, CoreType::Performance) => "FireStorm",
-            (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
-
-            // M2
-            (0x030..=0x039, CoreType::Performance) => "Avalanche",
-            (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
-
-            // M3+, A18 Pro
-            (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
-            (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
-
-            _ => UNK,
-        };
-
-        if str == UNK {
-            None
-        } else {
-            Some(String::from(str))
-        }
+    OsCpuInfo {
+        raw_midr,
+        midrs,
+        vendor,
+        cpu_arch,
+        cores,
+        model,
+        raw: values,
+        midr_source: DataSource::Sysctrl("hw.cpufamily"),
+        features_source: DataSource::Sysctrl("hw.optional.*"),
     }
 }

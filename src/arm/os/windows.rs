@@ -3,8 +3,73 @@
 //! Uses `IsProcessorFeaturePresent` API and registry reads for feature detection.
 //! Follows the existing Windows pattern in `src/arm/mod.rs` using the `windows` crate.
 
-use std::collections::BTreeMap;
+use super::OsCpuInfo;
+use crate::arm::brand::Vendor;
+use crate::arm::micro_arch::*;
+use crate::common::DataSource;
+use std::collections::{BTreeMap, HashSet};
 use windows::Win32::System::Threading::*;
+
+/// Windows-specific CPU detection via MRS and the registry.
+pub fn detect() -> OsCpuInfo {
+    let mut raw_midr: HashSet<usize> = HashSet::new();
+    let mut midrs: HashSet<Midr> = HashSet::new();
+    let mut all_midrs: Vec<Midr> = Vec::new();
+    let mut midr_source = DataSource::CpuLookupTable;
+
+    if let Some(core_ids) = core_affinity::get_core_ids() {
+        for core_id in core_ids {
+            core_affinity::set_for_current(core_id);
+            let midr_val = crate::arm::get_midr();
+            raw_midr.insert(midr_val);
+            let midr = Midr::new(midr_val);
+            midrs.insert(midr);
+            all_midrs.push(midr);
+        }
+    } else {
+        let midr_val = crate::arm::get_midr();
+        raw_midr.insert(midr_val);
+        let midr = Midr::new(midr_val);
+        midrs.insert(midr);
+        all_midrs.push(midr);
+    }
+
+    // On Windows, MRS is emulated. Try the registry for more accurate MIDRs.
+    let windows_midrs = get_windows_midrs();
+    if !windows_midrs.is_empty() {
+        all_midrs.clear();
+        midrs.clear();
+        raw_midr.clear();
+        for m_val in windows_midrs {
+            raw_midr.insert(m_val);
+            let midr = Midr::new(m_val);
+            midrs.insert(midr);
+            all_midrs.push(midr);
+        }
+        midr_source = DataSource::WindowsRegistry;
+    }
+
+    let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
+    let vendor: String = Vendor::from(primary_midr.implementer).into();
+    let cpu_arch = CpuArch::find(
+        primary_midr.implementer,
+        primary_midr.part,
+        primary_midr.variant,
+    );
+    let cores = super::detect_cores(&all_midrs);
+
+    OsCpuInfo {
+        raw_midr,
+        midrs,
+        vendor,
+        cpu_arch,
+        cores,
+        model: String::new(),
+        raw: BTreeMap::new(),
+        midr_source,
+        features_source: DataSource::SystemCall,
+    }
+}
 
 // ----------------------------------------------------------------------------
 // Feature detection via IsProcessorFeaturePresent
@@ -222,7 +287,7 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
     detected.insert("sve2", false);
     detected.insert("sme", false);
 
-    super::features::build_feature_map(&detected)
+    crate::arm::features::build_feature_map(&detected)
 }
 
 #[cfg(target_os = "windows")]

@@ -1,7 +1,7 @@
 use crate::arm::CoreType;
 use crate::arm::brand::*;
-use crate::common::Cache;
 use crate::common::constants::*;
+use crate::common::{Cache, UNK};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -52,7 +52,6 @@ pub struct CpuCore {
     pub count: u32,
 }
 
-pub const UNK: &str = "Unknown";
 type Implementer = Vendor;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -250,7 +249,7 @@ impl CpuArch {
     pub fn new(
         implementer: Implementer,
         model: &str,
-        soc_model: Option<&str>,
+        soc_model: Option<String>,
         micro_arch: MicroArch,
         code_name: &'static str,
         part_number: usize,
@@ -259,7 +258,7 @@ impl CpuArch {
         CpuArch {
             implementer,
             model: String::from(model),
-            soc_model: soc_model.map(String::from),
+            soc_model,
             micro_arch,
             code_name,
             part_number,
@@ -279,10 +278,15 @@ impl CpuArch {
         }
     }
 
-    fn find_soc<'a>() -> Option<&'a str> {
+    fn find_soc() -> Option<String> {
         #[cfg(target_os = "linux")]
         {
-            // @TODO try to find in /proc/cpuinfo
+            let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
+            if let Some(last) = cpuinfo.last()
+                && let Some(raw_soc) = last.get("Model")
+            {
+                return Some(String::from(raw_soc.trim()));
+            }
             None
         }
 

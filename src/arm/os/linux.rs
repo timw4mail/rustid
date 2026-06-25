@@ -3,8 +3,152 @@
 //! Uses text-based parsing of `/proc/cpuinfo` "Features" line and
 //! `getauxval(AT_HWCAP/AT_HWCAP2/AT_HWCAP3)` when available.
 
+use super::OsCpuInfo;
+use crate::arm::brand::Vendor;
+use crate::arm::micro_arch::*;
+use crate::common::DataSource;
 use crate::common::get_proc_cpuinfo_data;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
+
+/// Linux-specific CPU detection via MRS, /sys, and /proc/cpuinfo.
+pub fn detect() -> OsCpuInfo {
+    let mut raw_midr: HashSet<usize> = HashSet::new();
+    let mut midrs: HashSet<Midr> = HashSet::new();
+    let mut all_midrs: Vec<Midr> = Vec::new();
+    let mut midr_source = DataSource::CpuLookupTable;
+
+    if let Some(core_ids) = core_affinity::get_core_ids() {
+        for core_id in core_ids {
+            core_affinity::set_for_current(core_id);
+            let midr_val = crate::arm::get_midr();
+            raw_midr.insert(midr_val);
+            let midr = Midr::new(midr_val);
+            midrs.insert(midr);
+            all_midrs.push(midr);
+        }
+    } else {
+        let midr_val = crate::arm::get_midr();
+        raw_midr.insert(midr_val);
+        let midr = Midr::new(midr_val);
+        midrs.insert(midr);
+        all_midrs.push(midr);
+    }
+
+    // If the kernel emulates a uniform MIDR for MRS, try /proc/cpuinfo or /sys.
+    if midrs.len() == 1 || all_midrs.len() <= 1 {
+        let linux_midrs = detect_linux_midrs();
+        if !linux_midrs.is_empty() {
+            all_midrs.clear();
+            midrs.clear();
+            raw_midr.clear();
+            for m_val in linux_midrs {
+                raw_midr.insert(m_val);
+                let midr = Midr::new(m_val);
+                midrs.insert(midr);
+                all_midrs.push(midr);
+            }
+            midr_source = DataSource::LinuxSysFs;
+        }
+    }
+
+    let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
+    let vendor: String = Vendor::from(primary_midr.implementer).into();
+    let cpu_arch = CpuArch::find(
+        primary_midr.implementer,
+        primary_midr.part,
+        primary_midr.variant,
+    );
+    let cores = super::detect_cores(&all_midrs);
+
+    OsCpuInfo {
+        raw_midr,
+        midrs,
+        vendor,
+        cpu_arch,
+        cores,
+        model: String::new(),
+        raw: BTreeMap::new(),
+        midr_source,
+        features_source: DataSource::LinuxProcCpuinfo,
+    }
+}
+
+/// Reads MIDR values from sysfs or /proc/cpuinfo as a fallback when MRS
+/// returns a uniform value for all cores.
+fn detect_linux_midrs() -> Vec<usize> {
+    let mut midrs = Vec::new();
+
+    let mut i = 0;
+    loop {
+        let path = format!(
+            "/sys/devices/system/cpu/cpu{}/regs/identification/midr_el1",
+            i
+        );
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16) {
+                midrs.push(midr);
+            }
+        } else {
+            break;
+        }
+        i += 1;
+    }
+
+    if !midrs.is_empty() {
+        return midrs;
+    }
+
+    let cpuinfo = get_proc_cpuinfo_data();
+    for map in &cpuinfo {
+        let impl_ = map.get("CPU implementer").and_then(|s| {
+            usize::from_str_radix(
+                s.split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .ok()
+        });
+        let part = map.get("CPU part").and_then(|s| {
+            usize::from_str_radix(
+                s.split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .ok()
+        });
+        if let (Some(i), Some(p)) = (impl_, part) {
+            let var = map.get("CPU variant").and_then(|s| {
+                usize::from_str_radix(
+                    s.split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim_start_matches("0x"),
+                    16,
+                )
+                .ok()
+            });
+            let arch = map
+                .get("CPU architecture")
+                .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
+            let rev = map
+                .get("CPU revision")
+                .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
+
+            let m = (i << 24)
+                | (var.unwrap_or(0) << 20)
+                | (arch.unwrap_or(0) << 16)
+                | (p << 4)
+                | rev.unwrap_or(0);
+            midrs.push(m);
+        }
+    }
+
+    midrs
+}
 
 // ----------------------------------------------------------------------------
 // Feature detection via /proc/cpuinfo (text-based, primary method)
@@ -477,5 +621,5 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
         cpuinfo.get("sme").copied().unwrap_or(false) || hwcap.get("sme").copied().unwrap_or(false),
     );
 
-    super::features::build_feature_map(&detected)
+    crate::arm::features::build_feature_map(&detected)
 }
