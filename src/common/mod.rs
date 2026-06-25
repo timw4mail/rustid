@@ -2,9 +2,6 @@ pub mod cache;
 
 pub mod constants;
 
-#[cfg(not(dos))]
-pub mod count;
-
 pub mod display;
 
 pub mod os;
@@ -12,9 +9,6 @@ pub mod os;
 pub use cache::*;
 
 pub use constants::*;
-
-#[cfg(not(dos))]
-pub use count::*;
 
 pub use display::*;
 

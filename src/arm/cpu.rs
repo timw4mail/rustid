@@ -35,6 +35,7 @@ impl TDetect for Cpu {
 
         #[cfg(not(target_os = "macos"))]
         {
+            #[cfg(not(target_arch = "arm"))]
             if let Some(core_ids) = core_affinity::get_core_ids() {
                 for core_id in core_ids {
                     core_affinity::set_for_current(core_id);
@@ -45,6 +46,15 @@ impl TDetect for Cpu {
                     all_midrs.push(midr);
                 }
             } else {
+                let midr_val = super::get_midr();
+                raw_midr.insert(midr_val);
+                let midr = Midr::new(midr_val);
+                midrs.insert(midr);
+                all_midrs.push(midr);
+            }
+
+            #[cfg(target_arch = "arm")]
+            {
                 let midr_val = super::get_midr();
                 raw_midr.insert(midr_val);
                 let midr = Midr::new(midr_val);
