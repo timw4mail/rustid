@@ -249,7 +249,7 @@ impl CpuArch {
     pub fn new(
         implementer: Implementer,
         model: &str,
-        soc_model: Option<&str>,
+        soc_model: Option<String>,
         micro_arch: MicroArch,
         code_name: &'static str,
         part_number: usize,
@@ -258,7 +258,7 @@ impl CpuArch {
         CpuArch {
             implementer,
             model: String::from(model),
-            soc_model: soc_model.map(String::from),
+            soc_model,
             micro_arch,
             code_name,
             part_number,
@@ -278,14 +278,14 @@ impl CpuArch {
         }
     }
 
-    fn find_soc<'a>() -> Option<&'a str> {
+    fn find_soc() -> Option<String> {
         #[cfg(target_os = "linux")]
         {
-            let cpuinfo = get_proc_cpuinfo_data();
+            let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
             if let Some(last) = cpuinfo.last()
                 && let Some(raw_soc) = last.get("Model")
             {
-                return Some(raw_soc.trim());
+                return Some(String::from(raw_soc.trim()));
             }
             None
         }

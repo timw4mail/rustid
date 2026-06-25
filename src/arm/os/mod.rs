@@ -52,7 +52,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>
         let core_type = arch.micro_arch.core_type();
         let core_name: String = arch.micro_arch.into();
 
-        let name = if core_name != super::micro_arch::UNK {
+        let name = if core_name != UNK {
             Some(core_name)
         } else {
             None
