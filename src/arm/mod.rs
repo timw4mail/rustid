@@ -5,39 +5,13 @@ mod brand;
 pub mod cpu;
 pub mod features;
 pub mod micro_arch;
+pub mod os;
 use crate::common::{CliFlags, CoreType, CpuDisplay};
-pub use micro_arch::{CpuCore, Midr};
 use std::collections::{BTreeMap, HashSet};
 
-#[cfg(not(target_os = "macos"))]
 pub use cpu::*;
-
-// ----------------------------------------------------------------------------
-// ! MacOS
-// ----------------------------------------------------------------------------
-
-#[cfg(target_os = "macos")]
-pub mod apple;
-#[cfg(target_os = "macos")]
-pub use apple::*;
-
-// ----------------------------------------------------------------------------
-// ! Linux
-// ----------------------------------------------------------------------------
-
-#[cfg(target_os = "linux")]
-pub mod linux;
-#[cfg(target_os = "linux")]
-pub use linux::*;
-
-// ----------------------------------------------------------------------------
-// ! Windows
-// ----------------------------------------------------------------------------
-
-#[cfg(target_os = "windows")]
-pub mod windows;
-#[cfg(target_os = "windows")]
-pub use windows::*;
+pub use micro_arch::{CpuCore, Midr};
+pub use os::*;
 
 trait TArmCpu {
     /// Returns the CPU model name, if available

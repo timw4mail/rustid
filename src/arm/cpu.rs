@@ -1,12 +1,7 @@
 //! Contains the Cpu struct for ARM.
-use super::brand::Vendor;
-use super::micro_arch::CpuArch;
 use super::micro_arch::*;
 use super::*;
-#[cfg(target_os = "linux")]
-use crate::common::get_proc_cpuinfo_data;
 use crate::common::*;
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Default, PartialEq)]
@@ -15,7 +10,9 @@ pub struct Cpu {
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
+    pub model: String,
     pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+    pub raw: BTreeMap<String, String>,
     pub features: BTreeMap<&'static str, String>,
     pub midr_source: DataSource,
     pub features_source: DataSource,
@@ -23,114 +20,20 @@ pub struct Cpu {
 
 impl TDetect for Cpu {
     fn detect() -> Self {
-        let mut raw_midr: HashSet<usize> = HashSet::new();
-        let mut midrs: HashSet<Midr> = HashSet::new();
-        let mut all_midrs: Vec<Midr> = Vec::new();
-
-        #[cfg(not(target_os = "macos"))]
-        let mut midr_source = DataSource::CpuLookupTable;
-
-        #[cfg(target_os = "macos")]
-        let midr_source = DataSource::Sysctrl("hw.cpufamily");
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            if let Some(core_ids) = core_affinity::get_core_ids() {
-                for core_id in core_ids {
-                    core_affinity::set_for_current(core_id);
-                    let midr_val = super::get_midr();
-                    raw_midr.insert(midr_val);
-                    let midr = Midr::new(midr_val);
-                    midrs.insert(midr);
-                    all_midrs.push(midr);
-                }
-            } else {
-                let midr_val = super::get_midr();
-                raw_midr.insert(midr_val);
-                let midr = Midr::new(midr_val);
-                midrs.insert(midr);
-                all_midrs.push(midr);
-            }
-
-            // On Linux, if we only found one type of core, or only one core total,
-            // the kernel might be emulating a uniform MIDR for MRS, or core_affinity might be limited.
-            // Try to get more accurate info from /proc/cpuinfo or /sys
-            #[cfg(target_os = "linux")]
-            if midrs.len() == 1 || all_midrs.len() <= 1 {
-                let linux_midrs = Self::detect_linux_midrs();
-                if !linux_midrs.is_empty() {
-                    all_midrs.clear();
-                    midrs.clear();
-                    raw_midr.clear();
-                    for m_val in linux_midrs {
-                        raw_midr.insert(m_val);
-                        let midr = Midr::new(m_val);
-                        midrs.insert(midr);
-                        all_midrs.push(midr);
-                    }
-                    midr_source = DataSource::LinuxSysFs;
-                }
-            }
-
-            // On Windows, MRS is also emulated and might return uniform MIDR.
-            // Try to get more accurate info from the registry.
-            #[cfg(target_os = "windows")]
-            {
-                let windows_midrs = super::get_windows_midrs();
-                if !windows_midrs.is_empty() {
-                    all_midrs.clear();
-                    midrs.clear();
-                    raw_midr.clear();
-                    for m_val in windows_midrs {
-                        raw_midr.insert(m_val);
-                        let midr = Midr::new(m_val);
-                        midrs.insert(midr);
-                        all_midrs.push(midr);
-                    }
-                    midr_source = DataSource::WindowsRegistry;
-                }
-            }
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            let midr_val = get_midr();
-            raw_midr.insert(midr_val);
-            midrs.insert(Midr::new(midr_val));
-            // macOS core count is handled in apple.rs, but we'll fill all_midrs for consistency
-            all_midrs.push(Midr::new(midr_val));
-        }
-
-        let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());
-        let vendor = Vendor::from(primary_midr.implementer);
-        let cpu_arch = CpuArch::find(
-            primary_midr.implementer,
-            primary_midr.part,
-            primary_midr.variant,
-        );
-
-        let cores = Self::detect_cores(&all_midrs);
+        let info = crate::arm::os::detect();
         let features = super::get_all_features();
 
-        let features_source = if cfg!(target_os = "linux") {
-            DataSource::LinuxProcCpuinfo
-        } else if cfg!(target_os = "windows") {
-            DataSource::SystemCall
-        } else if cfg!(target_os = "macos") {
-            DataSource::Sysctrl("hw.optional.*")
-        } else {
-            DataSource::Sysctrl(UNK)
-        };
-
         Self {
-            raw_midr,
-            midrs,
-            vendor: vendor.into(),
-            cpu_arch,
-            cores,
+            raw_midr: info.raw_midr,
+            midrs: info.midrs,
+            vendor: info.vendor,
+            cpu_arch: info.cpu_arch,
+            model: info.model,
+            cores: info.cores,
+            raw: info.raw,
             features,
-            midr_source,
-            features_source,
+            midr_source: info.midr_source,
+            features_source: info.features_source,
         }
     }
 }
@@ -159,6 +62,14 @@ impl TCpuDisplay for Cpu {
 }
 
 impl TArmCpu for Cpu {
+    fn model(&self) -> Option<&str> {
+        if self.model.is_empty() {
+            None
+        } else {
+            Some(&self.model)
+        }
+    }
+
     fn raw_midr(&self) -> HashSet<usize> {
         self.raw_midr.clone()
     }
@@ -169,141 +80,5 @@ impl TArmCpu for Cpu {
 
     fn vendor(&self) -> &str {
         &self.vendor
-    }
-}
-
-impl Cpu {
-    #[cfg(target_os = "linux")]
-    fn detect_linux_midrs() -> Vec<usize> {
-        let mut midrs = Vec::new();
-
-        // 1. Try /sys/devices/system/cpu/cpu*/regs/identification/midr_el1
-        let mut i = 0;
-        loop {
-            let path = format!(
-                "/sys/devices/system/cpu/cpu{}/regs/identification/midr_el1",
-                i
-            );
-            if let Ok(content) = std::fs::read_to_string(&path) {
-                if let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16)
-                {
-                    midrs.push(midr);
-                }
-            } else {
-                break;
-            }
-            i += 1;
-        }
-
-        if !midrs.is_empty() {
-            return midrs;
-        }
-
-        // 2. Fallback to /proc/cpuinfo
-        let cpuinfo = get_proc_cpuinfo_data();
-        for map in &cpuinfo {
-            let impl_ = map.get("CPU implementer").and_then(|s| {
-                usize::from_str_radix(
-                    s.split_whitespace()
-                        .next()
-                        .unwrap_or("")
-                        .trim_start_matches("0x"),
-                    16,
-                )
-                .ok()
-            });
-            let part = map.get("CPU part").and_then(|s| {
-                usize::from_str_radix(
-                    s.split_whitespace()
-                        .next()
-                        .unwrap_or("")
-                        .trim_start_matches("0x"),
-                    16,
-                )
-                .ok()
-            });
-            if let (Some(i), Some(p)) = (impl_, part) {
-                let var = map.get("CPU variant").and_then(|s| {
-                    usize::from_str_radix(
-                        s.split_whitespace()
-                            .next()
-                            .unwrap_or("")
-                            .trim_start_matches("0x"),
-                        16,
-                    )
-                    .ok()
-                });
-                let arch = map
-                    .get("CPU architecture")
-                    .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
-                let rev = map
-                    .get("CPU revision")
-                    .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
-
-                let m = (i << 24)
-                    | (var.unwrap_or(0) << 20)
-                    | (arch.unwrap_or(0) << 16)
-                    | (p << 4)
-                    | rev.unwrap_or(0);
-                midrs.push(m);
-            }
-        }
-
-        midrs
-    }
-
-    fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>, Midr), CpuCore> {
-        let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
-
-        let runtime_cache = Cache::detect();
-
-        #[cfg(target_os = "linux")]
-        let sysfs_per_type = Cache::from_sys_fs_per_type();
-
-        let mut core_cache_map: BTreeMap<usize, Option<Cache>> = BTreeMap::new();
-
-        let mut unique_midrs: Vec<Midr> = midrs.to_vec();
-        unique_midrs.sort();
-        unique_midrs.dedup();
-
-        for midr in &unique_midrs {
-            #[cfg(target_os = "linux")]
-            let cache = sysfs_per_type
-                .as_ref()
-                .and_then(|m| m.get(&midr.to_bits()).copied())
-                .or_else(|| runtime_cache)
-                .or(None);
-
-            #[cfg(not(target_os = "linux"))]
-            let cache = runtime_cache.or(None);
-
-            core_cache_map.insert(midr.to_bits(), cache);
-        }
-
-        for midr in midrs {
-            let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
-            let core_type = arch.micro_arch.core_type();
-            let core_name: String = arch.micro_arch.into();
-
-            let name = if core_name != micro_arch::UNK {
-                Some(core_name)
-            } else {
-                None
-            };
-
-            let cache = core_cache_map.get(&midr.to_bits()).cloned().flatten();
-
-            cores
-                .entry((core_type, name.clone(), *midr))
-                .and_modify(|c| c.count += 1)
-                .or_insert(CpuCore {
-                    kind: core_type,
-                    name,
-                    cache,
-                    count: 1,
-                });
-        }
-
-        cores
     }
 }

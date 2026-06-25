@@ -1,7 +1,7 @@
 use crate::arm::CoreType;
 use crate::arm::brand::*;
-use crate::common::Cache;
 use crate::common::constants::*;
+use crate::common::{Cache, UNK};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -52,7 +52,6 @@ pub struct CpuCore {
     pub count: u32,
 }
 
-pub const UNK: &str = "Unknown";
 type Implementer = Vendor;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -282,7 +281,12 @@ impl CpuArch {
     fn find_soc<'a>() -> Option<&'a str> {
         #[cfg(target_os = "linux")]
         {
-            // @TODO try to find in /proc/cpuinfo
+            let cpuinfo = get_proc_cpuinfo_data();
+            if let Some(last) = cpuinfo.last()
+                && let Some(raw_soc) = last.get("Model")
+            {
+                return Some(raw_soc.trim());
+            }
             None
         }
 
