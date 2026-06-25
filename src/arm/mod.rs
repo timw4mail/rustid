@@ -70,6 +70,8 @@ impl CpuDisplay {
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 cpu.display_cache(core.cache, &cc, 0);
 
+                println!();
+
                 i += 1;
             }
         } else {
@@ -87,8 +89,6 @@ impl CpuDisplay {
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
             cpu.display_cache(core.cache, &cc, 0);
-
-            println!();
         }
 
         // Display features
