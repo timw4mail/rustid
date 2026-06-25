@@ -36,14 +36,14 @@ impl CpuDisplay {
 
         println!();
 
+        if let Some(soc_model) = &cpu_arch.soc_model {
+            cpu.simple_line("SoC/System", soc_model);
+        }
+
         cpu.simple_line(
             "Brand",
             <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
-
-        if let Some(soc_model) = &cpu_arch.soc_model {
-            cpu.simple_line("SoC/System", soc_model);
-        }
 
         cpu.simple_line("Model", &cpu_arch.model);
 
@@ -87,6 +87,8 @@ impl CpuDisplay {
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
             cpu.display_cache(core.cache, &cc, 0);
+
+            println!();
         }
 
         // Display features
