@@ -16,6 +16,7 @@ pub fn detect() -> OsCpuInfo {
     let mut all_midrs: Vec<Midr> = Vec::new();
     let mut midr_source = DataSource::CpuLookupTable;
 
+    #[cfg(not(target_arch = "arm"))]
     if let Some(core_ids) = core_affinity::get_core_ids() {
         for core_id in core_ids {
             core_affinity::set_for_current(core_id);
@@ -26,6 +27,17 @@ pub fn detect() -> OsCpuInfo {
             all_midrs.push(midr);
         }
     } else {
+        let midr_val = crate::arm::get_midr();
+        raw_midr.insert(midr_val);
+        let midr = Midr::new(midr_val);
+        midrs.insert(midr);
+        all_midrs.push(midr);
+    }
+
+    // I am reasonably sure that 32bit arm chips
+    // are not multi-core
+    #[cfg(target_arch = "arm")]
+    {
         let midr_val = crate::arm::get_midr();
         raw_midr.insert(midr_val);
         let midr = Midr::new(midr_val);
@@ -176,7 +188,10 @@ pub fn get_features_from_cpuinfo() -> BTreeMap<String, bool> {
 
 /// Check if floating-point (fp) is supported.
 pub fn has_fp() -> bool {
-    get_features_from_cpuinfo().get("fp").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("fp")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if Advanced SIMD (NEON/asimd) is supported.
@@ -193,32 +208,50 @@ pub fn has_neon() -> bool {
 
 /// Check if AES instructions are supported.
 pub fn has_aes() -> bool {
-    get_features_from_cpuinfo().get("aes").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("aes")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if SHA1 instructions are supported.
 pub fn has_sha1() -> bool {
-    get_features_from_cpuinfo().get("sha1").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("sha1")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if SHA2 instructions are supported.
 pub fn has_sha2() -> bool {
-    get_features_from_cpuinfo().get("sha2").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("sha2")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if SHA3 instructions are supported.
 pub fn has_sha3() -> bool {
-    get_features_from_cpuinfo().get("sha3").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("sha3")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if SHA512 instructions are supported.
 pub fn has_sha512() -> bool {
-    get_features_from_cpuinfo().get("sha512").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("sha512")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if CRC32 instructions are supported.
 pub fn has_crc32() -> bool {
-    get_features_from_cpuinfo().get("crc32").copied().unwrap_or(false)
+    get_features_from_cpuinfo()
+        .get("crc32")
+        .copied()
+        .unwrap_or(false)
 }
 
 /// Check if atomic instructions (LSE) are supported.
@@ -251,9 +284,15 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
     // SIMD
     detected.insert("neon", detected.get("asimd").copied().unwrap_or(false));
     detected.insert("asimdhp", cpuinfo.get("asimdhp").copied().unwrap_or(false));
-    detected.insert("asimdfhm", cpuinfo.get("asimdfhm").copied().unwrap_or(false));
+    detected.insert(
+        "asimdfhm",
+        cpuinfo.get("asimdfhm").copied().unwrap_or(false),
+    );
     detected.insert("asimddp", cpuinfo.get("asimddp").copied().unwrap_or(false));
-    detected.insert("asimdrdm", cpuinfo.get("asimdrdm").copied().unwrap_or(false));
+    detected.insert(
+        "asimdrdm",
+        cpuinfo.get("asimdrdm").copied().unwrap_or(false),
+    );
 
     // Crypto
     detected.insert("aes", cpuinfo.get("aes").copied().unwrap_or(false));
@@ -294,7 +333,10 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
     detected.insert("pauth2", cpuinfo.get("pauth2").copied().unwrap_or(false));
     detected.insert("fpac", cpuinfo.get("fpac").copied().unwrap_or(false));
     detected.insert("speces", cpuinfo.get("speces").copied().unwrap_or(false));
-    detected.insert("specres2", cpuinfo.get("specres2").copied().unwrap_or(false));
+    detected.insert(
+        "specres2",
+        cpuinfo.get("specres2").copied().unwrap_or(false),
+    );
     detected.insert("csv2", cpuinfo.get("csv2").copied().unwrap_or(false));
     detected.insert("csv3", cpuinfo.get("csv3").copied().unwrap_or(false));
     detected.insert("ecv", cpuinfo.get("ecv").copied().unwrap_or(false));
