@@ -20,8 +20,10 @@ fn get_bsd_midrs() -> (Vec<usize>, DataSource) {
         }
     }
 
+    #[allow(unused)]
     let mut midrs = Vec::new();
-    #[cfg(not(target_arch = "arm"))]
+
+    #[cfg(target_arch = "aarch64")]
     if let Some(core_ids) = core_affinity::get_core_ids() {
         for core_id in core_ids {
             core_affinity::set_for_current(core_id);
@@ -30,8 +32,9 @@ fn get_bsd_midrs() -> (Vec<usize>, DataSource) {
     } else {
         midrs.push(crate::arm::get_midr());
     }
+
     #[cfg(target_arch = "arm")]
-    midrs.push(crate::arm::get_midr());
+    panic!("Could not get midr from sysctl");
 
     (midrs, DataSource::CpuLookupTable)
 }
