@@ -36,12 +36,16 @@ impl CpuDisplay {
 
         println!();
 
+        if let Some(system) = &cpu_arch.system {
+            cpu.simple_line("System", system);
+        }
+
         if let Some(soc_model) = &cpu_arch.soc_model {
-            cpu.simple_line("SoC/System", soc_model);
+            cpu.simple_line("SoC", soc_model);
         }
 
         cpu.simple_line(
-            "Brand",
+            "Implementer",
             <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
         );
 

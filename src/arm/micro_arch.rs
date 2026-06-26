@@ -228,6 +228,7 @@ impl From<MicroArch> for String {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     pub implementer: Implementer,
+    pub system: Option<String>,
     pub soc_model: Option<String>,
     pub model: String,
     pub micro_arch: MicroArch,
@@ -240,6 +241,7 @@ impl Default for CpuArch {
     fn default() -> Self {
         Self::new(
             Implementer::default(),
+            None,
             UNK,
             None,
             MicroArch::default(),
@@ -253,6 +255,7 @@ impl Default for CpuArch {
 impl CpuArch {
     pub fn new(
         implementer: Implementer,
+        system: Option<String>,
         model: &str,
         soc_model: Option<String>,
         micro_arch: MicroArch,
@@ -262,6 +265,7 @@ impl CpuArch {
     ) -> Self {
         CpuArch {
             implementer,
+            system,
             model: String::from(model),
             soc_model,
             micro_arch,
@@ -288,9 +292,27 @@ impl CpuArch {
         {
             let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
             if let Some(last) = cpuinfo.last()
-                && let Some(raw_soc) = last.get("Model")
+                && (!last.contains_key("processor"))
+                && let Some(raw_soc) = last.get("Hardware")
             {
                 return Some(String::from(raw_soc.trim()));
+            }
+            None
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        None
+    }
+
+    fn find_system() -> Option<String> {
+        #[cfg(target_os = "linux")]
+        {
+            let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
+            if let Some(last) = cpuinfo.last()
+                && (!last.contains_key("processor"))
+                && let Some(raw) = last.get("Model")
+            {
+                return Some(String::from(raw.trim()));
             }
             None
         }
@@ -461,11 +483,21 @@ impl CpuArch {
             ),
         ];
         let soc_model = CpuArch::find_soc();
+        let system = CpuArch::find_system();
         PARTS
             .iter()
             .find(|(p, _, _, _)| *p == part)
             .map(|&(_, model, ma, name)| {
-                Self::new(Implementer::Arm, model, soc_model, ma, name, part, None)
+                Self::new(
+                    Implementer::Arm,
+                    system,
+                    model,
+                    soc_model,
+                    ma,
+                    name,
+                    part,
+                    None,
+                )
             })
             .unwrap_or_else(|| Self {
                 implementer: Implementer::Arm,
@@ -568,12 +600,14 @@ impl CpuArch {
             ),
         ];
         let soc_model = CpuArch::find_soc();
+        let system = CpuArch::find_system();
         PARTS
             .iter()
             .find(|(p, _, _, _, _)| *p == part)
             .map(|&(_, model, ma, name, tech)| {
                 Self::new(
                     Implementer::Apple,
+                    system,
                     model,
                     soc_model,
                     ma,
@@ -704,12 +738,14 @@ impl CpuArch {
             ),
         ];
         let soc_model = CpuArch::find_soc();
+        let system = CpuArch::find_system();
         PARTS
             .iter()
             .find(|(p, _, _, _, _)| *p == part)
             .map(|&(_, model, ma, name, tech)| {
                 Self::new(
                     Implementer::Qualcomm,
+                    system,
                     model,
                     soc_model,
                     ma,
