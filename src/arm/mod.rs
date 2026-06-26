@@ -119,7 +119,7 @@ pub fn get_midr() -> usize {
     {
         let mut midr: usize = 0;
         // ARMv7 and ARMv8 (AArch64) have MIDR at c0, so `mrs r0, MIDR` or `mrs x0, MIDR_EL1`
-        #[cfg(target_arch = "arm")]
+        #[cfg(all(target_arch = "arm", not(target_os = "linux")))]
         {
             // For ARMv7-A and earlier, MIDR is c0, c0, 0
             unsafe {

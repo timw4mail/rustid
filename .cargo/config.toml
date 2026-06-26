@@ -24,9 +24,3 @@ rustflags = [
 rustflags = [
 	"-C", "target-cpu=i486",
 ]
-
-# Raspberry Pi 1B
-[target.arm-unknown-linux-gnueabihf]
-rustflags = [
-	"-C", "target-cpu=arm1136jf-s",
-]

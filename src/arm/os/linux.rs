@@ -9,7 +9,7 @@ use crate::common::DataSource;
 use crate::common::get_proc_cpuinfo_data;
 use std::collections::{BTreeMap, HashSet};
 
-/// Linux-specific CPU detection via MRS, /sys, and /proc/cpuinfo.
+/// Linux-specific CPU detection via /sys, /proc/cpuinfo, and inline asm fallback.
 pub fn detect() -> OsCpuInfo {
     let mut raw_midr: HashSet<usize> = HashSet::new();
     let mut midrs: HashSet<Midr> = HashSet::new();
@@ -34,18 +34,29 @@ pub fn detect() -> OsCpuInfo {
         all_midrs.push(midr);
     }
 
-    // ARM chips did not have multiple core types (BIG.little)
-    // for chips pre-aarch64
+    // Prefer sysfs for reading the MIDR on 32-bit ARM to avoid
+    // inline asm (`mrc p15, ...`) which may cause SIGILL on
+    // systems where the coprocessor access is trapped or on
+    // older CPUs with LLVM codegen issues.
     #[cfg(target_arch = "arm")]
     {
-        let midr_val = crate::arm::get_midr();
-        raw_midr.insert(midr_val);
-        let midr = Midr::new(midr_val);
-        midrs.insert(midr);
-        all_midrs.push(midr);
+        let linux_midrs = detect_linux_midrs();
+        if !linux_midrs.is_empty() {
+            for m_val in linux_midrs {
+                raw_midr.insert(m_val);
+                let midr = Midr::new(m_val);
+                midrs.insert(midr);
+                all_midrs.push(midr);
+            }
+            midr_source = DataSource::LinuxSysFs;
+        } else {
+            panic!("Could not get midr value from sysfs");
+        }
     }
 
-    // If the kernel emulates a uniform MIDR for MRS, try /proc/cpuinfo or /sys.
+    // For AArch64 (where MRS is always available), try sysfs only when
+    // MRS returns a uniform value (kernel may emulate a single MIDR on big.LITTLE).
+    #[cfg(not(target_arch = "arm"))]
     if midrs.len() == 1 || all_midrs.len() <= 1 {
         let linux_midrs = detect_linux_midrs();
         if !linux_midrs.is_empty() {
