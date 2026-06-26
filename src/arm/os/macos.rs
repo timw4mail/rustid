@@ -1,4 +1,5 @@
 use super::OsCpuInfo;
+use crate::arm::TArmFeatures;
 use crate::arm::brand::*;
 use crate::arm::micro_arch::*;
 use crate::common::get_full_raw_sysctl_map;
@@ -138,64 +139,52 @@ pub fn get_features_from_sysctl() -> BTreeMap<String, bool> {
     features
 }
 
-/// Check if floating-point (fp) is supported.
-pub fn has_fp() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("fp").copied().unwrap_or(false)
-}
+impl TArmFeatures for crate::arm::ArmFeatures {
+    fn has_fp(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("fp").copied().unwrap_or(false)
+    }
 
-/// Check if Advanced SIMD (NEON/asimd) is supported.
-pub fn has_simd() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("asimd").copied().unwrap_or(false)
-        || features.get("neon").copied().unwrap_or(false)
-}
+    fn has_asimd(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("asimd").copied().unwrap_or(false)
+            || features.get("neon").copied().unwrap_or(false)
+    }
 
-/// Check if NEON is supported (alias for has_simd on ARM).
-pub fn has_neon() -> bool {
-    has_simd()
-}
+    fn has_aes(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("aes").copied().unwrap_or(false)
+    }
 
-/// Check if AES instructions are supported.
-pub fn has_aes() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("aes").copied().unwrap_or(false)
-}
+    fn has_sha1(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("sha1").copied().unwrap_or(false)
+    }
 
-/// Check if SHA1 instructions are supported.
-pub fn has_sha1() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("sha1").copied().unwrap_or(false)
-}
+    fn has_sha2(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("sha2").copied().unwrap_or(false)
+    }
 
-/// Check if SHA2 instructions are supported.
-pub fn has_sha2() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("sha2").copied().unwrap_or(false)
-}
+    fn has_sha3(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("sha3").copied().unwrap_or(false)
+    }
 
-/// Check if SHA3 instructions are supported.
-pub fn has_sha3() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("sha3").copied().unwrap_or(false)
-}
+    fn has_sha512(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("sha512").copied().unwrap_or(false)
+    }
 
-/// Check if SHA512 instructions are supported.
-pub fn has_sha512() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("sha512").copied().unwrap_or(false)
-}
+    fn has_crc32(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("crc32").copied().unwrap_or(false)
+    }
 
-/// Check if CRC32 instructions are supported.
-pub fn has_crc32() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("crc32").copied().unwrap_or(false)
-}
-
-/// Check if atomic instructions (LSE) are supported.
-pub fn has_atomics() -> bool {
-    let features = get_features_from_sysctl();
-    features.get("atomics").copied().unwrap_or(false)
+    fn has_atomics(&self) -> bool {
+        let features = get_features_from_sysctl();
+        features.get("atomics").copied().unwrap_or(false)
+    }
 }
 
 /// Returns all detected features as a BTreeMap of category to space-separated features.

@@ -194,82 +194,72 @@ pub fn get_features_from_cpuinfo() -> BTreeMap<String, bool> {
 }
 
 // ----------------------------------------------------------------------------
-// Public API: has_* functions
+// TArmFeatures implementation
 // ----------------------------------------------------------------------------
 
-/// Check if floating-point (fp) is supported.
-pub fn has_fp() -> bool {
-    get_features_from_cpuinfo()
-        .get("fp")
-        .copied()
-        .unwrap_or(false)
-}
+use crate::arm::TArmFeatures;
 
-/// Check if Advanced SIMD (NEON/asimd) is supported.
-pub fn has_simd() -> bool {
-    let features = get_features_from_cpuinfo();
-    features.get("asimd").copied().unwrap_or(false)
-        || features.get("neon").copied().unwrap_or(false)
-}
+impl TArmFeatures for crate::arm::ArmFeatures {
+    fn has_fp(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("fp")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if NEON is supported (alias for has_simd on ARM).
-pub fn has_neon() -> bool {
-    has_simd()
-}
+    fn has_asimd(&self) -> bool {
+        let features = get_features_from_cpuinfo();
+        features.get("asimd").copied().unwrap_or(false)
+            || features.get("neon").copied().unwrap_or(false)
+    }
 
-/// Check if AES instructions are supported.
-pub fn has_aes() -> bool {
-    get_features_from_cpuinfo()
-        .get("aes")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_aes(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("aes")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if SHA1 instructions are supported.
-pub fn has_sha1() -> bool {
-    get_features_from_cpuinfo()
-        .get("sha1")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_sha1(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("sha1")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if SHA2 instructions are supported.
-pub fn has_sha2() -> bool {
-    get_features_from_cpuinfo()
-        .get("sha2")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_sha2(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("sha2")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if SHA3 instructions are supported.
-pub fn has_sha3() -> bool {
-    get_features_from_cpuinfo()
-        .get("sha3")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_sha3(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("sha3")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if SHA512 instructions are supported.
-pub fn has_sha512() -> bool {
-    get_features_from_cpuinfo()
-        .get("sha512")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_sha512(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("sha512")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if CRC32 instructions are supported.
-pub fn has_crc32() -> bool {
-    get_features_from_cpuinfo()
-        .get("crc32")
-        .copied()
-        .unwrap_or(false)
-}
+    fn has_crc32(&self) -> bool {
+        get_features_from_cpuinfo()
+            .get("crc32")
+            .copied()
+            .unwrap_or(false)
+    }
 
-/// Check if atomic instructions (LSE) are supported.
-pub fn has_atomics() -> bool {
-    let features = get_features_from_cpuinfo();
-    features.get("atomics").copied().unwrap_or(false)
-        || features.get("lse").copied().unwrap_or(false)
+    fn has_atomics(&self) -> bool {
+        let features = get_features_from_cpuinfo();
+        features.get("atomics").copied().unwrap_or(false)
+            || features.get("lse").copied().unwrap_or(false)
+    }
 }
 
 // ----------------------------------------------------------------------------

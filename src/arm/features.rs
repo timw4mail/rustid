@@ -140,69 +140,49 @@ pub fn normalize_feature_name(name: &str) -> String {
 }
 
 // ----------------------------------------------------------------------------
-// Public API (individual has_* functions)
-// ----------------------------------------------------------------------------
-
-/// Check if a feature is present (platform-specific, implemented per platform)
-#[cfg(target_os = "macos")]
-pub use super::macos::{
-    has_aes, has_atomics, has_crc32, has_fp, has_neon, has_sha1, has_sha2, has_sha3, has_sha512,
-    has_simd,
-};
-
-#[cfg(target_os = "linux")]
-pub use super::linux::{
-    has_aes, has_atomics, has_crc32, has_fp, has_neon, has_sha1, has_sha2, has_sha3, has_sha512,
-    has_simd,
-};
-
-#[cfg(target_os = "windows")]
-pub use super::windows::{
-    has_aes, has_atomics, has_crc32, has_fp, has_neon, has_sha1, has_sha2, has_sha3, has_sha512,
-    has_simd,
-};
-
-// ----------------------------------------------------------------------------
 // Aggregator: get_feature_list()
 // ----------------------------------------------------------------------------
 
 /// Returns a map of feature categories to space-separated feature strings.
 /// Mirrors `src/cpuid/fns.rs::get_feature_list()` but with ARM-specific groups.
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
+    use crate::arm::TArmFeatures;
+
+    let f = crate::arm::ArmFeatures;
     let mut detected: BTreeMap<&'static str, bool> = BTreeMap::new();
 
     // Base
-    detected.insert("fp", has_fp());
-    detected.insert("asimd", has_simd());
+    detected.insert("fp", f.has_fp());
+    detected.insert("asimd", f.has_asimd());
     detected.insert("cpuid", cfg!(target_os = "linux")); // Only on Linux via HWCAP_CPUID
 
     // SIMD
-    detected.insert("neon", has_neon());
-    detected.insert("asimdhp", false); // Platform-specific detection needed
-    detected.insert("asimdfhm", false);
-    detected.insert("asimddp", false);
-    detected.insert("asimdrdm", false);
+    detected.insert("neon", f.has_neon());
+    detected.insert("asimdhp", f.has_asimdhp());
+    detected.insert("asimdfhm", f.has_asimdfhm());
+    detected.insert("asimddp", f.has_asimddp());
+    detected.insert("asimdrdm", f.has_asimdrdm());
 
     // Crypto
-    detected.insert("aes", has_aes());
-    detected.insert("sha1", has_sha1());
-    detected.insert("sha2", has_sha2());
-    detected.insert("sha3", has_sha3());
-    detected.insert("sha512", has_sha512());
-    detected.insert("pmull", false);
-    detected.insert("sm3", false);
-    detected.insert("sm4", false);
+    detected.insert("aes", f.has_aes());
+    detected.insert("sha1", f.has_sha1());
+    detected.insert("sha2", f.has_sha2());
+    detected.insert("sha3", f.has_sha3());
+    detected.insert("sha512", f.has_sha512());
+    detected.insert("pmull", f.has_pmull());
+    detected.insert("sm3", f.has_sm3());
+    detected.insert("sm4", f.has_sm4());
 
     // Atomic
-    detected.insert("atomics", has_atomics());
-    detected.insert("lse", has_atomics()); // LSE is the ARMv8.1 atomics
-    detected.insert("lse2", false);
+    detected.insert("atomics", f.has_atomics());
+    detected.insert("lse", f.has_lse());
+    detected.insert("lse2", f.has_lse2());
 
     // FP
-    detected.insert("fphp", false);
-    detected.insert("fp16", false);
-    detected.insert("fcma", false);
-    detected.insert("jscvt", false);
+    detected.insert("fphp", f.has_fphp());
+    detected.insert("fp16", f.has_fp16());
+    detected.insert("fcma", f.has_fcma());
+    detected.insert("jscvt", f.has_jscvt());
 
     build_feature_map(&detected)
 }
