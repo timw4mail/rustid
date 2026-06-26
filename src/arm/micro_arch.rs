@@ -66,6 +66,8 @@ pub enum MicroArch {
     AppleEverest,
     AppleSawtooth,
 
+    Arm1176,
+
     ArmCortexA7,
     ArmCortexA8,
     ArmCortexA9,
@@ -175,6 +177,7 @@ impl From<MicroArch> for String {
             MicroArch::AppleBlizzard => "Blizzard",
             MicroArch::AppleEverest => "Everest",
             MicroArch::AppleSawtooth => "Sawtooth",
+            MicroArch::Arm1176 => "ARM11/ARMv6",
             MicroArch::ArmCortexA7 => "Cortex-A7",
             MicroArch::ArmCortexA8 => "Cortex-A8",
             MicroArch::ArmCortexA9 => "Cortex-A9",
@@ -296,6 +299,7 @@ impl CpuArch {
 
     fn find_arm(part: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str)] = &[
+            (0xB76, "ARM ARM1176JZF-S", MicroArch::Arm1176, "ARM11/ARMv6"),
             (0xC07, "ARM Cortex-A7", MicroArch::ArmCortexA7, "Cortex-A7"),
             (0xC08, "ARM Cortex-A8", MicroArch::ArmCortexA8, "Cortex-A8"),
             (0xC09, "ARM Cortex-A9", MicroArch::ArmCortexA9, "Cortex-A9"),
