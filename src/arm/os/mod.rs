@@ -100,3 +100,12 @@ pub use linux::*;
 pub mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::*;
+
+// ----------------------------------------------------------------------------
+// ! BSD (NetBSD, FreeBSD, OpenBSD)
+// ----------------------------------------------------------------------------
+
+#[cfg(any(target_os = "netbsd", target_os = "freebsd", target_os = "openbsd"))]
+pub mod bsd;
+#[cfg(any(target_os = "netbsd", target_os = "freebsd", target_os = "openbsd"))]
+pub use bsd::*;

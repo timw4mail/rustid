@@ -35,6 +35,176 @@ pub const MISC_FEATURES: &[&str] = &[
     "the", "smep", "smap", "5lvl",
 ];
 
+pub struct ArmFeatures;
+
+#[allow(unused)]
+pub trait TArmFeatures {
+    // Base features
+    fn has_fp(&self) -> bool {
+        false
+    }
+    fn has_asimd(&self) -> bool {
+        false
+    }
+    fn has_evtstrm(&self) -> bool {
+        false
+    }
+    fn has_cpuid(&self) -> bool {
+        false
+    }
+
+    // SIMD/NEON features
+    fn has_neon(&self) -> bool {
+        self.has_asimd()
+    }
+    fn has_asimdhp(&self) -> bool {
+        false
+    }
+    fn has_asimdfhm(&self) -> bool {
+        false
+    }
+    fn has_asimddp(&self) -> bool {
+        false
+    }
+    fn has_asimdrdm(&self) -> bool {
+        false
+    }
+
+    // Crypto features
+    fn has_aes(&self) -> bool {
+        false
+    }
+    fn has_pmull(&self) -> bool {
+        false
+    }
+    fn has_sha1(&self) -> bool {
+        false
+    }
+    fn has_sha2(&self) -> bool {
+        false
+    }
+    fn has_sha3(&self) -> bool {
+        false
+    }
+    fn has_sha512(&self) -> bool {
+        false
+    }
+    fn has_sm3(&self) -> bool {
+        false
+    }
+    fn has_sm4(&self) -> bool {
+        false
+    }
+
+    // Atomics
+    fn has_atomics(&self) -> bool {
+        false
+    }
+    fn has_lse(&self) -> bool {
+        self.has_atomics()
+    }
+    fn has_lse2(&self) -> bool {
+        false
+    }
+
+    // Floating-point features
+    fn has_fphp(&self) -> bool {
+        false
+    }
+    fn has_fp16(&self) -> bool {
+        false
+    }
+    fn has_fcma(&self) -> bool {
+        false
+    }
+    fn has_jscvt(&self) -> bool {
+        false
+    }
+
+    // Misc features
+    fn has_crc32(&self) -> bool {
+        false
+    }
+    fn has_dcpop(&self) -> bool {
+        false
+    }
+    fn has_lrcpc(&self) -> bool {
+        false
+    }
+    fn has_lrcpc2(&self) -> bool {
+        false
+    }
+    fn has_flagm(&self) -> bool {
+        false
+    }
+    fn has_flagm2(&self) -> bool {
+        false
+    }
+    fn has_dit(&self) -> bool {
+        false
+    }
+    fn has_ssbs(&self) -> bool {
+        false
+    }
+    fn has_bti(&self) -> bool {
+        false
+    }
+    fn has_pauth(&self) -> bool {
+        false
+    }
+    fn has_pauth2(&self) -> bool {
+        false
+    }
+    fn has_fpac(&self) -> bool {
+        false
+    }
+    fn has_specres(&self) -> bool {
+        false
+    }
+    fn has_specres2(&self) -> bool {
+        false
+    }
+    fn has_csv2(&self) -> bool {
+        false
+    }
+    fn has_csv3(&self) -> bool {
+        false
+    }
+    fn has_ecv(&self) -> bool {
+        false
+    }
+    fn has_sb(&self) -> bool {
+        false
+    }
+    fn has_frintts(&self) -> bool {
+        false
+    }
+    fn has_dpb(&self) -> bool {
+        false
+    }
+    fn has_dpb2(&self) -> bool {
+        false
+    }
+    fn has_dotprod(&self) -> bool {
+        false
+    }
+    fn has_bf16(&self) -> bool {
+        false
+    }
+    fn has_i8mm(&self) -> bool {
+        false
+    }
+    fn has_sve(&self) -> bool {
+        false
+    }
+    fn has_sve2(&self) -> bool {
+        false
+    }
+    fn has_sme(&self) -> bool {
+        false
+    }
+}
+
 /// Populate a detected features map from a platform source map.
 /// Handles common aliases (asimd/neon, atomics/lse) and defaults unknown features to false.
 pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'static str, bool> {
