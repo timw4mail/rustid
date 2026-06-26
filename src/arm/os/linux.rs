@@ -34,8 +34,8 @@ pub fn detect() -> OsCpuInfo {
         all_midrs.push(midr);
     }
 
-    // I am reasonably sure that 32bit arm chips
-    // are not multi-core
+    // ARM chips did not have multiple core types (BIG.little)
+    // for chips pre-aarch64
     #[cfg(target_arch = "arm")]
     {
         let midr_val = crate::arm::get_midr();

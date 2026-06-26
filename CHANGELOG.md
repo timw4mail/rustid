@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.5.0]
+
+### Added
+- SoC/device model name shown in ARM output when available from `/proc/cpuinfo`
+- `CpuArch::brand_arch()` factory method to deduplicate x86 vendor micro-arch lookup closures
+- Shared `get_proc_cpuinfo_data()` helper that parses `/proc/cpuinfo` into structured key-value maps
+- ARM core type groups separated by a blank line in output for readability
+
+### Changed
+- Restructured ARM module into OS-specific submodules (`src/arm/os/{apple,linux,windows}.rs`) with shared core detection in `os/mod.rs`
+- Rewrote ARM Linux feature detection to parse `/proc/cpuinfo` instead of `libc` system calls; removed `libc` dependency
+- Simplified ARM CPU model/part lookup tables from verbose `match` arms to concise tuple arrays
+- Replaced raw line-by-line `/proc/cpuinfo` parsing with shared structured parser across ARM, PPC, and x86 topology detection
+- Replaced hardcoded cache lookup tables for ARM and PPC micro-architectures with runtime OS cache detection
+- Simplified x86 vendor micro-arch closures (AMD, Intel, Centaur, Cyrix) via shared `CpuArch::brand_arch()`
+- Intel CPU vendor module now implements the `TMicroArch` trait, matching other vendors
+- PPC clock speed parsing uses shared `get_proc_cpuinfo_data()` instead of raw string parsing
+- Updated build configuration: added Raspberry Pi 1 (arm1136) target, removed `libc` dependency, removed `set unstable` from justfile
+
+### Fixed
+- Corrected hex literal formatting in Apple CPU part matching (e.g., `0x32` → `0x032`) to ensure correct M3/M4 detection
+- Fixed PPC clock speed parsing from `cpu MHz` lines
+
+### Removed
+- `libc` crate dependency
+- `src/common/count.rs` module (`logical_cores()` function)
+
 ## [1.4.0]
 
 ### Added
