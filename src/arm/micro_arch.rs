@@ -122,6 +122,8 @@ impl MicroArch {
 
             MicroArch::AppleIcestorm | MicroArch::AppleBlizzard => CoreType::Efficiency,
 
+            MicroArch::Arm1176 => CoreType::Performance,
+
             MicroArch::ArmCortexA7
             | MicroArch::ArmCortexA32
             | MicroArch::ArmCortexA35
