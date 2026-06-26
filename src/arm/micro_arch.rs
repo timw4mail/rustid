@@ -768,7 +768,7 @@ mod tests {
     #[test]
     fn test_midr_parsing() {
         let midr = Midr::new(0x61FF0F02);
-        assert_eq!(midr.implementer, 0x61);
+        assert_eq!(midr.implementer, IMPL_APPLE);
         assert_eq!(midr.variant, 0xF);
         assert_eq!(midr.architecture, 0xF);
         assert_eq!(midr.part, 0x0F0);
@@ -778,7 +778,7 @@ mod tests {
     #[test]
     fn test_midr_parsing_m1() {
         let midr = Midr::new(0x611F0231);
-        assert_eq!(midr.implementer, 0x61);
+        assert_eq!(midr.implementer, IMPL_APPLE);
         assert_eq!(midr.variant, 0x1);
         assert_eq!(midr.architecture, 0xF);
         assert_eq!(midr.part, 0x023);
@@ -787,97 +787,97 @@ mod tests {
 
     #[test]
     fn test_apple_m1_find() {
-        let cpu = CpuArch::find(0x61, 0x022, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x022, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M1");
         assert_eq!(cpu.micro_arch, MicroArch::AppleIcestorm);
     }
 
     #[test]
     fn test_apple_m1_pro_find() {
-        let cpu = CpuArch::find(0x61, 0x024, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x024, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M1 Pro");
         assert_eq!(cpu.micro_arch, MicroArch::AppleIcestorm);
     }
 
     #[test]
     fn test_apple_m2_find() {
-        let cpu = CpuArch::find(0x61, 0x032, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x032, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M2");
         assert_eq!(cpu.micro_arch, MicroArch::AppleBlizzard);
     }
 
     #[test]
     fn test_apple_m3_find() {
-        let cpu = CpuArch::find(0x61, 0x042, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x042, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M3");
         assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]
     fn test_apple_m4_find() {
-        let cpu = CpuArch::find(0x61, 0x052, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x052, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple M4");
         assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]
     fn test_apple_a18_pro_find() {
-        let cpu = CpuArch::find(0x61, 0x101, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x101, 0x0);
         assert_eq!(cpu.model.as_str(), "Apple A18 Pro");
         assert_eq!(cpu.micro_arch, MicroArch::AppleEverest);
     }
 
     #[test]
     fn test_apple_cpu_unknown() {
-        let cpu = CpuArch::find(0x61, 0x999, 0x0);
+        let cpu = CpuArch::find(IMPL_APPLE, 0x999, 0x0);
         assert_eq!(cpu.model.as_str(), UNK);
         assert_eq!(cpu.micro_arch, MicroArch::Unknown);
     }
 
     #[test]
     fn test_non_apple_implementer() {
-        let cpu = CpuArch::find(0x41, 0x999, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0x999, 0x0);
         assert_eq!(cpu.model.as_str(), UNK);
     }
 
     #[test]
     fn test_arm_cortex_a76_find() {
-        let cpu = CpuArch::find(0x41, 0xD0E, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0xD0E, 0x0);
         assert_eq!(cpu.model.as_str(), "ARM Cortex-A76");
         assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA76);
     }
 
     #[test]
     fn test_arm_cortex_a55_find() {
-        let cpu = CpuArch::find(0x41, 0xD05, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0xD05, 0x0);
         assert_eq!(cpu.model.as_str(), "ARM Cortex-A55");
         assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA55);
     }
 
     #[test]
     fn test_arm_cortex_a53_find() {
-        let cpu = CpuArch::find(0x41, 0xD03, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0xD03, 0x0);
         assert_eq!(cpu.model.as_str(), "ARM Cortex-A53");
         assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA53);
     }
 
     #[test]
     fn test_arm_cortex_x1_find() {
-        let cpu = CpuArch::find(0x41, 0xD13, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0xD13, 0x0);
         assert_eq!(cpu.model.as_str(), "ARM Cortex-X1");
         assert_eq!(cpu.micro_arch, MicroArch::ArmCortexX1);
     }
 
     #[test]
     fn test_arm_neoverse_n1_find() {
-        let cpu = CpuArch::find(0x41, 0xD41, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0xD41, 0x0);
         assert_eq!(cpu.model.as_str(), "ARM Neoverse N1");
         assert_eq!(cpu.micro_arch, MicroArch::ArmNeoverseN1);
     }
 
     #[test]
     fn test_arm_unknown_part() {
-        let cpu = CpuArch::find(0x41, 0x999, 0x0);
+        let cpu = CpuArch::find(IMPL_ARM, 0x999, 0x0);
         assert_eq!(cpu.model.as_str(), UNK);
         assert_eq!(cpu.micro_arch, MicroArch::Unknown);
     }
@@ -891,7 +891,7 @@ mod tests {
 
     #[test]
     fn test_qualcomm_oryon_find() {
-        let cpu = CpuArch::find(0x51, 0x001, 0x0);
+        let cpu = CpuArch::find(IMPL_QUALCOMM, 0x001, 0x0);
         assert_eq!(cpu.model.as_str(), "Snapdragon X Elite");
         assert_eq!(cpu.micro_arch, MicroArch::QCOryon);
     }

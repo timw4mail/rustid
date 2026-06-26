@@ -160,10 +160,10 @@ fn detect_linux_midrs() -> Vec<usize> {
                 .get("CPU revision")
                 .and_then(|s| s.split_whitespace().next().unwrap_or("").parse().ok());
 
-            let m = (i << 24)
-                | (var.unwrap_or(0) << 20)
-                | (arch.unwrap_or(0) << 16)
-                | (p << 4)
+            let m = (i << IMPLEMENTER_OFFSET)
+                | (var.unwrap_or(0) << VARIANT_OFFSET)
+                | (arch.unwrap_or(0) << ARCHITECTURE_OFFSET)
+                | (p << PART_OFFSET)
                 | rev.unwrap_or(0);
             midrs.push(m);
         }
@@ -278,89 +278,7 @@ pub fn has_atomics() -> bool {
 
 /// Returns all detected features as a BTreeMap of category to space-separated features.
 pub fn get_all_features() -> BTreeMap<&'static str, String> {
-    let mut detected: BTreeMap<&'static str, bool> = BTreeMap::new();
-
-    let cpuinfo = get_features_from_cpuinfo();
-
-    // Base features
-    detected.insert("fp", cpuinfo.get("fp").copied().unwrap_or(false));
-    detected.insert(
-        "asimd",
-        cpuinfo.get("asimd").copied().unwrap_or(false)
-            || cpuinfo.get("neon").copied().unwrap_or(false),
-    );
-    detected.insert("cpuid", cpuinfo.get("cpuid").copied().unwrap_or(false));
-    detected.insert("evtstrm", cpuinfo.get("evtstrm").copied().unwrap_or(false));
-
-    // SIMD
-    detected.insert("neon", detected.get("asimd").copied().unwrap_or(false));
-    detected.insert("asimdhp", cpuinfo.get("asimdhp").copied().unwrap_or(false));
-    detected.insert(
-        "asimdfhm",
-        cpuinfo.get("asimdfhm").copied().unwrap_or(false),
-    );
-    detected.insert("asimddp", cpuinfo.get("asimddp").copied().unwrap_or(false));
-    detected.insert(
-        "asimdrdm",
-        cpuinfo.get("asimdrdm").copied().unwrap_or(false),
-    );
-
-    // Crypto
-    detected.insert("aes", cpuinfo.get("aes").copied().unwrap_or(false));
-    detected.insert("pmull", cpuinfo.get("pmull").copied().unwrap_or(false));
-    detected.insert("sha1", cpuinfo.get("sha1").copied().unwrap_or(false));
-    detected.insert("sha2", cpuinfo.get("sha2").copied().unwrap_or(false));
-    detected.insert("sha3", cpuinfo.get("sha3").copied().unwrap_or(false));
-    detected.insert("sha512", cpuinfo.get("sha512").copied().unwrap_or(false));
-    detected.insert("sm3", cpuinfo.get("sm3").copied().unwrap_or(false));
-    detected.insert("sm4", cpuinfo.get("sm4").copied().unwrap_or(false));
-
-    // Atomic
-    detected.insert(
-        "atomics",
-        cpuinfo.get("atomics").copied().unwrap_or(false)
-            || cpuinfo.get("lse").copied().unwrap_or(false),
-    );
-    detected.insert("lse", detected.get("atomics").copied().unwrap_or(false));
-    detected.insert("lse2", cpuinfo.get("lse2").copied().unwrap_or(false));
-
-    // FP
-    detected.insert("fphp", cpuinfo.get("fphp").copied().unwrap_or(false));
-    detected.insert("fp16", cpuinfo.get("fp16").copied().unwrap_or(false));
-    detected.insert("fcma", cpuinfo.get("fcma").copied().unwrap_or(false));
-    detected.insert("jscvt", cpuinfo.get("jscvt").copied().unwrap_or(false));
-
-    // Misc
-    detected.insert("crc32", cpuinfo.get("crc32").copied().unwrap_or(false));
-    detected.insert("dcpop", cpuinfo.get("dcpop").copied().unwrap_or(false));
-    detected.insert("lrcpc", cpuinfo.get("lrcpc").copied().unwrap_or(false));
-    detected.insert("lrcpc2", cpuinfo.get("lrcpc2").copied().unwrap_or(false));
-    detected.insert("flagm", cpuinfo.get("flagm").copied().unwrap_or(false));
-    detected.insert("flagm2", cpuinfo.get("flagm2").copied().unwrap_or(false));
-    detected.insert("dit", cpuinfo.get("dit").copied().unwrap_or(false));
-    detected.insert("ssbs", cpuinfo.get("ssbs").copied().unwrap_or(false));
-    detected.insert("bti", cpuinfo.get("bti").copied().unwrap_or(false));
-    detected.insert("pauth", cpuinfo.get("pauth").copied().unwrap_or(false));
-    detected.insert("pauth2", cpuinfo.get("pauth2").copied().unwrap_or(false));
-    detected.insert("fpac", cpuinfo.get("fpac").copied().unwrap_or(false));
-    detected.insert("speces", cpuinfo.get("speces").copied().unwrap_or(false));
-    detected.insert(
-        "specres2",
-        cpuinfo.get("specres2").copied().unwrap_or(false),
-    );
-    detected.insert("csv2", cpuinfo.get("csv2").copied().unwrap_or(false));
-    detected.insert("csv3", cpuinfo.get("csv3").copied().unwrap_or(false));
-    detected.insert("ecv", cpuinfo.get("ecv").copied().unwrap_or(false));
-    detected.insert("sb", cpuinfo.get("sb").copied().unwrap_or(false));
-    detected.insert("frintts", cpuinfo.get("frintts").copied().unwrap_or(false));
-    detected.insert("dpb", cpuinfo.get("dpb").copied().unwrap_or(false));
-    detected.insert("dpb2", cpuinfo.get("dpb2").copied().unwrap_or(false));
-    detected.insert("dotprod", cpuinfo.get("dotprod").copied().unwrap_or(false));
-    detected.insert("bf16", cpuinfo.get("bf16").copied().unwrap_or(false));
-    detected.insert("i8mm", cpuinfo.get("i8mm").copied().unwrap_or(false));
-    detected.insert("sve", cpuinfo.get("sve").copied().unwrap_or(false));
-    detected.insert("sve2", cpuinfo.get("sve2").copied().unwrap_or(false));
-    detected.insert("sme", cpuinfo.get("sme").copied().unwrap_or(false));
-
+    let src = get_features_from_cpuinfo();
+    let detected = crate::arm::features::populate_detected_features(&src);
     crate::arm::features::build_feature_map(&detected)
 }

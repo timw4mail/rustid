@@ -79,9 +79,9 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>
 // ----------------------------------------------------------------------------
 
 #[cfg(target_os = "macos")]
-pub mod apple;
+pub mod macos;
 #[cfg(target_os = "macos")]
-pub use apple::*;
+pub use macos::*;
 
 // ----------------------------------------------------------------------------
 // ! Linux

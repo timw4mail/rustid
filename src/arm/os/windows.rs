@@ -4,7 +4,7 @@
 //! Follows the existing Windows pattern in `src/arm/mod.rs` using the `windows` crate.
 
 use super::OsCpuInfo;
-use crate::arm::brand::Vendor;
+use crate::arm::brand::{IMPL_ARM, Vendor};
 use crate::arm::micro_arch::*;
 use crate::common::DataSource;
 use std::collections::{BTreeMap, HashSet};
@@ -215,78 +215,8 @@ pub fn has_atomics() -> bool {
 
 /// Returns all detected features as a BTreeMap of category to space-separated features.
 pub fn get_all_features() -> BTreeMap<&'static str, String> {
-    let mut detected: BTreeMap<&'static str, bool> = BTreeMap::new();
-    let api_features = get_features_from_api();
-
-    // Base features
-    detected.insert("fp", api_features.get("fp").copied().unwrap_or(false));
-    detected.insert("asimd", api_features.get("asimd").copied().unwrap_or(false));
-    detected.insert("cpuid", api_features.get("cpuid").copied().unwrap_or(false));
-    detected.insert(
-        "evtstrm",
-        api_features.get("evtstrm").copied().unwrap_or(false),
-    );
-
-    // SIMD
-    detected.insert("neon", api_features.get("neon").copied().unwrap_or(false));
-    detected.insert("asimdhp", false);
-    detected.insert("asimdfhm", false);
-    detected.insert("asimddp", false);
-    detected.insert("asimdrdm", false);
-
-    // Crypto
-    detected.insert("aes", api_features.get("aes").copied().unwrap_or(false));
-    detected.insert("pmull", api_features.get("pmull").copied().unwrap_or(false));
-    detected.insert("sha1", api_features.get("sha1").copied().unwrap_or(false));
-    detected.insert("sha2", api_features.get("sha2").copied().unwrap_or(false));
-    detected.insert("sha3", false);
-    detected.insert("sha512", false);
-    detected.insert("sm3", false);
-    detected.insert("sm4", false);
-
-    // Atomic
-    detected.insert(
-        "atomics",
-        api_features.get("atomics").copied().unwrap_or(false),
-    );
-    detected.insert("lse", api_features.get("atomics").copied().unwrap_or(false));
-    detected.insert("lse2", false);
-
-    // FP
-    detected.insert("fphp", false);
-    detected.insert("fp16", false);
-    detected.insert("fcma", false);
-    detected.insert("jscvt", false);
-
-    // Misc
-    detected.insert("crc32", api_features.get("crc32").copied().unwrap_or(false));
-    detected.insert("dcpop", false);
-    detected.insert("lrcpc", false);
-    detected.insert("lrcpc2", false);
-    detected.insert("flagm", false);
-    detected.insert("flagm2", false);
-    detected.insert("dit", false);
-    detected.insert("ssbs", false);
-    detected.insert("bti", false);
-    detected.insert("pauth", false);
-    detected.insert("pauth2", false);
-    detected.insert("fpac", false);
-    detected.insert("specres", false);
-    detected.insert("specres2", false);
-    detected.insert("csv2", false);
-    detected.insert("csv3", false);
-    detected.insert("ecv", false);
-    detected.insert("sb", false);
-    detected.insert("frintts", false);
-    detected.insert("dpb", false);
-    detected.insert("dpb2", false);
-    detected.insert("dotprod", false);
-    detected.insert("bf16", false);
-    detected.insert("i8mm", false);
-    detected.insert("sve", false);
-    detected.insert("sve2", false);
-    detected.insert("sme", false);
-
+    let src = get_features_from_api();
+    let detected = crate::arm::features::populate_detected_features(&src);
     crate::arm::features::build_feature_map(&detected)
 }
 
@@ -390,9 +320,9 @@ pub fn get_synth_midr() -> usize {
     }
 
     let mut synthetic_midr: usize = 0;
-    synthetic_midr |= 0x41_usize << 24;
-    synthetic_midr |= (sys_info.wProcessorLevel as usize & 0xFFF) << 4;
-    synthetic_midr |= sys_info.wProcessorRevision as usize & 0xF;
+    synthetic_midr |= IMPL_ARM << IMPLEMENTER_OFFSET;
+    synthetic_midr |= (sys_info.wProcessorLevel as usize & 0xFFF) << PART_OFFSET;
+    synthetic_midr |= sys_info.wProcessorRevision as usize & REVISION_MASK;
 
     synthetic_midr
 }

@@ -200,81 +200,8 @@ pub fn has_atomics() -> bool {
 
 /// Returns all detected features as a BTreeMap of category to space-separated features.
 pub fn get_all_features() -> BTreeMap<&'static str, String> {
-    let mut detected: BTreeMap<&'static str, bool> = BTreeMap::new();
-    let features = get_features_from_sysctl();
-
-    // Base features
-    detected.insert("fp", features.get("fp").copied().unwrap_or(false));
-    detected.insert("asimd", features.get("asimd").copied().unwrap_or(false));
-    detected.insert("cpuid", features.get("cpuid").copied().unwrap_or(false));
-    detected.insert("evtstrm", features.get("evtstrm").copied().unwrap_or(false));
-
-    // SIMD
-    detected.insert("neon", features.get("neon").copied().unwrap_or(false));
-    detected.insert("asimdhp", features.get("asimdhp").copied().unwrap_or(false));
-    detected.insert(
-        "asimdfhm",
-        features.get("asimdfhm").copied().unwrap_or(false),
-    );
-    detected.insert("asimddp", features.get("asimddp").copied().unwrap_or(false));
-    detected.insert(
-        "asimdrdm",
-        features.get("asimdrdm").copied().unwrap_or(false),
-    );
-
-    // Crypto
-    detected.insert("aes", features.get("aes").copied().unwrap_or(false));
-    detected.insert("pmull", features.get("pmull").copied().unwrap_or(false));
-    detected.insert("sha1", features.get("sha1").copied().unwrap_or(false));
-    detected.insert("sha2", features.get("sha2").copied().unwrap_or(false));
-    detected.insert("sha3", features.get("sha3").copied().unwrap_or(false));
-    detected.insert("sha512", features.get("sha512").copied().unwrap_or(false));
-    detected.insert("sm3", features.get("sm3").copied().unwrap_or(false));
-    detected.insert("sm4", features.get("sm4").copied().unwrap_or(false));
-
-    // Atomic
-    detected.insert("atomics", features.get("atomics").copied().unwrap_or(false));
-    detected.insert("lse", features.get("atomics").copied().unwrap_or(false));
-    detected.insert("lse2", features.get("lse2").copied().unwrap_or(false));
-
-    // FP
-    detected.insert("fphp", features.get("fphp").copied().unwrap_or(false));
-    detected.insert("fp16", features.get("fp16").copied().unwrap_or(false));
-    detected.insert("fcma", features.get("fcma").copied().unwrap_or(false));
-    detected.insert("jscvt", features.get("jscvt").copied().unwrap_or(false));
-
-    // Misc
-    detected.insert("crc32", features.get("crc32").copied().unwrap_or(false));
-    detected.insert("dcpop", features.get("dcpop").copied().unwrap_or(false));
-    detected.insert("lrcpc", features.get("lrcpc").copied().unwrap_or(false));
-    detected.insert("lrcpc2", features.get("lrcpc2").copied().unwrap_or(false));
-    detected.insert("flagm", features.get("flagm").copied().unwrap_or(false));
-    detected.insert("flagm2", features.get("flagm2").copied().unwrap_or(false));
-    detected.insert("dit", features.get("dit").copied().unwrap_or(false));
-    detected.insert("ssbs", features.get("ssbs").copied().unwrap_or(false));
-    detected.insert("bti", features.get("bti").copied().unwrap_or(false));
-    detected.insert("pauth", features.get("pauth").copied().unwrap_or(false));
-    detected.insert("pauth2", features.get("pauth2").copied().unwrap_or(false));
-    detected.insert("fpac", features.get("fpac").copied().unwrap_or(false));
-    detected.insert("specres", features.get("specres").copied().unwrap_or(false));
-    detected.insert(
-        "specres2",
-        features.get("specres2").copied().unwrap_or(false),
-    );
-    detected.insert("csv2", features.get("csv2").copied().unwrap_or(false));
-    detected.insert("csv3", features.get("csv3").copied().unwrap_or(false));
-    detected.insert("ecv", features.get("ecv").copied().unwrap_or(false));
-    detected.insert("sb", features.get("sb").copied().unwrap_or(false));
-    detected.insert("frintts", features.get("frintts").copied().unwrap_or(false));
-    detected.insert("dpb", features.get("dpb").copied().unwrap_or(false));
-    detected.insert("dpb2", features.get("dpb2").copied().unwrap_or(false));
-    detected.insert("dotprod", features.get("dotprod").copied().unwrap_or(false));
-    detected.insert("bf16", features.get("bf16").copied().unwrap_or(false));
-    detected.insert("i8mm", features.get("i8mm").copied().unwrap_or(false));
-    detected.insert("sve", features.get("sve").copied().unwrap_or(false));
-    detected.insert("sve2", features.get("sve2").copied().unwrap_or(false));
-    detected.insert("sme", features.get("sme").copied().unwrap_or(false));
-
+    let src = get_features_from_sysctl();
+    let detected = crate::arm::features::populate_detected_features(&src);
     crate::arm::features::build_feature_map(&detected)
 }
 
@@ -314,59 +241,59 @@ pub fn get_synth_midr() -> usize {
 }
 
 fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
-    let midr_base = IMPL_APPLE << 24;
+    let midr_base = IMPL_APPLE << IMPLEMENTER_OFFSET;
 
     match cpufamily {
         // M1 family
         CPUFAMILY_ARM_FIRESTORM_ICESTORM => {
             if brand_string.contains("M1 Pro") {
-                midr_base | (0x024 << 4)
+                midr_base | (0x024 << PART_OFFSET)
             } else if brand_string.contains("M1 Max") {
-                midr_base | (0x028 << 4)
+                midr_base | (0x028 << PART_OFFSET)
             } else {
-                midr_base | (0x022 << 4) // M1 base
+                midr_base | (0x022 << PART_OFFSET) // M1 base
             }
         }
 
         // M2 Family
         CPUFAMILY_ARM_BLIZZARD_AVALANCHE => {
             if brand_string.contains("M2 Pro") {
-                midr_base | (0x034 << 4)
+                midr_base | (0x034 << PART_OFFSET)
             } else if brand_string.contains("M2 Max") {
-                midr_base | (0x038 << 4)
+                midr_base | (0x038 << PART_OFFSET)
             } else {
-                midr_base | (0x030 << 4) // A15, M2 base
+                midr_base | (0x030 << PART_OFFSET) // A15, M2 base
             }
         }
 
         // M3 family
         CPUFAMILY_ARM_EVEREST_SAWTOOTH => {
             if brand_string.contains("M3 Pro") {
-                midr_base | (0x044 << 4)
+                midr_base | (0x044 << PART_OFFSET)
             } else if brand_string.contains("M3 Max") {
-                midr_base | (0x048 << 4)
+                midr_base | (0x048 << PART_OFFSET)
             } else {
-                midr_base | (0x042 << 4) // A16, M3 base
+                midr_base | (0x042 << PART_OFFSET) // A16, M3 base
             }
         }
 
         // M4 family
         0x4B4FAE0A => {
             if brand_string.contains("M4 Pro") {
-                midr_base | (0x054 << 4)
+                midr_base | (0x054 << PART_OFFSET)
             } else if brand_string.contains("M4 Max") {
-                midr_base | (0x058 << 4)
+                midr_base | (0x058 << PART_OFFSET)
             } else {
-                midr_base | (0x052 << 4) // M4 base
+                midr_base | (0x052 << PART_OFFSET) // M4 base
             }
         }
 
         // Apple A18 / A18 Pro (0x75D4ACB9)
         0x75D4ACB9 => {
             if brand_string.contains("A18 Pro") {
-                midr_base | (0x101 << 4)
+                midr_base | (0x101 << PART_OFFSET)
             } else {
-                midr_base | (0x100 << 4) // A18
+                midr_base | (0x100 << PART_OFFSET) // A18
             }
         }
 
