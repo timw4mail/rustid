@@ -317,7 +317,15 @@ impl CpuArch {
             None
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "netbsd")]
+        {
+            if let Some(model) = crate::common::os::get_sysctl_value("hw.model") {
+                return Some(String::from(model.trim()));
+            }
+            None
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "netbsd")))]
         None
     }
 
