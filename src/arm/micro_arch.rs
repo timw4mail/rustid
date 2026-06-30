@@ -379,9 +379,9 @@ impl CpuArch {
             ),
             (
                 0xD08,
-                "ARM Cortex-A65",
-                MicroArch::ArmCortexA65,
-                "Cortex-A65",
+                "ARM Cortex-A72",
+                MicroArch::ArmCortexA72,
+                "Cortex-A72",
             ),
             (
                 0xD0B,
