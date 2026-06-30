@@ -27,14 +27,11 @@
 - Simplified x86 vendor micro-arch closures (AMD, Intel, Centaur, Cyrix) via shared `CpuArch::brand_arch()`
 - Intel CPU vendor module now implements the `TMicroArch` trait, matching other vendors
 - PPC clock speed parsing uses shared `get_proc_cpuinfo_data()` instead of raw string parsing
-- Updated build configuration: added Raspberry Pi 1 (arm1136) target, removed `libc` dependency, removed `set unstable` from justfile
 - ARM 32-bit Linux MIDR detection reads from sysfs instead of inline `mrc p15` assembly to avoid SIGILL on older CPUs
 - Migrated all OS-specific ARM feature functions from standalone `has_*()` to `TArmFeatures` trait implementations
-- Apple and Windows MIDR synthesis uses named bit-offset constants instead of magic numbers
-- Sysctl parser accepts `=` as a delimiter alongside `:` for FreeBSD compatibility
+- Sysctl parser accepts `=` as a delimiter alongside `:` for NetBSD compatibility
 - Output labels refined: "Brand" → "Implementer"; split "SoC/System" into distinct "System" and "SoC" lines
 - Updated G4 PowerPC codenames (Apollo 6/7, Max, V'ger) for accuracy
-- Cache display spacing tweak in common display module
 
 ### Fixed
 - Corrected hex literal formatting in Apple CPU part matching (e.g., `0x32` → `0x032`) to ensure correct M3/M4 detection
