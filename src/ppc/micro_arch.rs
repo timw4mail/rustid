@@ -135,7 +135,7 @@ impl CpuArch {
             0x030C => Self::new(
                 "PowerPC 7447",
                 MicroArch::Ppc7447,
-                "Apollo 6",
+                "Apollo 7",
                 0x30C,
                 Some(N130),
             ),
@@ -150,14 +150,14 @@ impl CpuArch {
             0x0352 => Self::new(
                 "PowerPC 7455",
                 MicroArch::Ppc7455,
-                "Apollo",
+                "Apollo 6",
                 0x352,
                 Some(N150),
             ),
             0x0353 => Self::new(
                 "PowerPC 7457",
                 MicroArch::Ppc7457,
-                "Apollo",
+                "Apollo 7",
                 0x353,
                 Some(N130),
             ),
@@ -176,7 +176,7 @@ impl CpuArch {
 
             // Apple PowerPC variants (based on IBM 7400/7410)
             // Apple uses version 0x0033 for some G4 chips
-            0x0033 => Self::new("Apple G4", MicroArch::Ppc7400, "Apollo", 0x33, Some(N180)),
+            0x0033 => Self::new("Apple G4", MicroArch::Ppc7400, "Max", 0x33, Some(N180)),
 
             // Apple G5 variants
             0x0045 => Self::new("Apple G5", MicroArch::Ppc970, "G5", 0x45, Some(N65)),
@@ -184,18 +184,18 @@ impl CpuArch {
 
             // Apple "Scream" chips - these are actually G4 derivatives
             // Version 0x8000 series used by Apple for some custom chips
-            0x8000 => Self::new("Apple G4", MicroArch::Ppc7400, "Scream", 0x8000, Some(N180)),
+            0x8000 => Self::new("Apple G4", MicroArch::Ppc7400, "V'ger", 0x8000, Some(N180)),
             0x8001 => Self::new(
-                "Apple G4+",
+                "Apple G4",
                 MicroArch::Ppc7447,
-                "Scream",
+                "Apollo 7",
                 0x8001,
                 Some(N130),
             ),
             0x8002 => Self::new(
-                "Apple G4+",
+                "Apple G4",
                 MicroArch::Ppc7447a,
-                "Scream",
+                "Apollo 7",
                 0x8002,
                 Some(N90),
             ),
