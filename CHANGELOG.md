@@ -7,9 +7,19 @@
 - `CpuArch::brand_arch()` factory method to deduplicate x86 vendor micro-arch lookup closures
 - Shared `get_proc_cpuinfo_data()` helper that parses `/proc/cpuinfo` into structured key-value maps
 - ARM core type groups separated by a blank line in output for readability
+- BSD support for ARM (NetBSD, FreeBSD, OpenBSD) via new `src/arm/os/bsd.rs` module with MIDR detection through sysctl and inline asm fallback
+- System/device model field (`CpuArch::system`) displayed as "System" line, sourced from `hw.model` (NetBSD), `hw.fdt.model` (FreeBSD), or `/proc/cpuinfo Model` (Linux), separate from the SoC model line
+- `TArmFeatures` trait providing a uniform interface for OS-specific ARM feature detection, implemented across Linux, macOS, Windows, and BSD modules
+- Shared `populate_detected_features()` helper eliminating duplicated feature-map construction in each OS module
+- ARM1176JZF-S (Raspberry Pi 1) microarchitecture variant and `MicroArch::Arm1176` variant
+- Raspberry Pi codename annotations in ARM core entries (Pi 2/3/4/5)
+- FreeBSD SoC detection via `hw.fdt.compatible` sysctl
+- `specres` feature flag to the ARM miscellaneous feature list
+- Named MIDR bit-field offset constants (`IMPLEMENTER_OFFSET`, `PART_OFFSET`, `VARIANT_OFFSET`, `ARCHITECTURE_OFFSET`, `REVISION_MASK`)
 
 ### Changed
 - Restructured ARM module into OS-specific submodules (`src/arm/os/{apple,linux,windows}.rs`) with shared core detection in `os/mod.rs`
+- Renamed `src/arm/os/apple.rs` → `macos.rs` for consistency
 - Rewrote ARM Linux feature detection to parse `/proc/cpuinfo` instead of `libc` system calls; removed `libc` dependency
 - Simplified ARM CPU model/part lookup tables from verbose `match` arms to concise tuple arrays
 - Replaced raw line-by-line `/proc/cpuinfo` parsing with shared structured parser across ARM, PPC, and x86 topology detection
@@ -18,14 +28,20 @@
 - Intel CPU vendor module now implements the `TMicroArch` trait, matching other vendors
 - PPC clock speed parsing uses shared `get_proc_cpuinfo_data()` instead of raw string parsing
 - Updated build configuration: added Raspberry Pi 1 (arm1136) target, removed `libc` dependency, removed `set unstable` from justfile
+- ARM 32-bit Linux MIDR detection reads from sysfs instead of inline `mrc p15` assembly to avoid SIGILL on older CPUs
+- Migrated all OS-specific ARM feature functions from standalone `has_*()` to `TArmFeatures` trait implementations
+- Apple and Windows MIDR synthesis uses named bit-offset constants instead of magic numbers
+- Sysctl parser accepts `=` as a delimiter alongside `:` for FreeBSD compatibility
+- Output labels refined: "Brand" → "Implementer"; split "SoC/System" into distinct "System" and "SoC" lines
+- Updated G4 PowerPC codenames (Apollo 6/7, Max, V'ger) for accuracy
+- Cache display spacing tweak in common display module
 
 ### Fixed
 - Corrected hex literal formatting in Apple CPU part matching (e.g., `0x32` → `0x032`) to ensure correct M3/M4 detection
 - Fixed PPC clock speed parsing from `cpu MHz` lines
-
-### Removed
-- `libc` crate dependency
-- `src/common/count.rs` module (`logical_cores()` function)
+- Corrected ARM Cortex-A72 mapping (previously misidentified as Cortex-A65)
+- Corrected PPC G4 codename labels for 7447, 7455, 7457 variants
+- Eliminated double blank line in ARM output when a core type has no cache information
 
 ## [1.4.0]
 
