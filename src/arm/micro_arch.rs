@@ -339,7 +339,7 @@ impl CpuArch {
         #[cfg(target_os = "freebsd")]
         {
             if let Some(sys) = crate::common::os::get_sysctl_value("hw.fdt.model") {
-                return Some(String::from(model.trim()));
+                return Some(String::from(sys.trim()));
             }
             None
         }
