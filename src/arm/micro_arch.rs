@@ -331,7 +331,9 @@ impl CpuArch {
 
     fn find_arm(part: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str)] = &[
+            // Raspberry Pi 1B
             (0xB76, "ARM ARM1176JZF-S", MicroArch::Arm1176, "ARM11/ARMv6"),
+            // Raspberry Pi 2B
             (0xC07, "ARM Cortex-A7", MicroArch::ArmCortexA7, "Cortex-A7"),
             (0xC08, "ARM Cortex-A8", MicroArch::ArmCortexA8, "Cortex-A8"),
             (0xC09, "ARM Cortex-A9", MicroArch::ArmCortexA9, "Cortex-A9"),
@@ -365,6 +367,8 @@ impl CpuArch {
                 MicroArch::ArmCortexA35,
                 "Cortex-A35",
             ),
+            // Raspberry Pi 3,
+            // Raspberry Pi Zero 2
             (
                 0xD03,
                 "ARM Cortex-A53",
@@ -377,17 +381,19 @@ impl CpuArch {
                 MicroArch::ArmCortexA55,
                 "Cortex-A55",
             ),
+            // Raspberry Pi 4
             (
                 0xD08,
                 "ARM Cortex-A72",
                 MicroArch::ArmCortexA72,
-                "Cortex-A72",
+                "Maya",
             ),
+            // Raspberry Pi 5
             (
                 0xD0B,
                 "ARM Cortex-A76",
                 MicroArch::ArmCortexA76,
-                "Cortex-A76",
+                "Enyo",
             ),
             (
                 0xD0C,
