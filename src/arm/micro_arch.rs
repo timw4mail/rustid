@@ -300,7 +300,18 @@ impl CpuArch {
             None
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "freebsd")]
+        {
+            if let Some(raw) = crate::common::os::get_sysctl_value("hw.fdt.compatible") {
+                let parts = raw.split(",");
+                if let Some(last) = parts.last() {
+                    return Some(String::from(last));
+                }
+            }
+            None
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
         None
     }
 
@@ -325,7 +336,15 @@ impl CpuArch {
             None
         }
 
-        #[cfg(not(any(target_os = "linux", target_os = "netbsd")))]
+        #[cfg(target_os = "freebsd")]
+        {
+            if let Some(sys) = crate::common::os::get_sysctl_value("hw.fdt.model") {
+                return Some(String::from(model.trim()));
+            }
+            None
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "netbsd", target_os = "freebsd")))]
         None
     }
 
@@ -382,19 +401,9 @@ impl CpuArch {
                 "Cortex-A55",
             ),
             // Raspberry Pi 4
-            (
-                0xD08,
-                "ARM Cortex-A72",
-                MicroArch::ArmCortexA72,
-                "Maya",
-            ),
+            (0xD08, "ARM Cortex-A72", MicroArch::ArmCortexA72, "Maya"),
             // Raspberry Pi 5
-            (
-                0xD0B,
-                "ARM Cortex-A76",
-                MicroArch::ArmCortexA76,
-                "Enyo",
-            ),
+            (0xD0B, "ARM Cortex-A76", MicroArch::ArmCortexA76, "Enyo"),
             (
                 0xD0C,
                 "ARM Cortex-A73",

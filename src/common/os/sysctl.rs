@@ -36,7 +36,7 @@ pub fn get_sysctl_value(name: &str) -> Option<String> {
     if let Some(stdout) = cmd_output_to_string("sysctl", name) {
         for line in stdout.lines() {
             let line = line.trim();
-            if let Some((key, value)) = line.split_once(&[':', '='])
+            if let Some((key, value)) = line.split_once([':', '='])
                 && key.trim() == name
             {
                 let value = value.trim();
@@ -55,7 +55,7 @@ fn get_sysctl_map_by_prefix(prefix: &str, strip_prefix: &str) -> HashMap<String,
     if let Some(stdout) = cmd_output_to_string("sysctl", prefix) {
         for line in stdout.lines() {
             let line = line.trim();
-            if let Some((key, value)) = line.split_once(&[':', '=']) {
+            if let Some((key, value)) = line.split_once([':', '=']) {
                 let key = key.trim();
                 let value = value.trim();
 
@@ -79,7 +79,7 @@ pub fn get_full_raw_sysctl_map() -> BTreeMap<String, String> {
     if let Some(stdout) = cmd_output_to_string("sysctl", "-a") {
         for line in stdout.lines() {
             let line = line.trim();
-            if let Some((key, value)) = line.split_once(&[':', '=']) {
+            if let Some((key, value)) = line.split_once([':', '=']) {
                 let key = key.trim();
                 let value = value.trim();
 
