@@ -75,7 +75,9 @@ impl CpuDisplay {
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 cpu.display_cache(core.cache, &cc, 0);
 
-                println!();
+                if core.cache.is_none() {
+                    CpuDisplay::newline();
+                }
 
                 i += 1;
             }
