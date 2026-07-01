@@ -404,9 +404,10 @@ impl Cache {
 
         let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
 
+        // @TODO: Properly parse table to account for missing values
         for line in lines.into_iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 3 {
+            if parts.len() <= 3 {
                 continue;
             }
 
