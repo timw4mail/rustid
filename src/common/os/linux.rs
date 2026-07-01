@@ -50,6 +50,21 @@ fn expand_cpu_list(s: &str) -> Vec<u32> {
     cpus
 }
 
+fn get_soc_cpuinfo() -> Option<String> {
+    let cpuinfo = get_proc_cpuinfo_data();
+    if let Some(last) = cpuinfo.last()
+        && (!last.contains_key("processor"))
+        && let Some(raw_soc) = last.get("Hardware")
+    {
+        return Some(String::from(raw_soc.trim()));
+    }
+    None
+}
+
+fn get_soc_devicetree() -> Option<String> {
+    None
+}
+
 pub fn get_proc_cpuinfo_data() -> Vec<HashMap<String, String>> {
     let content = match std::fs::read_to_string("/proc/cpuinfo") {
         Ok(c) => c,
@@ -72,6 +87,29 @@ pub fn get_proc_cpuinfo_data() -> Vec<HashMap<String, String>> {
 }
 
 impl TOSData for OS {
+    fn get_soc() -> Option<String> {
+        if let Some(soc) = get_soc_cpuinfo() {
+            return Some(soc);
+        }
+
+        if let Some(soc) = get_soc_devicetree() {
+            return Some(soc);
+        }
+
+        None
+    }
+
+    fn get_system_name() -> Option<String> {
+        let cpuinfo = get_proc_cpuinfo_data();
+        if let Some(last) = cpuinfo.last()
+            && (!last.contains_key("processor"))
+            && let Some(raw) = last.get("Model")
+        {
+            return Some(String::from(raw.trim()));
+        }
+        None
+    }
+
     fn get_socket_count() -> TopologyTier {
         // Fallback: /proc/cpuinfo unique physical ids
         let cpuinfo = get_proc_cpuinfo_data();

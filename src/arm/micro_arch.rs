@@ -1,7 +1,8 @@
 use crate::arm::CoreType;
 use crate::arm::brand::*;
 use crate::common::constants::*;
-use crate::common::{Cache, UNK};
+use crate::common::os::OS;
+use crate::common::{Cache, TOSData, UNK};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -287,104 +288,104 @@ impl CpuArch {
         }
     }
 
-    fn find_soc() -> Option<String> {
-        #[cfg(target_os = "linux")]
-        {
-            let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
-            if let Some(last) = cpuinfo.last()
-                && (!last.contains_key("processor"))
-                && let Some(raw_soc) = last.get("Hardware")
-            {
-                return Some(String::from(raw_soc.trim()));
-            }
-            None
-        }
-
-        #[cfg(target_os = "freebsd")]
-        {
-            if let Some(raw) = crate::common::os::get_sysctl_value("hw.fdt.compatible") {
-                let parts = raw.split(",");
-                if let Some(last) = parts.last() {
-                    return Some(String::from(last));
-                }
-            }
-            None
-        }
-
-        #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
-        None
-    }
-
-    fn find_system() -> Option<String> {
-        #[cfg(target_os = "linux")]
-        {
-            let cpuinfo = crate::common::os::get_proc_cpuinfo_data();
-            if let Some(last) = cpuinfo.last()
-                && (!last.contains_key("processor"))
-                && let Some(raw) = last.get("Model")
-            {
-                return Some(String::from(raw.trim()));
-            }
-            None
-        }
-
-        #[cfg(target_os = "netbsd")]
-        {
-            if let Some(model) = crate::common::os::get_sysctl_value("hw.model") {
-                return Some(String::from(model.trim()));
-            }
-            None
-        }
-
-        #[cfg(target_os = "freebsd")]
-        {
-            if let Some(sys) = crate::common::os::get_sysctl_value("hw.fdt.model") {
-                return Some(String::from(sys.trim()));
-            }
-            None
-        }
-
-        #[cfg(not(any(target_os = "linux", target_os = "netbsd", target_os = "freebsd")))]
-        None
+    fn find_impl(
+        part: usize,
+        implementer: Implementer,
+        parts: &[(
+            usize,
+            &'static str,
+            MicroArch,
+            &'static str,
+            Option<&'static str>,
+        )],
+    ) -> Self {
+        let soc_model = OS::get_soc();
+        let system = OS::get_system_name();
+        parts
+            .iter()
+            .find(|(p, _, _, _, _)| *p == part)
+            .map(|&(_, model, ma, name, tech)| CpuArch {
+                implementer,
+                system,
+                model: String::from(model),
+                soc_model,
+                micro_arch: ma,
+                code_name: name,
+                part_number: part,
+                technology: tech,
+            })
+            .unwrap_or_else(move || Self {
+                implementer,
+                ..Self::default()
+            })
     }
 
     fn find_arm(part: usize) -> Self {
-        const PARTS: &[(usize, &str, MicroArch, &str)] = &[
+        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
             // Raspberry Pi 1B
-            (0xB76, "ARM ARM1176JZF-S", MicroArch::Arm1176, "ARM11/ARMv6"),
+            (
+                0xB76,
+                "ARM ARM1176JZF-S",
+                MicroArch::Arm1176,
+                "ARM11/ARMv6",
+                None,
+            ),
             // Raspberry Pi 2B
-            (0xC07, "ARM Cortex-A7", MicroArch::ArmCortexA7, "Cortex-A7"),
-            (0xC08, "ARM Cortex-A8", MicroArch::ArmCortexA8, "Cortex-A8"),
-            (0xC09, "ARM Cortex-A9", MicroArch::ArmCortexA9, "Cortex-A9"),
+            (
+                0xC07,
+                "ARM Cortex-A7",
+                MicroArch::ArmCortexA7,
+                "Cortex-A7",
+                None,
+            ),
+            (
+                0xC08,
+                "ARM Cortex-A8",
+                MicroArch::ArmCortexA8,
+                "Cortex-A8",
+                None,
+            ),
+            (
+                0xC09,
+                "ARM Cortex-A9",
+                MicroArch::ArmCortexA9,
+                "Cortex-A9",
+                None,
+            ),
             (
                 0xC0A,
                 "ARM Cortex-A12",
                 MicroArch::ArmCortexA12,
                 "Cortex-A12",
+                None,
             ),
             (
                 0xC0F,
                 "ARM Cortex-A15",
                 MicroArch::ArmCortexA15,
                 "Cortex-A15",
+                None,
             ),
             (
                 0xC0E,
                 "ARM Cortex-A17",
                 MicroArch::ArmCortexA17,
                 "Cortex-A17",
+                None,
             ),
             (
                 0xC20,
                 "ARM Cortex-A32",
                 MicroArch::ArmCortexA32,
                 "Cortex-A32",
+                None,
             ),
             (
                 0xC23,
                 "ARM Cortex-A35",
                 MicroArch::ArmCortexA35,
                 "Cortex-A35",
+                None,
             ),
             // Raspberry Pi 3,
             // Raspberry Pi Zero 2
@@ -393,256 +394,354 @@ impl CpuArch {
                 "ARM Cortex-A53",
                 MicroArch::ArmCortexA53,
                 "Cortex-A53",
+                None,
             ),
             (
                 0xD05,
                 "ARM Cortex-A55",
                 MicroArch::ArmCortexA55,
                 "Cortex-A55",
+                None,
             ),
             // Raspberry Pi 4
-            (0xD08, "ARM Cortex-A72", MicroArch::ArmCortexA72, "Maya"),
+            (
+                0xD08,
+                "ARM Cortex-A72",
+                MicroArch::ArmCortexA72,
+                "Maya",
+                None,
+            ),
             // Raspberry Pi 5
-            (0xD0B, "ARM Cortex-A76", MicroArch::ArmCortexA76, "Enyo"),
+            (
+                0xD0B,
+                "ARM Cortex-A76",
+                MicroArch::ArmCortexA76,
+                "Enyo",
+                None,
+            ),
             (
                 0xD0C,
                 "ARM Cortex-A73",
                 MicroArch::ArmCortexA73,
                 "Cortex-A73",
+                None,
             ),
             (
                 0xD0D,
                 "ARM Cortex-A75",
                 MicroArch::ArmCortexA75,
                 "Cortex-A75",
+                None,
             ),
             (
                 0xD0E,
                 "ARM Cortex-A76",
                 MicroArch::ArmCortexA76,
                 "Cortex-A76",
+                None,
             ),
             (
                 0xD10,
                 "ARM Cortex-A77",
                 MicroArch::ArmCortexA77,
                 "Cortex-A77",
+                None,
             ),
             (
                 0xD11,
                 "ARM Cortex-A78",
                 MicroArch::ArmCortexA78,
                 "Cortex-A78",
+                None,
             ),
             (
                 0xD46,
                 "ARM Cortex-A510",
                 MicroArch::ArmCortexA510,
                 "Cortex-A510",
+                None,
             ),
             (
                 0xD80,
                 "ARM Cortex-A520",
                 MicroArch::ArmCortexA520,
                 "Cortex-A520",
+                None,
             ),
             (
                 0xD47,
                 "ARM Cortex-A710",
                 MicroArch::ArmCortexA710,
                 "Cortex-A710",
+                None,
             ),
             (
                 0xD4D,
                 "ARM Cortex-A715",
                 MicroArch::ArmCortexA715,
                 "Cortex-A715",
+                None,
             ),
             (
                 0xD81,
                 "ARM Cortex-A720",
                 MicroArch::ArmCortexA720,
                 "Cortex-A720",
+                None,
             ),
             (
                 0xD87,
                 "ARM Cortex-A725",
                 MicroArch::ArmCortexA725,
                 "Cortex-A725",
+                None,
             ),
-            (0xD13, "ARM Cortex-X1", MicroArch::ArmCortexX1, "Cortex-X1"),
-            (0xD48, "ARM Cortex-X2", MicroArch::ArmCortexX2, "Cortex-X2"),
-            (0xD4E, "ARM Cortex-X3", MicroArch::ArmCortexX3, "Cortex-X3"),
-            (0xD82, "ARM Cortex-X4", MicroArch::ArmCortexX4, "Cortex-X4"),
+            (
+                0xD13,
+                "ARM Cortex-X1",
+                MicroArch::ArmCortexX1,
+                "Cortex-X1",
+                None,
+            ),
+            (
+                0xD48,
+                "ARM Cortex-X2",
+                MicroArch::ArmCortexX2,
+                "Cortex-X2",
+                None,
+            ),
+            (
+                0xD4E,
+                "ARM Cortex-X3",
+                MicroArch::ArmCortexX3,
+                "Cortex-X3",
+                None,
+            ),
+            (
+                0xD82,
+                "ARM Cortex-X4",
+                MicroArch::ArmCortexX4,
+                "Cortex-X4",
+                None,
+            ),
             (
                 0xD40,
                 "ARM Neoverse E1",
                 MicroArch::ArmNeoverseE1,
                 "Neoverse E1",
+                None,
             ),
             (
                 0xD41,
                 "ARM Neoverse N1",
                 MicroArch::ArmNeoverseN1,
                 "Neoverse N1",
+                None,
             ),
             (
                 0xD49,
                 "ARM Neoverse N2",
                 MicroArch::ArmNeoverseN2,
                 "Neoverse N2",
+                None,
             ),
             (
                 0xD44,
                 "ARM Neoverse V1",
                 MicroArch::ArmNeoverseV1,
                 "Neoverse V1",
+                None,
             ),
             (
                 0xD4F,
                 "ARM Neoverse V2",
                 MicroArch::ArmNeoverseV2,
                 "Neoverse V2",
+                None,
             ),
         ];
-        let soc_model = CpuArch::find_soc();
-        let system = CpuArch::find_system();
-        PARTS
-            .iter()
-            .find(|(p, _, _, _)| *p == part)
-            .map(|&(_, model, ma, name)| {
-                Self::new(
-                    Implementer::Arm,
-                    system,
-                    model,
-                    soc_model,
-                    ma,
-                    name,
-                    part,
-                    None,
-                )
-            })
-            .unwrap_or_else(|| Self {
-                implementer: Implementer::Arm,
-                ..Self::default()
-            })
+        Self::find_impl(part, Implementer::Arm, PARTS)
     }
 
     fn find_apple(part: usize) -> Self {
-        const PARTS: &[(usize, &str, MicroArch, &str, &str)] = &[
-            (0x022, "Apple M1", MicroArch::AppleIcestorm, "Tonga", N5),
-            (0x023, "Apple M1", MicroArch::AppleFirestorm, "Tonga", N5),
+        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
+            (
+                0x022,
+                "Apple M1",
+                MicroArch::AppleIcestorm,
+                "Tonga",
+                Some(N5),
+            ),
+            (
+                0x023,
+                "Apple M1",
+                MicroArch::AppleFirestorm,
+                "Tonga",
+                Some(N5),
+            ),
             (
                 0x024,
                 "Apple M1 Pro",
                 MicroArch::AppleIcestorm,
                 "Jade Chop",
-                N5,
+                Some(N5),
             ),
             (
                 0x025,
                 "Apple M1 Pro",
                 MicroArch::AppleFirestorm,
                 "Jade Chop",
-                N5,
+                Some(N5),
             ),
             (
                 0x028,
                 "Apple M1 Max",
                 MicroArch::AppleIcestorm,
                 "Jade 1C",
-                N5,
+                Some(N5),
             ),
             (
                 0x029,
                 "Apple M1 Max",
                 MicroArch::AppleFirestorm,
                 "Jade 1C",
-                N5,
+                Some(N5),
             ),
-            (0x032, "Apple M2", MicroArch::AppleBlizzard, "Staten", N5),
-            (0x033, "Apple M2", MicroArch::AppleAvalanche, "Staten", N5),
+            (
+                0x032,
+                "Apple M2",
+                MicroArch::AppleBlizzard,
+                "Staten",
+                Some(N5),
+            ),
+            (
+                0x033,
+                "Apple M2",
+                MicroArch::AppleAvalanche,
+                "Staten",
+                Some(N5),
+            ),
             (
                 0x034,
                 "Apple M2 Pro",
                 MicroArch::AppleBlizzard,
                 "Rhodes Chop",
-                N5,
+                Some(N5),
             ),
             (
                 0x035,
                 "Apple M2 Pro",
                 MicroArch::AppleAvalanche,
                 "Rhodes Chop",
-                N5,
+                Some(N5),
             ),
             (
                 0x038,
                 "Apple M2 Max",
                 MicroArch::AppleBlizzard,
                 "Rhodes 1C",
-                N5,
+                Some(N5),
             ),
             (
                 0x039,
                 "Apple M2 Max",
                 MicroArch::AppleAvalanche,
                 "Rhodes 1C",
-                N5,
+                Some(N5),
             ),
-            (0x042, "Apple M3", MicroArch::AppleEverest, "Ibiza", N3),
-            (0x043, "Apple M3", MicroArch::AppleSawtooth, "Ibiza", N3),
-            (0x044, "Apple M3 Pro", MicroArch::AppleEverest, "Lobos", N3),
-            (0x045, "Apple M3 Pro", MicroArch::AppleSawtooth, "Lobos", N3),
-            (0x048, "Apple M3 Max", MicroArch::AppleEverest, "Palma", N3),
-            (0x049, "Apple M3 Max", MicroArch::AppleSawtooth, "Palma", N3),
-            (0x052, "Apple M4", MicroArch::AppleEverest, "Donan", N3),
-            (0x053, "Apple M4", MicroArch::AppleSawtooth, "Donan", N3),
+            (
+                0x042,
+                "Apple M3",
+                MicroArch::AppleEverest,
+                "Ibiza",
+                Some(N3),
+            ),
+            (
+                0x043,
+                "Apple M3",
+                MicroArch::AppleSawtooth,
+                "Ibiza",
+                Some(N3),
+            ),
+            (
+                0x044,
+                "Apple M3 Pro",
+                MicroArch::AppleEverest,
+                "Lobos",
+                Some(N3),
+            ),
+            (
+                0x045,
+                "Apple M3 Pro",
+                MicroArch::AppleSawtooth,
+                "Lobos",
+                Some(N3),
+            ),
+            (
+                0x048,
+                "Apple M3 Max",
+                MicroArch::AppleEverest,
+                "Palma",
+                Some(N3),
+            ),
+            (
+                0x049,
+                "Apple M3 Max",
+                MicroArch::AppleSawtooth,
+                "Palma",
+                Some(N3),
+            ),
+            (
+                0x052,
+                "Apple M4",
+                MicroArch::AppleEverest,
+                "Donan",
+                Some(N3),
+            ),
+            (
+                0x053,
+                "Apple M4",
+                MicroArch::AppleSawtooth,
+                "Donan",
+                Some(N3),
+            ),
             (
                 0x054,
                 "Apple M4 Pro",
                 MicroArch::AppleEverest,
                 "Brava Chop",
-                N3,
+                Some(N3),
             ),
             (
                 0x055,
                 "Apple M4 Pro",
                 MicroArch::AppleSawtooth,
                 "Brava Chop",
-                N3,
+                Some(N3),
             ),
-            (0x058, "Apple M4 Max", MicroArch::AppleEverest, "Brava", N3),
-            (0x059, "Apple M4 Max", MicroArch::AppleSawtooth, "Brava", N3),
+            (
+                0x058,
+                "Apple M4 Max",
+                MicroArch::AppleEverest,
+                "Brava",
+                Some(N3),
+            ),
+            (
+                0x059,
+                "Apple M4 Max",
+                MicroArch::AppleSawtooth,
+                "Brava",
+                Some(N3),
+            ),
             (
                 0x101,
                 "Apple A18 Pro",
                 MicroArch::AppleEverest,
                 "Tahiti",
-                N3,
+                Some(N3),
             ),
         ];
-        let soc_model = CpuArch::find_soc();
-        let system = CpuArch::find_system();
-        PARTS
-            .iter()
-            .find(|(p, _, _, _, _)| *p == part)
-            .map(|&(_, model, ma, name, tech)| {
-                Self::new(
-                    Implementer::Apple,
-                    system,
-                    model,
-                    soc_model,
-                    ma,
-                    name,
-                    part,
-                    Some(tech),
-                )
-            })
-            .unwrap_or_else(|| Self {
-                implementer: Implementer::Apple,
-                ..Self::default()
-            })
+        Self::find_impl(part, Implementer::Apple, PARTS)
     }
 
     fn find_qualcomm(part: usize) -> Self {
@@ -760,27 +859,7 @@ impl CpuArch {
                 None,
             ),
         ];
-        let soc_model = CpuArch::find_soc();
-        let system = CpuArch::find_system();
-        PARTS
-            .iter()
-            .find(|(p, _, _, _, _)| *p == part)
-            .map(|&(_, model, ma, name, tech)| {
-                Self::new(
-                    Implementer::Qualcomm,
-                    system,
-                    model,
-                    soc_model,
-                    ma,
-                    name,
-                    part,
-                    tech,
-                )
-            })
-            .unwrap_or_else(|| Self {
-                implementer: Implementer::Qualcomm,
-                ..Self::default()
-            })
+        Self::find_impl(part, Implementer::Qualcomm, PARTS)
     }
 }
 

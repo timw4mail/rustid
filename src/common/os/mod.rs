@@ -38,5 +38,13 @@ pub use sysctl::*;
 pub struct OS;
 
 pub trait TOSData {
+    fn get_system_name() -> Option<String> {
+        None
+    }
+
+    fn get_soc() -> Option<String> {
+        None
+    }
+
     fn get_socket_count() -> TopologyTier;
 }
