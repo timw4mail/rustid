@@ -240,42 +240,20 @@ pub struct CpuArch {
 
 impl Default for CpuArch {
     fn default() -> Self {
-        Self::new(
-            Implementer::default(),
-            None,
-            UNK,
-            None,
-            MicroArch::default(),
-            UNK,
-            0,
-            None,
-        )
+        Self {
+            implementer: Implementer::default(),
+            system: None,
+            soc_model: None,
+            model: String::from(UNK),
+            micro_arch: MicroArch::default(),
+            code_name: UNK,
+            part_number: 0,
+            technology: None,
+        }
     }
 }
 
 impl CpuArch {
-    pub fn new(
-        implementer: Implementer,
-        system: Option<String>,
-        model: &str,
-        soc_model: Option<String>,
-        micro_arch: MicroArch,
-        code_name: &'static str,
-        part_number: usize,
-        technology: Option<&'static str>,
-    ) -> Self {
-        CpuArch {
-            implementer,
-            system,
-            model: String::from(model),
-            soc_model,
-            micro_arch,
-            code_name,
-            part_number,
-            technology,
-        }
-    }
-
     pub fn find(implementer: usize, part: usize, _variant: usize) -> Self {
         match implementer {
             IMPL_ARM => Self::find_arm(part),

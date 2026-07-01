@@ -1,5 +1,6 @@
 //! Os-specific data gathering
 use crate::common::TopologyTier;
+use alloc::string::String;
 
 #[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
 pub mod bsd;
