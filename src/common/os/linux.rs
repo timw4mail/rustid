@@ -61,10 +61,19 @@ fn get_soc_cpuinfo() -> Option<String> {
     None
 }
 
+fn get_devicetree_compatible() -> Option<Vec<String>> {
+    if let Ok(raw) = std::fs::read_to_string("/sys/firmware/devicetree/base/compatible") {
+        let res: Vec<String> = raw.split(",").map(String::from).collect();
+
+        return Some(res);
+    }
+
+    None
+}
+
 fn get_soc_devicetree() -> Option<String> {
-    if let Some(raw) = std::fs::read_to_string("/sys/firmware/devicetree/base/compatible") {
-        // @TODO filter and cleanup
-        return Some(raw);
+    if let Some(parts) = get_devicetree_compatible() {
+        return parts.last().cloned();
     }
 
     None
