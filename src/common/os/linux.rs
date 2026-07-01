@@ -62,6 +62,11 @@ fn get_soc_cpuinfo() -> Option<String> {
 }
 
 fn get_soc_devicetree() -> Option<String> {
+    if let Some(raw) = std::fs::read_to_string("/sys/firmware/devicetree/base/compatible") {
+        // @TODO filter and cleanup
+        return Some(raw);
+    }
+
     None
 }
 
