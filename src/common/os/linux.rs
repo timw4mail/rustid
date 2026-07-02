@@ -1,6 +1,6 @@
 #![cfg(target_os = "linux")]
 
-use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier};
+use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, ucfirst};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -61,9 +61,12 @@ fn get_soc_cpuinfo() -> Option<String> {
     None
 }
 
-fn get_devicetree_compatible() -> Option<Vec<String>> {
+fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
     if let Ok(raw) = std::fs::read_to_string("/sys/firmware/devicetree/base/compatible") {
-        let res: Vec<String> = raw.split(",").map(String::from).collect();
+        let res: Vec<_> = raw
+            .split('\0')
+            .map(|p| -> Vec<_> { p.split(",").map(String::from).collect() })
+            .collect();
 
         return Some(res);
     }
@@ -72,8 +75,24 @@ fn get_devicetree_compatible() -> Option<Vec<String>> {
 }
 
 fn get_soc_devicetree() -> Option<String> {
-    if let Some(parts) = get_devicetree_compatible() {
-        return parts.last().cloned();
+    if let Some(pairs) = get_devicetree_compatible()
+        && let Some(pair) = pairs.last().cloned()
+    {
+        if pair.len() < 2 {
+            return Some(pair[0].clone());
+        }
+
+        let raw_vendor = pair[0].clone();
+        let raw_model = pair[1].clone();
+
+        let vendor = match raw_vendor.as_str() {
+            "brcm" => String::from("Broadcom"),
+            "raspberrypi" => String::from("Raspberry Pi"),
+            other => ucfirst(other),
+        };
+        let model = raw_model.to_uppercase();
+
+        return Some(format!("{vendor} {model}"));
     }
 
     None

@@ -16,6 +16,14 @@ pub use os::*;
 
 use alloc::string::String;
 
+pub fn ucfirst(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CliFlags {
     pub color: bool,
