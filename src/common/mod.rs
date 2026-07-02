@@ -24,6 +24,14 @@ pub fn ucfirst(s: &str) -> String {
     }
 }
 
+pub fn cleanup_soc_vendor(s: &str) -> String {
+    match s {
+        "brcm" => String::from("Broadcom"),
+        "raspberrypi" => String::from("Raspberry Pi"),
+        other => ucfirst(other),
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CliFlags {
     pub color: bool,
