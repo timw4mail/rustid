@@ -7,7 +7,7 @@ pub mod features;
 pub mod micro_arch;
 pub mod os;
 use crate::common::{CliFlags, CoreType, CpuDisplay};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 pub use cpu::*;
 pub use features::{ArmFeatures, TArmFeatures};
@@ -27,41 +27,36 @@ trait TArmCpu {
 }
 
 impl CpuDisplay {
-    pub fn display(
-        cpu_arch: &micro_arch::CpuArch,
-        cores: &BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
-        features: &BTreeMap<&'static str, String>,
-        flags: CliFlags,
-    ) {
+    pub fn display(cpu_info: &Cpu, flags: CliFlags) {
         let cpu = CpuDisplay { flags };
 
         println!();
 
-        if let Some(system) = &cpu_arch.system {
+        if let Some(system) = &cpu_info.system {
             cpu.simple_line("System", system);
         }
 
-        if let Some(soc_model) = &cpu_arch.soc_model {
+        if let Some(soc_model) = &cpu_info.soc_model {
             cpu.simple_line("SoC", soc_model);
         }
 
         cpu.simple_line(
             "Implementer",
-            <brand::Vendor as Into<&str>>::into(cpu_arch.implementer),
+            <brand::Vendor as Into<&str>>::into(cpu_info.cpu_arch.implementer),
         );
 
-        cpu.simple_line("Model", &cpu_arch.model);
+        cpu.simple_line("Model", &cpu_info.cpu_arch.model);
 
-        cpu.simple_line("Codename", cpu_arch.code_name);
+        cpu.simple_line("Codename", cpu_info.cpu_arch.code_name);
 
-        if let Some(tech) = cpu_arch.technology {
+        if let Some(tech) = cpu_info.cpu_arch.technology {
             cpu.simple_line("Process", tech);
         }
 
         #[allow(clippy::explicit_counter_loop)]
-        if cores.len() > 1 {
+        if cpu_info.cores.len() > 1 {
             let mut i = 1;
-            for ((kind, _, _), core) in cores {
+            for ((kind, _, _), core) in &cpu_info.cores {
                 let core_num = format!("Core #{i}");
                 println!("{}", cpu.label(&core_num));
                 println!("{}{}", cpu.label("Count"), core.count);
@@ -83,8 +78,9 @@ impl CpuDisplay {
             }
         } else {
             println!("{}", cpu.label("Cores"));
-            let keys: Vec<_> = cores.keys().collect();
-            let core = cores
+            let keys: Vec<_> = cpu_info.cores.keys().collect();
+            let core = cpu_info
+                .cores
                 .get(keys[0])
                 .expect("There should be a core to display");
 
@@ -99,10 +95,10 @@ impl CpuDisplay {
         }
 
         // Display features
-        if !features.is_empty() {
+        if !cpu_info.features.is_empty() {
             let keys = ["Base", "SIMD", "Security", "Atomics", "Fp", "Misc"];
             for key in keys {
-                if let Some(feat_str) = features.get(key) {
+                if let Some(feat_str) = cpu_info.features.get(key) {
                     if key == "Base" {
                         println!("{}{}", cpu.inline_sublabel("Features", "Base"), feat_str);
                     } else {

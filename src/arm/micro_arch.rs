@@ -1,8 +1,7 @@
 use crate::arm::CoreType;
 use crate::arm::brand::*;
 use crate::common::constants::*;
-use crate::common::os::OS;
-use crate::common::{Cache, TOSData, UNK};
+use crate::common::{Cache, UNK};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -229,8 +228,6 @@ impl From<MicroArch> for String {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuArch {
     pub implementer: Implementer,
-    pub system: Option<String>,
-    pub soc_model: Option<String>,
     pub model: String,
     pub micro_arch: MicroArch,
     pub code_name: &'static str,
@@ -242,8 +239,6 @@ impl Default for CpuArch {
     fn default() -> Self {
         Self {
             implementer: Implementer::default(),
-            system: None,
-            soc_model: None,
             model: String::from(UNK),
             micro_arch: MicroArch::default(),
             code_name: UNK,
@@ -277,16 +272,12 @@ impl CpuArch {
             Option<&'static str>,
         )],
     ) -> Self {
-        let soc_model = OS::get_soc();
-        let system = OS::get_system_name();
         parts
             .iter()
             .find(|(p, _, _, _, _)| *p == part)
             .map(|&(_, model, ma, name, tech)| CpuArch {
                 implementer,
-                system,
                 model: String::from(model),
-                soc_model,
                 micro_arch: ma,
                 code_name: name,
                 part_number: part,
