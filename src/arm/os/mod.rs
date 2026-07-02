@@ -8,7 +8,7 @@ pub struct OsCpuInfo {
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
-    pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+    pub cores: BTreeMap<(CoreType, Midr), CpuCore>,
     pub model: String,
     pub raw: BTreeMap<String, String>,
     pub midr_source: DataSource,
@@ -19,8 +19,8 @@ pub struct OsCpuInfo {
 /// Iterates over MIDRs, assigning core types/names via `CpuArch::find()`
 /// and merging cache data from the runtime or sysfs.
 #[cfg(not(target_os = "macos"))]
-pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>, Midr), CpuCore> {
-    let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
+pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore> {
+    let mut cores: BTreeMap<(CoreType, Midr), CpuCore> = BTreeMap::new();
 
     let runtime_cache = Cache::detect();
 
@@ -61,7 +61,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Option<String>
         let cache = core_cache_map.get(&midr.to_bits()).cloned().flatten();
 
         cores
-            .entry((core_type, name.clone(), *midr))
+            .entry((core_type, *midr))
             .and_modify(|c| c.count += 1)
             .or_insert(CpuCore {
                 kind: core_type,

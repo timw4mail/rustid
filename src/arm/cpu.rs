@@ -13,7 +13,7 @@ pub struct Cpu {
     pub model: String,
     pub system: Option<String>,
     pub soc_model: Option<String>,
-    pub cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore>,
+    pub cores: BTreeMap<(CoreType, Midr), CpuCore>,
     pub raw: BTreeMap<String, String>,
     pub features: BTreeMap<&'static str, String>,
     pub midr_source: DataSource,

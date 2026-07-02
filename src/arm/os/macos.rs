@@ -329,7 +329,7 @@ pub fn detect() -> OsCpuInfo {
     let vendor: String = Vendor::from(midr.implementer).into();
     let cpu_arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
     let values = get_sysctl_map();
-    let mut cores: BTreeMap<(CoreType, Option<String>, Midr), CpuCore> = BTreeMap::new();
+    let mut cores: BTreeMap<(CoreType, Midr), CpuCore> = BTreeMap::new();
 
     let perf_levels: usize = values
         .get("hw.nperflevels")
@@ -379,7 +379,7 @@ pub fn detect() -> OsCpuInfo {
         let name = find_core_codename(&midr, kind);
 
         cores.insert(
-            (kind, name.clone(), midr),
+            (kind, midr),
             CpuCore {
                 kind,
                 name,

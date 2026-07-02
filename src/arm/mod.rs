@@ -6,7 +6,7 @@ pub mod cpu;
 pub mod features;
 pub mod micro_arch;
 pub mod os;
-use crate::common::{CliFlags, CoreType, CpuDisplay};
+use crate::common::{CliFlags, CpuDisplay};
 use std::collections::HashSet;
 
 pub use cpu::*;
@@ -56,11 +56,11 @@ impl CpuDisplay {
         #[allow(clippy::explicit_counter_loop)]
         if cpu_info.cores.len() > 1 {
             let mut i = 1;
-            for ((kind, _, _), core) in &cpu_info.cores {
+            for core in cpu_info.cores.values() {
                 let core_num = format!("Core #{i}");
                 println!("{}", cpu.label(&core_num));
                 println!("{}{}", cpu.label("Count"), core.count);
-                let name = Into::<&str>::into(*kind);
+                let name = Into::<&str>::into(core.kind);
                 println!("{}{}", cpu.label("Type"), name);
 
                 if let Some(name) = core.name.clone() {

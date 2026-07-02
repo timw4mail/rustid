@@ -1,5 +1,5 @@
-use crate::arm::CoreType;
 use crate::arm::brand::*;
+use crate::common::CoreType;
 use crate::common::constants::*;
 use crate::common::{Cache, UNK};
 
