@@ -16,6 +16,22 @@ impl TDetect for TopologyCount {
 }
 
 impl TOSData for OS {
+    fn get_system_name() -> Option<String> {
+        if let Some(raw) = get_sysctl_value("hw.product").or(get_sysctl_value("hw.model")) {
+            let unknown = format!("Unknown model {raw}");
+
+            // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
+            let model = match raw.as_str() {
+                "Mac17,5" => "MacBook Neo (13-inch, A18 Pro, 2026)",
+                _ => unknown.as_str(),
+            };
+
+            Some(String::from(model))
+        } else {
+            None
+        }
+    }
+
     fn get_socket_count() -> TopologyTier {
         let hw_packages = get_sysctl_int_value("hw.packages");
 
