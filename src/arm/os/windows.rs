@@ -13,7 +13,6 @@ use windows::Win32::System::Threading::*;
 
 /// Windows-specific CPU detection via MRS and the registry.
 pub fn detect() -> OsCpuInfo {
-    let mut raw_midr: HashSet<usize> = HashSet::new();
     let mut midrs: HashSet<Midr> = HashSet::new();
     let mut all_midrs: Vec<Midr> = Vec::new();
     let mut midr_source = DataSource::CpuLookupTable;
@@ -22,14 +21,12 @@ pub fn detect() -> OsCpuInfo {
         for core_id in core_ids {
             core_affinity::set_for_current(core_id);
             let midr_val = crate::arm::get_midr();
-            raw_midr.insert(midr_val);
             let midr = Midr::new(midr_val);
             midrs.insert(midr);
             all_midrs.push(midr);
         }
     } else {
         let midr_val = crate::arm::get_midr();
-        raw_midr.insert(midr_val);
         let midr = Midr::new(midr_val);
         midrs.insert(midr);
         all_midrs.push(midr);
@@ -40,9 +37,7 @@ pub fn detect() -> OsCpuInfo {
     if !windows_midrs.is_empty() {
         all_midrs.clear();
         midrs.clear();
-        raw_midr.clear();
         for m_val in windows_midrs {
-            raw_midr.insert(m_val);
             let midr = Midr::new(m_val);
             midrs.insert(midr);
             all_midrs.push(midr);
@@ -60,7 +55,6 @@ pub fn detect() -> OsCpuInfo {
     let cores = super::detect_cores(&all_midrs);
 
     OsCpuInfo {
-        raw_midr,
         midrs,
         vendor,
         cpu_arch,

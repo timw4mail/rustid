@@ -41,13 +41,11 @@ fn get_bsd_midrs() -> (Vec<usize>, DataSource) {
 
 /// BSD-specific CPU detection via sysctl and inline asm fallback.
 pub fn detect() -> OsCpuInfo {
-    let mut raw_midr: HashSet<usize> = HashSet::new();
     let mut midrs: HashSet<Midr> = HashSet::new();
     let mut all_midrs: Vec<Midr> = Vec::new();
 
     let (bsd_midrs, midr_source) = get_bsd_midrs();
     for m_val in bsd_midrs {
-        raw_midr.insert(m_val);
         let midr = Midr::new(m_val);
         midrs.insert(midr);
         all_midrs.push(midr);
@@ -63,7 +61,6 @@ pub fn detect() -> OsCpuInfo {
     let cores = super::detect_cores(&all_midrs);
 
     OsCpuInfo {
-        raw_midr,
         midrs,
         vendor,
         cpu_arch,

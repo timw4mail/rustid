@@ -7,8 +7,6 @@ pub mod features;
 pub mod micro_arch;
 pub mod os;
 use crate::common::{CliFlags, CpuDisplay};
-use std::collections::HashSet;
-
 pub use cpu::*;
 pub use features::{ArmFeatures, TArmFeatures};
 pub use micro_arch::{CpuCore, Midr};
@@ -21,8 +19,6 @@ trait TArmCpu {
         None
     }
 
-    fn raw_midr(&self) -> HashSet<usize>;
-    fn midr(&self) -> Option<&Midr>;
     fn vendor(&self) -> &str;
 }
 

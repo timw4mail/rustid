@@ -22,6 +22,7 @@ pub struct Midr {
     pub architecture: usize,
     pub part: usize,
     pub revision: usize,
+    pub raw: usize,
 }
 
 impl Midr {
@@ -32,6 +33,7 @@ impl Midr {
             architecture: (midr & ARCHITECTURE_MASK) >> ARCHITECTURE_OFFSET,
             part: (midr & PART_MASK) >> PART_OFFSET,
             revision: midr & REVISION_MASK,
+            raw: midr,
         }
     }
 

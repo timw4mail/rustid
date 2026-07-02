@@ -320,8 +320,6 @@ fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
 /// macOS-specific CPU detection via sysctl.
 pub fn detect() -> OsCpuInfo {
     let midr_val = get_synth_midr();
-    let mut raw_midr = HashSet::new();
-    raw_midr.insert(midr_val);
     let midr = Midr::new(midr_val);
     let mut midrs = HashSet::new();
     midrs.insert(midr);
@@ -395,7 +393,6 @@ pub fn detect() -> OsCpuInfo {
         .to_string();
 
     OsCpuInfo {
-        raw_midr,
         midrs,
         vendor,
         cpu_arch,

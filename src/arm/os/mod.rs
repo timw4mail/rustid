@@ -4,7 +4,6 @@ use std::collections::{BTreeMap, HashSet};
 
 /// Platform-specific CPU detection result, used by `cpu::Cpu::detect()`.
 pub struct OsCpuInfo {
-    pub raw_midr: HashSet<usize>,
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,

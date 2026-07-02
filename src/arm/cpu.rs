@@ -6,7 +6,6 @@ use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
-    pub raw_midr: HashSet<usize>,
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
@@ -26,7 +25,6 @@ impl TDetect for Cpu {
         let features = super::get_all_features();
 
         Self {
-            raw_midr: info.raw_midr,
             midrs: info.midrs,
             vendor: info.vendor,
             cpu_arch: info.cpu_arch,
@@ -47,16 +45,24 @@ impl TCpuDisplay for Cpu {
     where
         Self: std::fmt::Debug,
     {
-        println!(
-            "Main ID Register (MIDR): 0x{:X}",
-            self.raw_midr().iter().next().unwrap_or(&0)
-        );
-        if let Some(midr) = self.midr() {
-            println!("Implementer: 0x{:X} ({})", midr.implementer, self.vendor());
-            println!("Variant: 0x{:X}", midr.variant);
-            println!("Part Number: 0x{:X}", midr.part);
-            println!("Revision: 0x{:X}", midr.revision);
+        if !self.midrs.is_empty() {
+            println!("Main ID Register (MIDR) values:");
+            for (i, midr) in self.midrs.iter().enumerate() {
+                println!("Midr {i}:");
+                println!("    Raw: 0x{:X}", midr.raw);
+                println!(
+                    "    Implementer: 0x{:X} ({})",
+                    midr.implementer,
+                    self.vendor()
+                );
+                println!("    Variant: 0x{:X}", midr.variant);
+                println!("    Part Number: 0x{:X}", midr.part);
+                println!("    Revision: 0x{:X}", midr.revision);
+            }
+
+            println!();
         }
+
         println!("{:#?}", self);
     }
 
@@ -72,14 +78,6 @@ impl TArmCpu for Cpu {
         } else {
             Some(&self.model)
         }
-    }
-
-    fn raw_midr(&self) -> HashSet<usize> {
-        self.raw_midr.clone()
-    }
-
-    fn midr(&self) -> Option<&Midr> {
-        self.midrs.iter().next()
     }
 
     fn vendor(&self) -> &str {
