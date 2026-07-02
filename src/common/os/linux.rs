@@ -62,9 +62,10 @@ fn get_soc_cpuinfo() -> Option<String> {
 }
 
 fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
-    if let Ok(raw) = std::fs::read_to_string("/sys/firmware/devicetree/base/compatible") {
+    if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/compatible") {
         let res: Vec<_> = raw
             .split('\0')
+            .filter(|s| !s.is_empty())
             .map(|p| -> Vec<_> { p.split(",").map(String::from).collect() })
             .collect();
 
