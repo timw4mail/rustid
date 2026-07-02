@@ -25,11 +25,14 @@ pub fn ucfirst(s: &str) -> String {
 }
 
 pub fn cleanup_soc_vendor(s: &str) -> String {
-    match s {
-        "brcm" => String::from("Broadcom"),
-        "raspberrypi" => String::from("Raspberry Pi"),
-        other => ucfirst(other),
-    }
+    let other = ucfirst(s);
+
+    String::from(match s {
+        "bigtreetech" => "BigTreeTech",
+        "brcm" => "Broadcom",
+        "raspberrypi" => "Raspberry Pi",
+        _ => other.as_str(),
+    })
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -77,22 +77,35 @@ fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
     None
 }
 
+fn format_compatible_pair(pair: Vec<String>) -> String {
+    if pair.len() < 2 {
+        return pair[0].clone();
+    }
+
+    let raw_vendor = pair[0].clone();
+    let raw_model = pair[1].clone();
+
+    let vendor = cleanup_soc_vendor(raw_vendor.as_str());
+    let model = raw_model;
+
+    return format!("{vendor} {model}");
+}
+
+fn get_system_devicetree() -> Option<String> {
+    if let Some(raw_pairs) = get_devicetree_compatible()
+        && let Some(pair) = raw_pairs.first().cloned()
+    {
+        return Some(format_compatible_pair(pair));
+    }
+
+    None
+}
+
 fn get_soc_devicetree() -> Option<String> {
-    if let Some(raw_pairs) = get_devicetree_compatible() {
-        // @TODO: handle output of multiple pairs of strings
-        if let Some(pair) = raw_pairs.last().cloned() {
-            if pair.len() < 2 {
-                return Some(pair[0].clone());
-            }
-
-            let raw_vendor = pair[0].clone();
-            let raw_model = pair[1].clone();
-
-            let vendor = cleanup_soc_vendor(raw_vendor.as_str());
-            let model = raw_model;
-
-            return Some(format!("{vendor} {model}"));
-        }
+    if let Some(raw_pairs) = get_devicetree_compatible()
+        && let Some(pair) = raw_pairs.last().cloned()
+    {
+        return Some(format_compatible_pair(pair));
     }
 
     None
@@ -133,13 +146,20 @@ impl TOSData for OS {
     }
 
     fn get_system_name() -> Option<String> {
-        let cpuinfo = get_proc_cpuinfo_data();
-        if let Some(last) = cpuinfo.last()
+        // Let's try /proc/cpuinfo first, as that will be formatted nicely
+        if let Some(last) = get_proc_cpuinfo_data().last()
             && (!last.contains_key("processor"))
             && let Some(raw) = last.get("Model")
         {
             return Some(String::from(raw.trim()));
         }
+
+        let devicetree_name = get_system_devicetree();
+
+        if devicetree_name.is_some() {
+            return devicetree_name;
+        }
+
         None
     }
 
