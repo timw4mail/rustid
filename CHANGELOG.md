@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0]
+
+### Added
+- Added mappings for Ivy Bridge and Bonnel Cpus
+
+### Changed
+- Improved formatting of ARM SoC values
+
 ## [1.5.0]
 
 ### Added
