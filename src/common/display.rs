@@ -359,7 +359,7 @@ impl CpuDisplay {
     }
 
     #[inline]
-    fn cache_size(raw_size: u32) -> (u32, &'static str) {
+    pub fn cache_size(raw_size: u32) -> (u32, &'static str) {
         let mut num = raw_size / 1024;
         let unit = if num >= 1024 { "MB" } else { "KB" };
 

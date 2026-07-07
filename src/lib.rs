@@ -44,6 +44,9 @@ pub mod common;
 
 #[cfg(x86_cpu)]
 pub mod cpuid;
+
+#[cfg(feature = "gui")]
+pub mod gui;
 #[cfg(x86_cpu)]
 pub use cpuid::Cpu;
 

@@ -15,13 +15,16 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump run-x86-emu
+.PHONY: default check lint fix fmt quality build build-debug build-release clean run run-gui from-file test coverage test-all
 
 # Lists the available actions
 default:
 	@echo "This is an $(ARCH) machine, running $(OS) on $(NUM_CPUS) cpus/cores/threads"
 	@rustup default
 	@just --list 2>/dev/null || echo "Install 'just' to see available commands"
+
+_cargo_cross:
+	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
 
 # Check code validity and style
 check:
@@ -54,10 +57,6 @@ build-debug:
 build-release:
 	cargo build --release
 
-# Fetch cross compilation tool
-_cargo_cross:
-	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
-
 # DOS build tools
 _build-dos-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
@@ -74,6 +73,7 @@ _build-dos-dump: _build-dos-tools
 build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
 	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
+	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
 # Build for modern windows (cli), requires visual studio to be installed
@@ -85,29 +85,6 @@ build-windows:
 build-windows-arm:
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
 	cargo build --target aarch64-pc-windows-msvc --release
-
-# Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
-run-x86-emu:
-	@if ! rustup target list --installed | grep -q arm64ec-pc-windows-msvc; then rustup target add arm64ec-pc-windows-msvc; fi
-	cargo run --target arm64ec-pc-windows-msvc $(ARG)
-
-# Run the dos build in DOSBox-X
-run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
-
-# Run the dos build in DOSBox-X, and return the output to a file
-test-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ./tools/dosbox-x.conf -time-limit 2 rustid.exe
-
-# Run windwos arm tests
-test-arm: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
-	cargo cross test --target aarch64-pc-windows-gnu
-
-# Run tests for 32-bit x86
-test-x86:
-	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
-	cargo test --target i686-pc-windows-msvc
 endif
 
 # Build for modern windows (cli), can be easier than msvc build
@@ -151,22 +128,37 @@ clean:
 run:
 	@$(BASE_RUN) -- $(ARG)
 
+# Build and run gui version
+run-gui:
+	@$(BASE_RUN) --features gui --bin rustid-gui -- $(ARG)
+
 # Run rustid, but pull cpu information from a cpuid dump
 from-file:
 	@$(BASE_RUN) file $(ARG)
 
-# Run the dos build in DOSBox-X (Linux/Unix)
-ifeq ($(OS),Linux)
-run-dos: build-dos
-	dosbox-x . -fastlaunch rustid.exe
-
-test-dos: build-dos
-	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
+# Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
+ifeq ($(OS),Windows_NT)
+run-x86-emu:
+	@if ! rustup target list --installed | grep -q arm64ec-pc-windows-msvc; then rustup target add arm64ec-pc-windows-msvc; fi
+	cargo run --target arm64ec-pc-windows-msvc $(ARG)
 endif
-ifeq ($(OS),Darwin)
+
+# Run the dos build in DOSBox-X
+ifeq ($(OS),Windows_NT)
+run-dos: build-dos
+	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
+endif
+ifneq ($(OS),Windows_NT)
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.exe
+endif
 
+# Run the dos build in DOSBox-X, and return the output to a file
+ifeq ($(OS),Windows_NT)
+test-dos: build-dos
+	"C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ./tools/dosbox-x.conf -time-limit 2 rustid.exe
+endif
+ifneq ($(OS),Windows_NT)
 test-dos: build-dos
 	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 endif
@@ -183,25 +175,25 @@ coverage:
 test-all: test test-x86 test-arm
 
 # Run linux aarch64 tests
-ifeq ($(OS),Linux)
+ifneq ($(OS),Windows_NT)
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
 	cargo cross test --target aarch64-unknown-linux-musl
 endif
-ifeq ($(OS),Darwin)
+ifeq ($(OS),Windows_NT)
 test-arm: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo cross test --target aarch64-unknown-linux-musl
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
+	cargo cross test --target aarch64-pc-windows-gnu
 endif
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
-ifeq ($(OS),Linux)
+ifneq ($(OS),Windows_NT)
 test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
 	cargo cross test --target i686-unknown-linux-musl
 endif
-ifeq ($(OS),Darwin)
-test-x86: _cargo_cross
-	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo cross test --target i686-unknown-linux-musl
+ifeq ($(OS),Windows_NT)
+test-x86:
+	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
+	cargo test --target i686-pc-windows-msvc
 endif

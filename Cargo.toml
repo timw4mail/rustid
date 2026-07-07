@@ -9,7 +9,7 @@ license = "MIT"
 default-run = "rustid"
 
 [dependencies]
-
+slint = { version = "1", optional = true }
 
 [profile.release]
 opt-level = "z"
@@ -42,6 +42,11 @@ name = "debug"
 required-features = ["debug", "dos-build"]
 path="src/dos_debug.rs"
 
+[[bin]]
+name = "rustid-gui"
+required-features = ["gui"]
+path="src/rustid_gui.rs"
+
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)'] }
 
@@ -52,3 +57,4 @@ unwrap_used = "warn"
 default = []
 debug = []
 dos-build = []
+gui = ["dep:slint"]

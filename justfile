@@ -112,6 +112,10 @@ clean:
 run arg="":
 	@{{base_run}} -- {{arg}}
 
+# Build and run gui version
+run-gui arg="":
+	@{{base_run}} --features gui --bin rustid-gui -- {{arg}}
+
 # Run rustid, but pull cpu information from a cpuid dump
 from-file arg="":
 	@{{base_run}} file {{arg}}
