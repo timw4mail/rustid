@@ -73,7 +73,7 @@ fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
                 if !(p.contains("Power") || p.contains("Mac")) {
                     p.split(",").map(String::from).collect()
                 } else {
-                    vec![p]
+                    vec![String::from(p)]
                 }
             })
             .collect();
