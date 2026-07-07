@@ -98,7 +98,26 @@ fn format_compatible_pair(pair: Vec<String>) -> String {
     format!("{vendor} {model}")
 }
 
-fn get_system_devicetree() -> Option<String> {
+fn get_raw_system_name() -> Option<String> {
+    // Let's look for a few possibilities that may have the formatted device name,
+    // or at least the easier to use system name
+    let simple_paths: Vec<_> = vec![
+        "/proc/device-tree/model",
+        "/proc/device-tree/smbios/smbios/system/product",
+    ];
+
+    for path in simple_paths {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            let raw: Vec<_> = raw.split('\0').collect();
+            let raw = raw.first();
+            if let Some(raw) = raw {
+                return Some(String::from(*raw));
+            } else {
+                return None;
+            }
+        }
+    }
+
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {
@@ -161,10 +180,10 @@ impl TOSData for OS {
             return Some(String::from(raw.trim()));
         }
 
-        let devicetree_name = get_system_devicetree();
+        let name = get_raw_system_name();
 
-        if devicetree_name.is_some() {
-            return devicetree_name;
+        if name.is_some() {
+            return name;
         }
 
         None
