@@ -68,7 +68,14 @@ fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
         let res: Vec<_> = raw
             .split('\0')
             .filter(|s| !s.is_empty())
-            .map(|p| -> Vec<_> { p.split(",").map(String::from).collect() })
+            .map(|p| -> Vec<_> {
+                // Since Mac Model strings contain commas, we don't want to split on those
+                if !(p.contains("Power") || p.contains("Mac")) {
+                    p.split(",").map(String::from).collect()
+                } else {
+                    vec![p]
+                }
+            })
             .collect();
 
         return Some(res);
