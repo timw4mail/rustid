@@ -199,6 +199,25 @@ impl CpuDisplay {
     pub fn format_system_name(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
         let model = match raw {
+            // PowerPC
+            "PowerMac11,2" => "Power Mac G5 (Late 2005)",
+            "PowerMac9,1" => "Power Mac G5 (Late 2004)",
+            "PowerMac7,3" => "Power Mac G5 (June 2004 | Early 2005)",
+            "PowerMac7,2" => "Power Mac G5 (June 2003 | Early 2005)",
+            "PowerMac5,1" => "Power Mac G4 Cube",
+            "PowerMac4,2" => "iMac (15-inch Early 2003)",
+            "PowerMac3,6" => "Power Mac G4 (FW 800 | Mirrored Drive Doors)",
+            "PowerMac3,5" => "Power Mac G4 (Quicksilver)",
+            "PowerMac3,4" => "Power Mac G4 (Digital Audio)",
+            "PowerMac3,3" => "Power Mac G4 (Gigabit Ethernet)",
+            "PowerMac3,1" => "Power Mac G4 (AGP Graphics)",
+            "PowerMac1,2" => "Power Mac G4 (PCI Graphics)",
+            "PowerMac1,1" => "Power Macintosh G3 (Blue and White)",
+            "PowerBook5,2" => "PowerBook G4 (15-inch, FW 800)",
+            "PowerBook4,1" => "iBook (late 2001)",
+            "PowerBook3,2" => "PowerBook G4 (Titanium)",
+
+            // Intel and Arm64
             "MacBookPro18,3" | "MacBookPro18,4" => "MacBook Pro (14-inch, 2021)",
             "MacBookPro18,1" | "MacBookPro18,2" => "MacBook Pro (16-inch, 2021)",
             "MacBookPro17,1" => "MacBook Pro (13-inch, 2020)",
