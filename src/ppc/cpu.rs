@@ -162,6 +162,7 @@ impl TDetect for Cpu {
 
 impl TCpuDisplay for Cpu {
     fn debug(&self) {
+        println!("PVR: {:x}", self.pvr);
         println!("{:#?}", self);
     }
 
