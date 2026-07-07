@@ -170,7 +170,7 @@ impl TCpuDisplay for Cpu {
 
         let cpu = CpuDisplay { flags };
 
-        if let Some(system) = self.system {
+        if let Some(system) = &self.system {
             cpu.simple_line("System", &cpu.format_system_name(&system));
         }
 
