@@ -17,11 +17,7 @@ impl TDetect for TopologyCount {
 
 impl TOSData for OS {
     fn get_system_name() -> Option<String> {
-        if let Some(raw) = get_sysctl_value("hw.product").or(get_sysctl_value("hw.model")) {
-            Some(raw)
-        } else {
-            None
-        }
+        get_sysctl_value("hw.product").or(get_sysctl_value("hw.model"))
     }
 
     fn get_socket_count() -> TopologyTier {
