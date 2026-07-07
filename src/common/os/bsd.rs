@@ -19,7 +19,7 @@ impl TOSData for OS {
     }
 
     fn get_system_name() -> Option<String> {
-        #[cfg(target_os = "netbsd")]
+        #[cfg(any(target_os = "netbsd", target_os = "openbsd"))]
         {
             if let Some(model) = get_sysctl_value("hw.model") {
                 return Some(String::from(model.trim()));
@@ -35,7 +35,7 @@ impl TOSData for OS {
             None
         }
 
-        #[cfg(not(any(target_os = "netbsd", target_os = "freebsd")))]
+        #[cfg(not(bsd))]
         None
     }
 

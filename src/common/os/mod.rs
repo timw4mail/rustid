@@ -2,10 +2,10 @@
 use crate::common::TopologyTier;
 use alloc::string::String;
 
-#[cfg(any(target_os = "freebsd", target_os = "netbsd"))]
+#[cfg(bsd)]
 pub mod bsd;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub mod linux;
 
 #[cfg(target_os = "macos")]
@@ -22,7 +22,10 @@ pub mod windows;
 
 // ----------------------------------------------------------------------------
 
-#[cfg(target_os = "linux")]
+#[cfg(bsd)]
+pub use bsd::*;
+
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub use linux::*;
 
 #[cfg(target_os = "macos")]
