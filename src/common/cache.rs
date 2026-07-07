@@ -166,7 +166,7 @@ pub struct Cache {
 
 #[cfg(not(x86_cpu))]
 impl Cache {
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "android", target_os = "linux")))]
     pub fn detect() -> Option<Cache> {
         None
     }

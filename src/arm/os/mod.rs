@@ -86,9 +86,9 @@ pub use macos::*;
 // ! Linux
 // ----------------------------------------------------------------------------
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub mod linux;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 pub use linux::*;
 
 // ----------------------------------------------------------------------------
@@ -104,7 +104,7 @@ pub use windows::*;
 // ! BSD (NetBSD, FreeBSD, OpenBSD)
 // ----------------------------------------------------------------------------
 
-#[cfg(any(target_os = "netbsd", target_os = "freebsd", target_os = "openbsd"))]
+#[cfg(bsd)]
 pub mod bsd;
-#[cfg(any(target_os = "netbsd", target_os = "freebsd", target_os = "openbsd"))]
+#[cfg(bsd)]
 pub use bsd::*;
