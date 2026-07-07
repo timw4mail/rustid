@@ -14,11 +14,9 @@ slint::slint! {
     }
 
     export component AppWindow inherits Window {
-        min-width: 600px;
-        min-height: 600px;
-        // preferred-height: 800px;
+        min-width: 640px;
+        preferred-height: 900px;
         title: "Rustid - CPU Information";
-        background: #1e1e1e;
         in property <[RowData]> rows;
 
         VerticalLayout {
@@ -36,8 +34,9 @@ slint::slint! {
                         col: 0;
                         row: idx;
                         horizontal-alignment: right;
-                        color: #00DD00;
+                        // color: #00DD00;
                         font-size: 14px;
+                        font-weight: FontWeight.bold;
                     }
                     for data[idx] in rows: Text {
                         text: data.sublabel;
@@ -46,6 +45,7 @@ slint::slint! {
                         horizontal-alignment: right;
                         color: #569cd6;
                         font-size: 14px;
+                        font-weight: FontWeight.bold;
                     }
                     for data[idx] in rows: HorizontalLayout {
                         padding-left: 12px;
@@ -53,7 +53,6 @@ slint::slint! {
                         row: idx;
                         Text {
                             text: data.value;
-                            color: #ffffff;
                             font-size: 14px;
                         }
                     }
@@ -90,6 +89,8 @@ fn build_rows(cpu: &Cpu) -> Vec<RowData> {
         )
         .into(),
     });
+
+    blank_row(&mut rows);
 
     #[cfg(x86_cpu)]
     build_x86_rows(&mut rows, cpu);
