@@ -294,6 +294,10 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
+        if let Some(system) = &self.system {
+            disp.simple_line("System", &disp.format_system_name(system));
+        }
+
         let ma = self.arch.micro_arch.as_str();
 
         disp.simple_line("Architecture", FeatureClass::detect().to_str());

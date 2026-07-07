@@ -10,7 +10,7 @@ use super::{EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
 #[cfg(not(dos))]
 use super::provider;
 
-use crate::common::{Cache, CoreType, DataSource, TDetect, UNK};
+use crate::common::{Cache, CoreType, DataSource, TDetect, TOSData, UNK};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -246,6 +246,9 @@ pub struct CpuCore {
 /// Represents a complete x86/x86_64 CPU with all detected information.
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
+    /// The system name, if applicable
+    pub system: Option<String>,
+    /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,
     /// CPU architecture and microarchitecture details
     pub arch: CpuArch,
@@ -537,6 +540,11 @@ impl TDetect for Cpu {
     /// Performs full CPU detection including architecture, microarchitecture,
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
+        let system = if provider::info_source() == provider::CpuidInfoSource::DumpFile {
+            None
+        } else {
+            crate::common::OS::get_system_name()
+        };
         let sig = CpuSignature::detect();
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect();
@@ -552,6 +560,7 @@ impl TDetect for Cpu {
         let cores = Vec::new();
 
         Self {
+            system,
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
             hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
