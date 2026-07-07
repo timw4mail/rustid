@@ -10,6 +10,7 @@ use std::path::Path;
 
 #[derive(Debug, PartialEq)]
 pub struct Cpu {
+    pub system: Option<String>,
     pub pvr: u32,
     pub version: u16,
     pub revision: u16,
@@ -165,6 +166,10 @@ impl TCpuDisplay for Cpu {
         println!();
 
         let cpu = CpuDisplay { flags };
+
+        if let Some(system) = self.cpu.system {
+            cpu.simple_line("System", cpu.format_system_name(self.cpu.system));
+        }
 
         cpu.simple_line("Model", self.cpu_arch.marketing_name);
         cpu.simple_line("MicroArch", self.cpu_arch.micro_arch.into());

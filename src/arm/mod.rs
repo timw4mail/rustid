@@ -29,7 +29,7 @@ impl CpuDisplay {
         println!();
 
         if let Some(system) = &cpu_info.system {
-            cpu.simple_line("System", system);
+            cpu.simple_line("System", cpu.format_system_name(system));
         }
 
         if let Some(soc_model) = &cpu_info.soc_model {

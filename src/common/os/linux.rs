@@ -88,7 +88,7 @@ fn format_compatible_pair(pair: Vec<String>) -> String {
     let vendor = cleanup_soc_vendor(raw_vendor.as_str());
     let model = raw_model;
 
-    return format!("{vendor} {model}");
+    format!("{vendor} {model}")
 }
 
 fn get_system_devicetree() -> Option<String> {
