@@ -5,6 +5,8 @@ use slint::{ModelRc, VecModel};
 use std::rc::Rc;
 
 slint::slint! {
+    import { ScrollView } from "std-widgets.slint";
+
     export struct RowData {
         label: string,
         sublabel: string,
@@ -12,14 +14,15 @@ slint::slint! {
     }
 
     export component AppWindow inherits Window {
-        width: 800px;
-        height: 600px;
+        min-width: 600px;
+        min-height: 600px;
+        // preferred-height: 800px;
         title: "Rustid - CPU Information";
         background: #1e1e1e;
         in property <[RowData]> rows;
 
         VerticalLayout {
-            Flickable {
+            ScrollView {
                 viewport-width: parent.width;
                 viewport-height: max(grid.preferred-height, parent.height);
 
@@ -33,22 +36,26 @@ slint::slint! {
                         col: 0;
                         row: idx;
                         horizontal-alignment: right;
-                        color: #9cdcfe;
+                        color: #00DD00;
                         font-size: 14px;
                     }
                     for data[idx] in rows: Text {
                         text: data.sublabel;
-                        col: 1;
+                        col: 0;
                         row: idx;
+                        horizontal-alignment: right;
                         color: #569cd6;
                         font-size: 14px;
                     }
-                    for data[idx] in rows: Text {
-                        text: data.value;
-                        col: 2;
+                    for data[idx] in rows: HorizontalLayout {
+                        padding-left: 12px;
+                        col: 1;
                         row: idx;
-                        color: #d4d4d4;
-                        font-size: 14px;
+                        Text {
+                            text: data.value;
+                            color: #ffffff;
+                            font-size: 14px;
+                        }
                     }
                 }
             }
@@ -64,9 +71,9 @@ pub fn run() {
 
     let model: ModelRc<RowData> = Rc::new(VecModel::from(rows)).into();
 
-    let ui = AppWindow::new().unwrap();
+    let ui = AppWindow::new().expect("Failed to create Window");
     ui.set_rows(model);
-    ui.run().unwrap();
+    ui.run().expect("Failed to run GUI");
 }
 
 fn build_rows(cpu: &Cpu) -> Vec<RowData> {
@@ -125,13 +132,18 @@ fn push_row(rows: &mut Vec<RowData>, label: &str, sublabel: &str, value: &str) {
     }
 }
 
+fn push_row_and_blank(rows: &mut Vec<RowData>, label: &str, sublabel: &str, value: &str) {
+    push_row(rows, label, sublabel, value);
+    blank_row(rows);
+}
+
 // ---------------------------------------------------------------------------
 // x86 / x86_64
 // ---------------------------------------------------------------------------
 #[cfg(x86_cpu)]
 fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
     use crate::common::UNK;
-    use crate::cpuid::{FeatureClass, HypervisorBrand, MicroArch, cpu::CpuSignature};
+    use crate::cpuid::{FeatureClass, HypervisorBrand, micro_arch::MicroArch};
 
     let disp = CpuDisplay {
         flags: CliFlags {
@@ -141,33 +153,29 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
     };
 
     if let Some(system) = &cpu.system {
-        push_row(rows, "System", "", &disp.format_system_name(system));
-        blank_row(rows);
+        push_row_and_blank(rows, "System", "", &disp.format_system_name(system));
     }
 
-    push_row(rows, "Architecture", "", FeatureClass::detect().to_str());
-    blank_row(rows);
+    push_row_and_blank(rows, "Architecture", "", FeatureClass::detect().to_str());
 
     if cpu.arch.brand_name != UNK {
-        push_row(
+        push_row_and_blank(
             rows,
             "Vendor",
             "",
             &format!("{} ({})", cpu.arch.vendor_string, cpu.arch.brand_name),
         );
-        blank_row(rows);
     }
 
     #[cfg(not(dos))]
     if let Some(hyp_str) = &cpu.hyp_vendor_str {
         let hyp = HypervisorBrand::from(hyp_str.as_str());
-        push_row(
+        push_row_and_blank(
             rows,
             "Hypervisor",
             "",
             &format!("{} ({})", hyp_str, hyp.to_str()),
         );
-        blank_row(rows);
     }
 
     build_x86_model(rows, cpu);
@@ -175,35 +183,29 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
 
     let ma = cpu.arch.micro_arch.as_str();
     if ma != UNK {
-        push_row(rows, "MicroArch", "", ma);
-        blank_row(rows);
+        push_row_and_blank(rows, "MicroArch", "", ma);
     }
 
     if cpu.arch.code_name != UNK
         && cpu.arch.code_name != ma
         && cpu.arch.micro_arch != MicroArch::I486
     {
-        push_row(rows, "Codename", "", cpu.arch.code_name);
-        blank_row(rows);
+        push_row_and_blank(rows, "Codename", "", cpu.arch.code_name);
     }
 
     if let Some(tech) = &cpu.arch.technology {
-        push_row(rows, "Process Node", "", tech);
-        blank_row(rows);
+        push_row_and_blank(rows, "Process Node", "", tech);
     }
 
     if let Some(egg) = &cpu.easter_egg {
-        push_row(rows, "Easter Egg", "", egg);
-        blank_row(rows);
+        push_row_and_blank(rows, "Easter Egg", "", egg);
     }
 
     if !cpu.has_cpuid {
-        push_row(rows, "CPUID", "", "No");
-        blank_row(rows);
+        push_row_and_blank(rows, "CPUID", "", "No");
     }
     if cpu.signature.is_overdrive {
-        push_row(rows, "Overdrive", "", "Yes");
-        blank_row(rows);
+        push_row_and_blank(rows, "Overdrive", "", "Yes");
     }
 
     if !cpu.cores.is_empty() {
@@ -258,7 +260,7 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
         if !centaur_map.is_empty() {
             let list: Vec<&str> = centaur_map
                 .iter()
-                .filter(|(_, enabled)| **enabled)
+                .filter(|(_, enabled)| *enabled)
                 .map(|(name, _)| *name)
                 .collect();
             if !list.is_empty() {
@@ -400,25 +402,19 @@ fn build_arm_rows(rows: &mut Vec<RowData>, cpu: &crate::arm::Cpu) {
     };
 
     if let Some(system) = &cpu.system {
-        push_row(rows, "System", "", &disp.format_system_name(system));
-        blank_row(rows);
+        push_row_and_blank(rows, "System", "", &disp.format_system_name(system));
     }
 
     if let Some(soc_model) = &cpu.soc_model {
-        push_row(rows, "SoC", "", soc_model);
-        blank_row(rows);
+        push_row_and_blank(rows, "SoC", "", soc_model);
     }
 
-    push_row(rows, "Implementer", "", &cpu.vendor);
-    blank_row(rows);
-    push_row(rows, "Model", "", &cpu.cpu_arch.model);
-    blank_row(rows);
-    push_row(rows, "Codename", "", cpu.cpu_arch.code_name);
-    blank_row(rows);
+    push_row_and_blank(rows, "Implementer", "", &cpu.vendor);
+    push_row_and_blank(rows, "Model", "", &cpu.cpu_arch.model);
+    push_row_and_blank(rows, "Codename", "", cpu.cpu_arch.code_name);
 
     if let Some(tech) = cpu.cpu_arch.technology {
-        push_row(rows, "Process", "", tech);
-        blank_row(rows);
+        push_row_and_blank(rows, "Process", "", tech);
     }
 
     if cpu.cores.len() > 1 {
@@ -473,33 +469,27 @@ fn build_ppc_rows(rows: &mut Vec<RowData>, cpu: &crate::ppc::cpu::Cpu) {
     };
 
     if let Some(system) = &cpu.system {
-        push_row(rows, "System", "", &disp.format_system_name(system));
-        blank_row(rows);
+        push_row_and_blank(rows, "System", "", &disp.format_system_name(system));
     }
 
-    push_row(rows, "Model", "", cpu.cpu_arch.marketing_name);
-    blank_row(rows);
+    push_row_and_blank(rows, "Model", "", cpu.cpu_arch.marketing_name);
 
     let ma: &str = cpu.cpu_arch.micro_arch.into();
-    push_row(rows, "MicroArch", "", ma);
-    blank_row(rows);
+    push_row_and_blank(rows, "MicroArch", "", ma);
 
-    push_row(rows, "Code Name", "", cpu.cpu_arch.code_name);
-    blank_row(rows);
+    push_row_and_blank(rows, "Code Name", "", cpu.cpu_arch.code_name);
 
     if let Some(tech) = cpu.cpu_arch.technology {
-        push_row(rows, "Process", "", tech);
-        blank_row(rows);
+        push_row_and_blank(rows, "Process", "", tech);
     }
 
     if let Some(clock_mhz) = cpu.clock_speed {
-        push_row(
+        push_row_and_blank(
             rows,
             "Frequency",
             "",
             &CpuDisplay::format_frequency(clock_mhz),
         );
-        blank_row(rows);
     }
 
     let cc = |s: u32| CpuDisplay::cache_count(s, 1);
@@ -606,6 +596,7 @@ fn build_speed_rows(rows: &mut Vec<RowData>, speed: &crate::common::Speed) {
 #[cfg(x86_cpu)]
 fn build_signature_rows(rows: &mut Vec<RowData>, sig: &crate::cpuid::cpu::CpuSignature) {
     use crate::common::DataSource;
+    use crate::cpuid::cpu::CpuSignature;
 
     if *sig == CpuSignature::default() {
         return;
@@ -629,7 +620,7 @@ fn build_signature_rows(rows: &mut Vec<RowData>, sig: &crate::cpuid::cpu::CpuSig
     push_row(
         rows,
         "",
-        "hex",
+        "",
         &format!(
             "({}, {}, {}, {}, {})",
             sig.extended_family, sig.family, sig.extended_model, sig.model, sig.stepping
