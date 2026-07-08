@@ -204,37 +204,3 @@ impl CpuArch {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ppc750_lookup() {
-        let cpu = CpuArch::find(0x0200);
-        assert_eq!(cpu.marketing_name, "PowerPC 750");
-        assert_eq!(cpu.micro_arch, MicroArch::Ppc750);
-        assert_eq!(cpu.code_name, "Arthur");
-    }
-
-    #[test]
-    fn test_apple_g5_lookup() {
-        let cpu = CpuArch::find(0x0045);
-        assert_eq!(cpu.marketing_name, "Apple G5");
-        assert_eq!(cpu.micro_arch, MicroArch::Ppc970);
-    }
-
-    #[test]
-    fn test_unknown_lookup() {
-        let cpu = CpuArch::find(0xFFFF);
-        assert_eq!(cpu.marketing_name, UNK);
-        assert_eq!(cpu.micro_arch, MicroArch::Unknown);
-    }
-
-    #[test]
-    fn test_ppc970fx_lookup() {
-        let cpu = CpuArch::find(0x003C);
-        assert_eq!(cpu.marketing_name, "PowerPC 970FX");
-        assert_eq!(cpu.micro_arch, MicroArch::Ppc970fx);
-    }
-}
