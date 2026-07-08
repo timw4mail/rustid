@@ -331,3 +331,80 @@ impl Topology {
         d
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_topology_domain_default() {
+        let d = TopologyDomain::default();
+        assert_eq!(d.level, 0);
+        assert_eq!(d.kind, TopologyType::Invalid);
+        assert_eq!(d.count, 0);
+    }
+
+    #[test]
+    fn test_topology_domain_new() {
+        let d = TopologyDomain {
+            level: 1,
+            kind: TopologyType::Core,
+            count: 4,
+        };
+        assert_eq!(d.level, 1);
+        assert_eq!(d.kind, TopologyType::Core);
+        assert_eq!(d.count, 4);
+    }
+
+    #[test]
+    fn test_topology_type_variants() {
+        assert_eq!(format!("{:?}", TopologyType::Invalid), "Invalid");
+        assert_eq!(format!("{:?}", TopologyType::Thread), "Thread");
+        assert_eq!(format!("{:?}", TopologyType::Core), "Core");
+        assert_eq!(format!("{:?}", TopologyType::Die), "Die");
+        assert_eq!(format!("{:?}", TopologyType::Socket), "Socket");
+        assert_eq!(format!("{:?}", TopologyType::Module), "Module");
+        assert_eq!(format!("{:?}", TopologyType::Tile), "Tile");
+        assert_eq!(format!("{:?}", TopologyType::DieGroup), "DieGroup");
+    }
+
+    #[test]
+    fn test_topology_default() {
+        let t = Topology::default();
+        assert_eq!(t.sockets, TopologyTier::default());
+        assert_eq!(t.dies, TopologyTier::default());
+        assert_eq!(t.cores, TopologyTier::default());
+        assert_eq!(t.threads, TopologyTier::default());
+        assert_eq!(t.speed, Speed::default());
+        assert!(t.cache.is_none());
+    }
+
+    #[test]
+    fn test_speed_default() {
+        let s = Speed::default();
+        assert_eq!(s.base, 0);
+        assert_eq!(s.boost, 0);
+        assert!(!s.measured);
+    }
+
+    #[test]
+    fn test_speed_new() {
+        let s = Speed {
+            base: 2400,
+            boost: 3200,
+            measured: true,
+        };
+        assert_eq!(s.base, 2400);
+        assert_eq!(s.boost, 3200);
+        assert!(s.measured);
+    }
+
+    #[test]
+    fn test_topology_debug() {
+        let t = Topology::default();
+        let debug = format!("{t:?}");
+        assert!(debug.contains("sockets"));
+        assert!(debug.contains("cores"));
+        assert!(debug.contains("threads"));
+    }
+}

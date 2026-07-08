@@ -385,3 +385,208 @@ impl CpuDisplay {
         (num, unit)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_raw_label() {
+        assert_eq!(CpuDisplay::raw_label("Test"), "          Test: ");
+    }
+
+    #[test]
+    fn test_raw_sublabel() {
+        assert_eq!(CpuDisplay::raw_sublabel("Sub"), "                Sub: ");
+    }
+
+    #[test]
+    fn test_raw_inline_sublabel() {
+        assert_eq!(
+            CpuDisplay::raw_inline_sublabel("Cache", "L1d"),
+            "         Cache: L1d: "
+        );
+    }
+
+    #[test]
+    fn test_label_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.label("Model"), "         Model: ");
+    }
+
+    #[test]
+    fn test_sublabel_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.sublabel("L1d"), "                L1d: ");
+    }
+
+    #[test]
+    fn test_inline_sublabel_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.inline_sublabel("Cache", "L1d"),
+            "         Cache: L1d: "
+        );
+    }
+
+    #[test]
+    fn test_format_frequency_mhz() {
+        assert_eq!(CpuDisplay::format_frequency(800u32), "800.00 MHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_exact() {
+        assert_eq!(CpuDisplay::format_frequency(3000u32), "3.00 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_fraction() {
+        assert_eq!(CpuDisplay::format_frequency(3500u32), "3.50 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_precise() {
+        assert_eq!(CpuDisplay::format_frequency(2496u32), "2.49 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_zero() {
+        assert_eq!(CpuDisplay::format_frequency(0u32), "0.00 MHz");
+    }
+
+    #[test]
+    fn test_format_frequency_u64() {
+        assert_eq!(CpuDisplay::format_frequency(2400u64), "2.40 GHz");
+    }
+
+    #[test]
+    fn test_label_with_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: true,
+                verbose: false,
+            },
+        };
+        let lbl = disp.label("Vendor");
+        assert!(lbl.starts_with("\x1b["));
+        assert!(lbl.contains("Vendor"));
+    }
+
+    #[test]
+    fn test_ansi_format() {
+        let s = CpuDisplay::ansi("31");
+        assert_eq!(s, "\x1b[31m");
+    }
+
+    #[test]
+    fn test_ansi_color() {
+        let s = CpuDisplay::ansi_color("32", "green");
+        assert_eq!(s, "\x1b[32mgreen\x1b[m");
+    }
+
+    #[test]
+    fn test_cache_count_zero_share() {
+        assert_eq!(CpuDisplay::cache_count(0, 4), "");
+    }
+
+    #[test]
+    fn test_cache_count_single_core() {
+        assert_eq!(CpuDisplay::cache_count(4, 1), "");
+    }
+
+    #[test]
+    fn test_cache_count_multi() {
+        assert_eq!(CpuDisplay::cache_count(4, 8), "2x ");
+    }
+
+    #[test]
+    fn test_cache_count_exact() {
+        assert_eq!(CpuDisplay::cache_count(2, 2), "");
+    }
+
+    #[test]
+    fn test_cache_size_kb() {
+        let (num, unit) = CpuDisplay::cache_size(65536);
+        assert_eq!(num, 64);
+        assert_eq!(unit, "KB");
+    }
+
+    #[test]
+    fn test_cache_size_mb() {
+        let (num, unit) = CpuDisplay::cache_size(8 * 1024 * 1024);
+        assert_eq!(num, 8);
+        assert_eq!(unit, "MB");
+    }
+
+    #[test]
+    fn test_cache_size_zero() {
+        let (num, unit) = CpuDisplay::cache_size(0);
+        assert_eq!(num, 0);
+        assert_eq!(unit, "KB");
+    }
+
+    #[test]
+    fn test_format_system_name_macbook_air_m1() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.format_system_name("MacBookAir10,1"),
+            "MacBook Air (M1, 2020)"
+        );
+    }
+
+    #[test]
+    fn test_format_system_name_unknown() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.format_system_name("CustomPC"), "CustomPC");
+    }
+
+    #[test]
+    fn test_format_system_name_mac_pro() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
+    }
+
+    #[test]
+    fn test_format_system_name_powerpc() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.format_system_name("PowerMac11,2"),
+            "Power Mac G5 (Late 2005)"
+        );
+    }
+}

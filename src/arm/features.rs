@@ -356,3 +356,157 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
     build_feature_map(&detected)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_populate_detected_features_empty() {
+        let src = BTreeMap::new();
+        let d = populate_detected_features(&src);
+        assert!(!d["fp"]);
+        assert!(!d["asimd"]);
+        assert!(!d["aes"]);
+    }
+
+    #[test]
+    fn test_populate_detected_features_full() {
+        let mut src = BTreeMap::new();
+        for k in BASE_FEATURES
+            .iter()
+            .chain(SIMD_FEATURES.iter())
+            .chain(CRYPTO_FEATURES.iter())
+            .chain(ATOMIC_FEATURES.iter())
+            .chain(FP_FEATURES.iter())
+            .chain(MISC_FEATURES.iter())
+        {
+            src.insert(k.to_string(), true);
+        }
+        let d = populate_detected_features(&src);
+        assert!(d["fp"]);
+        assert!(d["asimd"]);
+        assert!(d["neon"]);
+        assert!(d["aes"]);
+        assert!(d["atomics"]);
+        assert!(d["lse"]);
+    }
+
+    #[test]
+    fn test_populate_detected_asimd_neon_alias() {
+        let mut src = BTreeMap::new();
+        src.insert("asimd".to_string(), true);
+        let d = populate_detected_features(&src);
+        assert!(d["asimd"]);
+        assert!(d["neon"]);
+    }
+
+    #[test]
+    fn test_populate_detected_neon_alias() {
+        let mut src = BTreeMap::new();
+        src.insert("neon".to_string(), true);
+        let d = populate_detected_features(&src);
+        assert!(d["asimd"]);
+        assert!(d["neon"]);
+    }
+
+    #[test]
+    fn test_populate_detected_atomics_lse_alias() {
+        let mut src = BTreeMap::new();
+        src.insert("atomics".to_string(), true);
+        let d = populate_detected_features(&src);
+        assert!(d["atomics"]);
+        assert!(d["lse"]);
+    }
+
+    #[test]
+    fn test_populate_detected_lse_alias() {
+        let mut src = BTreeMap::new();
+        src.insert("lse".to_string(), true);
+        let d = populate_detected_features(&src);
+        assert!(d["atomics"]);
+        assert!(d["lse"]);
+    }
+
+    #[test]
+    fn test_build_feature_map_empty() {
+        let detected = BTreeMap::new();
+        let map = build_feature_map(&detected);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_build_feature_map_all_false() {
+        let mut detected = BTreeMap::new();
+        for f in BASE_FEATURES.iter().chain(SIMD_FEATURES.iter()) {
+            detected.insert(*f, false);
+        }
+        let map = build_feature_map(&detected);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_build_feature_map_base_only() {
+        let mut detected = BTreeMap::new();
+        detected.insert("fp", true);
+        detected.insert("asimd", true);
+        detected.insert("evtstrm", false);
+        detected.insert("cpuid", false);
+        let map = build_feature_map(&detected);
+        assert!(map.contains_key("Base"));
+        assert_eq!(map.get("Base"), Some(&String::from("fp asimd")));
+    }
+
+    #[test]
+    fn test_build_feature_map_all_categories() {
+        let mut detected = BTreeMap::new();
+        detected.insert("fp", true);
+        detected.insert("asimd", true);
+        detected.insert("neon", true);
+        detected.insert("aes", true);
+        detected.insert("atomics", true);
+        detected.insert("fphp", true);
+        detected.insert("crc32", true);
+        let map = build_feature_map(&detected);
+        assert!(map.contains_key("Base"));
+        assert!(map.contains_key("SIMD"));
+        assert!(map.contains_key("Security"));
+        assert!(map.contains_key("Atomics"));
+        assert!(map.contains_key("Fp"));
+        assert!(map.contains_key("Misc"));
+    }
+
+    #[test]
+    fn test_normalize_feature_name() {
+        assert_eq!(normalize_feature_name("FP"), "fp");
+        assert_eq!(normalize_feature_name("Asimd"), "asimd");
+        assert_eq!(normalize_feature_name("CRC32"), "crc32");
+    }
+
+    #[test]
+    fn test_normalize_feature_name_already_lower() {
+        assert_eq!(normalize_feature_name("aes"), "aes");
+    }
+
+    #[test]
+    fn test_populate_detected_misc_features() {
+        let mut src = BTreeMap::new();
+        src.insert("crc32".to_string(), true);
+        src.insert("dcpop".to_string(), false);
+        src.insert("bti".to_string(), true);
+        let d = populate_detected_features(&src);
+        assert!(d["crc32"]);
+        assert!(!d["dcpop"]);
+        assert!(d["bti"]);
+    }
+
+    #[test]
+    fn test_all_feature_constants_not_empty() {
+        assert!(!BASE_FEATURES.is_empty());
+        assert!(!SIMD_FEATURES.is_empty());
+        assert!(!CRYPTO_FEATURES.is_empty());
+        assert!(!ATOMIC_FEATURES.is_empty());
+        assert!(!FP_FEATURES.is_empty());
+        assert!(!MISC_FEATURES.is_empty());
+    }
+}

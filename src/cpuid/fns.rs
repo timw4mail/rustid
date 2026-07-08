@@ -392,8 +392,72 @@ mod tests {
     }
 
     #[test]
+    fn test_cpuid_default() {
+        let c = Cpuid::default();
+        assert_eq!(c.eax, 0);
+        assert_eq!(c.ebx, 0);
+        assert_eq!(c.ecx, 0);
+        assert_eq!(c.edx, 0);
+    }
+
+    #[test]
+    fn test_cpuid_from_zeros() {
+        let res = CpuidResult {
+            eax: 0,
+            ebx: 0,
+            ecx: 0,
+            edx: 0,
+        };
+        let c: Cpuid = res.into();
+        assert_eq!(c, Cpuid::default());
+    }
+
+    #[test]
+    fn test_cpuid_from_large_values() {
+        let res = CpuidResult {
+            eax: 0xFFFFFFFF,
+            ebx: 0xDEADBEEF,
+            ecx: 0xCAFEBABE,
+            edx: 0x12345678,
+        };
+        let c: Cpuid = res.into();
+        assert_eq!(c.eax, 0xFFFFFFFF);
+        assert_eq!(c.edx, 0x12345678);
+    }
+
+    #[test]
+    fn test_cpuid_debug() {
+        let c = Cpuid {
+            eax: 1,
+            ebx: 2,
+            ecx: 3,
+            edx: 4,
+        };
+        let s = format!("{c:?}");
+        assert!(s.contains("eax"));
+        assert!(s.contains("ebx"));
+    }
+
+    #[test]
     fn test_vendor_str() {
         let vendor = vendor_str();
         assert!(!vendor.is_empty());
+    }
+
+    #[test]
+    fn test_cpuid_partial_eq() {
+        let a = Cpuid {
+            eax: 1,
+            ebx: 2,
+            ecx: 3,
+            edx: 4,
+        };
+        let b = Cpuid {
+            eax: 1,
+            ebx: 2,
+            ecx: 3,
+            edx: 4,
+        };
+        assert_eq!(a, b);
     }
 }
