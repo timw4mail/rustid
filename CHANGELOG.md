@@ -3,10 +3,25 @@
 ## [1.6.0]
 
 ### Added
-- Added mappings for Ivy Bridge and Bonnel Cpus
+- System/device model detection from Linux devicetree `compatible` string
+- Mac model lookup table and mappings (ARM and x86_64)
+- PowerPC Mac model mappings
+- Expanded PowerPC model coverage and improved mappings
+- PVR value display in hex for PowerPC debug output
+- More unit tests
+- Android and OpenBSD build support
 
 ### Changed
-- Improved formatting of ARM SoC values
+- Centralized OS-specific information gathering for ARM into shared module
+- Refactored System/SoC properties onto the main CPU object
+- Moved raw MIDR values into `Midr` sub-struct with updated debug display
+- Extracted Mac model table for cross-architecture reuse
+- Improved formatting of ARM SoC data
+
+### Fixed
+- Crash from missing values in `lscpu` output
+- System formatting and string filtering for Mac model detection
+- PowerPC system display (correct property reference, code errors, missing borrow)
 
 ## [1.5.0]
 
