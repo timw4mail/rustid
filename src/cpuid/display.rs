@@ -294,6 +294,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
+        #[cfg(not(dos))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }
