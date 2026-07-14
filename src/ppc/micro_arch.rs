@@ -115,10 +115,20 @@ impl CpuArch {
 
             // PowerPC 750 (G3)
             0x0008 => match revision {
-                0x0201 | 0x2201 => Self::new("PowerPC 750CX", MicroArch::Ppc750, "G3", 0x201, Some(N180)),
-                0x0202 | 0x2202 => Self::new("PowerPC 750CXe", MicroArch::Ppc750, "G3", 0x202, Some(N180)),
+                0x0201 | 0x2201 => {
+                    Self::new("PowerPC 750CX", MicroArch::Ppc750, "G3", 0x201, Some(N180))
+                }
+                0x0202 | 0x2202 => {
+                    Self::new("PowerPC 750CXe", MicroArch::Ppc750, "G3", 0x202, Some(N180))
+                }
                 0x0205 => Self::new("PowerPC 750L", MicroArch::Ppc750, "G3", 0x205, Some(N180)),
-                _ => Self::new("PowerPC 750", MicroArch::Ppc750, "Arthur", 0x200, Some(N260)),
+                _ => Self::new(
+                    "PowerPC 750",
+                    MicroArch::Ppc750,
+                    "Arthur",
+                    0x200,
+                    Some(N260),
+                ),
             },
 
             0x7000 => match revision {
@@ -128,20 +138,62 @@ impl CpuArch {
 
             // PowerPC 7400 (G4)
             0x000C => match revision {
-                0x0309 => Self::new("PowerPC 7410", MicroArch::Ppc7410, "Nitro", 0x309, Some(N180)),
+                0x0309 => Self::new(
+                    "PowerPC 7410",
+                    MicroArch::Ppc7410,
+                    "Nitro",
+                    0x309,
+                    Some(N180),
+                ),
                 _ => Self::new("PowerPC 7400", MicroArch::Ppc7400, "Max", 0x308, Some(N220)),
             },
 
             // PowerPC 7450 / 7455 / 7457 / 7447 / 7447A / 7460 (G4)
             0x8000 => Self::new("PowerPC 7450", MicroArch::Ppc7450, "Max", 0x351, Some(N180)),
-            0x8001 => Self::new("PowerPC 7455", MicroArch::Ppc7455, "Apollo 6", 0x352, Some(N150)),
-            0x8002 => Self::new("PowerPC 7457", MicroArch::Ppc7457, "Apollo 7", 0x353, Some(N130)),
+            0x8001 => Self::new(
+                "PowerPC 7455",
+                MicroArch::Ppc7455,
+                "Apollo 6",
+                0x352,
+                Some(N150),
+            ),
+            0x8002 => Self::new(
+                "PowerPC 7457",
+                MicroArch::Ppc7457,
+                "Apollo 7",
+                0x353,
+                Some(N130),
+            ),
             0x8003 => match revision {
-                0x030C => Self::new("PowerPC 7447", MicroArch::Ppc7447, "Apollo 7", 0x30C, Some(N130)),
-                0x030D => Self::new("PowerPC 7447A", MicroArch::Ppc7447a, "Apollo 7", 0x30D, Some(N90)),
-                _ => Self::new("PowerPC 7460", MicroArch::Ppc7460, "Apollo Pro", 0x354, Some(N130)),
+                0x030C => Self::new(
+                    "PowerPC 7447",
+                    MicroArch::Ppc7447,
+                    "Apollo 7",
+                    0x30C,
+                    Some(N130),
+                ),
+                0x030D => Self::new(
+                    "PowerPC 7447A",
+                    MicroArch::Ppc7447a,
+                    "Apollo 7",
+                    0x30D,
+                    Some(N90),
+                ),
+                _ => Self::new(
+                    "PowerPC 7460",
+                    MicroArch::Ppc7460,
+                    "Apollo Pro",
+                    0x354,
+                    Some(N130),
+                ),
             },
-            0x8004 => Self::new("PowerPC 7448", MicroArch::Ppc7448, "Apollo 8", 0x8004, Some(N90)),
+            0x8004 => Self::new(
+                "PowerPC 7448",
+                MicroArch::Ppc7448,
+                "Apollo 8",
+                0x8004,
+                Some(N90),
+            ),
 
             // PowerPC 970 / G5
             0x0039 => Self::new("PowerPC 970", MicroArch::Ppc970, "G5", 0x39, Some(N150)),

@@ -86,6 +86,7 @@ impl TMicroArch for Intel {
             (0, 6, 1, 14, 5) => brand_arch(MicroArch::Nehalem, "Lynnfield", Some(N45)),
             (0, 6, 2, 10, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge", Some(N32)),
             (0, 6, 2, 12, 0) => brand_arch(MicroArch::Westmere, "Arrandale", Some(N32)),
+            (0, 6, 2, 13, 7) => brand_arch(MicroArch::SandyBridge, "Sandy Bridge-EN", Some(N32)),
             (0, 6, 3, 7, 3) => brand_arch(MicroArch::Silvermont, "Bay Trail-M", Some(N22)),
             (0, 6, 3, 10, 9) => brand_arch(MicroArch::IvyBridge, "Ivy Bridge", Some(N22)),
             (0, 6, 3, 12, _) => brand_arch(MicroArch::Haswell, "Haswell", Some(N22)),
