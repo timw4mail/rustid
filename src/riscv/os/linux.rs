@@ -3,10 +3,10 @@
 //! Uses `/proc/cpuinfo` for ISA string and vendor info, and sysfs for CSR values.
 
 use super::OsCpuInfo;
+use crate::common::get_proc_cpuinfo_data;
+use crate::common::{CoreType, DataSource};
 use crate::riscv::brand::Vendor;
 use crate::riscv::micro_arch::*;
-use crate::common::DataSource;
-use crate::common::get_proc_cpuinfo_data;
 use std::collections::BTreeMap;
 
 /// Linux-specific CPU detection via /proc/cpuinfo and sysfs.
@@ -93,10 +93,7 @@ pub fn detect() -> OsCpuInfo {
 
 /// Read a RISC-V CSR value from sysfs.
 fn read_sysfs_csr(name: &str) -> usize {
-    let path = format!(
-        "/sys/devices/system/cpu/cpu0/regs/identification/{}",
-        name
-    );
+    let path = format!("/sys/devices/system/cpu/cpu0/regs/identification/{}", name);
     std::fs::read_to_string(&path)
         .ok()
         .and_then(|s| {
@@ -144,11 +141,26 @@ pub fn get_features_from_isa(isa: &str) -> BTreeMap<String, bool> {
     // (e.g., "rv64gcv_zba_zbb" or "rv64gcv_zicbom")
     let lower = isa.to_lowercase();
     let multi_letter = [
-        "zba", "zbb", "zbc", "zbs",
-        "zvfh", "zvbb", "zvbc",
-        "zkne", "zknd", "zksed", "zksh", "zknh",
-        "zicbom", "zicbop", "zicboz",
-        "zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl",
+        "zba",
+        "zbb",
+        "zbc",
+        "zbs",
+        "zvfh",
+        "zvbb",
+        "zvbc",
+        "zkne",
+        "zknd",
+        "zksed",
+        "zksh",
+        "zknh",
+        "zicbom",
+        "zicbop",
+        "zicboz",
+        "zicsr",
+        "zifencei",
+        "zicntr",
+        "zihintpause",
+        "zihintntl",
     ];
     for ext in &multi_letter {
         if lower.contains(ext) {

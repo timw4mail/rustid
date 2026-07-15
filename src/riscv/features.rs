@@ -40,9 +40,7 @@ pub const PRIV_FEATURES: &[&str] = &["s", "u", "h"];
 pub const CACHE_FEATURES: &[&str] = &["zicbom", "zicbop", "zicboz"];
 
 /// Miscellaneous extensions
-pub const MISC_FEATURES: &[&str] = &[
-    "zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl",
-];
+pub const MISC_FEATURES: &[&str] = &["zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl"];
 
 pub struct RiscvFeatures;
 
@@ -128,12 +126,36 @@ pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'st
     let mut d: BTreeMap<&'static str, bool> = BTreeMap::new();
 
     let all_features: &[&str] = &[
-        "m", "a", "f", "d", "q", "c", "v", "zvfh", "zvbb", "zvbc",
-        "zba", "zbb", "zbc", "zbs",
-        "zkne", "zknd", "zksed", "zksh", "zknh",
-        "s", "u", "h",
-        "zicbom", "zicbop", "zicboz",
-        "zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl",
+        "m",
+        "a",
+        "f",
+        "d",
+        "q",
+        "c",
+        "v",
+        "zvfh",
+        "zvbb",
+        "zvbc",
+        "zba",
+        "zbb",
+        "zbc",
+        "zbs",
+        "zkne",
+        "zknd",
+        "zksed",
+        "zksh",
+        "zknh",
+        "s",
+        "u",
+        "h",
+        "zicbom",
+        "zicbop",
+        "zicboz",
+        "zicsr",
+        "zifencei",
+        "zicntr",
+        "zihintpause",
+        "zihintntl",
     ];
 
     for feat in all_features {

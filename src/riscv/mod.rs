@@ -9,7 +9,7 @@ pub mod os;
 use crate::common::{CliFlags, CpuDisplay};
 pub use cpu::*;
 pub use features::{RiscvFeatures, TRiscvFeatures};
-pub use micro_arch::CpuArch;
+pub use micro_arch::{CpuArch, CpuCore};
 pub use os::*;
 
 pub(crate) trait TRiscvCpu {
@@ -19,6 +19,7 @@ pub(crate) trait TRiscvCpu {
         None
     }
 
+    #[allow(unused)]
     fn vendor(&self) -> &str;
 }
 
@@ -66,8 +67,16 @@ impl CpuDisplay {
         // Display features
         if !cpu_info.features.is_empty() {
             let keys = [
-                "Mul", "Atomic", "Float", "Compressed", "Bitmanip",
-                "Vector", "Crypto", "Priv", "Cache", "Misc",
+                "Mul",
+                "Atomic",
+                "Float",
+                "Compressed",
+                "Bitmanip",
+                "Vector",
+                "Crypto",
+                "Priv",
+                "Cache",
+                "Misc",
             ];
             let mut first = true;
             for key in keys {

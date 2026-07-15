@@ -3,10 +3,18 @@
 //! Parses the `misa` CSR to determine ISA extensions, and maps
 //! vendor/architecture IDs to known CPU cores.
 
-use crate::riscv::brand::*;
 use crate::common::CoreType;
 use crate::common::constants::*;
 use crate::common::{Cache, UNK};
+use crate::riscv::brand::*;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CpuCore {
+    pub kind: CoreType,
+    pub name: Option<String>,
+    pub cache: Option<Cache>,
+    pub count: u32,
+}
 
 /// RISC-V `misa` register layout.
 ///
@@ -16,16 +24,6 @@ use crate::common::{Cache, UNK};
 pub struct Misa {
     pub xlen: usize,
     pub extensions: u64,
-}
-
-/// Single-letter extension bits (bit position = char - 'A').
-fn ext_bit(ch: char) -> bool {
-    let c = ch.to_ascii_uppercase();
-    if c < 'A' || c > 'Z' {
-        return false;
-    }
-    let bit = (c as u64) - ('A' as u64);
-    false // placeholder, see from_raw
 }
 
 impl Misa {
@@ -38,7 +36,7 @@ impl Misa {
         };
         Misa {
             xlen,
-            extensions: val & 0x3_FFFF_FFFF_FFFF_FFFF,
+            extensions: val & 0x3FFF_FFFF_FFFF_FFFF,
         }
     }
 
@@ -221,29 +219,83 @@ impl CpuArch {
 
     fn find_sifive(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
-            (0x0000_0001, "SiFive U74", MicroArch::SiFiveU74, "U74", Some(N28)),
+            (
+                0x0000_0001,
+                "SiFive U74",
+                MicroArch::SiFiveU74,
+                "U74",
+                Some(N28),
+            ),
             (0x0000_0002, "SiFive U76", MicroArch::SiFiveU76, "U76", None),
             (0x0000_0003, "SiFive S76", MicroArch::SiFiveS76, "S76", None),
-            (0x0000_0010, "SiFive P470", MicroArch::SiFiveP470, "P470", None),
-            (0x0000_0040, "SiFive P550", MicroArch::SiFiveP550, "P550", Some(N7)),
-            (0x0000_0080, "SiFive P670", MicroArch::SiFiveP670, "P670", None),
+            (
+                0x0000_0010,
+                "SiFive P470",
+                MicroArch::SiFiveP470,
+                "P470",
+                None,
+            ),
+            (
+                0x0000_0040,
+                "SiFive P550",
+                MicroArch::SiFiveP550,
+                "P550",
+                Some(N7),
+            ),
+            (
+                0x0000_0080,
+                "SiFive P670",
+                MicroArch::SiFiveP670,
+                "P670",
+                None,
+            ),
         ];
         Self::find_impl(marchid, Vendor::SiFive, PARTS)
     }
 
     fn find_thead(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
-            (0x0000_0000, "T-Head C906", MicroArch::THeadC906, "C906", Some(N28)),
-            (0x0000_0001, "T-Head C910", MicroArch::THeadC910, "C910", Some(N16)),
-            (0x0000_0002, "T-Head C920", MicroArch::THeadC920, "C920", None),
+            (
+                0x0000_0000,
+                "T-Head C906",
+                MicroArch::THeadC906,
+                "C906",
+                Some(N28),
+            ),
+            (
+                0x0000_0001,
+                "T-Head C910",
+                MicroArch::THeadC910,
+                "C910",
+                Some(N16),
+            ),
+            (
+                0x0000_0002,
+                "T-Head C920",
+                MicroArch::THeadC920,
+                "C920",
+                None,
+            ),
         ];
         Self::find_impl(marchid, Vendor::THead, PARTS)
     }
 
     fn find_starfive(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
-            (0x0000_0000, "StarFive JH7100", MicroArch::StarFiveJH7100, "JH7100", None),
-            (0x0000_0000, "StarFive JH7110", MicroArch::StarFiveJH7110, "JH7110", Some(N28)),
+            (
+                0x0000_0000,
+                "StarFive JH7100",
+                MicroArch::StarFiveJH7100,
+                "JH7100",
+                None,
+            ),
+            (
+                0x0000_0000,
+                "StarFive JH7110",
+                MicroArch::StarFiveJH7110,
+                "JH7110",
+                Some(N28),
+            ),
         ];
         Self::find_impl(marchid, Vendor::StarFive, PARTS)
     }
