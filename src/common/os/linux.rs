@@ -116,11 +116,17 @@ fn get_raw_system_name() -> Option<String> {
             {
                 let raw = raw?;
                 let trimmed = raw.trim();
+
+                if trimmed.is_empty() {
+                    return None;
+                }
+
                 return Some(String::from(trimmed));
             }
         }
     }
 
+    // If we see nothing in sysfs, check the device tree 'compatible' value
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {
