@@ -104,20 +104,29 @@ fn get_raw_system_name() -> Option<String> {
     let simple_paths: Vec<_> = vec![
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
+        "/sys/devices/virtual/dmi/id/product_family",
+        "/sys/devices/virtual/dmi/id/product_name",
+        "/sys/class/dmi/id/product_name",
     ];
 
     for path in simple_paths {
         if let Ok(raw) = std::fs::read_to_string(path) {
             let raw: Vec<_> = raw.split('\0').collect();
             let raw = raw.first();
-            if let Some(raw) = raw {
-                return Some(String::from(*raw));
-            } else {
-                return None;
+            {
+                let raw = raw?;
+                let trimmed = raw.trim();
+
+                if trimmed.is_empty() || trimmed.contains("To Be Filled") {
+                    continue;
+                }
+
+                return Some(String::from(trimmed));
             }
         }
     }
 
+    // If we see nothing in sysfs, check the device tree 'compatible' value
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {

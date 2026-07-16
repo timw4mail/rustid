@@ -374,6 +374,13 @@ impl CpuArch {
                 "Cortex-A55",
                 None,
             ),
+            (
+                0xD06,
+                "ARM Cortex-A65",
+                MicroArch::ArmCortexA65,
+                "Cortex-A65",
+                None,
+            ),
             // Raspberry Pi 4
             (
                 0xD08,
@@ -960,6 +967,13 @@ mod tests {
         assert_eq!(String::from(MicroArch::AppleFirestorm), "Firestorm");
         assert_eq!(String::from(MicroArch::AppleAvalanche), "Avalanche");
         assert_eq!(String::from(MicroArch::ArmCortexA76), "Cortex-A76");
+    }
+
+    #[test]
+    fn test_arm_cortex_a65_find() {
+        let cpu = CpuArch::find(IMPL_ARM, 0xD06, 0x0);
+        assert_eq!(cpu.model.as_str(), "ARM Cortex-A65");
+        assert_eq!(cpu.micro_arch, MicroArch::ArmCortexA65);
     }
 
     #[test]

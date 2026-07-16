@@ -60,6 +60,11 @@ pub mod arm;
 #[cfg(arm_cpu)]
 pub use arm::Cpu;
 
+#[cfg(target_arch = "riscv64")]
+pub mod riscv;
+#[cfg(target_arch = "riscv64")]
+pub use riscv::Cpu;
+
 #[cfg(dos)]
 pub use cpuid::dos::*;
 

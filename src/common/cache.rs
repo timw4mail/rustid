@@ -177,3 +177,104 @@ impl Cache {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cache_level_no_count() {
+        let cl = CacheLevel::no_count(512 * 1024, CacheType::Unified, 8);
+        assert_eq!(cl.size, 512 * 1024);
+        assert_eq!(cl.kind, CacheType::Unified);
+        assert_eq!(cl.assoc, 8);
+        assert_eq!(cl.share_count, 0);
+    }
+
+    #[test]
+    fn test_cache_level_new_unified() {
+        let cl = CacheLevel::new_unified(1024 * 1024, 16);
+        assert_eq!(cl.size, 1024 * 1024);
+        assert_eq!(cl.kind, CacheType::Unified);
+        assert_eq!(cl.assoc, 16);
+        assert_eq!(cl.share_count, 0);
+    }
+
+    #[test]
+    fn test_cache_level_getters() {
+        let cl = CacheLevel::new(8192, CacheType::Data, 4, 2);
+        assert_eq!(cl.size(), 8192);
+        assert_eq!(cl.assoc(), 4);
+        assert_eq!(cl.kind(), CacheType::Data);
+        assert_eq!(cl.share_count(), 2);
+    }
+
+    #[test]
+    fn test_cache_level_default() {
+        let cl = CacheLevel::default();
+        assert_eq!(cl.size, 0);
+        assert_eq!(cl.kind, CacheType::Invalid);
+        assert_eq!(cl.assoc, 0);
+        assert_eq!(cl.share_count, 0);
+    }
+
+    #[test]
+    fn test_l1_cache_set_share_counts() {
+        let mut l1 = Level1Cache::default_split();
+        l1.set_data(16384, 8);
+        l1.set_instruction(16384, 4);
+        l1.set_data_share_count(2);
+        l1.set_instruction_share_count(2);
+
+        if let Level1Cache::Split { data, instruction } = l1 {
+            assert_eq!(data.share_count, 2);
+            assert_eq!(instruction.share_count, 2);
+        } else {
+            panic!("Expected split cache");
+        }
+    }
+
+    #[test]
+    fn test_l1_cache_default() {
+        let l1 = Level1Cache::default();
+        assert!(l1.is_unified());
+        assert_eq!(l1.size(), 0);
+    }
+
+    #[test]
+    fn test_cache_default() {
+        let c = Cache::default();
+        assert!(c.l1.is_unified());
+        assert_eq!(c.l1.size(), 0);
+        assert!(c.l2.is_none());
+        assert!(c.l3.is_none());
+    }
+
+    #[test]
+    fn test_l1_is_split() {
+        let split = Level1Cache::default_split();
+        assert!(split.is_split());
+        assert!(!split.is_unified());
+    }
+
+    #[test]
+    fn test_l1_is_unified() {
+        let unified = Level1Cache::new_unified(1024, 4);
+        assert!(unified.is_unified());
+        assert!(!unified.is_split());
+    }
+
+    #[test]
+    fn test_level1_cache_debug() {
+        let l1 = Level1Cache::new_unified(4096, 2);
+        assert_eq!(l1.size(), 4096);
+    }
+
+    #[test]
+    fn test_cache_type_debug() {
+        assert_eq!(format!("{:?}", CacheType::Unified), "Unified");
+        assert_eq!(format!("{:?}", CacheType::Data), "Data");
+        assert_eq!(format!("{:?}", CacheType::Instruction), "Instruction");
+        assert_eq!(format!("{:?}", CacheType::Invalid), "Invalid");
+    }
+}

@@ -413,3 +413,168 @@ impl TMicroArch for Cyrix {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cyrix_slc() {
+        assert_eq!(CyrixModel::detect_with_ids(0x00, 0), CyrixModel::Slc);
+    }
+
+    #[test]
+    fn test_cyrix_dlc() {
+        assert_eq!(CyrixModel::detect_with_ids(0x01, 0), CyrixModel::Dlc);
+    }
+
+    #[test]
+    fn test_cyrix_slc2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x02, 0), CyrixModel::Slc2);
+    }
+
+    #[test]
+    fn test_cyrix_dlc2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x03, 0), CyrixModel::Dlc2);
+    }
+
+    #[test]
+    fn test_cyrix_srx() {
+        assert_eq!(CyrixModel::detect_with_ids(0x04, 0), CyrixModel::Srx);
+    }
+
+    #[test]
+    fn test_cyrix_drx() {
+        assert_eq!(CyrixModel::detect_with_ids(0x05, 0), CyrixModel::Drx);
+    }
+
+    #[test]
+    fn test_cyrix_srx2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x06, 0), CyrixModel::Srx2);
+    }
+
+    #[test]
+    fn test_cyrix_drx2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x07, 0), CyrixModel::Drx2);
+    }
+
+    #[test]
+    fn test_cyrix_cx486s() {
+        assert_eq!(CyrixModel::detect_with_ids(0x10, 0), CyrixModel::Cx486S);
+    }
+
+    #[test]
+    fn test_cyrix_cx486s2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x11, 0), CyrixModel::Cx486S2);
+    }
+
+    #[test]
+    fn test_cyrix_cx486se() {
+        assert_eq!(CyrixModel::detect_with_ids(0x12, 0), CyrixModel::Cx486Se);
+    }
+
+    #[test]
+    fn test_cyrix_cx486se2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x13, 0), CyrixModel::Cx486Se2);
+    }
+
+    #[test]
+    fn test_cyrix_cx486dx() {
+        assert_eq!(CyrixModel::detect_with_ids(0x1A, 0), CyrixModel::Cx486DX);
+    }
+
+    #[test]
+    fn test_cyrix_cx486dx2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x1B, 0), CyrixModel::Cx486DX2);
+    }
+
+    #[test]
+    fn test_cyrix_cx486dx4() {
+        assert_eq!(CyrixModel::detect_with_ids(0x1F, 0), CyrixModel::Cx486DX4);
+    }
+
+    #[test]
+    fn test_cyrix_cx486dx4_alt() {
+        assert_eq!(CyrixModel::detect_with_ids(0x81, 0), CyrixModel::Cx486DX4);
+    }
+
+    #[test]
+    fn test_cyrix_5x86() {
+        assert_eq!(CyrixModel::detect_with_ids(0x28, 0), CyrixModel::Cx5x86);
+    }
+
+    #[test]
+    fn test_cyrix_5x86_upper() {
+        assert_eq!(CyrixModel::detect_with_ids(0x2F, 0), CyrixModel::Cx5x86);
+    }
+
+    #[test]
+    fn test_cyrix_6x86_without_cx8() {
+        let actual = CyrixModel::detect_with_ids(0x30, 0x00);
+        if has_cx8() {
+            assert_eq!(actual, CyrixModel::Cx6x86L);
+        } else {
+            assert_eq!(actual, CyrixModel::Cx6x86);
+        }
+    }
+
+    #[test]
+    fn test_cyrix_6x86l_high_dir1() {
+        assert_eq!(CyrixModel::detect_with_ids(0x30, 0x22), CyrixModel::Cx6x86L);
+    }
+
+    #[test]
+    fn test_cyrix_mediagx() {
+        assert_eq!(CyrixModel::detect_with_ids(0x40, 0), CyrixModel::MediaGx);
+    }
+
+    #[test]
+    fn test_cyrix_mediagx_upper() {
+        assert_eq!(CyrixModel::detect_with_ids(0x46, 0), CyrixModel::MediaGx);
+    }
+
+    #[test]
+    fn test_cyrix_m2() {
+        assert_eq!(CyrixModel::detect_with_ids(0x50, 0), CyrixModel::M2);
+    }
+
+    #[test]
+    fn test_cyrix_m2_upper() {
+        assert_eq!(CyrixModel::detect_with_ids(0x5F, 0), CyrixModel::M2);
+    }
+
+    #[test]
+    fn test_cyrix_unknown() {
+        assert_eq!(CyrixModel::detect_with_ids(0xFF, 0), CyrixModel::Unknown);
+    }
+
+    #[test]
+    fn test_cyrix_to_str_slc() {
+        assert_eq!(CyrixModel::Slc.to_str(), "Cx486 SLC");
+    }
+
+    #[test]
+    fn test_cyrix_to_str_dlc() {
+        assert_eq!(CyrixModel::Dlc.to_str(), "Cx486 DLC");
+    }
+
+    #[test]
+    fn test_cyrix_to_str_unknown() {
+        assert_eq!(CyrixModel::Unknown.to_str(), "Unknown");
+    }
+
+    #[test]
+    fn test_cyrix_to_str_mediagx() {
+        assert_eq!(CyrixModel::MediaGx.to_str(), "MediaGX GXm");
+    }
+
+    #[test]
+    fn test_cyrix_to_str_m2() {
+        assert_eq!(CyrixModel::M2.to_str(), "6x86MX/MII");
+    }
+
+    #[test]
+    fn test_cyrix_to_str_cx486dx4() {
+        assert_eq!(CyrixModel::Cx486DX4.to_str(), "Cx486DX4");
+    }
+}

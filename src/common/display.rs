@@ -119,7 +119,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB, {}-way",
                             self.inline_sublabel("Cache", "L1d"),
-                            &data_count,
+                            data_count,
                             data.size / 1024,
                             data.assoc
                         );
@@ -127,7 +127,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB",
                             self.inline_sublabel("Cache", "L1d"),
-                            &data_count,
+                            data_count,
                             data.size / 1024
                         );
                     }
@@ -136,7 +136,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB, {}-way",
                             self.sublabel("L1i"),
-                            &instruction_count,
+                            instruction_count,
                             instruction.size / 1024,
                             instruction.assoc
                         );
@@ -144,7 +144,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB",
                             self.sublabel("L1i"),
-                            &instruction_count,
+                            instruction_count,
                             instruction.size / 1024,
                         );
                     }
@@ -159,13 +159,13 @@ impl CpuDisplay {
                     println!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L2"),
-                        &count,
+                        count,
                         num,
                         unit,
                         l2.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L2"), &count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
                 }
             }
 
@@ -181,13 +181,13 @@ impl CpuDisplay {
                     println!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L3"),
-                        &count,
+                        count,
                         num,
                         unit,
                         l3.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L3"), &count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
                 }
             }
 
@@ -199,94 +199,12 @@ impl CpuDisplay {
     pub fn format_system_name(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
         let model = match raw {
-            // PowerPC
-            "PowerMac11,2" => "Power Mac G5 (Late 2005)",
-            "PowerMac9,1" => "Power Mac G5 (Late 2004)",
-            "PowerMac7,3" => "Power Mac G5 (June 2004 | Early 2005)",
-            "PowerMac7,2" => "Power Mac G5 (June 2003 | Early 2005)",
-            "PowerMac5,1" => "Power Mac G4 Cube",
-            "PowerMac4,2" => "iMac (15-inch Early 2003)",
-            "PowerMac3,6" => "Power Mac G4 (FW 800 | Mirrored Drive Doors)",
-            "PowerMac3,5" => "Power Mac G4 (Quicksilver)",
-            "PowerMac3,4" => "Power Mac G4 (Digital Audio)",
-            "PowerMac3,3" => "Power Mac G4 (Gigabit Ethernet)",
-            "PowerMac3,1" => "Power Mac G4 (AGP Graphics)",
-            "PowerMac1,2" => "Power Mac G4 (PCI Graphics)",
-            "PowerMac1,1" => "Power Macintosh G3 (Blue and White)",
-            "PowerBook5,2" => "PowerBook G4 (15-inch, FW 800)",
-            "PowerBook4,1" => "iBook (late 2001)",
-            "PowerBook3,2" => "PowerBook G4 (Titanium)",
-
-            // Intel and Arm64
+            // Arm64 (Apple Silicon)
             "MacBookPro18,3" | "MacBookPro18,4" => "MacBook Pro (14-inch, 2021)",
             "MacBookPro18,1" | "MacBookPro18,2" => "MacBook Pro (16-inch, 2021)",
-            "MacBookPro17,1" => "MacBook Pro (13-inch, 2020)",
-            "MacBookPro16,3" => "MacBook Pro (13-inch, 2020, Two Thunderbolt 3 ports)",
-            "MacBookPro16,2" => "MacBook Pro (13-inch, 2020, Four Thunderbolt 3 ports)",
-            "MacBookPro16,4" | "MacBookPro16,1" => "MacBook Pro (16-inch, 2019)",
-            "MacBookPro15,4" => "MacBook Pro (13-inch, 2019, Two Thunderbolt 3 ports)",
-            "MacBookPro15,3" => "MacBook Pro (15-inch, 2019)",
-            "MacBookPro15,2" => "MacBook Pro (13-inch, 2018/2019, Four Thunderbolt 3 ports)",
-            "MacBookPro15,1" => "MacBook Pro (15-inch, 2018/2019)",
-            "MacBookPro14,3" => "MacBook Pro (15-inch, 2017)",
-            "MacBookPro14,2" => "MacBook Pro (13-inch, 2017, Four Thunderbolt 3 ports)",
-            "MacBookPro14,1" => "MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports)",
-            "MacBookPro13,3" => "MacBook Pro (15-inch, 2016)",
-            "MacBookPro13,2" => "MacBook Pro (13-inch, 2016, Four Thunderbolt 3 ports)",
-            "MacBookPro13,1" => "MacBook Pro (13-inch, 2016, Two Thunderbolt 3 ports)",
-            "MacBookPro12,1" => "MacBook Pro (Retina, 13-inch, Early 2015)",
-            "MacBookPro11,4" | "MacBookPro11,5" => "MacBook Pro (Retina, 15-inch, Mid 2015)",
-            "MacBookPro11,2" | "MacBookPro11,3" => {
-                "MacBook Pro (Retina, 15-inch, Late 2013/Mid 2014)"
-            }
-            "MacBookPro11,1" => "MacBook Pro (Retina, 13-inch, Late 2013/Mid 2014)",
-            "MacBookPro10,2" => "MacBook Pro (Retina, 13-inch, Late 2012/Early 2013)",
-            "MacBookPro10,1" => "MacBook Pro (Retina, 15-inch, Mid 2012/Early 2013)",
-            "MacBookPro9,2" => "MacBook Pro (13-inch, Mid 2012)",
-            "MacBookPro9,1" => "MacBook Pro (15-inch, Mid 2012)",
-            "MacBookPro8,3" => "MacBook Pro (17-inch, 2011)",
-            "MacBookPro8,2" => "MacBook Pro (15-inch, 2011)",
-            "MacBookPro8,1" => "MacBook Pro (13-inch, 2011)",
-            "MacBookPro7,1" => "MacBook Pro (13-inch, Mid 2010)",
-            "MacBookPro6,2" => "MacBook Pro (15-inch, Mid 2010)",
-            "MacBookPro6,1" => "MacBook Pro (17-inch, Mid 2010)",
-            "MacBookPro5,5" => "MacBook Pro (13-inch, Mid 2009)",
-            "MacBookPro5,3" => "MacBook Pro (15-inch, Mid 2009)",
-            "MacBookPro5,2" => "MacBook Pro (17-inch, Mid/Early 2009)",
-            "MacBookPro5,1" => "MacBook Pro (15-inch, Late 2008)",
-            "MacBookPro4,1" => "MacBook Pro (17/15-inch, Early 2008)",
-            "MacBookAir10,1" => "MacBook Air (2020)",
-            "MacBookAir9,1" => "MacBook Air (Retina, 13-inch, 2020)",
-            "MacBookAir8,2" => "MacBook Air (Retina, 13-inch, 2019)",
-            "MacBookAir8,1" => "MacBook Air (Retina, 13-inch, 2018)",
-            "MacBookAir7,2" => "MacBook Air (13-inch, Early 2015/2017)",
-            "MacBookAir7,1" => "MacBook Air (11-inch, Early 2015)",
-            "MacBookAir6,2" => "MacBook Air (13-inch, Mid 2013/Early 2014)",
-            "MacBookAir6,1" => "MacBook Air (11-inch, Mid 2013/Early 2014)",
-            "MacBookAir5,2" => "MacBook Air (13-inch, Mid 2012)",
-            "MacBookAir5,1" => "MacBook Air (11-inch, Mid 2012)",
-            "MacBookAir4,2" => "MacBook Air (13-inch, Mid 2011)",
-            "MacBookAir4,1" => "MacBook Air (11-inch, Mid 2011)",
-            "MacBookAir3,2" => "MacBook Air (13-inch, Late 2010)",
-            "MacBookAir3,1" => "MacBook Air (11-inch, Late 2010)",
-            "MacBookAir2,1" => "MacBook Air (Mid 2009)",
-            "Macmini9,1" => "Mac mini (2020)",
-            "Macmini8,1" => "Mac mini (2018)",
-            "Macmini7,1" => "Mac mini (Mid 2014)",
-            "Macmini6,1" | "Macmini6,2" => "Mac mini (Late 2012)",
-            "Macmini5,1" | "Macmini5,2" => "Mac mini (Mid 2011)",
-            "Macmini4,1" => "Mac mini (Mid 2010)",
-            "Macmini3,1" => "Mac mini (Early/Late 2009)",
-            "MacBook10,1" => "MacBook (Retina, 12-inch, 2017)",
-            "MacBook9,1" => "MacBook (Retina, 12-inch, Early 2016)",
-            "MacBook8,1" => "MacBook (Retina, 12-inch, Early 2015)",
-            "MacBook7,1" => "MacBook (13-inch, Mid 2010)",
-            "MacBook6,1" => "MacBook (13-inch, Late 2009)",
-            "MacBook5,2" => "MacBook (13-inch, Early/Mid 2009)",
-            "MacPro7,1" => "Mac Pro (2019)",
-            "MacPro6,1" => "Mac Pro (Late 2013)",
-            "MacPro5,1" => "Mac Pro (Mid 2010 - Mid 2012)",
-            "MacPro4,1" => "Mac Pro (Early 2009)",
+            "MacBookPro17,1" => "MacBook Pro (13-inch, M1, 2020)",
+            "MacBookAir10,1" => "MacBook Air (M1, 2020)",
+            "Macmini9,1" => "Mac mini (M1, 2020)",
             "Mac17,9" => "MacBook Pro (14-inch, 2026)",
             "Mac17,8" => "MacBook Pro (16-inch, 2026)",
             "Mac17,7" => "MacBook Pro (14-inch, 2026)",
@@ -330,10 +248,76 @@ impl CpuDisplay {
             "Mac13,2" => "Mac Studio (2022, Two Thunderbolt 4 front ports)",
             "iMac21,1" => "iMac (24-inch, 2021, Two Thunderbolt / USB 4 ports, Two USB 3 ports)",
             "iMac21,2" => "iMac (24-inch, 2021, Two Thunderbolt / USB 4 ports)",
+
+            // Intel
+            "MacBookPro16,3" => "MacBook Pro (13-inch, 2020, Two Thunderbolt 3 ports)",
+            "MacBookPro16,2" => "MacBook Pro (13-inch, 2020, Four Thunderbolt 3 ports)",
+            "MacBookPro16,4" | "MacBookPro16,1" => "MacBook Pro (16-inch, 2019)",
+            "MacBookPro15,4" => "MacBook Pro (13-inch, 2019, Two Thunderbolt 3 ports)",
+            "MacBookPro15,3" => "MacBook Pro (15-inch, 2019)",
+            "MacBookPro15,2" => "MacBook Pro (13-inch, 2018/2019, Four Thunderbolt 3 ports)",
+            "MacBookPro15,1" => "MacBook Pro (15-inch, 2018/2019)",
+            "MacBookPro14,3" => "MacBook Pro (15-inch, 2017)",
+            "MacBookPro14,2" => "MacBook Pro (13-inch, 2017, Four Thunderbolt 3 ports)",
+            "MacBookPro14,1" => "MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports)",
+            "MacBookPro13,3" => "MacBook Pro (15-inch, 2016)",
+            "MacBookPro13,2" => "MacBook Pro (13-inch, 2016, Four Thunderbolt 3 ports)",
+            "MacBookPro13,1" => "MacBook Pro (13-inch, 2016, Two Thunderbolt 3 ports)",
+            "MacBookPro12,1" => "MacBook Pro (Retina, 13-inch, Early 2015)",
+            "MacBookPro11,4" | "MacBookPro11,5" => "MacBook Pro (Retina, 15-inch, Mid 2015)",
+            "MacBookPro11,2" | "MacBookPro11,3" => {
+                "MacBook Pro (Retina, 15-inch, Late 2013/Mid 2014)"
+            }
+            "MacBookPro11,1" => "MacBook Pro (Retina, 13-inch, Late 2013/Mid 2014)",
+            "MacBookPro10,2" => "MacBook Pro (Retina, 13-inch, Late 2012/Early 2013)",
+            "MacBookPro10,1" => "MacBook Pro (Retina, 15-inch, Mid 2012/Early 2013)",
+            "MacBookPro9,2" => "MacBook Pro (13-inch, Mid 2012)",
+            "MacBookPro9,1" => "MacBook Pro (15-inch, Mid 2012)",
+            "MacBookPro8,3" => "MacBook Pro (17-inch, 2011)",
+            "MacBookPro8,2" => "MacBook Pro (15-inch, 2011)",
+            "MacBookPro8,1" => "MacBook Pro (13-inch, 2011)",
+            "MacBookPro7,1" => "MacBook Pro (13-inch, Mid 2010)",
+            "MacBookPro6,2" => "MacBook Pro (15-inch, Mid 2010)",
+            "MacBookPro6,1" => "MacBook Pro (17-inch, Mid 2010)",
+            "MacBookPro5,5" => "MacBook Pro (13-inch, Mid 2009)",
+            "MacBookPro5,3" => "MacBook Pro (15-inch, Mid 2009)",
+            "MacBookPro5,2" => "MacBook Pro (17-inch, Mid/Early 2009)",
+            "MacBookPro5,1" => "MacBook Pro (15-inch, Late 2008)",
+            "MacBookPro4,1" => "MacBook Pro (17/15-inch, Early 2008)",
+            "MacBookAir9,1" => "MacBook Air (Retina, 13-inch, 2020)",
+            "MacBookAir8,2" => "MacBook Air (Retina, 13-inch, 2019)",
+            "MacBookAir8,1" => "MacBook Air (Retina, 13-inch, 2018)",
+            "MacBookAir7,2" => "MacBook Air (13-inch, Early 2015/2017)",
+            "MacBookAir7,1" => "MacBook Air (11-inch, Early 2015)",
+            "MacBookAir6,2" => "MacBook Air (13-inch, Mid 2013/Early 2014)",
+            "MacBookAir6,1" => "MacBook Air (11-inch, Mid 2013/Early 2014)",
+            "MacBookAir5,2" => "MacBook Air (13-inch, Mid 2012)",
+            "MacBookAir5,1" => "MacBook Air (11-inch, Mid 2012)",
+            "MacBookAir4,2" => "MacBook Air (13-inch, Mid 2011)",
+            "MacBookAir4,1" => "MacBook Air (11-inch, Mid 2011)",
+            "MacBookAir3,2" => "MacBook Air (13-inch, Late 2010)",
+            "MacBookAir3,1" => "MacBook Air (11-inch, Late 2010)",
+            "MacBookAir2,1" => "MacBook Air (Mid 2009)",
+            "Macmini8,1" => "Mac mini (2018)",
+            "Macmini7,1" => "Mac mini (Mid 2014)",
+            "Macmini6,1" | "Macmini6,2" => "Mac mini (Late 2012)",
+            "Macmini5,1" | "Macmini5,2" => "Mac mini (Mid 2011)",
+            "Macmini4,1" => "Mac mini (Mid 2010)",
+            "Macmini3,1" => "Mac mini (Early/Late 2009)",
+            "MacBook10,1" => "MacBook (Retina, 12-inch, 2017)",
+            "MacBook9,1" => "MacBook (Retina, 12-inch, Early 2016)",
+            "MacBook8,1" => "MacBook (Retina, 12-inch, Early 2015)",
+            "MacBook7,1" => "MacBook (13-inch, Mid 2010)",
+            "MacBook6,1" => "MacBook (13-inch, Late 2009)",
+            "MacBook5,2" => "MacBook (13-inch, Early/Mid 2009)",
+            "MacPro7,1" => "Mac Pro (2019)",
+            "MacPro6,1" => "Mac Pro (Late 2013)",
+            "MacPro5,1" => "Mac Pro (Mid 2010 - Mid 2012)",
+            "MacPro4,1" => "Mac Pro (Early 2009)",
+            "iMacPro1,1" => "iMac Pro (2017)",
             "iMac20,1" | "iMac20,2" => "iMac (Retina 5K, 27-inch, 2020)",
             "iMac19,1" => "iMac (Retina 5K, 27-inch, 2019)",
             "iMac19,2" => "iMac (Retina 4K, 21.5-inch, 2019)",
-            "iMacPro1,1" => "iMac Pro (2017)",
             "iMac18,3" => "iMac (Retina 5K, 27-inch, 2017)",
             "iMac18,2" => "iMac (Retina 4K, 21.5-inch, 2017)",
             "iMac18,1" => "iMac (21.5-inch, 2017)",
@@ -352,6 +336,37 @@ impl CpuDisplay {
             "iMac11,2" => "iMac (21.5-inch, Mid 2010)",
             "iMac10,1" => "iMac (27/21.5-inch, Late 2009)",
             "iMac9,1" => "iMac (24/20-inch, Early 2009)",
+            "Xserve3,1" => "XServe (Early 2009)",
+            "Xserve2,1" => "XServe (Early 2008)",
+            "Xserve1,1" => "XServe (Late 2006)",
+
+            // PowerPC
+            "PowerMac11,2" => "Power Mac G5 (Late 2005)",
+            "PowerMac9,1" => "Power Mac G5 (Late 2004)",
+            "PowerMac7,3" => "Power Mac G5 (June 2004 | Early 2005)",
+            "PowerMac7,2" => "Power Mac G5 (June 2003 | Early 2005)",
+            "PowerMac5,1" => "Power Mac G4 Cube",
+            "PowerMac4,2" => "iMac (15-inch Early 2003)",
+            "PowerMac3,6" => "Power Mac G4 (FW 800 | Mirrored Drive Doors)",
+            "PowerMac3,5" => "Power Mac G4 (Quicksilver)",
+            "PowerMac3,4" => "Power Mac G4 (Digital Audio)",
+            "PowerMac3,3" => "Power Mac G4 (Gigabit Ethernet)",
+            "PowerMac3,1" => "Power Mac G4 (AGP Graphics)",
+            "PowerMac1,2" => "Power Mac G4 (PCI Graphics)",
+            "PowerMac1,1" => "Power Macintosh G3 (Blue and White)",
+            "PowerBook6,7" => "iBook G4 (Mid 2005)",
+            "PowerBook6,5" => "iBook G4 (2004)",
+            "PowerBook6,3" => "iBook G4",
+            "PowerBook5,2" => "PowerBook G4 (15-inch, FW 800)",
+            "PowerBook4,3" => "iBook (14.1 LCD 16 VRAM | Opaque 16 VRAM | 32 VRAM)",
+            "PowerBook4,2" => "iBook (14.1 LCD)",
+            "PowerBook4,1" => "iBook (Dual USB | late 2001)",
+            "PowerBook3,2" => "PowerBook G4 (Titanium)",
+            "PowerBook2,2" => "iBook (FireWire)",
+            "PowerBook2,1" => "iBook",
+            "RackMac3,1" => "XServe G5",
+            "RackMac1,2" => "XServe (Slot Load | Cluster Node)",
+            "RackMac1,1" => "XServe",
             _ => raw,
         };
 
@@ -368,5 +383,210 @@ impl CpuDisplay {
         }
 
         (num, unit)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_raw_label() {
+        assert_eq!(CpuDisplay::raw_label("Test"), "          Test: ");
+    }
+
+    #[test]
+    fn test_raw_sublabel() {
+        assert_eq!(CpuDisplay::raw_sublabel("Sub"), "                Sub: ");
+    }
+
+    #[test]
+    fn test_raw_inline_sublabel() {
+        assert_eq!(
+            CpuDisplay::raw_inline_sublabel("Cache", "L1d"),
+            "         Cache: L1d: "
+        );
+    }
+
+    #[test]
+    fn test_label_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.label("Model"), "         Model: ");
+    }
+
+    #[test]
+    fn test_sublabel_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.sublabel("L1d"), "                L1d: ");
+    }
+
+    #[test]
+    fn test_inline_sublabel_no_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.inline_sublabel("Cache", "L1d"),
+            "         Cache: L1d: "
+        );
+    }
+
+    #[test]
+    fn test_format_frequency_mhz() {
+        assert_eq!(CpuDisplay::format_frequency(800u32), "800.00 MHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_exact() {
+        assert_eq!(CpuDisplay::format_frequency(3000u32), "3.00 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_fraction() {
+        assert_eq!(CpuDisplay::format_frequency(3500u32), "3.50 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_ghz_precise() {
+        assert_eq!(CpuDisplay::format_frequency(2496u32), "2.49 GHz");
+    }
+
+    #[test]
+    fn test_format_frequency_zero() {
+        assert_eq!(CpuDisplay::format_frequency(0u32), "0.00 MHz");
+    }
+
+    #[test]
+    fn test_format_frequency_u64() {
+        assert_eq!(CpuDisplay::format_frequency(2400u64), "2.40 GHz");
+    }
+
+    #[test]
+    fn test_label_with_color() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: true,
+                verbose: false,
+            },
+        };
+        let lbl = disp.label("Vendor");
+        assert!(lbl.starts_with("\x1b["));
+        assert!(lbl.contains("Vendor"));
+    }
+
+    #[test]
+    fn test_ansi_format() {
+        let s = CpuDisplay::ansi("31");
+        assert_eq!(s, "\x1b[31m");
+    }
+
+    #[test]
+    fn test_ansi_color() {
+        let s = CpuDisplay::ansi_color("32", "green");
+        assert_eq!(s, "\x1b[32mgreen\x1b[m");
+    }
+
+    #[test]
+    fn test_cache_count_zero_share() {
+        assert_eq!(CpuDisplay::cache_count(0, 4), "");
+    }
+
+    #[test]
+    fn test_cache_count_single_core() {
+        assert_eq!(CpuDisplay::cache_count(4, 1), "");
+    }
+
+    #[test]
+    fn test_cache_count_multi() {
+        assert_eq!(CpuDisplay::cache_count(4, 8), "2x ");
+    }
+
+    #[test]
+    fn test_cache_count_exact() {
+        assert_eq!(CpuDisplay::cache_count(2, 2), "");
+    }
+
+    #[test]
+    fn test_cache_size_kb() {
+        let (num, unit) = CpuDisplay::cache_size(65536);
+        assert_eq!(num, 64);
+        assert_eq!(unit, "KB");
+    }
+
+    #[test]
+    fn test_cache_size_mb() {
+        let (num, unit) = CpuDisplay::cache_size(8 * 1024 * 1024);
+        assert_eq!(num, 8);
+        assert_eq!(unit, "MB");
+    }
+
+    #[test]
+    fn test_cache_size_zero() {
+        let (num, unit) = CpuDisplay::cache_size(0);
+        assert_eq!(num, 0);
+        assert_eq!(unit, "KB");
+    }
+
+    #[test]
+    fn test_format_system_name_macbook_air_m1() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.format_system_name("MacBookAir10,1"),
+            "MacBook Air (M1, 2020)"
+        );
+    }
+
+    #[test]
+    fn test_format_system_name_unknown() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.format_system_name("CustomPC"), "CustomPC");
+    }
+
+    #[test]
+    fn test_format_system_name_mac_pro() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
+    }
+
+    #[test]
+    fn test_format_system_name_powerpc() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                verbose: false,
+            },
+        };
+        assert_eq!(
+            disp.format_system_name("PowerMac11,2"),
+            "Power Mac G5 (Late 2005)"
+        );
     }
 }

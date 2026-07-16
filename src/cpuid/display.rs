@@ -38,10 +38,10 @@ impl Cpu {
             } else if raw_model.trim().eq(&disp_model) {
                 disp.simple_line("Model", &disp_model);
             } else {
-                println!("{}{}", disp.label("Model"), &disp_model);
+                println!("{}{}", disp.label("Model"), disp_model);
 
                 if flags.verbose {
-                    println!("{}{}", disp.label("Model (raw)"), &raw_model);
+                    println!("{}{}", disp.label("Model (raw)"), raw_model);
                 }
 
                 CpuDisplay::newline();
@@ -294,6 +294,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
+        #[cfg(not(dos))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }

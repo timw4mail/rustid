@@ -178,3 +178,145 @@ pub enum DataSource {
     /// value from Windows registry
     WindowsRegistry,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ucfirst_empty() {
+        assert_eq!(ucfirst(""), "");
+    }
+
+    #[test]
+    fn test_ucfirst_already_upper() {
+        assert_eq!(ucfirst("Hello"), "Hello");
+    }
+
+    #[test]
+    fn test_ucfirst_lowercase() {
+        assert_eq!(ucfirst("hello"), "Hello");
+    }
+
+    #[test]
+    fn test_ucfirst_single_char() {
+        assert_eq!(ucfirst("a"), "A");
+    }
+
+    #[test]
+    fn test_cleanup_soc_vendor_brcm() {
+        assert_eq!(cleanup_soc_vendor("brcm"), "Broadcom");
+    }
+
+    #[test]
+    fn test_cleanup_soc_vendor_raspberrypi() {
+        assert_eq!(cleanup_soc_vendor("raspberrypi"), "Raspberry Pi");
+    }
+
+    #[test]
+    fn test_cleanup_soc_vendor_bigtreetech() {
+        assert_eq!(cleanup_soc_vendor("bigtreetech"), "BigTreeTech");
+    }
+
+    #[test]
+    fn test_cleanup_soc_vendor_other() {
+        assert_eq!(cleanup_soc_vendor("unknown_vendor"), "Unknown_vendor");
+    }
+
+    #[test]
+    fn test_core_type_from_str_performance() {
+        assert_eq!(CoreType::from("Performance"), CoreType::Performance);
+    }
+
+    #[test]
+    fn test_core_type_from_str_efficiency() {
+        assert_eq!(CoreType::from("Efficiency"), CoreType::Efficiency);
+    }
+
+    #[test]
+    fn test_core_type_from_str_super() {
+        assert_eq!(CoreType::from("Super"), CoreType::Super);
+    }
+
+    #[test]
+    fn test_core_type_from_str_unknown_defaults_to_performance() {
+        assert_eq!(CoreType::from("Unknown"), CoreType::Performance);
+    }
+
+    #[test]
+    fn test_core_type_from_string() {
+        let s = String::from("Efficiency");
+        assert_eq!(CoreType::from(s), CoreType::Efficiency);
+    }
+
+    #[test]
+    fn test_core_type_into_str() {
+        let s: &str = CoreType::Super.into();
+        assert_eq!(s, "Super");
+        let s: &str = CoreType::Performance.into();
+        assert_eq!(s, "Performance");
+        let s: &str = CoreType::Efficiency.into();
+        assert_eq!(s, "Efficiency");
+    }
+
+    #[test]
+    fn test_topology_tier_new() {
+        let t = TopologyTier::new(4, DataSource::Cpuid);
+        assert_eq!(t.count, 4);
+        assert_eq!(t.source, DataSource::Cpuid);
+    }
+
+    #[test]
+    fn test_topology_tier_default() {
+        let t = TopologyTier::default();
+        assert_eq!(t.count, 1);
+        assert_eq!(t.source, DataSource::DefaultValue);
+    }
+
+    #[test]
+    fn test_speed_default() {
+        let s = Speed::default();
+        assert_eq!(s.base, 0);
+        assert_eq!(s.boost, 0);
+        assert!(!s.measured);
+    }
+
+    #[test]
+    fn test_speed_values() {
+        let s = Speed {
+            base: 2400,
+            boost: 5000,
+            measured: false,
+        };
+        assert_eq!(s.base, 2400);
+        assert_eq!(s.boost, 5000);
+        assert!(!s.measured);
+    }
+
+    #[test]
+    fn test_speed_measured() {
+        let s = Speed {
+            base: 3000,
+            boost: 3000,
+            measured: true,
+        };
+        assert!(s.measured);
+    }
+
+    #[test]
+    fn test_cli_flags_default() {
+        let f = CliFlags::default();
+        assert!(!f.color);
+        assert!(!f.verbose);
+    }
+
+    #[test]
+    fn test_cli_flags_explicit() {
+        let f = CliFlags {
+            color: true,
+            verbose: true,
+        };
+        assert!(f.color);
+        assert!(f.verbose);
+    }
+}
