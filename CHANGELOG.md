@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.0]
+
+### Added
+ - Initial Risc V support
+
+### Changed
+ - Improved system name detection on Linux
+
+### Fixed
+
 ## [1.6.0]
 
 ### Added

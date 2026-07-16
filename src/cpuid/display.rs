@@ -38,10 +38,10 @@ impl Cpu {
             } else if raw_model.trim().eq(&disp_model) {
                 disp.simple_line("Model", &disp_model);
             } else {
-                println!("{}{}", disp.label("Model"), &disp_model);
+                println!("{}{}", disp.label("Model"), disp_model);
 
                 if flags.verbose {
-                    println!("{}{}", disp.label("Model (raw)"), &raw_model);
+                    println!("{}{}", disp.label("Model (raw)"), raw_model);
                 }
 
                 CpuDisplay::newline();

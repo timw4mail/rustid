@@ -104,6 +104,7 @@ fn get_raw_system_name() -> Option<String> {
     let simple_paths: Vec<_> = vec![
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
+        "/sys/devices/virtual/dmi/id/product_family",
         "/sys/devices/virtual/dmi/id/product_name",
         "/sys/class/dmi/id/product_name",
     ];
@@ -112,11 +113,10 @@ fn get_raw_system_name() -> Option<String> {
         if let Ok(raw) = std::fs::read_to_string(path) {
             let raw: Vec<_> = raw.split('\0').collect();
             let raw = raw.first();
-            if let Some(raw) = raw {
+            {
+                let raw = raw?;
                 let trimmed = raw.trim();
                 return Some(String::from(trimmed));
-            } else {
-                return None;
             }
         }
     }
