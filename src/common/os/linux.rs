@@ -118,7 +118,7 @@ fn get_raw_system_name() -> Option<String> {
                 let trimmed = raw.trim();
 
                 if trimmed.is_empty() {
-                    return None;
+                    continue;
                 }
 
                 return Some(String::from(trimmed));
