@@ -119,7 +119,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB, {}-way",
                             self.inline_sublabel("Cache", "L1d"),
-                            &data_count,
+                            data_count,
                             data.size / 1024,
                             data.assoc
                         );
@@ -127,7 +127,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB",
                             self.inline_sublabel("Cache", "L1d"),
-                            &data_count,
+                            data_count,
                             data.size / 1024
                         );
                     }
@@ -136,7 +136,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB, {}-way",
                             self.sublabel("L1i"),
-                            &instruction_count,
+                            instruction_count,
                             instruction.size / 1024,
                             instruction.assoc
                         );
@@ -144,7 +144,7 @@ impl CpuDisplay {
                         println!(
                             "{}{}{} KB",
                             self.sublabel("L1i"),
-                            &instruction_count,
+                            instruction_count,
                             instruction.size / 1024,
                         );
                     }
@@ -159,13 +159,13 @@ impl CpuDisplay {
                     println!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L2"),
-                        &count,
+                        count,
                         num,
                         unit,
                         l2.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L2"), &count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
                 }
             }
 
@@ -181,13 +181,13 @@ impl CpuDisplay {
                     println!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L3"),
-                        &count,
+                        count,
                         num,
                         unit,
                         l3.assoc
                     );
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L3"), &count, num, unit);
+                    println!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
                 }
             }
 

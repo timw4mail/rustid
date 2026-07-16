@@ -113,7 +113,8 @@ fn get_raw_system_name() -> Option<String> {
             let raw: Vec<_> = raw.split('\0').collect();
             let raw = raw.first();
             if let Some(raw) = raw {
-                return Some(String::from(*raw));
+                let trimmed = raw.trim();
+                return Some(String::from(trimmed));
             } else {
                 return None;
             }
