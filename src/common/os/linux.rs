@@ -104,6 +104,8 @@ fn get_raw_system_name() -> Option<String> {
     let simple_paths: Vec<_> = vec![
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
+        "/sys/devices/virtual/dmi/id/product_name",
+        "/sys/class/dmi/id/product_name",
     ];
 
     for path in simple_paths {
