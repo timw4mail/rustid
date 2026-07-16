@@ -117,7 +117,7 @@ fn get_raw_system_name() -> Option<String> {
                 let raw = raw?;
                 let trimmed = raw.trim();
 
-                if trimmed.is_empty() {
+                if trimmed.is_empty() || trimmed.contains("To Be Filled") {
                     continue;
                 }
 
