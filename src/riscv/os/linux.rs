@@ -15,7 +15,7 @@ pub fn detect() -> OsCpuInfo {
     let first = cpuinfo.first();
 
     let vendor_id = first
-        .and_then(|m| m.get("vendor-id"))
+        .and_then(|m| m.get("mvendorid"))
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
 
