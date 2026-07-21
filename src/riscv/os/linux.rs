@@ -34,9 +34,13 @@ pub fn detect() -> OsCpuInfo {
     let mvendorid = read_sysfs_csr("mvendorid");
     let marchid = read_sysfs_csr("marchid");
     let mimpid = read_sysfs_csr("mimpid");
+    let mconfigptr = read_sysfs_csr("mconfigptr");
 
     let vendor_name = if !vendor_id.is_empty() {
-        vendor_id.clone()
+        let trimmed = vendor_id.trim().trim_start_matches("0x");
+        let parsed = usize::from_str_radix(trimmed, 16).unwrap_or(mvendorid);
+        let v: String = Vendor::from(parsed).into();
+        v
     } else {
         let v: String = Vendor::from(mvendorid).into();
         v
@@ -58,6 +62,20 @@ pub fn detect() -> OsCpuInfo {
     }
     if mimpid != 0 {
         raw.insert("mimpid".to_string(), format!("0x{:x}", mimpid));
+    }
+    if mconfigptr != 0 {
+        raw.insert("mconfigptr".to_string(), format!("0x{:x}", mconfigptr));
+    }
+
+    // Read device tree CPU properties
+    if let Some(dt_compat) = read_dt_cpu_prop("compatible") {
+        raw.insert("dt-compatible".to_string(), dt_compat);
+    }
+    if let Some(dt_isa) = read_dt_cpu_prop("riscv,isa") {
+        raw.insert("dt-isa".to_string(), dt_isa);
+    }
+    if let Some(freq) = read_dt_cpu_freq() {
+        raw.insert("clock-frequency".to_string(), freq);
     }
 
     // Count cores from cpuinfo entries
@@ -101,6 +119,48 @@ fn read_sysfs_csr(name: &str) -> usize {
             usize::from_str_radix(trimmed, 16).ok()
         })
         .unwrap_or(0)
+}
+
+/// Read a property from the device tree CPU node.
+///
+/// Reads from `/sys/firmware/devicetree/base/cpus/cpu@0/{prop}`.
+/// Binary properties (like `compatible`, `riscv,isa`) are null-terminated strings.
+fn read_dt_cpu_prop(prop: &str) -> Option<String> {
+    let path = format!("/sys/firmware/devicetree/base/cpus/cpu@0/{}", prop);
+    let bytes = std::fs::read(&path).ok()?;
+    // Strip trailing null bytes
+    let len = bytes
+        .iter()
+        .rposition(|&b| b != 0)
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    if len == 0 {
+        return None;
+    }
+    String::from_utf8(bytes[..len].to_vec()).ok()
+}
+
+/// Read the clock-frequency property from the device tree CPU node.
+///
+/// The value is a big-endian u32 in Hz. Returns a human-readable string.
+fn read_dt_cpu_freq() -> Option<String> {
+    let path = "/sys/firmware/devicetree/base/cpus/cpu@0/clock-frequency";
+    let bytes = std::fs::read(path).ok()?;
+    if bytes.len() < 4 {
+        return None;
+    }
+    // Big-endian u32
+    let freq = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    if freq == 0 {
+        return None;
+    }
+    if freq >= 1_000_000_000 {
+        Some(format!("{:.2} GHz", freq as f64 / 1_000_000_000.0))
+    } else if freq >= 1_000_000 {
+        Some(format!("{} MHz", freq / 1_000_000))
+    } else {
+        Some(format!("{} Hz", freq))
+    }
 }
 
 // ----------------------------------------------------------------------------
