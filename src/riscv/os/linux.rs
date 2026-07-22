@@ -4,7 +4,7 @@
 
 use super::OsCpuInfo;
 use crate::common::get_proc_cpuinfo_data;
-use crate::common::{Cache, CoreType, DataSource};
+use crate::common::{Cache, CoreType, DataSource, UNK};
 use crate::riscv::brand::Vendor;
 use crate::riscv::micro_arch::*;
 use std::collections::BTreeMap;
@@ -46,7 +46,7 @@ pub fn detect() -> OsCpuInfo {
         v
     };
 
-    let cpu_arch = CpuArch::find(mvendorid, marchid);
+    let mut cpu_arch = CpuArch::find(mvendorid, marchid);
 
     let mut raw: BTreeMap<String, String> = BTreeMap::new();
     if let Some(first_map) = first {
@@ -67,16 +67,34 @@ pub fn detect() -> OsCpuInfo {
         raw.insert("mconfigptr".to_string(), format!("0x{:x}", mconfigptr));
     }
 
-    // Read device tree CPU properties
-    if let Some(dt_compat) = read_dt_cpu_prop("compatible") {
-        raw.insert("dt-compatible".to_string(), dt_compat);
+    // Read device tree CPU properties (early, so we can use them as fallbacks)
+    let dt_compat = read_dt_cpu_prop("compatible");
+    if let Some(ref compat) = dt_compat {
+        raw.insert("dt-compatible".to_string(), compat.clone());
     }
-    if let Some(dt_isa) = read_dt_cpu_prop("riscv,isa") {
-        raw.insert("dt-isa".to_string(), dt_isa);
+    let dt_isa = read_dt_cpu_prop("riscv,isa");
+    if let Some(ref isa) = dt_isa {
+        raw.insert("dt-isa".to_string(), isa.clone());
     }
     if let Some(freq) = read_dt_cpu_freq() {
         raw.insert("clock-frequency".to_string(), freq);
     }
+
+    // Fallback: if CSR-based identification yielded Unknown, try device tree compatible
+    if cpu_arch.model == UNK {
+        if let Some(ref compat) = dt_compat {
+            if let Some(dt_arch) = CpuArch::find_by_compatible(compat) {
+                cpu_arch = dt_arch;
+            }
+        }
+    }
+
+    // Fallback: if ISA string is missing from /proc/cpuinfo, try device tree
+    let final_isa = if isa_string.is_empty() {
+        dt_isa.unwrap_or_default()
+    } else {
+        isa_string
+    };
 
     // Count cores from cpuinfo entries
     let core_count = cpuinfo.len() as u32;
@@ -102,7 +120,7 @@ pub fn detect() -> OsCpuInfo {
         vendor: vendor_name,
         cpu_arch,
         model: model_name,
-        isa_string,
+        isa_string: final_isa,
         cores,
         raw,
         midr_source: DataSource::LinuxProcCpuinfo,
@@ -206,7 +224,10 @@ pub fn get_features_from_isa(isa: &str) -> BTreeMap<String, bool> {
         "zbb",
         "zbc",
         "zbs",
+        "zfh",
+        "zfhmin",
         "zvfh",
+        "zvfhmin",
         "zvbb",
         "zvbc",
         "zkne",
@@ -214,6 +235,22 @@ pub fn get_features_from_isa(isa: &str) -> BTreeMap<String, bool> {
         "zksed",
         "zksh",
         "zknh",
+        "zkn",
+        "zks",
+        "zbkb",
+        "zkc",
+        "zbkx",
+        "zca",
+        "zcb",
+        "zcd",
+        "zcmp",
+        "zcmt",
+        "zacas",
+        "ztso",
+        "zama16b",
+        "svinval",
+        "svnapot",
+        "svpbmt",
         "zicbom",
         "zicbop",
         "zicboz",

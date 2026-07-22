@@ -19,19 +19,27 @@ pub const MUL_FEATURES: &[&str] = &["m"];
 pub const ATOMIC_FEATURES: &[&str] = &["a"];
 
 /// Single-precision floating point
-pub const FP_FEATURES: &[&str] = &["f", "d", "q"];
+pub const FP_FEATURES: &[&str] = &["f", "d", "q", "zfh", "zfhmin"];
 
 /// Compressed instruction extension
 pub const COMPRESSED_FEATURES: &[&str] = &["c"];
+
+/// Compressed/pointer extensions (Zc*)
+pub const ZC_FEATURES: &[&str] = &["zca", "zcb", "zcmp", "zcmt"];
 
 /// Bit manipulation extensions
 pub const BITMANIP_FEATURES: &[&str] = &["zba", "zbb", "zbc", "zbs"];
 
 /// Vector extension
-pub const VECTOR_FEATURES: &[&str] = &["v", "zvfh", "zvbb", "zvbc"];
+pub const VECTOR_FEATURES: &[&str] = &["v", "zvfh", "zvfhmin", "zvbb", "zvbc"];
 
-/// Cryptographic extensions
-pub const CRYPTO_FEATURES: &[&str] = &["zkne", "zknd", "zksed", "zksh", "zknh"];
+/// Scalar crypto extensions
+pub const CRYPTO_FEATURES: &[&str] = &[
+    "zkne", "zknd", "zksed", "zksh", "zknh", "zkn", "zks", "zbkb", "zkc", "zbkx",
+];
+
+/// Atomic max/min extension
+pub const AMO_FEATURES: &[&str] = &["zacas"];
 
 /// Supervisor/user/hypervisor extensions
 pub const PRIV_FEATURES: &[&str] = &["s", "u", "h"];
@@ -39,86 +47,11 @@ pub const PRIV_FEATURES: &[&str] = &["s", "u", "h"];
 /// Cache/block management extensions
 pub const CACHE_FEATURES: &[&str] = &["zicbom", "zicbop", "zicboz"];
 
+/// Memory model and virtual memory extensions
+pub const MEM_FEATURES: &[&str] = &["ztso", "zama16b", "svinval", "svnapot", "svpbmt"];
+
 /// Miscellaneous extensions
 pub const MISC_FEATURES: &[&str] = &["zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl"];
-
-pub struct RiscvFeatures;
-
-#[allow(unused)]
-pub trait TRiscvFeatures {
-    fn has_m(&self) -> bool {
-        false
-    }
-    fn has_a(&self) -> bool {
-        false
-    }
-    fn has_f(&self) -> bool {
-        false
-    }
-    fn has_d(&self) -> bool {
-        false
-    }
-    fn has_c(&self) -> bool {
-        false
-    }
-    fn has_v(&self) -> bool {
-        false
-    }
-    fn has_zba(&self) -> bool {
-        false
-    }
-    fn has_zbb(&self) -> bool {
-        false
-    }
-    fn has_zbc(&self) -> bool {
-        false
-    }
-    fn has_zbs(&self) -> bool {
-        false
-    }
-    fn has_zkne(&self) -> bool {
-        false
-    }
-    fn has_zknd(&self) -> bool {
-        false
-    }
-    fn has_zksed(&self) -> bool {
-        false
-    }
-    fn has_zksh(&self) -> bool {
-        false
-    }
-    fn has_s(&self) -> bool {
-        false
-    }
-    fn has_u(&self) -> bool {
-        false
-    }
-    fn has_h(&self) -> bool {
-        false
-    }
-    fn has_zicbom(&self) -> bool {
-        false
-    }
-    fn has_zicbop(&self) -> bool {
-        false
-    }
-    fn has_zicboz(&self) -> bool {
-        false
-    }
-    fn has_zicsr(&self) -> bool {
-        false
-    }
-    fn has_zifencei(&self) -> bool {
-        false
-    }
-    fn has_zvfh(&self) -> bool {
-        false
-    }
-    fn has_zvbb(&self) -> bool {
-        false
-    }
-}
 
 /// Populate a detected features map from a platform source map.
 /// Handles multi-letter extensions (e.g. "zba", "zkne") directly.
@@ -133,7 +66,10 @@ pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'st
         "q",
         "c",
         "v",
+        "zfh",
+        "zfhmin",
         "zvfh",
+        "zvfhmin",
         "zvbb",
         "zvbc",
         "zba",
@@ -145,6 +81,21 @@ pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'st
         "zksed",
         "zksh",
         "zknh",
+        "zkn",
+        "zks",
+        "zbkb",
+        "zkc",
+        "zbkx",
+        "zca",
+        "zcb",
+        "zcmp",
+        "zcmt",
+        "zacas",
+        "ztso",
+        "zama16b",
+        "svinval",
+        "svnapot",
+        "svpbmt",
         "s",
         "u",
         "h",
@@ -176,11 +127,14 @@ pub fn build_feature_map(
         ("Atomic", ATOMIC_FEATURES),
         ("Float", FP_FEATURES),
         ("Compressed", COMPRESSED_FEATURES),
+        ("Zc", ZC_FEATURES),
         ("Bitmanip", BITMANIP_FEATURES),
         ("Vector", VECTOR_FEATURES),
-        ("Crypto", CRYPTO_FEATURES),
+        ("ScalarCrypto", CRYPTO_FEATURES),
+        ("AmoMaxMin", AMO_FEATURES),
         ("Priv", PRIV_FEATURES),
         ("Cache", CACHE_FEATURES),
+        ("MemModel", MEM_FEATURES),
         ("Misc", MISC_FEATURES),
     ];
 

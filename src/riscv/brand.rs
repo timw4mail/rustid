@@ -10,6 +10,10 @@ pub const VENDOR_STARFIVE: usize = 0x1bc;
 pub const VENDOR_KENDRYTE: usize = 0x31e;
 /// WCH (Nanjing Qinheng Microelectronics)
 pub const VENDOR_WCH: usize = 0x1fc;
+/// Nuclei System Technology
+pub const VENDOR_NUCLEI: usize = 0xc23;
+/// XiangShan (ICT, CAS)
+pub const VENDOR_XIANGSHAN: usize = 0x557;
 
 #[allow(unused)]
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
@@ -21,6 +25,8 @@ pub enum Vendor {
     StarFive,
     Kendryte,
     WCH,
+    Nuclei,
+    XiangShan,
 }
 
 impl From<Vendor> for String {
@@ -40,6 +46,8 @@ impl From<Vendor> for &'static str {
             StarFive => "StarFive",
             Kendryte => "Canaan",
             WCH => "WCH",
+            Nuclei => "Nuclei",
+            XiangShan => "XiangShan",
         }
     }
 }
@@ -52,6 +60,8 @@ impl From<usize> for Vendor {
             VENDOR_STARFIVE => Self::StarFive,
             VENDOR_KENDRYTE => Self::Kendryte,
             VENDOR_WCH => Self::WCH,
+            VENDOR_NUCLEI => Self::Nuclei,
+            VENDOR_XIANGSHAN => Self::XiangShan,
             _ => Self::Unknown,
         }
     }

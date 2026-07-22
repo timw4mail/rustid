@@ -8,7 +8,6 @@ pub mod micro_arch;
 pub mod os;
 use crate::common::{CliFlags, CpuDisplay};
 pub use cpu::*;
-pub use features::{RiscvFeatures, TRiscvFeatures};
 pub use micro_arch::{CpuArch, CpuCore};
 pub use os::*;
 
@@ -91,23 +90,5 @@ impl CpuDisplay {
             }
             println!();
         }
-    }
-}
-
-/// Reads the RISC-V `misa` CSR via inline assembly.
-///
-/// Returns 0 on platforms without inline asm support.
-pub fn get_misa() -> u64 {
-    #[cfg(target_arch = "riscv64")]
-    {
-        let val: u64;
-        unsafe {
-            core::arch::asm!("csrr {rd}, misa", rd = out(reg) val, options(nomem, nostack));
-        }
-        val
-    }
-    #[cfg(not(target_arch = "riscv64"))]
-    {
-        0
     }
 }
