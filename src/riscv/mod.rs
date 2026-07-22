@@ -59,17 +59,17 @@ impl CpuDisplay {
                 let core_label = alloc::format!("Core #{}", i + 1);
                 println!("{}", cpu.label(&core_label));
 
-                let type_str: &str = core.kind.into();
+                let type_str: &str = core.1.kind.into();
                 println!("{}{}", cpu.label("Type"), type_str);
 
-                if let Some(name) = &core.name {
+                if let Some(name) = &core.1.name {
                     println!("{}{}", cpu.label("Codename"), name);
                 }
 
-                println!("{}{} cores", cpu.label("Topology"), core.count);
+                println!("{}{} cores", cpu.label("Topology"), core.1.count);
 
-                let cc = |s| CpuDisplay::cache_count(s, core.count);
-                cpu.display_cache(core.cache, &cc, 0);
+                let cc = |s| CpuDisplay::cache_count(s, core.1.count);
+                cpu.display_cache(core.1.cache, &cc, 0);
             }
         }
 
