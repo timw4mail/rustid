@@ -90,6 +90,7 @@ impl TMicroArch for Intel {
             (0, 6, 3, 7, 3) => brand_arch(MicroArch::Silvermont, "Bay Trail-M", Some(N22)),
             (0, 6, 3, 10, 9) => brand_arch(MicroArch::IvyBridge, "Ivy Bridge", Some(N22)),
             (0, 6, 3, 12, _) => brand_arch(MicroArch::Haswell, "Haswell", Some(N22)),
+            (0, 6, 3, 14, _) => brand_arch(MicroArch::IvyBridge, "Ivy Bridge-EN", Some(N22)),
             (0, 6, 3, 15, _) => brand_arch(MicroArch::Haswell, "Haswell-EP 4S", Some(N22)),
             (0, 6, 4, 12, 4) => brand_arch(MicroArch::Airmont, "Braswell", Some(N14)),
             (0, 6, 5, 14, 3) => brand_arch(MicroArch::Skylake, "Skylake-S", Some(N14)),
