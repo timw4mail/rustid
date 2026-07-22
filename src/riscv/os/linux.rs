@@ -4,7 +4,7 @@
 
 use super::OsCpuInfo;
 use crate::common::get_proc_cpuinfo_data;
-use crate::common::{CoreType, DataSource};
+use crate::common::{Cache, CoreType, DataSource};
 use crate::riscv::brand::Vendor;
 use crate::riscv::micro_arch::*;
 use std::collections::BTreeMap;
@@ -81,6 +81,7 @@ pub fn detect() -> OsCpuInfo {
     // Count cores from cpuinfo entries
     let core_count = cpuinfo.len() as u32;
     let core_type = CoreType::Performance;
+    let cache = Cache::detect();
     let cores = if core_count > 0 {
         let mut map = BTreeMap::new();
         map.insert(
@@ -88,7 +89,7 @@ pub fn detect() -> OsCpuInfo {
             CpuCore {
                 kind: core_type,
                 name: Some(String::from(cpu_arch.micro_arch)),
-                cache: None,
+                cache,
                 count: core_count,
             },
         );
