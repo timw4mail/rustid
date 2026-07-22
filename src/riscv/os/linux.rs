@@ -19,6 +19,16 @@ pub fn detect() -> OsCpuInfo {
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
 
+    let marchid_str = first
+        .and_then(|m| m.get("marchid"))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+
+    let mimpid_str = first
+        .and_then(|m| m.get("mimpid"))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+
     let model_name = first
         .and_then(|m| m.get("model name"))
         .or_else(|| first.and_then(|m| m.get("model")))
@@ -31,15 +41,29 @@ pub fn detect() -> OsCpuInfo {
         .unwrap_or_default();
 
     // Read CSR values from sysfs
-    let mvendorid = read_sysfs_csr("mvendorid");
-    let marchid = read_sysfs_csr("marchid");
-    let mimpid = read_sysfs_csr("mimpid");
+    let sysfs_mvendorid = read_sysfs_csr("mvendorid");
+    let sysfs_marchid = read_sysfs_csr("marchid");
+    let sysfs_mimpid = read_sysfs_csr("mimpid");
     let mconfigptr = read_sysfs_csr("mconfigptr");
 
+    // Parse /proc/cpuinfo hex strings as fallbacks when sysfs CSR files are absent
+    fn parse_hex_fallback(cpuinfo_val: &str, sysfs_val: usize) -> usize {
+        if sysfs_val != 0 {
+            return sysfs_val;
+        }
+        if cpuinfo_val.is_empty() {
+            return 0;
+        }
+        let trimmed = cpuinfo_val.trim().trim_start_matches("0x");
+        usize::from_str_radix(trimmed, 16).unwrap_or(0)
+    }
+
+    let mvendorid = parse_hex_fallback(&vendor_id, sysfs_mvendorid);
+    let marchid = parse_hex_fallback(&marchid_str, sysfs_marchid);
+    let mimpid = parse_hex_fallback(&mimpid_str, sysfs_mimpid);
+
     let vendor_name = if !vendor_id.is_empty() {
-        let trimmed = vendor_id.trim().trim_start_matches("0x");
-        let parsed = usize::from_str_radix(trimmed, 16).unwrap_or(mvendorid);
-        let v: String = Vendor::from(parsed).into();
+        let v: String = Vendor::from(mvendorid).into();
         v
     } else {
         let v: String = Vendor::from(mvendorid).into();
