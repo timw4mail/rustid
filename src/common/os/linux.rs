@@ -63,7 +63,7 @@ fn get_soc_cpuinfo() -> Option<String> {
     None
 }
 
-fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
+pub fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
     if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/compatible") {
         let res: Vec<_> = raw
             .split('\0')
@@ -84,7 +84,7 @@ fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
     None
 }
 
-fn format_compatible_pair(pair: Vec<String>) -> String {
+pub fn format_compatible_pair(pair: Vec<String>) -> String {
     if pair.len() < 2 {
         return pair[0].clone();
     }

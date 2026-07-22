@@ -3,8 +3,10 @@
 //! Uses `/proc/cpuinfo` for ISA string and vendor info, and sysfs for CSR values.
 
 use super::OsCpuInfo;
-use crate::common::get_proc_cpuinfo_data;
-use crate::common::{Cache, CoreType, DataSource, UNK};
+use crate::common::{
+    Cache, CoreType, DataSource, UNK, format_compatible_pair, get_devicetree_compatible,
+    get_proc_cpuinfo_data,
+};
 use crate::riscv::brand::Vendor;
 use crate::riscv::micro_arch::*;
 use std::collections::BTreeMap;
@@ -34,6 +36,15 @@ pub fn detect() -> OsCpuInfo {
         .or_else(|| first.and_then(|m| m.get("model")))
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
+
+    let model_name = if model_name.is_empty() {
+        get_devicetree_compatible()
+            .and_then(|pairs| pairs.last().cloned())
+            .map(|pair| format_compatible_pair(pair))
+            .unwrap_or_default()
+    } else {
+        model_name
+    };
 
     let isa_string = first
         .and_then(|m| m.get("isa"))
