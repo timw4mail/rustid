@@ -138,9 +138,9 @@ impl MicroArch {
     }
 }
 
-impl From<MicroArch> for String {
-    fn from(ma: MicroArch) -> String {
-        let s = match ma {
+impl MicroArch {
+    pub fn as_str(&self) -> &str {
+        match self {
             MicroArch::Unknown => UNK,
             MicroArch::SiFiveU74 => "SiFive U74",
             MicroArch::SiFiveU76 => "SiFive U76",
@@ -159,8 +159,13 @@ impl From<MicroArch> for String {
             MicroArch::StarFiveJH7110 => "StarFive JH7110",
             MicroArch::KendryteK210 => "Kendryte K210",
             MicroArch::WCHCH32V => "WCH CH32V",
-        };
-        String::from(s)
+        }
+    }
+}
+
+impl From<MicroArch> for String {
+    fn from(ma: MicroArch) -> String {
+        String::from(ma.as_str())
     }
 }
 
