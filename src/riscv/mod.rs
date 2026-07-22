@@ -34,7 +34,7 @@ impl CpuDisplay {
 
         cpu.simple_line("Vendor", &cpu_info.vendor);
 
-        cpu.simple_line("Model", &cpu_info.cpu_arch.model);
+        cpu.simple_line("Model", &cpu_info.model);
 
         let ma = cpu_info.cpu_arch.micro_arch.as_str();
         if ma != UNK {
