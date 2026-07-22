@@ -46,21 +46,31 @@ impl CpuDisplay {
 
         // Display cores
         if !cpu_info.cores.is_empty() {
-            println!("{}", cpu.label("Cores"));
-            let keys: Vec<_> = cpu_info.cores.keys().collect();
-            let core = cpu_info
-                .cores
-                .get(keys[0])
-                .expect("There should be a core to display");
+            let total_cores: u32 = cpu_info.cores.values().map(|c| c.count).sum();
+            println!(
+                "{}{} cores across {} core types",
+                cpu.label("Cpu Topology"),
+                total_cores,
+                cpu_info.cores.len()
+            );
+            CpuDisplay::newline();
 
-            if let Some(name) = &core.name {
-                println!("{}{}", cpu.label("Name"), name);
+            for (i, core) in cpu_info.cores.iter().enumerate() {
+                let core_label = alloc::format!("Core #{}", i + 1);
+                println!("{}", cpu.label(&core_label));
+
+                let type_str: &str = core.kind.into();
+                println!("{}{}", cpu.label("Type"), type_str);
+
+                if let Some(name) = &core.name {
+                    println!("{}{}", cpu.label("Codename"), name);
+                }
+
+                println!("{}{} cores", cpu.label("Topology"), core.count);
+
+                let cc = |s| CpuDisplay::cache_count(s, core.count);
+                cpu.display_cache(core.cache, &cc, 0);
             }
-
-            println!("{}{}", cpu.label("Count"), core.count);
-
-            let cc = |s| CpuDisplay::cache_count(s, core.count);
-            cpu.display_cache(core.cache, &cc, 0);
         }
 
         // Display features
