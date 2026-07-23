@@ -277,7 +277,7 @@ impl CpuArch {
             }),
             // StarFive SoCs
             "starfive,jh7100" => Some(CpuArch {
-                vendor: Vendor::StarFive,
+                vendor: Vendor::SiFive,
                 model: String::from("StarFive JH7100"),
                 micro_arch: MicroArch::SiFiveU74,
                 code_name: "JH7100",
@@ -285,7 +285,7 @@ impl CpuArch {
                 technology: None,
             }),
             "starfive,jh7110" => Some(CpuArch {
-                vendor: Vendor::StarFive,
+                vendor: Vendor::SiFive,
                 model: String::from("StarFive JH7110"),
                 micro_arch: MicroArch::SiFiveU74,
                 code_name: "JH7110",
@@ -432,7 +432,7 @@ impl CpuArch {
             "JH7110",
             None,
         )];
-        Self::find_impl(marchid, Vendor::StarFive, PARTS)
+        Self::find_impl(marchid, Vendor::SiFive, PARTS)
     }
 
     fn find_kendryte(marchid: usize) -> Self {
