@@ -4,11 +4,15 @@
 
 ### Added
  - Initial Risc V (64bit) support
+ - IvyBridge-EN (EP) CPU mapping
+ - Xeon E5-2407 CPUID dump for testing
 
 ### Changed
- - Improved system name detection on Linux
+ - Improved Linux system name detection (more sources, whitespace cleanup, empty string handling)
 
-### Fixed
+ ### Fixed
+ - System name no longer returns empty strings
+ - System name lookup skips placeholder strings instead of misreporting them
 
 ## [1.6.0]
 
