@@ -12,9 +12,9 @@ impl CpuDisplay {
 
         cpu.simple_line("Architecture", &cpu_info.isa_string);
 
-        cpu.simple_line("Vendor", &cpu_info.vendor);
-
         cpu.simple_line("SoC", &cpu_info.model);
+
+        cpu.simple_line("CPU Vendor", &cpu_info.vendor);
 
         let ma = cpu_info.cpu_arch.micro_arch.as_str();
         if ma != UNK {

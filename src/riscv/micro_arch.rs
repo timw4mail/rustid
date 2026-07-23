@@ -101,10 +101,6 @@ pub enum MicroArch {
     THeadC920,
     THeadC930,
 
-    // StarFive
-    StarFiveJH7100,
-    StarFiveJH7110,
-
     // Kendryte
     KendryteK210,
 
@@ -130,8 +126,6 @@ impl MicroArch {
             | MicroArch::THeadC910
             | MicroArch::THeadC920
             | MicroArch::THeadC930
-            | MicroArch::StarFiveJH7100
-            | MicroArch::StarFiveJH7110
             | MicroArch::KendryteK210
             | MicroArch::WCHCH32V => CoreType::Performance,
         }
@@ -155,8 +149,6 @@ impl MicroArch {
             MicroArch::THeadC910 => "T-Head C910",
             MicroArch::THeadC920 => "T-Head C920",
             MicroArch::THeadC930 => "T-Head C930",
-            MicroArch::StarFiveJH7100 => "StarFive JH7100",
-            MicroArch::StarFiveJH7110 => "StarFive JH7110",
             MicroArch::KendryteK210 => "Kendryte K210",
             MicroArch::WCHCH32V => "WCH CH32V",
         }
@@ -287,7 +279,7 @@ impl CpuArch {
             "starfive,jh7100" => Some(CpuArch {
                 vendor: Vendor::StarFive,
                 model: String::from("StarFive JH7100"),
-                micro_arch: MicroArch::StarFiveJH7100,
+                micro_arch: MicroArch::SiFiveU74,
                 code_name: "JH7100",
                 marchid: 0,
                 technology: None,
@@ -295,7 +287,7 @@ impl CpuArch {
             "starfive,jh7110" => Some(CpuArch {
                 vendor: Vendor::StarFive,
                 model: String::from("StarFive JH7110"),
-                micro_arch: MicroArch::StarFiveJH7110,
+                micro_arch: MicroArch::SiFiveU74,
                 code_name: "JH7110",
                 marchid: 0,
                 technology: Some(N28),
@@ -344,7 +336,7 @@ impl CpuArch {
     fn find_sifive(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
             (
-                0x0000_0001,
+                0x0000_0007,
                 "SiFive U74",
                 MicroArch::SiFiveU74,
                 "U74",
@@ -434,10 +426,10 @@ impl CpuArch {
 
     fn find_starfive(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[(
-            0x0000_0000,
-            "StarFive JH7100",
-            MicroArch::StarFiveJH7100,
-            "JH7100",
+            0x0000_0007,
+            "StarFive JH7110",
+            MicroArch::SiFiveU74,
+            "JH7110",
             None,
         )];
         Self::find_impl(marchid, Vendor::StarFive, PARTS)
