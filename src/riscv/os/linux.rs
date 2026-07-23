@@ -4,10 +4,9 @@
 
 use super::OsCpuInfo;
 use crate::common::{
-    Cache, CoreType, DataSource, UNK, format_compatible_pair, get_devicetree_compatible,
-    get_proc_cpuinfo_data,
+    Cache, CoreType, DataSource, UNK, get_devicetree_compatible, get_proc_cpuinfo_data,
 };
-use crate::riscv::brand::Vendor;
+use crate::riscv::brand::{Vendor, format_uarch};
 use crate::riscv::micro_arch::*;
 use std::collections::BTreeMap;
 
@@ -40,7 +39,7 @@ pub fn detect() -> OsCpuInfo {
     let model_name = if model_name.is_empty() {
         get_devicetree_compatible()
             .and_then(|pairs| pairs.last().cloned())
-            .map(|pair| format_compatible_pair(pair))
+            .map(|pair| format_uarch(&pair.join(",")))
             .unwrap_or_default()
     } else {
         model_name
