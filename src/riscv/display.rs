@@ -1,4 +1,5 @@
 use super::*;
+use crate::riscv::brand::format_uarch;
 
 impl CpuDisplay {
     pub fn display(cpu_info: &Cpu, flags: CliFlags) {
@@ -19,7 +20,11 @@ impl CpuDisplay {
 
         let ma = cpu_info.cpu_arch.micro_arch.as_str();
         if ma != UNK {
-            cpu.simple_line("MicroArch", ma);
+            cpu.simple_line("CPU Core", ma);
+        } else if let Some(uarch) = cpu_info.raw.get("uarch") {
+            if !uarch.is_empty() {
+                cpu.simple_line("CPU Core", &format_uarch(uarch));
+            }
         }
 
         if !(cpu_info.cpu_arch.code_name == UNK || cpu_info.cpu_arch.code_name == ma) {

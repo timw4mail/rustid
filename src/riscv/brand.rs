@@ -67,6 +67,34 @@ impl From<usize> for Vendor {
     }
 }
 
+pub fn format_uarch(raw: &str) -> String {
+    let parts: Vec<&str> = raw.splitn(2, ',').collect();
+    let vendor_str = match parts[0] {
+        "sifive" => "SiFive",
+        "thead" => "T-Head",
+        "starfive" => "StarFive",
+        "kendryte" => "Canaan",
+        "wch" => "WCH",
+        "nuclei" => "Nuclei",
+        "xiangshan" => "XiangShan",
+        other => {
+            let mut chars = other.chars();
+            match chars.next() {
+                None => return String::new(),
+                Some(first) => {
+                    let rest: String = chars.collect();
+                    return format!("{}{}", first.to_uppercase(), rest.to_lowercase());
+                }
+            }
+        }
+    };
+    if parts.len() > 1 {
+        format!("{} {}", vendor_str, parts[1].to_uppercase())
+    } else {
+        String::from(vendor_str)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +118,35 @@ mod tests {
     fn test_vendor_to_str() {
         let v: &str = Vendor::SiFive.into();
         assert_eq!(v, "SiFive");
+    }
+
+    #[test]
+    fn test_format_uarch_sifive_with_suffix() {
+        assert_eq!(format_uarch("sifive,u74-mc"), "SiFive U74-MC");
+    }
+
+    #[test]
+    fn test_format_uarch_sifive_simple() {
+        assert_eq!(format_uarch("sifive,u74"), "SiFive U74");
+    }
+
+    #[test]
+    fn test_format_uarch_thead() {
+        assert_eq!(format_uarch("thead,c906"), "T-Head C906");
+    }
+
+    #[test]
+    fn test_format_uarch_kendryte() {
+        assert_eq!(format_uarch("kendryte,k210"), "Canaan K210");
+    }
+
+    #[test]
+    fn test_format_uarch_no_vendor() {
+        assert_eq!(format_uarch("u74"), "U74");
+    }
+
+    #[test]
+    fn test_format_uarch_empty() {
+        assert_eq!(format_uarch(""), "");
     }
 }

@@ -3,7 +3,7 @@
 ## [1.7.0]
 
 ### Added
- - Initial Risc V support
+ - Initial Risc V (64bit) support
 
 ### Changed
  - Improved system name detection on Linux

@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump run-x86-emu
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump run-x86-emu
 
 # Lists the available actions
 default:
@@ -26,6 +26,10 @@ default:
 # Check code validity and style
 check:
 	$(BASE_CHECK)
+
+# Compile check for Risc V
+check-riscv:
+	cargo check --target riscv64gc-unknown-linux-gnu
 
 # More in-depth code style checking
 lint:
