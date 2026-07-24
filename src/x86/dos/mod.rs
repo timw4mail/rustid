@@ -38,12 +38,12 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 #[macro_export]
 macro_rules! print {
     ($s:literal) => {
-        $crate::cpuid::dos::_print_str($s)
+        $crate::x86::dos::_print_str($s)
     };
     ($($arg:tt)*) => {
         {
             use core::fmt::Write;
-            let _ = write!(&mut $crate::cpuid::dos::DosWriter {}, $($arg)*);
+            let _ = write!(&mut $crate::x86::dos::DosWriter {}, $($arg)*);
         }
     };
 }
@@ -232,7 +232,7 @@ impl Speed {
     #[inline(never)]
     pub fn measure_frequency() -> u32 {
         use super::is_386;
-        use crate::cpuid::dos::peek_u16;
+        use crate::x86::dos::peek_u16;
 
         // For Cyrix, only measure 486-class cpus with the fallback,
         // only the M2 chips can be measured with TSC, and only if CPUID is enabled

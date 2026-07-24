@@ -1,8 +1,8 @@
 use super::TMicroArch;
-use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::constants::{N350, UNK, VENDOR_CYRIX};
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::{CpuSignature, FeatureClass, has_cx8};
+use crate::x86::brand::CpuBrand;
+use crate::x86::constants::{N350, UNK, VENDOR_CYRIX};
+use crate::x86::micro_arch::{CpuArch, MicroArch};
+use crate::x86::{CpuSignature, FeatureClass, has_cx8};
 use alloc::format;
 use alloc::string::String;
 
@@ -146,7 +146,7 @@ impl Cyrix {
     /// Detects and returns Cyrix CPU information.
     #[must_use]
     pub fn detect() -> Cyrix {
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return Cyrix::default();
         }
 
@@ -185,7 +185,7 @@ impl Cyrix {
 
     #[cfg(dos)]
     fn get_device_ids() -> (u8, u8) {
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return (0, 0);
         }
 
@@ -224,7 +224,7 @@ impl Cyrix {
 
     #[cfg(dos)]
     fn get_device_id_from_signature() -> u8 {
-        if let Some(signature) = crate::cpuid::get_reset_signature() {
+        if let Some(signature) = crate::x86::get_reset_signature() {
             return match (signature.family, signature.model) {
                 (3, 2) => 0x01,
                 (4, 5) => 0x10,
@@ -240,7 +240,7 @@ impl Cyrix {
     pub fn get_signature_from_device_id() -> CpuSignature {
         use crate::common::DataSource;
 
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return CpuSignature::default();
         }
 
@@ -260,7 +260,7 @@ impl Cyrix {
 
     #[must_use]
     pub fn get_feature_class() -> FeatureClass {
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return FeatureClass::i386;
         }
 
@@ -292,7 +292,7 @@ impl Cyrix {
     #[must_use]
     pub fn can_enable_cpuid() -> bool {
         // If it's not Cyrix, or cpuid is enabled, we don't care
-        if crate::cpuid::has_cpuid() || !crate::cpuid::is_cyrix() {
+        if crate::x86::has_cpuid() || !crate::x86::is_cyrix() {
             return false;
         }
 
@@ -315,7 +315,7 @@ impl Cyrix {
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
     #[must_use]
     pub fn model_string() -> String {
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return String::from(UNK);
         }
 
@@ -346,7 +346,7 @@ impl Cyrix {
     ///
     /// See: <https://www.ardent-tool.com/CPU/docs/Cyrix/detect.pdf>
     fn multiplier() -> &'static str {
-        if !crate::cpuid::is_cyrix() {
+        if !crate::x86::is_cyrix() {
             return "0";
         }
 

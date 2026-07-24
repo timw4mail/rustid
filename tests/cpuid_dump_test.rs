@@ -2,8 +2,8 @@
 
 use rustid::common::TDetect;
 use rustid::common::*;
-use rustid::cpuid::provider::*;
-use rustid::cpuid::*;
+use rustid::x86::provider::*;
+use rustid::x86::*;
 use std::path::PathBuf;
 
 // ----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ mod tm5700 {
     #[test]
     fn test_version_str() {
         with_mock_cpu(|| {
-            let transmeta = rustid::cpuid::vendor::Transmeta::detect();
+            let transmeta = rustid::x86::vendor::Transmeta::detect();
             assert_eq!(
                 transmeta.version_str,
                 "20040614 15:00 official release 4.5.2#1"
@@ -129,7 +129,7 @@ mod tm5700 {
 
 mod ppro {
     use super::*;
-    use rustid::cpuid::mp::MpTable;
+    use rustid::x86::mp::MpTable;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("dump/p6x2.txt");
@@ -841,7 +841,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_padlock_features() {
         with_mock_cpu(|| {
-            use rustid::cpuid::vendor::centaur;
+            use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "KX-5640 has RNG");
             assert!(centaur::rng_enabled(), "KX-5640 rng enabled");
             assert!(centaur::has_rng2(), "KX-5640 has RNG2");
@@ -953,7 +953,7 @@ mod via_c7d {
     #[test]
     fn test_via_padlock_features() {
         with_mock_cpu(|| {
-            use rustid::cpuid::vendor::centaur;
+            use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "C7-D has RNG");
             assert!(centaur::rng_enabled(), "C7-D has RNG enabled");
             assert!(!centaur::has_rng2(), "C7-D has no RNG2");
@@ -987,7 +987,7 @@ mod olpc {
     #[test]
     fn test_olpc_padlock_features() {
         with_mock_cpu(|| {
-            use rustid::cpuid::vendor::centaur;
+            use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "C7-M has RNG");
             assert!(centaur::rng_enabled(), "C7-M has RNG enabled");
             assert!(!centaur::has_rng2(), "C7-M has no RNG2");
@@ -1021,7 +1021,7 @@ mod idt_w2b {
     #[test]
     fn test_w2b_padlock_features() {
         with_mock_cpu(|| {
-            use rustid::cpuid::vendor::centaur;
+            use rustid::x86::vendor::centaur;
             assert!(!centaur::has_rng(), "Winchip 2B has no RNG");
             assert!(!centaur::has_rng2(), "Winchip 2B has no RNG2");
             assert!(!centaur::has_ace(), "Winchip 2B has no ACE enabled");
@@ -1035,7 +1035,7 @@ mod idt_w2b {
 
 #[cfg(target_arch = "x86")]
 mod vortex86dx3 {
-    use rustid::cpuid::{has_ht, has_mmx, max_extended_leaf};
+    use rustid::x86::{has_ht, has_mmx, max_extended_leaf};
 
     use super::*;
 

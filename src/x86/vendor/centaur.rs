@@ -1,8 +1,8 @@
-use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::constants::*;
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
+use crate::x86::brand::CpuBrand;
+use crate::x86::constants::*;
+use crate::x86::micro_arch::{CpuArch, MicroArch};
+use crate::x86::vendor::TMicroArch;
+use crate::x86::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
 
 pub struct Centaur;
 
@@ -76,7 +76,7 @@ impl TMicroArch for Centaur {
 // For ACE and ACE2, both the present bit AND the enable bit must be set.
 // ----------------------------------------------------------------------------
 
-use crate::cpuid::{CENTAUR_LEAF_1, EXT_LEAF_1, Reg, has_feature};
+use crate::x86::{CENTAUR_LEAF_1, EXT_LEAF_1, Reg, has_feature};
 
 fn has_centaur_feature(bit: u32) -> bool {
     if !is_valid_leaf(CENTAUR_LEAF_1) {
@@ -199,8 +199,8 @@ pub fn rsa_enabled() -> bool {
 
 pub type CentaurFeatureMap<'a> = &'a [(
     &'static str,
-    crate::cpuid::features::FeatureFn,
-    crate::cpuid::features::FeatureFn,
+    crate::x86::features::FeatureFn,
+    crate::x86::features::FeatureFn,
 )];
 
 #[cfg(not(dos))]
@@ -236,7 +236,7 @@ impl Centaur {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::cpuid::micro_arch::tests::dummy_signature;
+    use crate::x86::micro_arch::tests::dummy_signature;
 
     #[test]
     fn test_cpu_arch_find_centaur() {

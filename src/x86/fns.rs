@@ -374,7 +374,7 @@ pub fn get_brand_id() -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cpuid::vendor_str;
+    use crate::x86::vendor_str;
 
     #[test]
     fn test_from_cpuid_result_for_cpu_info() {

@@ -1,6 +1,6 @@
 //! Let's count sockets/cores/threads
 use crate::common::{DataSource, TopologyTier};
-use crate::cpuid::{amd_threads_per_core, cpuid_data_source, has_ht};
+use crate::x86::{amd_threads_per_core, cpuid_data_source, has_ht};
 
 #[cfg(not(dos))]
 use crate::common::{OS, TOSData};

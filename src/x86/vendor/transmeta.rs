@@ -1,8 +1,8 @@
-use crate::cpuid::brand::CpuBrand;
-use crate::cpuid::constants::*;
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, read_multi_leaf_str};
+use crate::x86::brand::CpuBrand;
+use crate::x86::constants::*;
+use crate::x86::micro_arch::{CpuArch, MicroArch};
+use crate::x86::vendor::TMicroArch;
+use crate::x86::{CpuSignature, read_multi_leaf_str};
 use alloc::string::String;
 
 /// Transmeta-specific microarchitecture detection.
