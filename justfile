@@ -14,6 +14,10 @@ _cargo_cross:
 check:
 	{{ base_check }}
 
+# Compile check for Risc V
+check-riscv:
+	cargo check --target riscv64gc-unknown-linux-gnu
+
 # More in-depth code style checking
 lint:
 	cargo clippy --all-targets --all-features

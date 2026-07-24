@@ -1,0 +1,24 @@
+--------------- Rustid 1.7.0 (riscv64-linux) ---------------
+
+        System: Pine64 Star64
+
+  Architecture: rv64imafdc_zicntr_zicsr_zifencei_zihpm_zaamo_zalrsc_zca_zcd_zba_zbb
+
+           SoC: StarFive JH7110
+
+      CPU Core: SiFive U74-MC
+
+      Topology: 4 cores
+
+         Cache: L1d: 4x 32 KB, 8-way
+                L1i: 4x 32 KB, 8-way
+                L2:  2 MB, 16-way
+
+      Features: Mul: m
+                Atomic: a
+                Float: f d
+                Compressed: c
+                Bitmanip: zba zbb
+                Vector: v
+                Priv: s h
+                Misc: zicsr zifencei zicntr

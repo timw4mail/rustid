@@ -88,18 +88,18 @@ pub enum MicroArch {
     SiFiveU74,
     SiFiveU76,
     SiFiveS76,
+    SiFiveP450,
     SiFiveP470,
     SiFiveP550,
+    SiFiveP650,
     SiFiveP670,
+    SiFiveP870,
 
     // T-Head
     THeadC906,
     THeadC910,
     THeadC920,
-
-    // StarFive
-    StarFiveJH7100,
-    StarFiveJH7110,
+    THeadC930,
 
     // Kendryte
     KendryteK210,
@@ -116,39 +116,48 @@ impl MicroArch {
             MicroArch::SiFiveU74
             | MicroArch::SiFiveU76
             | MicroArch::SiFiveS76
+            | MicroArch::SiFiveP450
             | MicroArch::SiFiveP470
             | MicroArch::SiFiveP550
+            | MicroArch::SiFiveP650
             | MicroArch::SiFiveP670
+            | MicroArch::SiFiveP870
             | MicroArch::THeadC906
             | MicroArch::THeadC910
             | MicroArch::THeadC920
-            | MicroArch::StarFiveJH7100
-            | MicroArch::StarFiveJH7110
+            | MicroArch::THeadC930
             | MicroArch::KendryteK210
             | MicroArch::WCHCH32V => CoreType::Performance,
         }
     }
 }
 
-impl From<MicroArch> for String {
-    fn from(ma: MicroArch) -> String {
-        let s = match ma {
+impl MicroArch {
+    pub fn as_str(&self) -> &str {
+        match self {
             MicroArch::Unknown => UNK,
             MicroArch::SiFiveU74 => "SiFive U74",
             MicroArch::SiFiveU76 => "SiFive U76",
             MicroArch::SiFiveS76 => "SiFive S76",
+            MicroArch::SiFiveP450 => "SiFive P450",
             MicroArch::SiFiveP470 => "SiFive P470",
             MicroArch::SiFiveP550 => "SiFive P550",
+            MicroArch::SiFiveP650 => "SiFive P650",
             MicroArch::SiFiveP670 => "SiFive P670",
+            MicroArch::SiFiveP870 => "SiFive P870",
             MicroArch::THeadC906 => "T-Head C906",
             MicroArch::THeadC910 => "T-Head C910",
             MicroArch::THeadC920 => "T-Head C920",
-            MicroArch::StarFiveJH7100 => "StarFive JH7100",
-            MicroArch::StarFiveJH7110 => "StarFive JH7110",
+            MicroArch::THeadC930 => "T-Head C930",
             MicroArch::KendryteK210 => "Kendryte K210",
             MicroArch::WCHCH32V => "WCH CH32V",
-        };
-        String::from(s)
+        }
+    }
+}
+
+impl From<MicroArch> for String {
+    fn from(ma: MicroArch) -> String {
+        String::from(ma.as_str())
     }
 }
 
@@ -182,10 +191,117 @@ impl CpuArch {
             VENDOR_SIFIVE => Self::find_sifive(marchid),
             VENDOR_THEAD => Self::find_thead(marchid),
             VENDOR_STARFIVE => Self::find_starfive(marchid),
+            VENDOR_KENDRYTE => Self::find_kendryte(marchid),
+            VENDOR_WCH => Self::find_wch(marchid),
             _ => Self {
                 vendor: Vendor::from(vendor),
                 ..Self::default()
             },
+        }
+    }
+
+    /// Try to identify the CPU from a device tree `compatible` string.
+    ///
+    /// This is used as a fallback when CSR-based identification fails.
+    pub fn find_by_compatible(compat: &str) -> Option<Self> {
+        let lower = compat.to_lowercase();
+        // Check for comma-separated compatible strings (DT can have multiple)
+        for entry in lower.split(',') {
+            let entry = entry.trim();
+            if let Some(arch) = Self::match_compatible_entry(entry) {
+                return Some(arch);
+            }
+        }
+        None
+    }
+
+    fn match_compatible_entry(entry: &str) -> Option<Self> {
+        match entry {
+            // SiFive cores
+            "sifive,u74" => Some(CpuArch {
+                vendor: Vendor::SiFive,
+                model: String::from("SiFive U74"),
+                micro_arch: MicroArch::SiFiveU74,
+                code_name: "U74",
+                marchid: 0,
+                technology: Some(N28),
+            }),
+            "sifive,u76" => Some(CpuArch {
+                vendor: Vendor::SiFive,
+                model: String::from("SiFive U76"),
+                micro_arch: MicroArch::SiFiveU76,
+                code_name: "U76",
+                marchid: 0,
+                technology: None,
+            }),
+            "sifive,s7" | "sifive,s76" => Some(CpuArch {
+                vendor: Vendor::SiFive,
+                model: String::from("SiFive S76"),
+                micro_arch: MicroArch::SiFiveS76,
+                code_name: "S76",
+                marchid: 0,
+                technology: None,
+            }),
+            // T-Head cores
+            "thead,c906" => Some(CpuArch {
+                vendor: Vendor::THead,
+                model: String::from("T-Head C906"),
+                micro_arch: MicroArch::THeadC906,
+                code_name: "C906",
+                marchid: 0,
+                technology: Some(N28),
+            }),
+            "thead,c910" => Some(CpuArch {
+                vendor: Vendor::THead,
+                model: String::from("T-Head C910"),
+                micro_arch: MicroArch::THeadC910,
+                code_name: "C910",
+                marchid: 0,
+                technology: Some(N16),
+            }),
+            "thead,c920" => Some(CpuArch {
+                vendor: Vendor::THead,
+                model: String::from("T-Head C920"),
+                micro_arch: MicroArch::THeadC920,
+                code_name: "C920",
+                marchid: 0,
+                technology: None,
+            }),
+            "thead,c930" => Some(CpuArch {
+                vendor: Vendor::THead,
+                model: String::from("T-Head C930"),
+                micro_arch: MicroArch::THeadC930,
+                code_name: "C930",
+                marchid: 0,
+                technology: None,
+            }),
+            // StarFive SoCs
+            "starfive,jh7100" => Some(CpuArch {
+                vendor: Vendor::SiFive,
+                model: String::from("StarFive JH7100"),
+                micro_arch: MicroArch::SiFiveU74,
+                code_name: "JH7100",
+                marchid: 0,
+                technology: None,
+            }),
+            "starfive,jh7110" => Some(CpuArch {
+                vendor: Vendor::SiFive,
+                model: String::from("StarFive JH7110"),
+                micro_arch: MicroArch::SiFiveU74,
+                code_name: "JH7110",
+                marchid: 0,
+                technology: Some(N28),
+            }),
+            // Kendryte
+            "canaan,k210" => Some(CpuArch {
+                vendor: Vendor::Kendryte,
+                model: String::from("Kendryte K210"),
+                micro_arch: MicroArch::KendryteK210,
+                code_name: "K210",
+                marchid: 0,
+                technology: Some(N28),
+            }),
+            _ => None,
         }
     }
 
@@ -220,7 +336,7 @@ impl CpuArch {
     fn find_sifive(marchid: usize) -> Self {
         const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
             (
-                0x0000_0001,
+                0x0000_0007,
                 "SiFive U74",
                 MicroArch::SiFiveU74,
                 "U74",
@@ -236,6 +352,13 @@ impl CpuArch {
                 None,
             ),
             (
+                0x0000_0020,
+                "SiFive P450",
+                MicroArch::SiFiveP450,
+                "P450",
+                None,
+            ),
+            (
                 0x0000_0040,
                 "SiFive P550",
                 MicroArch::SiFiveP550,
@@ -243,10 +366,24 @@ impl CpuArch {
                 Some(N7),
             ),
             (
+                0x0000_0050,
+                "SiFive P650",
+                MicroArch::SiFiveP650,
+                "P650",
+                None,
+            ),
+            (
                 0x0000_0080,
                 "SiFive P670",
                 MicroArch::SiFiveP670,
                 "P670",
+                None,
+            ),
+            (
+                0x0000_0090,
+                "SiFive P870",
+                MicroArch::SiFiveP870,
+                "P870",
                 None,
             ),
         ];
@@ -276,28 +413,43 @@ impl CpuArch {
                 "C920",
                 None,
             ),
+            (
+                0x0000_0003,
+                "T-Head C930",
+                MicroArch::THeadC930,
+                "C930",
+                None,
+            ),
         ];
         Self::find_impl(marchid, Vendor::THead, PARTS)
     }
 
     fn find_starfive(marchid: usize) -> Self {
-        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[
-            (
-                0x0000_0000,
-                "StarFive JH7100",
-                MicroArch::StarFiveJH7100,
-                "JH7100",
-                None,
-            ),
-            (
-                0x0000_0000,
-                "StarFive JH7110",
-                MicroArch::StarFiveJH7110,
-                "JH7110",
-                Some(N28),
-            ),
-        ];
-        Self::find_impl(marchid, Vendor::StarFive, PARTS)
+        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[(
+            0x0000_0007,
+            "StarFive JH7110",
+            MicroArch::SiFiveU74,
+            "JH7110",
+            None,
+        )];
+        Self::find_impl(marchid, Vendor::SiFive, PARTS)
+    }
+
+    fn find_kendryte(marchid: usize) -> Self {
+        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] = &[(
+            0x0000_0000,
+            "Kendryte K210",
+            MicroArch::KendryteK210,
+            "K210",
+            Some(N28),
+        )];
+        Self::find_impl(marchid, Vendor::Kendryte, PARTS)
+    }
+
+    fn find_wch(marchid: usize) -> Self {
+        const PARTS: &[(usize, &str, MicroArch, &str, Option<&str>)] =
+            &[(0x0000_0000, "WCH CH32V", MicroArch::WCHCH32V, "CH32V", None)];
+        Self::find_impl(marchid, Vendor::WCH, PARTS)
     }
 }
 
