@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::{CliFlags, CpuDisplay, UNK};
 use crate::riscv::brand::format_uarch;
 
 impl CpuDisplay {

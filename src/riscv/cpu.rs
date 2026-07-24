@@ -1,6 +1,5 @@
 //! Contains the Cpu struct for RISC-V.
 use super::micro_arch::*;
-use super::*;
 use crate::common::*;
 use std::collections::BTreeMap;
 
@@ -48,19 +47,5 @@ impl TCpuDisplay for Cpu {
 
     fn display_table(&self, flags: CliFlags) {
         CpuDisplay::display(self, flags);
-    }
-}
-
-impl TRiscvCpu for Cpu {
-    fn model(&self) -> Option<&str> {
-        if self.model.is_empty() {
-            None
-        } else {
-            Some(&self.model)
-        }
-    }
-
-    fn vendor(&self) -> &str {
-        &self.vendor
     }
 }
