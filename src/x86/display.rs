@@ -3,6 +3,9 @@ use super::micro_arch::MicroArch;
 use super::*;
 
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
+#[cfg(not(any(dos, dos32a)))]
+use crate::println;
+#[cfg(any(dos, dos32a))]
 use crate::println;
 use alloc::string::String;
 
@@ -231,7 +234,7 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
         let centaur_map = super::vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
@@ -265,7 +268,7 @@ impl Cpu {
             }
 
             // Centaur features list
-            #[cfg(not(dos))]
+            #[cfg(not(any(dos, dos32a)))]
             if is_centaur() {
                 self.print_centaur_features(flags, disp);
             }
@@ -294,7 +297,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }

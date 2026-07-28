@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump run-x86-emu
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump build-dos32a _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump run-x86-emu
 
 # Lists the available actions
 default:
@@ -79,6 +79,21 @@ build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
 	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
 	@cargo test --test dos_binary_size_test --features dos-build
+
+# DOS/32A build tools
+_build-dos32a-tools:
+	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
+
+_build-dos32a-rustid: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid dos32a_rustid.lx
+
+_build-dos32a-dump: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dos32a_dump.lx
+
+# Build for DOS/32A (LX format)
+build-dos32a: _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump
 
 # Build for modern windows (cli), requires visual studio to be installed
 ifeq ($(OS),Windows_NT)

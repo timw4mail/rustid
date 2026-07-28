@@ -64,6 +64,21 @@ build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
 	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
 	@cargo test --test dos_binary_size_test --features dos-build
 
+_build-dos32a-tools:
+	# Fetch required tools (if they aren't already installed)
+	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
+
+_build-dos32a-rustid: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid dos32a_rustid.lx
+
+_build-dos32a-dump: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dos32a_dump.lx
+
+# Build for DOS/32A (LX format)
+build-dos32a: _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump
+
 # Build for modern windows (cli),  requires visual studio to be installed
 [windows]
 build-windows:

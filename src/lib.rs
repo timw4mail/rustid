@@ -22,22 +22,23 @@
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
 #![cfg_attr(all(not(test), dos), no_std)]
+#![cfg_attr(all(not(test), dos32a), no_std)]
 
 extern crate alloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 const ARCH: &str = std::env::consts::ARCH;
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 const ARCH: &str = "x86";
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 const OS: &str = std::env::consts::OS;
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 const OS: &str = "DOS";
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 extern crate std;
 
 pub mod common;
@@ -65,7 +66,10 @@ pub use riscv::Cpu;
 #[cfg(dos)]
 pub use x86::dos::*;
 
-#[cfg(not(dos))]
+#[cfg(dos32a)]
+pub use x86::dos32a::*;
+
+#[cfg(not(any(dos, dos32a)))]
 pub use std::{print, println};
 
 pub fn version() {
@@ -75,16 +79,21 @@ pub fn version() {
     );
 }
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 #[cfg(x86_cpu)]
 pub fn file_version() {
     println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");
 }
 
-#[cfg(target_arch = "x86")]
+#[cfg(any(target_arch = "x86", dos, dos32a))]
 pub fn cyrix_cpuid_check() {
+    #[cfg(not(any(dos, dos32a)))]
+    use crate::println;
+    
+    #[cfg(any(dos, dos32a))]
     use crate::println;
 
+    #[cfg(x86_cpu)]
     if x86::vendor::Cyrix::can_enable_cpuid() {
         println!("This CPU has CPUID support, but it is disabled by default.");
         println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");

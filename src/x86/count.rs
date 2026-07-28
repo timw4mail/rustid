@@ -2,22 +2,22 @@
 use crate::common::{DataSource, TopologyTier};
 use crate::x86::{amd_threads_per_core, cpuid_data_source, has_ht};
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 use crate::common::{OS, TOSData};
 
 use super::{amd_logical_cores, is_amd};
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 use super::{info_source, provider::CpuidInfoSource};
 
 pub fn get_platform_socket_count() -> TopologyTier {
-    #[cfg(dos)]
+    #[cfg(any(dos, dos32a))]
     let sockets_detected = TopologyTier::new(
         super::mp::MpTable::detect().socket_count(),
         DataSource::MpTable,
     );
 
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     let sockets_detected = if info_source() == CpuidInfoSource::Cpu {
         OS::get_socket_count()
     } else {

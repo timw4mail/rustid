@@ -24,7 +24,7 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading sysinfo -cpu (for Haiku)
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     #[must_use]
     pub fn detect_sysinfo(cmd: &str) -> MpTable {
         let mut table = MpTable { sockets: 1 };
@@ -45,14 +45,16 @@ impl MpTable {
     }
 
     /// Detects the number of sockets by reading /proc/cpuinfo
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     #[must_use]
     pub fn detect_cpuinfo(file: &str) -> MpTable {
+        #[cfg(not(any(dos, dos32a)))]
         use std::collections::HashSet;
 
         let mut table = MpTable { sockets: 1 };
 
         // Fallback: /proc/cpuinfo unique physical ids
+        #[cfg(not(any(dos, dos32a)))]
         if let Ok(content) = std::fs::read_to_string(file) {
             let mut entries = 0;
             let mut physical_ids = HashSet::new();

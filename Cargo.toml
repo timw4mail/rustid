@@ -42,8 +42,18 @@ name = "debug"
 required-features = ["debug", "dos-build"]
 path="src/dos_debug.rs"
 
+[[bin]]
+name = "dos32a_rustid"
+required-features = ["dos32a-build"]
+path="src/dos32a_rustid.rs"
+
+[[bin]]
+name = "dos32a_dump"
+required-features = ["dos32a-build"]
+path="src/dos32a_dump.rs"
+
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)'] }
 
 [lints.clippy]
 unwrap_used = "warn"
@@ -52,3 +62,4 @@ unwrap_used = "warn"
 default = []
 debug = []
 dos-build = []
+dos32a-build = []

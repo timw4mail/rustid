@@ -18,13 +18,16 @@ pub mod display;
 #[cfg(dos)]
 pub mod dos;
 
+#[cfg(dos32a)]
+pub mod dos32a;
+
 pub mod dump;
 pub mod features;
 pub mod fns;
 pub mod micro_arch;
 pub mod mp;
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 pub mod provider;
 
 pub mod topology;
