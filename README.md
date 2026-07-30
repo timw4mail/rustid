@@ -1,6 +1,6 @@
 # Rustid
 
-A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets. There is also some support for ARM and PowerPC cpu detection.
+A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets. There is also support for ARM, RISC V, and PowerPC cpu detection.
 
 ### AI Disclaimer:
 
@@ -10,16 +10,59 @@ This application is developed using *some* AI, mostly related to:
 * Assembly code
 
 ## Features
-- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, and PowerPC.
+- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, Risc V and PowerPC.
 - **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
 - **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 
+## Platform Support
+
+### Tier 1
+
+Primary platforms, with the majority of testing effort.
+
+|               | DOS    | Windows | macOS  | Linux  | Haiku  |
+|--------------:|:------:|:-------:|:------:|:------:|:------:|
+| **x86_64**    | —      | ✅      | ✅     | 🟢     | ✅     |
+| **x86_32**    | ✅[¹](#note-1) | ✅ | — | 🟢 | ✅ |
+| **ARM 64**    | —      | ⚠️[⁵](#note-5) | ✅ | 🟢 | ❌ |
+| **ARM 32**    | —      | —       | —      | ✅     | —      |
+| **RISC-V 64** | —      | —       | —      | ✅     | —      |
+| **PowerPC**   | —      | —       | —      | ✅     | —      |
+| **PowerPC 64**| —      | —       | —      | ⚠️[⁴](#note-4) | — |
+
+### Tier 2
+
+These are best-effort platforms: they should work, but information may be more limited and/or less correct.
+
+|               | FreeBSD | NetBSD | OpenBSD | Android |
+|--------------:|:-------:|:------:|:-------:|:-------:|
+| **x86_64**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
+| **x86_32**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
+| **ARM 64**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
+| **ARM 32**    | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[²](#note-2) |
+| **RISC-V 64** | ❌      | ❌     | ❌      | —       |
+| **PowerPC**   | ❌      | ❌     | ❌      | —       |
+| **PowerPC 64**| ❌      | ❌     | ❌      | —       |
+
+**Legend:**
+- 🟢 CI-tested (`just test-all` on `ubuntu-latest`)
+- ✅ Supported
+- ⚠️ Partial
+- ❌ Not supported
+
+**Notes:**
+- <a id="note-1"></a>¹ DOS: requires 386 or newer CPU
+- <a id="note-2"></a>² Android: untested, uses Linux platform logic
+- <a id="note-3"></a>³ ARM 32 BSD: panics if MIDR cannot be read from sysctl
+- <a id="note-4"></a>⁴ PowerPC 64 Linux: untested
+- <a id="note-5"></a>⁵ Windows ARM 64: limited data
+
 ## Getting Started
 
 ### Installing (DOS)
-For DOS, there are release binaries on Github for each release.
+For DOS, there are binaries on Github for each release.
 
 ### Installing (MacOS, Linux, Windows, etc.)
 - Rust (`cargo` needs to be installed)
@@ -72,7 +115,7 @@ Output varies by architecture. Here is an example for x86_64:
 
 ```
 
-For ARM and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
+For ARM, Risc V, and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
 
 ## Information References
 
