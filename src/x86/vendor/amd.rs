@@ -1,7 +1,7 @@
-use crate::cpuid::constants::*;
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::vendor::TMicroArch;
-use crate::cpuid::{CpuSignature, amd_logical_cores};
+use crate::x86::constants::*;
+use crate::x86::micro_arch::{CpuArch, MicroArch};
+use crate::x86::vendor::TMicroArch;
+use crate::x86::{CpuSignature, amd_logical_cores};
 
 /// AMD-specific microarchitecture detection.
 pub struct Amd;
@@ -126,8 +126,8 @@ impl TMicroArch for Amd {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cpuid::UNK;
-    use crate::cpuid::micro_arch::tests::dummy_signature;
+    use crate::x86::UNK;
+    use crate::x86::micro_arch::tests::dummy_signature;
 
     #[test]
     fn test_cpu_arch_find_amd() {

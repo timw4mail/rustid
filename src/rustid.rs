@@ -32,7 +32,7 @@ fn help() {
 fn main() {
     use rustid::common::CliFlags;
     #[cfg(x86_cpu)]
-    use rustid::cpuid;
+    use rustid::x86;
 
     #[cfg(target_arch = "x86")]
     cyrix_cpuid_check();
@@ -107,7 +107,7 @@ fn main() {
 
     #[cfg(x86_cpu)]
     if let Some(path) = &file_path {
-        use cpuid::provider::{self, CpuDump};
+        use x86::provider::{self, CpuDump};
 
         rustid::file_version();
         let dump = CpuDump::parse_file(path);
@@ -138,7 +138,7 @@ fn main() {
         }
         #[cfg(x86_cpu)]
         "dump" => {
-            use rustid::cpuid::{dump::dump_cpu, topology::Topology};
+            use rustid::x86::{dump::dump_cpu, topology::Topology};
 
             let mut output = String::new();
             let topo = Topology::detect();
@@ -160,7 +160,7 @@ fn main() {
 
     #[cfg(x86_cpu)]
     if file_path.is_some() {
-        use rustid::cpuid::provider;
+        use rustid::x86::provider;
         provider::reset_cpuid_provider();
     }
 }

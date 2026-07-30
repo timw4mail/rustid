@@ -695,7 +695,7 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cpuid::get_feature_list;
+    use crate::x86::get_feature_list;
 
     #[test]
     fn test_model_string() {

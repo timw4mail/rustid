@@ -43,12 +43,13 @@ extern crate std;
 pub mod common;
 
 #[cfg(x86_cpu)]
-pub mod cpuid;
+pub mod x86;
+
+#[cfg(x86_cpu)]
+pub use x86::Cpu;
 
 #[cfg(feature = "gui")]
 pub mod gui;
-#[cfg(x86_cpu)]
-pub use cpuid::Cpu;
 
 #[cfg(ppc_cpu)]
 pub mod ppc;
@@ -66,7 +67,7 @@ pub mod riscv;
 pub use riscv::Cpu;
 
 #[cfg(dos)]
-pub use cpuid::dos::*;
+pub use x86::dos::*;
 
 #[cfg(not(dos))]
 pub use std::{print, println};
@@ -88,7 +89,7 @@ pub fn file_version() {
 pub fn cyrix_cpuid_check() {
     use crate::println;
 
-    if cpuid::vendor::Cyrix::can_enable_cpuid() {
+    if x86::vendor::Cyrix::can_enable_cpuid() {
         println!("This CPU has CPUID support, but it is disabled by default.");
         println!("Some BIOSes have an option to enable CPUID for Cyrix chips.");
         println!("For DOS, you can download a utility from ");

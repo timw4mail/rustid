@@ -1,8 +1,8 @@
 use crate::common::CoreType;
-use crate::cpuid::CpuSignature;
-use crate::cpuid::constants::*;
-use crate::cpuid::micro_arch::{CpuArch, MicroArch};
-use crate::cpuid::vendor::TMicroArch;
+use crate::x86::CpuSignature;
+use crate::x86::constants::*;
+use crate::x86::micro_arch::{CpuArch, MicroArch};
+use crate::x86::vendor::TMicroArch;
 
 /// Intel-specific microarchitecture detection.
 pub struct Intel;
@@ -142,25 +142,25 @@ mod test {
         let model = "Intel Processor";
 
         // I486
-        let sig_i486 = crate::cpuid::micro_arch::tests::dummy_signature(4, 0, 0, 0, 0);
+        let sig_i486 = crate::x86::micro_arch::tests::dummy_signature(4, 0, 0, 0, 0);
         let arch = Intel::micro_arch(model, sig_i486);
         assert_eq!(arch.micro_arch, MicroArch::I486);
         assert_eq!(arch.code_name, "i80486DX");
 
         // P5 (MicroArch::Pentium)
-        let sig_p5 = crate::cpuid::micro_arch::tests::dummy_signature(5, 2, 0, 0, 0);
+        let sig_p5 = crate::x86::micro_arch::tests::dummy_signature(5, 2, 0, 0, 0);
         let arch = Intel::micro_arch(model, sig_p5);
         assert_eq!(arch.micro_arch, MicroArch::P5);
         assert_eq!(arch.code_name, "P54C");
 
         // Nehalem
-        let sig_nehalem = crate::cpuid::micro_arch::tests::dummy_signature(6, 14, 0, 1, 5);
+        let sig_nehalem = crate::x86::micro_arch::tests::dummy_signature(6, 14, 0, 1, 5);
         let arch = Intel::micro_arch(model, sig_nehalem);
         assert_eq!(arch.micro_arch, MicroArch::Nehalem);
         assert_eq!(arch.code_name, "Lynnfield");
 
         // Unknown Intel
-        let sig_unknown = crate::cpuid::micro_arch::tests::dummy_signature(99, 0, 0, 0, 0);
+        let sig_unknown = crate::x86::micro_arch::tests::dummy_signature(99, 0, 0, 0, 0);
         let arch = Intel::micro_arch(model, sig_unknown);
         assert_eq!(arch.micro_arch, MicroArch::Unknown);
         assert_eq!(arch.code_name, UNK);

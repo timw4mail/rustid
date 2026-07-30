@@ -1,7 +1,7 @@
 use super::*;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
 use crate::common::TDetect;
-use crate::cpuid;
+use crate::x86;
 use core::fmt::Write;
 
 fn repeat_spaces(n: usize) -> &'static str {
@@ -121,12 +121,12 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     }
 
     if vendor == "CentaurHauls" || vendor == "Zhaoxin" {
-        let max_centaur_leaf = cpuid::x86_cpuid(CENTAUR_LEAF_0).eax;
+        let max_centaur_leaf = x86::x86_cpuid(CENTAUR_LEAF_0).eax;
         for leaf in CENTAUR_LEAF_0..=max_centaur_leaf {
             dump_leaf_maybe_subleaves(f, leaf, 4);
         }
     } else if vendor == "GenuineTMx86" || vendor == "TransmetaCPU" {
-        let max_transmeta_leaf = cpuid::x86_cpuid(TRANSMETA_LEAF_0).eax;
+        let max_transmeta_leaf = x86::x86_cpuid(TRANSMETA_LEAF_0).eax;
         for leaf in TRANSMETA_LEAF_0..=max_transmeta_leaf {
             dump_leaf_maybe_subleaves(f, leaf, 4);
         }

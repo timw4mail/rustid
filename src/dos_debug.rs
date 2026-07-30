@@ -28,8 +28,8 @@ pub unsafe extern "C" fn _start() -> ! {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{TCpuDisplay, TDetect};
-    use rustid::cpuid::dos::{exit, init_heap};
-    use rustid::cpuid::quirks::debug_quirks;
+    use rustid::x86::dos::{exit, init_heap};
+    use rustid::x86::quirks::debug_quirks;
     use rustid::{Cpu, cyrix_cpuid_check, println, version};
 
     unsafe { init_heap() };

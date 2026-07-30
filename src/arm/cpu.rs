@@ -40,37 +40,6 @@ impl TDetect for Cpu {
     }
 }
 
-impl TCpuDisplay for Cpu {
-    fn debug(&self)
-    where
-        Self: std::fmt::Debug,
-    {
-        if !self.midrs.is_empty() {
-            println!("Main ID Register (MIDR) values:");
-            for (i, midr) in self.midrs.iter().enumerate() {
-                println!("Midr {i}:");
-                println!("    Raw: 0x{:X}", midr.raw);
-                println!(
-                    "    Implementer: 0x{:X} ({})",
-                    midr.implementer,
-                    self.vendor()
-                );
-                println!("    Variant: 0x{:X}", midr.variant);
-                println!("    Part Number: 0x{:X}", midr.part);
-                println!("    Revision: 0x{:X}", midr.revision);
-            }
-
-            println!();
-        }
-
-        println!("{:#?}", self);
-    }
-
-    fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display(self, flags);
-    }
-}
-
 impl TArmCpu for Cpu {
     fn model(&self) -> Option<&str> {
         if self.model.is_empty() {

@@ -1,7 +1,7 @@
 use super::constants::*;
 use super::{is_valid_leaf, vendor_str, x86_cpuid_count};
 use crate::common::{Cache, DataSource, Speed, TopologyTier};
-use crate::cpuid::count::{get_core_count, get_platform_socket_count, get_thread_count};
+use crate::x86::count::{get_core_count, get_platform_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
 #[cfg(not(dos))]
@@ -34,7 +34,7 @@ impl Speed {
                 }
             }
             VENDOR_TRANSMETA => {
-                use crate::cpuid::TRANSMETA_LEAF_1;
+                use crate::x86::TRANSMETA_LEAF_1;
 
                 if !is_valid_leaf(TRANSMETA_LEAF_1) {
                     return Speed::measure();
