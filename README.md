@@ -10,16 +10,40 @@ This application is developed using *some* AI, mostly related to:
 * Assembly code
 
 ## Features
-- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, and PowerPC.
+- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, Risc V and PowerPC.
 - **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
 - **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 
+## Platform Support
+
+|                  | DOS   | Linux  | Windows | macOS  | Android | Haiku  | FreeBSD | NetBSD | OpenBSD |
+|-----------------:|:-----:|:------:|:-------:|:------:|:-------:|:------:|:-------:|:------:|:-------:|
+| **x86_64**       | N/A   | 🟢     | ✅      | ✅     | ✅²     | ✅     | ✅      | ✅     | ✅      |
+| **x86 (32-bit)** | ✅¹   | 🟢     | ✅      | N/A    | ✅²     | ✅     | ✅      | ✅     | ✅      |
+| **AArch64**      | N/A   | 🟢     | ✅      | ✅     | ✅²     | ✅     | ✅      | ✅     | ✅      |
+| **ARM (32-bit)** | N/A   | ✅     | N/A     | N/A    | ✅²     | N/A    | ⚠️³     | ⚠️³    | ⚠️³     |
+| **RISC-V 64**    | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
+| **PowerPC**      | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
+| **PowerPC64**    | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
+
+**Legend:**
+- 🟢 CI-tested (`just test-all` on `ubuntu-latest`)
+- ✅ Supported
+- ⚠️ Partial (panics if `MIDR` unavailable from sysctl`)
+- ❌ Not supported
+- N/A Combo does not exist as a real platform
+
+**Notes:**
+¹ DOS: requires 386 or newer CPU
+² Android: experimental, uses Linux platform logic
+³ ARM 32-bit BSD: panics if MIDR cannot be read from sysctl
+
 ## Getting Started
 
 ### Installing (DOS)
-For DOS, there are release binaries on Github for each release.
+For DOS, there are binaries on Github for each release.
 
 ### Installing (MacOS, Linux, Windows, etc.)
 - Rust (`cargo` needs to be installed)
@@ -72,7 +96,7 @@ Output varies by architecture. Here is an example for x86_64:
 
 ```
 
-For ARM and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
+For ARM, Risc V, and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
 
 ## Information References
 
