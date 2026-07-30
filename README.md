@@ -18,22 +18,37 @@ This application is developed using *some* AI, mostly related to:
 
 ## Platform Support
 
-|                  | DOS   | Linux  | Windows | macOS  | Android | Haiku  | FreeBSD | NetBSD | OpenBSD |
-|-----------------:|:-----:|:------:|:-------:|:------:|:-------:|:------:|:-------:|:------:|:-------:|
-| **x86_64**       | N/A   | 🟢     | ✅      | ✅     | ✅²     | ✅     | ✅      | ✅     | ✅      |
-| **x86 (32-bit)** | ✅¹   | 🟢     | ✅      | N/A    | ✅²     | ✅     | ✅      | ✅     | ✅      |
-| **AArch64**      | N/A   | 🟢     | ✅      | ✅     | ✅²     | ✅     | ✅      | ✅     | ✅      |
-| **ARM (32-bit)** | N/A   | ✅     | N/A     | N/A    | ✅²     | N/A    | ⚠️³     | ⚠️³    | ⚠️³     |
-| **RISC-V 64**    | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
-| **PowerPC**      | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
-| **PowerPC64**    | N/A   | ✅     | N/A     | N/A    | N/A     | N/A    | ❌      | ❌     | ❌      |
+### Tier 1
+
+|               | DOS    | Windows | macOS  | Linux  | Haiku  |
+|--------------:|:------:|:-------:|:------:|:------:|:------:|
+| **x86_64**    | —      | ✅      | ✅     | 🟢     | ✅     |
+| **x86_32**    | ✅¹    | ✅      | —      | 🟢     | ✅     |
+| **ARM 64**    | —      | ✅      | ✅     | 🟢     | ✅     |
+| **ARM 32**    | —      | —       | —      | ✅     | —      |
+| **RISC-V 64** | —      | —       | —      | ✅     | —      |
+| **PowerPC**   | —      | —       | —      | ✅     | —      |
+| **PowerPC64** | —      | —       | —      | ✅     | —      |
+
+### Tier 2
+
+These are best-effort platforms: they should work, but information may be more limited and/or less correct.
+
+|               | FreeBSD | NetBSD | OpenBSD | Android |
+|--------------:|:-------:|:------:|:-------:|:-------:|
+| **x86_64**    | ✅      | ✅     | ✅      | ✅²     |
+| **x86_32**    | ✅      | ✅     | ✅      | ✅²     |
+| **ARM 64**    | ✅      | ✅     | ✅      | ✅²     |
+| **ARM 32**    | ⚠️³     | ⚠️³    | ⚠️³     | ✅²     |
+| **RISC-V 64** | ❌      | ❌     | ❌      | —       |
+| **PowerPC**   | ❌      | ❌     | ❌      | —       |
+| **PowerPC64** | ❌      | ❌     | ❌      | —       |
 
 **Legend:**
 - 🟢 CI-tested (`just test-all` on `ubuntu-latest`)
 - ✅ Supported
 - ⚠️ Partial (panics if `MIDR` unavailable from sysctl`)
 - ❌ Not supported
-- N/A Combo does not exist as a real platform
 
 **Notes:**
 ¹ DOS: requires 386 or newer CPU
