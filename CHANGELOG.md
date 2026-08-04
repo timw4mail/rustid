@@ -9,6 +9,8 @@
 
 ### Changed
  - Improved Linux system name detection (more sources, whitespace cleanup, empty string handling)
+ - Expanded filtering of generic firmware strings (e.g. "System Product Name", "Default string") when detecting the Linux system name
+ - Linux system name folds in the hypervisor vendor for VMs (e.g. "QEMU Standard PC ...") and falls back to board identity when the product string is a placeholder
 
  ### Fixed
  - System name no longer returns empty strings
