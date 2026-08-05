@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump build-dos32a _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump run-x86-emu
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release clean run from-file run-debug test-dos test coverage test-all build-dos _build-dos-tools _build-dos-debug _build-dos-dump build-dos32a _build-dos32a-tools _build-dos32a-rustid run-x86-emu
 
 # Lists the available actions
 default:
@@ -85,15 +85,13 @@ _build-dos32a-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos32a-rustid: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid dos32a_rustid.lx
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid rustid.le
+	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; fi
+	@if [ -f RUSTID.EXE ]; then cp RUSTID.EXE rustid.exe; fi
 
-_build-dos32a-dump: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dos32a_dump.lx
-
-# Build for DOS/32A (LX format)
-build-dos32a: _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump
+# Build for DOS/32A (LE format bound executable)
+build-dos32a: _build-dos32a-tools _build-dos32a-rustid
 
 # Build for modern windows (cli), requires visual studio to be installed
 ifeq ($(OS),Windows_NT)
@@ -176,14 +174,14 @@ from-file:
 
 # Run the dos build in DOSBox-X (Linux/Unix)
 ifeq ($(OS),Linux)
-run-dos: build-dos
+run-dos: build-dos32a
 	dosbox-x . -fastlaunch rustid.exe
 
 test-dos: build-dos
 	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 endif
 ifeq ($(OS),Darwin)
-run-dos: build-dos
+run-dos: build-dos32a
 	dosbox-x . -fastlaunch rustid.exe
 
 test-dos: build-dos
