@@ -97,9 +97,9 @@ fn write_chunk(data: &[u8]) {
             "int 0x21",
             in("ah") 0x40_u8,
             in("bx") 1_u16, // File handle 1 = stdout
-            in("cx") len,
-            in("dx") data.as_ptr() as u32,
-            lateout("ax") _,
+            in("ecx") len as u32,
+            in("edx") data.as_ptr() as u32,
+            lateout("eax") _,
             options(preserves_flags)
         );
     }

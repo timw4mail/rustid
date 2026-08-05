@@ -89,7 +89,7 @@ pub fn file_version() {
 pub fn cyrix_cpuid_check() {
     #[cfg(not(any(dos, dos32a)))]
     use crate::println;
-    
+
     #[cfg(any(dos, dos32a))]
     use crate::println;
 

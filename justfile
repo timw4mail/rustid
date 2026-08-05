@@ -69,12 +69,12 @@ _build-dos32a-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos32a-rustid: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid dos32a_rustid.lx
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid rustid32.le
 
 _build-dos32a-dump: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dos32a_dump.lx
+	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dump32.le
 
 # Build for DOS/32A (LX format)
 build-dos32a: _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump
@@ -148,7 +148,7 @@ run-dos: build-dos
 
 # Run the dos debug build in DOSBox-X
 [linux, unix]
-run-dos: build-dos
+run-dos: build-dos32a
 	dosbox-x . -fastlaunch rustid.exe
 
 # Run the dos build in DOSBox-x, and return the output to a file

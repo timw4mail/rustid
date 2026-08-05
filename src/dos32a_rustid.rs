@@ -7,13 +7,11 @@
 #[unsafe(naked)]
 pub unsafe extern "C" fn _start() -> ! {
     core::arch::naked_asm!(
-        // Setup flat 32-bit protected mode segments
-        "xor eax, eax",
-        "mov ds, ax",
+        // Setup flat selectors
+        "mov ax, ds",
         "mov es, ax",
         "mov fs, ax",
         "mov gs, ax",
-        "mov ss, ax",
         // Setup stack
         "lea esp, [_stack_top]",
         // Jump to rust_main

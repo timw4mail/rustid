@@ -34,7 +34,7 @@ pub use macos::*;
 #[cfg(target_os = "haiku")]
 pub use haiku::*;
 
-#[cfg(all(target_family = "unix", not(target_os = "haiku")))]
+#[cfg(all(target_family = "unix", not(any(target_os = "haiku", dos, dos32a))))]
 pub use sysctl::*;
 
 // ----------------------------------------------------------------------------
