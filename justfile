@@ -70,11 +70,13 @@ _build-dos32a-tools:
 
 _build-dos32a-rustid: _build-dos32a-tools
 	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid rustid32.le
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid dos32a_rustid.le
+	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe dos32a_rustid.le" >/dev/null 2>&1 || true; fi
 
 _build-dos32a-dump: _build-dos32a-tools
 	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_dump --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dump32.le
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_dump dos32a_dump.le
+	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bndump.exe dos32a_dump.le" >/dev/null 2>&1 || true; fi
 
 # Build for DOS/32A (LX format)
 build-dos32a: _build-dos32a-tools _build-dos32a-rustid _build-dos32a-dump
