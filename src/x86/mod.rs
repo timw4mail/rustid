@@ -15,11 +15,8 @@ pub mod count;
 pub mod cpu;
 pub mod display;
 
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 pub mod dos;
-
-#[cfg(dos32a)]
-pub mod dos32a;
 
 pub mod dump;
 pub mod features;

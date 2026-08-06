@@ -63,11 +63,8 @@ pub mod riscv;
 #[cfg(target_arch = "riscv64")]
 pub use riscv::Cpu;
 
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 pub use x86::dos::*;
-
-#[cfg(dos32a)]
-pub use x86::dos32a::*;
 
 #[cfg(not(any(dos, dos32a)))]
 pub use std::{print, println};
