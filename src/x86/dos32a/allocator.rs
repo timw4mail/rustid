@@ -86,7 +86,6 @@ pub unsafe fn init_heap() {
 
     // DOS/32A flat model: heap starts after the binary data
     // The binary is loaded at 0x10000, so calculate heap size from there
-    let binary_end = heap_start + 0x10000; // Approximate binary end in flat model
     let heap_size = 0x100000; // 1MB heap for DOS/32A
 
     unsafe { ALLOCATOR.init(heap_start, heap_size) };

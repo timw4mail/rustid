@@ -123,7 +123,12 @@ clean:
 	@cargo clean
 	@rm -f *.com
 	@rm -f *.exe
+	@rm -f *.EXE
+	@rm -f *.le
+	@rm -f *.lx
+	@rm -f *.LX
 	@rm -f *.bin
+	@rm -f *.log
 
 # Build and run the app
 run arg="":
@@ -151,7 +156,7 @@ run-dos: build-dos32a
 
 # Run the dos build in DOSBox-x, and return the output to a file
 [linux, unix]
-test-dos: build-dos
+test-dos: build-dos32a
 	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 
 # Run the dos build in DOSBox-x, and return the output to a file

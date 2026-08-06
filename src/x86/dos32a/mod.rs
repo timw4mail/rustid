@@ -135,6 +135,165 @@ pub fn peek_u32(addr: u32) -> u32 {
     unsafe { *(addr as *const u32) }
 }
 
+/// Maximum number of command-line arguments supported.
+const MAX_ARGS: usize = 8;
+
+/// A tokenized view of the DOS command-line tail.
+///
+/// Tokens are split on whitespace (space / tab). Each `&'static str` slice
+/// points directly into the PSP region, which is valid for the program lifetime.
+pub struct Args {
+    tokens: [&'static str; MAX_ARGS],
+    count: usize,
+}
+
+impl Args {
+    /// Returns a slice of the parsed argument tokens.
+    #[inline]
+    pub fn as_slice(&self) -> &[&'static str] {
+        &self.tokens[..self.count]
+    }
+}
+
+/// Returns the 32-bit linear base address of a selector by calling
+/// DPMI `INT 31h AX=0006h`. Returns `None` if the call fails.
+pub fn selector_base(selector: u16) -> Option<u32> {
+    let mut base_high: u16 = 0;
+    let mut base_low: u16 = 0;
+    let mut err_or_carry: u16 = 0x0006;
+    unsafe {
+        asm!(
+            "int 0x31",
+            "jc 2f",
+            "xor ax, ax",
+            "2:",
+            inout("ax") err_or_carry,
+            in("bx") selector,
+            out("cx") base_high,
+            out("dx") base_low,
+        );
+    }
+    if err_or_carry == 0 {
+        Some(((base_high as u32) << 16) | (base_low as u32))
+    } else {
+        None
+    }
+}
+
+static mut TAIL_BUF: [u8; 128] = [0; 128];
+
+/// Returns the flat linear base address of the PSP.
+pub fn psp_base() -> Option<u32> {
+    let mut psp_val: u32 = 0;
+    unsafe {
+        asm!(
+            "mov ah, 0x51",
+            "int 0x21",
+            out("ebx") psp_val,
+            out("eax") _,
+            out("ecx") _,
+            out("edx") _,
+        );
+    }
+
+    let psp_val = psp_val as u16;
+    if psp_val < 0x0400 {
+        selector_base(psp_val)
+    } else {
+        Some((psp_val as u32) << 4)
+    }
+}
+
+/// Reads the DOS command-line tail from the PSP and tokenizes it.
+///
+/// Uses INT 21h AH=51h to retrieve the PSP selector, copies the command tail
+/// bytes into a static buffer to ensure 'static lifetime, and splits it on whitespace.
+pub fn get_args() -> Args {
+    let mut tokens = [""; MAX_ARGS];
+    let mut count = 0;
+
+    let mut psp_val: u32 = 0;
+    unsafe {
+        asm!(
+            "mov ah, 0x51",
+            "int 0x21",
+            out("ebx") psp_val,
+            out("eax") _,
+            out("ecx") _,
+            out("edx") _,
+        );
+    }
+
+    let psp_sel = psp_val as u16;
+    let mut raw_len: u8 = 0;
+
+    if psp_sel < 0x0400 {
+        // Protected-mode selector
+        unsafe {
+            asm!(
+                "push es",
+                "mov es, {sel:x}",
+                "mov {len}, es:[0x80]",
+                "pop es",
+                sel = in(reg) psp_sel,
+                len = out(reg_byte) raw_len,
+            );
+        }
+        let len = (raw_len as usize).min(127);
+        for i in 0..len {
+            let offset = (0x81 + i) as u16;
+            let mut byte: u8 = 0;
+            unsafe {
+                asm!(
+                    "push es",
+                    "mov es, {sel:x}",
+                    "mov {byte}, es:[{off:e}]",
+                    "pop es",
+                    sel = in(reg) psp_sel,
+                    off = in(reg) offset,
+                    byte = out(reg_byte) byte,
+                );
+                TAIL_BUF[i] = byte;
+            }
+        }
+    } else {
+        // Real-mode segment
+        let base = (psp_sel as u32) << 4;
+        raw_len = peek_u8(base + 0x80);
+        let len = (raw_len as usize).min(127);
+        for i in 0..len {
+            unsafe {
+                TAIL_BUF[i] = peek_u8(base + 0x81 + i as u32);
+            }
+        }
+    }
+
+    let len = (raw_len as usize).min(127);
+
+    // Build a &'static str over the copied static tail bytes
+    let tail: &'static str = unsafe {
+        let bytes = &TAIL_BUF[..len];
+        // Strip any trailing CR (0x0D) DOS places at the end
+        let trimmed = if bytes.last() == Some(&0x0D) {
+            &bytes[..bytes.len() - 1]
+        } else {
+            bytes
+        };
+        // DOS encodes the tail as ASCII; treat as UTF-8 (all-ASCII is valid)
+        core::str::from_utf8_unchecked(trimmed)
+    };
+
+    for token in tail.split(|c: char| c == ' ' || c == '\t') {
+        let t = token.trim();
+        if !t.is_empty() && count < MAX_ARGS {
+            tokens[count] = t;
+            count += 1;
+        }
+    }
+
+    Args { tokens, count }
+}
+
 impl Speed {
     #[inline(never)]
     fn measure_frequency_tsc(t1: u16) -> u32 {
