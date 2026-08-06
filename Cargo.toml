@@ -33,11 +33,6 @@ required-features = ["dos-build"]
 path="src/dos_rustid.rs"
 
 [[bin]]
-name = "dump"
-required-features = ["dos-build"]
-path="src/dos_dump.rs"
-
-[[bin]]
 name = "debug"
 required-features = ["debug", "dos-build"]
 path="src/dos_debug.rs"
