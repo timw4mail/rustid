@@ -67,16 +67,16 @@ _build-dos-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos-debug: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features="debug dos-build" --bin debug --release
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --features="debug dos-build" --bin debug --release
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/debug debug.exe
 
 _build-dos-dump: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features dos-build --bin dump --release
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --features dos-build --bin dump --release
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dump dump.exe
 
 # Build for DOS (EXE format)
 build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos_rustid
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 
@@ -85,7 +85,7 @@ _build-dos32a-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos32a-rustid: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos32a_rustid --release
 	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos32a_rustid rustid.le
 	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; fi
 	@if [ -f RUSTID.EXE ]; then cp RUSTID.EXE rustid.exe; fi
@@ -155,7 +155,7 @@ build-mac-arm: _cargo_cross
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
-	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target i486-linux.json --release
+	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
 # Remove build files
 clean:

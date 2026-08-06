@@ -35,7 +35,7 @@ just build-dos
 ```
 
 This will:
-1. Build `dos_rustid`, `dump`, and `debug` using the `i486-dos.json` target spec
+1. Build `dos_rustid`, `dump`, and `debug` using the `build-config/i486-dos.json` target spec
 2. Convert each ELF binary to MZ EXE format via `tools/make_exe`
 3. Run the binary size test
 
@@ -73,7 +73,7 @@ C:\> debug.exe
 
 ## How It Works
 
-### Target Specification (`i486-dos.json`)
+### Target Specification (`build-config/i486-dos.json`)
 
 The custom target `i486-unknown-none-code16` targets a 386-class CPU in 16-bit real mode:
 
@@ -105,7 +105,7 @@ mov ss, ax
 .word rust_main - 1f             ; manual 16-bit near jump
 ```
 
-The linker script (`link-exe.x`) places this in the `.startup` section at offset `0x10`, right after a 6-byte metadata header (data seg offset, stack seg offset, stack size).
+The linker script (`build-config/link-exe.x`) places this in the `.startup` section at offset `0x10`, right after a 6-byte metadata header (data seg offset, stack seg offset, stack size).
 
 ### EXE Conversion (`tools/make_exe`)
 
