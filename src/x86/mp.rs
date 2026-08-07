@@ -260,7 +260,6 @@ impl MpTable {
     #[inline(never)]
     fn get_ebda_seg() -> Option<u16> {
         use crate::x86::dos::peek_u16;
-        use core::arch::asm;
 
         let es_val: u16 = 0;
         let flags: u16 = 1; // Set carry flag to force fallback

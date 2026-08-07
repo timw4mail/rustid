@@ -16,16 +16,20 @@ pub use allocator::init_heap;
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     use crate::println;
-    // if let Some(location) = info.location() {
-    //     println!(
-    //         "Panic in file '{}' at line {}:{}",
-    //         location.file(),
-    //         location.line(),
-    //         location.column(),
-    //     );
-    // } else {
-    //     println!("Panic for unknown reason.");
-    // }
+
+    #[cfg(dos32a)]
+    if let Some(location) = _info.location() {
+        println!(
+            "Panic in file '{}' at line {}:{}",
+            location.file(),
+            location.line(),
+            location.column(),
+        );
+    } else {
+        println!("Panic for unknown reason.");
+    }
+
+    #[cfg(dos)]
     println!("Panic!");
     exit(1);
 }

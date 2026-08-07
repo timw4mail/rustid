@@ -3,6 +3,8 @@ use crate::x86::constants::*;
 use crate::x86::micro_arch::{CpuArch, MicroArch};
 use crate::x86::vendor::TMicroArch;
 use crate::x86::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
+
+#[cfg(not(dos))]
 use alloc::vec::Vec;
 
 pub struct Centaur;
