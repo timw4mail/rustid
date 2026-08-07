@@ -165,13 +165,80 @@ impl Cyrix {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(all(not(dos), not(dos32a)))]
     fn get_device_ids() -> (u8, u8) {
         (Self::get_device_id_from_signature(), 0)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(all(not(dos), not(dos32a)))]
     fn get_device_id_from_signature() -> u8 {
+        let sig = CpuSignature::detect();
+
+        match (sig.family, sig.model) {
+            (4, 9) => 0x28,
+            (5, 2 | 3) => 0x30,
+            (5, 4) => 0x40,
+            (6, 0) => 0x50,
+            _ => 0,
+        }
+    }
+
+    #[cfg(dos32a)]
+    fn get_device_ids() -> (u8, u8) {
+        if !crate::x86::is_cyrix() {
+            return (0, 0);
+        }
+
+        const CYRIX_CCR_PORT: u16 = 0x22;
+        const CYRIX_DATA_PORT: u16 = 0x23;
+
+        fn read_ccr(index: u8) -> u8 {
+            let result: u8;
+            let idx = index;
+            unsafe {
+                // DOS32a INT 31h, AH=17h: Outport byte
+                core::arch::asm!(
+                    "mov ah, 0x17",
+                    "int 0x31",
+                    in("dx") CYRIX_CCR_PORT,
+                    in("al") idx,
+                    options(preserves_flags),
+                );
+                // DOS32a INT 31h, AH=16h: Inport byte
+                core::arch::asm!(
+                    "mov ah, 0x16",
+                    "int 0x31",
+                    in("dx") CYRIX_DATA_PORT,
+                    out("al") result,
+                    options(preserves_flags),
+                );
+            }
+            result
+        }
+
+        let dir0 = read_ccr(0xFE);
+        let dir1 = read_ccr(0xFF);
+
+        let dir0 = if dir0 == 0xFF || dir0 == 0x00 {
+            Self::get_device_id_from_signature()
+        } else {
+            dir0
+        };
+
+        (dir0, dir1)
+    }
+
+    #[cfg(dos32a)]
+    fn get_device_id_from_signature() -> u8 {
+        if let Some(signature) = crate::x86::get_reset_signature() {
+            return match (signature.family, signature.model) {
+                (3, 2) => 0x01,
+                (4, 5) => 0x10,
+                (4, 8) => 0x1B,
+                _ => 0,
+            };
+        }
+
         let sig = CpuSignature::detect();
 
         match (sig.family, sig.model) {
