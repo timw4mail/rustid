@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.8.0]
+
+### Added
+- DOS32A DOS Extender support for 32-bit protected-mode DOS binaries (`rustid.exe` built with DOS32A) - this allows showing more information, adding program arguments, and removes the 64K size limitation of the original real-mode dos binaries
+- Custom `elf2le` tool to convert ELF binaries to Linear Executable (LE) format for DOS32A
+- Automatic fallback to real-mode DOS binary for pre-CPUID CPUs requiring CPU reset identification
+- Platform support details and tables added to README
+
+### Changed
+- Renamed internal `cpuid` module to `x86` for cross-architecture consistency
+- Extracted display/formatting logic from CPU detection in ARM and PowerPC modules
+- Reorganized binary targets, link scripts, and target specs into `build-config/` directory
+- Aligned DOS extender formatting, panic handling, and trace display with real-mode DOS version
+
+### Fixed
+- Patched DOS32A binary to suppress startup banner and warnings
+
+### Known Issues
+- Intel/Zhaoxin CPUs with multiple cores may show the core count as socket count, and multiply the core count by the spurious socket count
+
 ## [1.7.0]
 
 ### Added
