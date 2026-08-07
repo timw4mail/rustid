@@ -60,7 +60,7 @@ impl Speed {
             return Speed::default();
         }
 
-        #[cfg(any(dos, dos32a))]
+        #[cfg(not(any(dos, dos32a)))]
         if !super::has_tsc() {
             return Speed::default();
         }
