@@ -280,10 +280,10 @@ impl Cpu {
 
 impl TCpuDisplay for Cpu {
     fn debug(&self) {
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!("{:#?}", self);
 
-        #[cfg(all(dos, feature = "debug"))]
+        #[cfg(any(all(dos, feature = "debug"), dos32a))]
         {
             use super::is_cyrix;
 

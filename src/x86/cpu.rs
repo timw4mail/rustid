@@ -190,7 +190,7 @@ impl CpuSignature {
 
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
-        #[cfg(dos)]
+        #[cfg(any(dos, dos32a))]
         if !has_cpuid() {
             use super::vendor::cyrix::Cyrix;
 
@@ -204,6 +204,7 @@ impl CpuSignature {
                 }
             }
 
+            #[cfg(dos)]
             if let Some(mut reset_sig) = super::get_reset_signature() {
                 reset_sig.source = DataSource::CpuReset;
                 return reset_sig;

@@ -72,12 +72,12 @@ impl CpuDisplay {
         let l = self.label(l);
         println!("{}{}", l, v);
 
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!();
     }
 
     pub fn newline() {
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!();
     }
 

@@ -25,7 +25,7 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(dos32a)]
 fn help() {
     use rustid::println;
-    println!("Usage: RUSTID32 [/FLAGS] [COMMAND]");
+    println!("Usage: RUSTID [/FLAGS] [COMMAND]");
     println!();
     println!("Commands:");
     println!("  (no args)    Display CPU information");
@@ -33,7 +33,7 @@ fn help() {
     println!("  E, EVERYTHING  Show CPU information and debug information");
     println!("  R, DUMP      Dump raw CPUID values");
     println!("  V, VERSION   Display version info");
-    println!("  H, HELP      Show this help message");
+    println!("  ?, H, HELP      Show this help message");
     println!();
     println!("Flags (use / or - prefix):");
     println!("  /M, /MONO    Don't output color");
@@ -84,7 +84,7 @@ pub extern "C" fn rust_main() -> ! {
                     action = "version";
                     continue 'args;
                 }
-                "H" | "HELP" => {
+                "?" | "H" | "HELP" => {
                     action = "help";
                     continue 'args;
                 }
@@ -143,7 +143,7 @@ pub extern "C" fn rust_main() -> ! {
                 'D' => action = "debug",
                 'E' => action = "everything",
                 'R' => action = "dump",
-                'H' => action = "help",
+                'H' | '?' => action = "help",
                 _ => {
                     use rustid::println;
                     println!("Unknown flag: /{}", c);
