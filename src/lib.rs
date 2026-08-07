@@ -26,6 +26,12 @@
 
 extern crate alloc;
 
+#[cfg(not(dos))]
+const APP: &str = "Rustid";
+
+#[cfg(dos)]
+const APP: &str = "Rust86";
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(not(any(dos, dos32a)))]
@@ -71,8 +77,8 @@ pub use std::{print, println};
 
 pub fn version() {
     println!(
-        "--------------- Rustid {} ({}-{}) ---------------",
-        VERSION, ARCH, OS
+        "--------------- {} {} ({}-{}) ---------------",
+        APP, VERSION, ARCH, OS
     );
 }
 

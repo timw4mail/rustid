@@ -28,19 +28,19 @@ name = "rustid"
 path="src/rustid.rs"
 
 [[bin]]
-name = "dos_rustid"
+name = "rust86"
 required-features = ["dos-build"]
-path="src/dos_rustid.rs"
+path= "src/rust86.rs"
 
 [[bin]]
-name = "debug"
+name = "debug86"
 required-features = ["debug", "dos-build"]
-path="src/dos_debug.rs"
+path= "src/debug86.rs"
 
 [[bin]]
-name = "dos32a_rustid"
+name = "dos_rustid"
 required-features = ["dos32a-build"]
-path="src/dos32a_rustid.rs"
+path= "src/dos_rustid.rs"
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)'] }
