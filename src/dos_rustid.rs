@@ -46,7 +46,7 @@ fn help() {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{CliFlags, TCpuDisplay, TDetect};
-    use rustid::x86::dos::{exit, get_args, init_heap};
+    use rustid::x86::dos::{exec_dos_binary, exit, get_args, init_heap};
     use rustid::{Cpu, cyrix_cpuid_check, version};
 
     unsafe { init_heap() };
@@ -158,6 +158,26 @@ pub extern "C" fn rust_main() -> ! {
     if action == "help" || had_error {
         help();
         exit(if had_error { 1 } else { 0 });
+    }
+
+    // Real-mode fallback for non-Cyrix pre-CPUID CPUs in default and debug modes
+    if (action == "default" || action == "debug")
+        && !rustid::x86::has_cpuid()
+        && !rustid::x86::is_cyrix()
+    {
+        let prog = if action == "debug" {
+            "debug86.exe"
+        } else {
+            "rust86.exe"
+        };
+        if let Err(err) = exec_dos_binary(prog, "") {
+            use rustid::println;
+            println!(
+                "Failed to execute real mode binary {} (error {})",
+                prog, err
+            );
+            exit(1);
+        }
     }
 
     if action != "dump" {
