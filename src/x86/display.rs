@@ -401,7 +401,7 @@ impl TCpuDisplay for Cpu {
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
                     println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
-                #[cfg(not(dos))]
+                #[cfg(not(any(dos, dos32a)))]
                 println!();
             }
         }
