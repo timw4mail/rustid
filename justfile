@@ -75,7 +75,7 @@ _build-dos32a-rustid: _build-dos32a-tools
 	@if [ -f RUSTID.EXE ]; then cp RUSTID.EXE rustid.exe; fi
 
 # Build for DOS/32A (LE format bound executable)
-build-dos32a: _build-dos32a-tools _build-dos32a-rustid
+build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
 
 # Build all dos binaries
 build-dos: build-dos32a build-dos-real

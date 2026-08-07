@@ -116,9 +116,11 @@ fn main() -> Result<()> {
         }
     }
 
+    let heap_size = 0x100000; // 1MB heap
+    let obj2_total_memsz = data_memsz as usize + heap_size;
     let obj1_pages = align_up(text_size as usize, PAGE_SIZE) / PAGE_SIZE;
     let obj2_file_pages = align_up(data_filesz as usize, PAGE_SIZE) / PAGE_SIZE;
-    let obj2_total_pages = align_up(data_memsz as usize, PAGE_SIZE) / PAGE_SIZE;
+    let obj2_total_pages = align_up(obj2_total_memsz, PAGE_SIZE) / PAGE_SIZE;
     let total_page_count = obj1_pages + obj2_total_pages;
 
     let mut code_data = vec![0u8; text_size as usize];
@@ -271,11 +273,12 @@ fn main() -> Result<()> {
     le_hdr[0x70..0x74].copy_from_slice(&imported_modules_rel.to_le_bytes());
     le_hdr[0x80..0x84].copy_from_slice(&(data_pages_offset as u32).to_le_bytes());
     le_hdr[0x94..0x98].copy_from_slice(&2u32.to_le_bytes()); // Auto DS = 2
-    le_hdr[0xA8..0xAC].copy_from_slice(&0x10000u32.to_le_bytes()); // Extra heap
+    le_hdr[0xA8..0xAC].copy_from_slice(&(heap_size as u32).to_le_bytes()); // Extra heap
 
     let mut obj_table = Vec::new();
     // Object 1: Code (RX)
-    obj_table.extend_from_slice(&text_size.to_le_bytes());
+    let obj1_vsize = (obj1_pages * PAGE_SIZE) as u32;
+    obj_table.extend_from_slice(&obj1_vsize.to_le_bytes());
     obj_table.extend_from_slice(&text_va.to_le_bytes());
     obj_table.extend_from_slice(&0x2045u32.to_le_bytes());
     obj_table.extend_from_slice(&1u32.to_le_bytes());
@@ -283,7 +286,8 @@ fn main() -> Result<()> {
     obj_table.extend_from_slice(&0u32.to_le_bytes());
 
     // Object 2: Data (RW)
-    obj_table.extend_from_slice(&data_memsz.to_le_bytes());
+    let obj2_vsize = (obj2_total_pages * PAGE_SIZE) as u32;
+    obj_table.extend_from_slice(&obj2_vsize.to_le_bytes());
     obj_table.extend_from_slice(&data_va.to_le_bytes());
     obj_table.extend_from_slice(&0x2043u32.to_le_bytes());
     obj_table.extend_from_slice(&((obj1_pages + 1) as u32).to_le_bytes());

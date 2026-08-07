@@ -189,23 +189,23 @@ pub fn peek_u16(seg: u16, off: u16) -> u16 {
 
 /// Reads a byte from a 32-bit linear address (Protected Mode).
 #[cfg(dos32a)]
-#[inline(never)]
+#[inline(always)]
 pub fn peek_u8(addr: u32) -> u8 {
-    unsafe { *(addr as *const u8) }
+    unsafe { core::ptr::read_volatile(addr as *const u8) }
 }
 
 /// Reads a 16-bit word from a 32-bit linear address (Protected Mode).
 #[cfg(dos32a)]
-#[inline(never)]
+#[inline(always)]
 pub fn peek_u16(addr: u32) -> u16 {
-    unsafe { *(addr as *const u16) }
+    unsafe { core::ptr::read_volatile(addr as *const u16) }
 }
 
 /// Reads a 32-bit dword from a 32-bit linear address (Protected Mode).
 #[cfg(dos32a)]
-#[inline(never)]
+#[inline(always)]
 pub fn peek_u32(addr: u32) -> u32 {
-    unsafe { *(addr as *const u32) }
+    unsafe { core::ptr::read_volatile(addr as *const u32) }
 }
 
 // ============================================================================
@@ -425,7 +425,7 @@ impl Speed {
 
                 ".align 16",
                 "2:",
-                "mov ax, [0x0004006C]",
+                "mov ax, [0x46c]",
                 "cmp ax, {3:x}",
                 "jne 2b",
 
@@ -470,11 +470,11 @@ impl Speed {
             return 0;
         }
 
-        let start_ticks = peek_u16(0x0004006C);
+        let start_ticks = peek_u16(0x46c);
         let mut t1 = start_ticks;
 
         while t1 == start_ticks {
-            t1 = peek_u16(0x0004006C);
+            t1 = peek_u16(0x46c);
         }
 
         if super::has_tsc() {
@@ -501,7 +501,7 @@ impl Speed {
                 "add {0:e}, 1",
                 "push eax",
                 "pop eax",
-                "mov ax, [0x0004006C]",
+                "mov ax, [0x46c]",
                 "cmp ax, {1:x}",
                 "jne 2b",
 

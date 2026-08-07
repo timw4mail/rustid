@@ -230,15 +230,6 @@ impl Cyrix {
 
     #[cfg(dos32a)]
     fn get_device_id_from_signature() -> u8 {
-        if let Some(signature) = crate::x86::get_reset_signature() {
-            return match (signature.family, signature.model) {
-                (3, 2) => 0x01,
-                (4, 5) => 0x10,
-                (4, 8) => 0x1B,
-                _ => 0,
-            };
-        }
-
         let sig = CpuSignature::detect();
 
         match (sig.family, sig.model) {
