@@ -16,6 +16,7 @@
 
 ### Fixed
 - Patched DOS32A binary to suppress startup banner and warnings
+- An issue where Intel/Zhaoxin CPUs with multiple cores may show the core count as socket count, and multiply the core count by the spurious socket count
 
 ## [1.7.0]
 
