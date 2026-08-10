@@ -18,20 +18,29 @@ jobs:
         run: |
           curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
+      - name: Install DOSBox-X
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dosbox-x
+
       - name: Clean build environment
         run: cargo clean && just clean
 
       - name: Build dos
         run: just build-dos
 
+      - name: Package DOS binaries
+        run: |
+          zip rustid-dos.zip rustid.exe rust86.exe debug86.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: rustid
-          path: ./*.exe
+          name: rustid-dos
+          path: rustid-dos.zip
 
       - name: Publish binaries
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create --generate-notes ${{ github.ref }} './rustid.exe#DOS binary (rustid.exe)' './debug.exe#DOS debug binary (debug.exe)' './dump.exe#Raw cpuid dump (dump.exe)'
+          gh release create --generate-notes ${{ github.ref }} './rustid-dos.zip#DOS Binaries (rustid-dos.zip)'
