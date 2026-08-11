@@ -1,6 +1,6 @@
 [package]
 name = "rustid"
-version = "1.8.0"
+version = "1.9.0"
 edition = "2024"
 authors = ["Timothy J. Warren <tim@timshome.page>"]
 description = "A utility to identify the name and properties of the current cpu"
@@ -28,19 +28,19 @@ name = "rustid"
 path="src/rustid.rs"
 
 [[bin]]
-name = "dos_rustid"
+name = "rust86"
 required-features = ["dos-build"]
-path="src/dos_rustid.rs"
+path= "src/rust86.rs"
 
 [[bin]]
-name = "dump"
-required-features = ["dos-build"]
-path="src/dos_dump.rs"
-
-[[bin]]
-name = "debug"
+name = "debug86"
 required-features = ["debug", "dos-build"]
-path="src/dos_debug.rs"
+path= "src/debug86.rs"
+
+[[bin]]
+name = "dos_rustid"
+required-features = ["dos32a-build"]
+path= "src/dos_rustid.rs"
 
 [[bin]]
 name = "rustid-gui"
@@ -48,7 +48,7 @@ required-features = ["gui"]
 path="src/rustid_gui.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)'] }
 
 [lints.clippy]
 unwrap_used = "warn"
@@ -58,3 +58,4 @@ default = []
 debug = []
 dos-build = []
 gui = ["dep:slint"]
+dos32a-build = []

@@ -18,6 +18,15 @@ jobs:
         run: |
           curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
+      - name: Install DOSBox-X
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dosbox-x
+
       - uses: actions/checkout@v6
+
       - name: Run tests
         run: just test-all
+
+      - name: Build DOS binaries
+        run: just build-dos

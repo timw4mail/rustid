@@ -1,0 +1,7 @@
+[package]
+name = "elf2le"
+version = "0.1.0"
+edition = "2024"
+description = "Convert ELF binaries to LE (Linear Executable) format for DOS/32A"
+
+[dependencies]

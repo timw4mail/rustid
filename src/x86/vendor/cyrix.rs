@@ -165,12 +165,12 @@ impl Cyrix {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(all(not(dos), not(dos32a)))]
     fn get_device_ids() -> (u8, u8) {
         (Self::get_device_id_from_signature(), 0)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(all(not(dos), not(dos32a)))]
     fn get_device_id_from_signature() -> u8 {
         let sig = CpuSignature::detect();
 
@@ -183,7 +183,7 @@ impl Cyrix {
         }
     }
 
-    #[cfg(dos)]
+    #[cfg(any(dos, dos32a))]
     fn get_device_ids() -> (u8, u8) {
         if !crate::x86::is_cyrix() {
             return (0, 0);
@@ -220,6 +220,19 @@ impl Cyrix {
         };
 
         (dir0, dir1)
+    }
+
+    #[cfg(dos32a)]
+    fn get_device_id_from_signature() -> u8 {
+        let sig = CpuSignature::detect();
+
+        match (sig.family, sig.model) {
+            (4, 9) => 0x28,
+            (5, 2 | 3) => 0x30,
+            (5, 4) => 0x40,
+            (6, 0) => 0x50,
+            _ => 0,
+        }
     }
 
     #[cfg(dos)]

@@ -5,7 +5,7 @@ use alloc::format;
 use alloc::string::String;
 
 use crate::common::CliFlags;
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 use crate::println;
 
 pub struct CpuDisplay {
@@ -72,12 +72,12 @@ impl CpuDisplay {
         let l = self.label(l);
         println!("{}{}", l, v);
 
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!();
     }
 
     pub fn newline() {
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!();
     }
 

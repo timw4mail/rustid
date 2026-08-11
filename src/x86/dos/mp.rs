@@ -1,3 +1,4 @@
+#![cfg(any(dos, dos32a))]
 //! MultiProcessor (MP) table detection for x86 systems.
 //!
 //! This module implements scanning and parsing of the Intel MP specification
@@ -22,88 +23,14 @@ impl MpTable {
     pub fn socket_count(&self) -> u32 {
         self.sockets
     }
-
-    /// Detects the number of sockets by reading sysinfo -cpu (for Haiku)
-    #[cfg(not(dos))]
-    #[must_use]
-    pub fn detect_sysinfo(cmd: &str) -> MpTable {
-        let mut table = MpTable { sockets: 1 };
-
-        if let Ok(o) = std::process::Command::new(cmd).output()
-            && let Ok(s) = String::from_utf8(o.stdout)
-        {
-            for line in s.lines() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if let Ok(num) = parts[0].parse::<u32>() {
-                    table.sockets = num;
-                    return table;
-                }
-            }
-        }
-
-        table
-    }
-
-    /// Detects the number of sockets by reading /proc/cpuinfo
-    #[cfg(not(dos))]
-    #[must_use]
-    pub fn detect_cpuinfo(file: &str) -> MpTable {
-        use std::collections::HashSet;
-
-        let mut table = MpTable { sockets: 1 };
-
-        // Fallback: /proc/cpuinfo unique physical ids
-        if let Ok(content) = std::fs::read_to_string(file) {
-            let mut entries = 0;
-            let mut physical_ids = HashSet::new();
-            let mut core_ids = HashSet::new();
-
-            for line in content.lines() {
-                if line.starts_with("physical id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    physical_ids.insert(id.trim());
-                    entries += 1;
-                }
-
-                if line.starts_with("core id")
-                    && let Some(id) = line.split(':').nth(1)
-                {
-                    core_ids.insert(id.trim());
-                }
-            }
-
-            // For the Pentium Pro, all the rules seem to be broken.
-            // There might be multiple entries in /proc/cpuinfo, all with identical ids
-            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-                table.sockets = entries;
-            } else {
-                table.sockets = physical_ids.len() as u32;
-            }
-        }
-
-        table
-    }
-}
-
-#[cfg(not(dos))]
-impl MpTable {
-    /// Detects the number of sockets via platform-specific means
-    #[must_use]
-    pub fn detect() -> MpTable {
-        #[allow(unreachable_code)]
-        MpTable { sockets: 1u32 }
-    }
 }
 
 /// MP Floating Pointer Structure signature: "_MP_"
-#[cfg(dos)]
 const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
 /// MP Floating Pointer Structure from the Intel MP Specification.
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
-#[cfg(dos)]
 struct MpFloatingPointer {
     /// Structure signature ("_MP_")
     signature: [u8; 4],
@@ -128,13 +55,38 @@ struct MpFloatingPointer {
 }
 
 #[cfg(dos)]
+#[inline(always)]
+fn peek_u8_so(seg: u16, off: u16) -> u8 {
+    crate::x86::dos::peek_u8(seg, off)
+}
+
+#[cfg(dos)]
+#[inline(always)]
+fn peek_u16_so(seg: u16, off: u16) -> u16 {
+    crate::x86::dos::peek_u16(seg, off)
+}
+
+#[cfg(dos32a)]
+#[inline(always)]
+fn peek_u8_so(seg: u16, off: u16) -> u8 {
+    let addr = ((seg as u32) << 4) + (off as u32);
+    crate::x86::dos::peek_u8(addr)
+}
+
+#[cfg(dos32a)]
+#[inline(always)]
+fn peek_u16_so(seg: u16, off: u16) -> u16 {
+    let addr = ((seg as u32) << 4) + (off as u32);
+    crate::x86::dos::peek_u16(addr)
+}
+
 impl MpTable {
     /// Detects the number of sockets using the Intel MP Specification.
     pub fn detect() -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
         // MP Table lookup is only applicable to certain CPUs
-        if !(super::is_intel() || super::is_vortex() || super::is_centaur()) {
+        if !(crate::x86::is_intel() || crate::x86::is_vortex() || crate::x86::is_centaur()) {
             return table;
         }
 
@@ -155,18 +107,14 @@ impl MpTable {
 
     #[inline(never)]
     fn check_sig(seg: u16, off: u16, sig: &[u8; 4]) -> bool {
-        use crate::x86::dos::peek_u8;
-
-        peek_u8(seg, off) == sig[0]
-            && peek_u8(seg, off + 1) == sig[1]
-            && peek_u8(seg, off + 2) == sig[2]
-            && peek_u8(seg, off + 3) == sig[3]
+        peek_u8_so(seg, off) == sig[0]
+            && peek_u8_so(seg, off + 1) == sig[1]
+            && peek_u8_so(seg, off + 2) == sig[2]
+            && peek_u8_so(seg, off + 3) == sig[3]
     }
 
     #[inline(never)]
     fn parse_config_table(config_ptr: u32) -> Option<u32> {
-        use crate::x86::dos::{peek_u8, peek_u16};
-
         if config_ptr == 0 || config_ptr > 0xFFF00 {
             return None;
         }
@@ -178,7 +126,7 @@ impl MpTable {
             return None;
         }
 
-        let entry_count = peek_u16(seg, off + 34);
+        let entry_count = peek_u16_so(seg, off + 34);
         let mut sockets = 0;
         let mut current_off = off + 44;
 
@@ -186,9 +134,9 @@ impl MpTable {
             if current_off > 0xFFF0 {
                 break;
             }
-            let entry_type = peek_u8(seg, current_off);
+            let entry_type = peek_u8_so(seg, current_off);
             if entry_type == 0 {
-                let flags = peek_u8(seg, current_off + 3);
+                let flags = peek_u8_so(seg, current_off + 3);
                 if (flags & 0x01) != 0 {
                     sockets += 1;
                 }
@@ -222,14 +170,12 @@ impl MpTable {
 
     #[inline(never)]
     fn scan_range(seg: u16, start_off: u16, length: u16) -> Option<MpFloatingPointer> {
-        use crate::x86::dos::peek_u8;
-
         for off in (start_off..(start_off.saturating_add(length))).step_by(16) {
             if Self::check_sig(seg, off, &MP_SIGNATURE) {
                 let mut bytes = [0u8; 16];
                 let mut sum: u8 = 0;
                 for (i, b) in bytes.iter_mut().enumerate() {
-                    let val = peek_u8(seg, off + i as u16);
+                    let val = peek_u8_so(seg, off + i as u16);
                     *b = val;
                     sum = sum.wrapping_add(val);
                 }
@@ -257,37 +203,38 @@ impl MpTable {
 
     #[inline(never)]
     fn get_ebda_seg() -> Option<u16> {
-        use crate::x86::dos::peek_u16;
-        use core::arch::asm;
+        #[cfg(dos)]
+        {
+            let mut es_val: u16 = 0;
+            let mut flags: u16 = 1; // Set carry flag to force fallback
 
-        let es_val: u16;
-        let flags: u16;
-        unsafe {
-            asm!(
-                "push ds",
-                "push es",
-                "push esi",
-                "push edi",
-                "mov eax, 0xC100",
-                "int 0x15",
-                "pushf",
-                "pop {0:x}",
-                "mov {1:x}, es",
-                "pop edi",
-                "pop esi",
-                "pop es",
-                "pop ds",
-                out(reg) flags,
-                out(reg) es_val,
-                out("eax") _,
-            );
+            unsafe {
+                core::arch::asm!(
+                    "push ds",
+                    "push es",
+                    "push esi",
+                    "push edi",
+                    "mov eax, 0xC100",
+                    "int 0x15",
+                    "pushf",
+                    "pop {0:x}",
+                    "mov {1:x}, es",
+                    "pop edi",
+                    "pop esi",
+                    "pop es",
+                    "pop ds",
+                    out(reg) flags,
+                    out(reg) es_val,
+                    out("eax") _,
+                );
+            }
+
+            if (flags & 1) == 0 {
+                return Some(es_val);
+            }
         }
 
-        if (flags & 1) == 0 {
-            Some(es_val)
-        } else {
-            let seg = peek_u16(0x0040, 0x000E);
-            if seg != 0 { Some(seg) } else { None }
-        }
+        let seg = peek_u16_so(0x0040, 0x000E);
+        if seg != 0 { Some(seg) } else { None }
     }
 }

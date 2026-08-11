@@ -65,14 +65,14 @@ pub(crate) fn real_x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
 /// Calls CPUID with the given leaf (EAX) and sub-leaf (ECX).
 #[must_use]
 pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
-    #[cfg(dos)]
+    #[cfg(any(dos, dos32a))]
     return real_x86_cpuid_count(leaf, sub_leaf);
 
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     super::provider::cpuid_count(leaf, sub_leaf)
 }
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 #[must_use]
 pub fn info_source() -> super::provider::CpuidInfoSource {
     super::provider::info_source()
@@ -82,10 +82,10 @@ pub fn info_source() -> super::provider::CpuidInfoSource {
 /// or from a previously captured dump file.
 #[must_use]
 pub fn cpuid_data_source() -> DataSource {
-    #[cfg(dos)]
+    #[cfg(any(dos, dos32a))]
     return DataSource::Cpuid;
 
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     match info_source() {
         super::provider::CpuidInfoSource::Cpu => DataSource::Cpuid,
         super::provider::CpuidInfoSource::DumpFile => DataSource::CpuidDump,

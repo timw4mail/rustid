@@ -3,6 +3,9 @@ use super::micro_arch::MicroArch;
 use super::*;
 
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
+#[cfg(not(any(dos, dos32a)))]
+use crate::println;
+#[cfg(any(dos, dos32a))]
 use crate::println;
 use alloc::string::String;
 
@@ -233,7 +236,11 @@ impl Cpu {
 
     #[cfg(not(dos))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
-        let centaur_map = super::vendor::Centaur::get_feature_list();
+        #[cfg(dos32a)]
+        use alloc::format;
+        #[cfg(dos32a)]
+        use alloc::vec::Vec;
+        let centaur_map = vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let mut list: Vec<String> = Vec::new();
             for (name, enabled) in &centaur_map {
@@ -277,10 +284,10 @@ impl Cpu {
 
 impl TCpuDisplay for Cpu {
     fn debug(&self) {
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         println!("{:#?}", self);
 
-        #[cfg(all(dos, feature = "debug"))]
+        #[cfg(any(all(dos, feature = "debug"), dos32a))]
         {
             use super::is_cyrix;
 
@@ -294,7 +301,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }
@@ -398,7 +405,7 @@ impl TCpuDisplay for Cpu {
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
                     println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
-                #[cfg(not(dos))]
+                #[cfg(not(any(dos, dos32a)))]
                 println!();
             }
         }

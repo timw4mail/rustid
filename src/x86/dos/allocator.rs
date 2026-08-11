@@ -7,17 +7,11 @@ use core::ptr::null_mut;
 /// This allocator does not support deallocation, but it is sufficient for
 /// the needs of rustid in a DOS environment where allocations are
 /// relatively few and live for the duration of the program.
-///
-/// Since DOS is a single-threaded environment, we use non-atomic operations
-/// to maintain compatibility with 386 processors which lack CMPXCHG.
 pub struct DosAllocator {
     start: UnsafeCell<usize>,
     end: UnsafeCell<usize>,
 }
 
-// SAFETY: DOS is a single-threaded/single-tasking environment.
-// Our allocator is only accessed by the main program and we don't
-// use interrupts for allocation.
 unsafe impl Sync for DosAllocator {}
 
 impl DosAllocator {
@@ -89,7 +83,10 @@ unsafe extern "C" {
 pub unsafe fn init_heap() {
     let heap_start = &raw mut _heap as usize;
 
-    // Use a safe default for Real Mode (within the current 64KB segment)
+    #[cfg(dos32a)]
+    let heap_size = 0x100000; // 1MB heap for DOS/32A
+
+    #[cfg(dos)]
     let heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
 
     unsafe { ALLOCATOR.init(heap_start, heap_size) };

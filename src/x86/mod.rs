@@ -15,16 +15,15 @@ pub mod count;
 pub mod cpu;
 pub mod display;
 
-#[cfg(dos)]
+#[cfg(any(dos, dos32a))]
 pub mod dos;
 
 pub mod dump;
 pub mod features;
 pub mod fns;
 pub mod micro_arch;
-pub mod mp;
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 pub mod provider;
 
 pub mod topology;

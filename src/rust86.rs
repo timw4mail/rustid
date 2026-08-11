@@ -27,25 +27,19 @@ pub unsafe extern "C" fn _start() -> ! {
 #[cfg(dos)]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
-    use rustid::x86::dos::{DosWriter, exit, init_heap};
-    use rustid::x86::{dump::dump_cpu, has_cpuid, topology::Topology};
-    use rustid::{println, version};
+    use rustid::common::{CliFlags, TCpuDisplay, TDetect};
+    use rustid::x86::dos::{exit, init_heap};
+    use rustid::{Cpu, cyrix_cpuid_check, version};
 
     unsafe { init_heap() };
 
-    if has_cpuid() {
-        let mut output = DosWriter {};
+    cyrix_cpuid_check();
 
-        let topo = Topology::detect();
+    let cpu = Cpu::detect();
+    let flags = CliFlags::default();
 
-        let logical_cores = topo.threads.count as usize;
-        for i in 0..logical_cores {
-            dump_cpu(&mut output, i);
-        }
-    } else {
-        version();
-        println!("This cpu does not support cpuid. Cpuid info cannot be dumped.");
-    }
+    version();
+    cpu.display_table(flags);
 
     exit(0);
 }

@@ -1,8 +1,5 @@
-#![cfg(dos)]
-//! DOS/16-bit environment support for rustid.
-//!
-//! This module provides DOS-specific implementations including console output
-//! via DOS INT 21h interrupts and a custom panic handler for bare-metal environments.
+#![cfg(any(dos, dos32a))]
+//! DOS (16-bit real mode and 32-bit protected mode) environment support for rustid.
 
 use super::vendor::cyrix::Cyrix;
 use crate::common::Speed;
@@ -12,6 +9,16 @@ use core::fmt::Write;
 pub mod allocator;
 pub use allocator::init_heap;
 
+#[cfg(dos32a)]
+pub mod args;
+
+pub mod mp;
+
+pub mod speed;
+
+#[cfg(dos32a)]
+pub use args::*;
+
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.
 #[cfg(not(test))]
@@ -19,16 +26,20 @@ pub use allocator::init_heap;
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     use crate::println;
-    // if let Some(location) = info.location() {
-    //     println!(
-    //         "Panic in file '{}' at line {}:{}",
-    //         location.file(),
-    //         location.line(),
-    //         location.column(),
-    //     );
-    // } else {
-    //     println!("Panic for unknown reason.");
-    // }
+
+    #[cfg(dos32a)]
+    if let Some(location) = _info.location() {
+        println!(
+            "Panic in file '{}' at line {}:{}",
+            location.file(),
+            location.line(),
+            location.column(),
+        );
+    } else {
+        println!("Panic for unknown reason.");
+    }
+
+    #[cfg(dos)]
     println!("Panic!");
     exit(1);
 }
@@ -68,10 +79,26 @@ macro_rules! println {
     };
 }
 
-/// Writes a string to the DOS console character by character.
+/// Writes a string to the DOS console.
 pub fn _print_str(s: &str) {
-    for &b in s.as_bytes() {
-        printc(b);
+    #[cfg(dos32a)]
+    {
+        if s.is_empty() {
+            return;
+        }
+        let bytes = s.as_bytes();
+        let mut offset = 0;
+        while offset < bytes.len() {
+            let chunk_size = (bytes.len() - offset).min(32767);
+            write_chunk(&bytes[offset..offset + chunk_size]);
+            offset += chunk_size;
+        }
+    }
+    #[cfg(dos)]
+    {
+        for &b in s.as_bytes() {
+            printc(b);
+        }
     }
 }
 
@@ -80,14 +107,13 @@ pub struct DosWriter;
 
 impl Write for DosWriter {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-        for &b in s.as_bytes() {
-            printc(b);
-        }
+        _print_str(s);
         Ok(())
     }
 }
 
 /// Outputs a single character to the DOS console using INT 21h.
+#[cfg(dos)]
 #[inline(always)]
 fn printc(ch: u8) {
     unsafe {
@@ -101,9 +127,29 @@ fn printc(ch: u8) {
     }
 }
 
-/// Exits the program and returns control to DOS using INT 21h, AH=4Ch.
+/// Writes a chunk of data to stdout using INT 21h, AH=40h (protected mode supported).
+#[cfg(dos32a)]
+#[inline(always)]
+fn write_chunk(data: &[u8]) {
+    let len = data.len() as u16;
+    if len == 0 {
+        return;
+    }
+    unsafe {
+        asm!(
+            "int 0x21",
+            in("ah") 0x40_u8,
+            in("bx") 1_u16, // File handle 1 = stdout
+            in("ecx") len as u32,
+            in("edx") data.as_ptr() as u32,
+            lateout("eax") _,
+            options(preserves_flags)
+        );
+    }
+}
+
+/// Exits the program and returns control to DOS/extender using INT 21h, AH=4Ch.
 pub fn exit(code: u8) -> ! {
-    // Exit to DOS via INT 21h, AH=4Ch
     unsafe {
         asm!(
             "int 0x21",
@@ -114,7 +160,8 @@ pub fn exit(code: u8) -> ! {
     }
 }
 
-/// Reads a byte from a segmented memory address.
+/// Reads a byte from conventional memory (Real Mode).
+#[cfg(dos)]
 #[inline(never)]
 pub fn peek_u8(seg: u16, off: u16) -> u8 {
     let val: u16;
@@ -134,7 +181,8 @@ pub fn peek_u8(seg: u16, off: u16) -> u8 {
     val as u8
 }
 
-/// Reads a 16-bit word from a segmented memory address.
+/// Reads a 16-bit word from conventional memory (Real Mode).
+#[cfg(dos)]
 #[inline(never)]
 pub fn peek_u16(seg: u16, off: u16) -> u16 {
     let val: u16;
@@ -153,194 +201,23 @@ pub fn peek_u16(seg: u16, off: u16) -> u16 {
     val
 }
 
-impl Speed {
-    #[inline(never)]
-    fn measure_frequency_tsc(t1: u16) -> u32 {
-        let mut tsc_values = [0u32; 4]; // start_low, start_high, end_low, end_high
-        let start_pit: u16;
-        let end_pit: u16;
+/// Reads a byte from a 32-bit linear address (Protected Mode).
+#[cfg(dos32a)]
+#[inline(always)]
+pub fn peek_u8(addr: u32) -> u8 {
+    unsafe { core::ptr::read_volatile(addr as *const u8) }
+}
 
-        // Wait for 2 ticks (~110ms)
-        let target_ticks = t1.wrapping_add(2);
+/// Reads a 16-bit word from a 32-bit linear address (Protected Mode).
+#[cfg(dos32a)]
+#[inline(always)]
+pub fn peek_u16(addr: u32) -> u16 {
+    unsafe { core::ptr::read_volatile(addr as *const u16) }
+}
 
-        unsafe {
-            asm!(
-                // Latch and read start PIT
-                "xor al, al",
-                "out 0x43, al",
-                "in al, 0x40",
-                "mov ah, al",
-                "in al, 0x40",
-                "xchg al, ah",
-                "mov {1:x}, ax",
-
-                // Read start TSC
-                "rdtsc",
-                "mov [{0}], eax",
-                "mov [{0} + 4], edx",
-
-                "push es",
-                "mov ax, 0x40",
-                "mov es, ax",
-                ".align 16",
-                "2:",
-                "mov ax, es:[0x6C]",
-                "cmp ax, {3:x}",
-                "jne 2b",
-                "pop es",
-
-                // Read end TSC
-                "rdtsc",
-                "mov [{0} + 8], eax",
-                "mov [{0} + 12], edx",
-
-                // Latch and read end PIT
-                "xor al, al",
-                "out 0x43, al",
-                "in al, 0x40",
-                "mov ah, al",
-                "in al, 0x40",
-                "xchg al, ah",
-                "mov {2:x}, ax",
-
-                in(reg) tsc_values.as_mut_ptr(),
-                out(reg) start_pit,
-                out(reg) end_pit,
-                in(reg) target_ticks,
-                out("eax") _,
-                out("edx") _,
-                options(preserves_flags)
-            );
-        }
-
-        let start_tsc = ((tsc_values[1] as u64) << 32) | (tsc_values[0] as u64);
-        let end_tsc = ((tsc_values[3] as u64) << 32) | (tsc_values[2] as u64);
-        let tsc_delta = end_tsc - start_tsc;
-
-        // PIT runs at 1.193182 MHz. Each tick is 65536 PIT cycles.
-        // Total pulses = (2 * 65536) + (start_pit - end_pit)
-        let elapsed_pulses = (2u64 * 65_536) + (start_pit as i32 - end_pit as i32) as u64;
-
-        // freq_hz = (tsc_delta * 1193182) / elapsed_pulses
-        // freq_mhz = freq_hz / 1_000_000
-        // We use rounded division: (numerator + denominator / 2) / denominator
-        let denom = elapsed_pulses * 1_000_000;
-        let freq_mhz = (tsc_delta * 1_193_182 + (denom / 2)) / denom;
-        freq_mhz as u32
-    }
-
-    #[inline(never)]
-    pub fn measure_frequency() -> u32 {
-        use super::is_386;
-        use crate::x86::dos::peek_u16;
-
-        // For Cyrix, only measure 486-class cpus with the fallback,
-        // only the M2 chips can be measured with TSC, and only if CPUID is enabled
-        if Cyrix::should_measure_speed() == false {
-            return 0;
-        }
-
-        // Use BIOS timer ticks at 0040:006C
-        // 1 tick = 65536 / 1193182 seconds (~54.9 ms)
-
-        let start_ticks = peek_u16(0x0040, 0x006C);
-        let mut t1 = start_ticks;
-
-        // Wait for a fresh tick
-        while t1 == start_ticks {
-            t1 = peek_u16(0x0040, 0x006C);
-        }
-
-        if super::has_tsc() {
-            return Self::measure_frequency_tsc(t1);
-        }
-
-        // No TSC (386/486). Use a calibrated instruction loop.
-        // We'll count how many times we can run a loop in 8 ticks (~440ms).
-        // We also use the PIT Channel 0 for sub-tick precision.
-
-        let mut iterations: u32 = 0;
-        let target_ticks = t1.wrapping_add(8);
-        let mut start_pit: u16 = 0;
-        let mut end_pit: u16 = 0;
-
-        unsafe {
-            core::arch::asm!(
-                "push es",
-                "mov ax, 0x40",
-                "mov es, ax",
-
-                // Latch and read start PIT
-                "xor al, al",
-                "out 0x43, al",
-                "in al, 0x40",
-                "mov ah, al",
-                "in al, 0x40",
-                "xchg al, ah",
-                "mov {2:x}, ax",
-
-                ".align 16",
-                "2:",
-                "add {0:e}, 1",
-                "push ax", // Extra work to slow down the loop and be more consistent
-                "pop ax",
-                "mov ax, es:[0x6C]",
-                "cmp ax, {1:x}",
-                "jne 2b",
-
-                // Latch and read end PIT
-                "xor al, al",
-                "out 0x43, al",
-                "in al, 0x40",
-                "mov ah, al",
-                "in al, 0x40",
-                "xchg al, ah",
-                "mov {3:x}, ax",
-
-                "pop es",
-                inout(reg) iterations,
-                in(reg) target_ticks,
-                out(reg) start_pit,
-                out(reg) end_pit,
-                out("ax") _,
-            );
-        }
-
-        // PIT runs at 1.193182 MHz. Each tick is 65536 PIT cycles.
-        // Total pulses = (8 * 65536) + (start_pit - end_pit)
-        let elapsed_pulses = (8u64 * 65_536) + (start_pit as i32 - end_pit as i32) as u64;
-
-        // Calibration:
-        // 486 loop: 10 cycles
-        // 386 loop: 29 cycles
-        // Cyrix loop: 14 cycles
-        // UMC loop: 10 cycles
-        // RapidCAD (486 core in 386 package): 20 cycles
-        let cycles_per_loop = match &*super::vendor_str() {
-            super::constants::VENDOR_CYRIX => 14,
-            super::constants::VENDOR_UMC => 10,
-            _ => {
-                if is_386() {
-                    let sig = super::cpu::CpuSignature::detect();
-                    match (sig.family, sig.model) {
-                        // RapidCAD
-                        (3, 4) => 20,
-                        // 'Regular' 386 Chips
-                        _ => 29,
-                    }
-                } else {
-                    // 'Classic' 486
-                    10
-                }
-            }
-        };
-
-        // freq_hz = (iterations * cycles_per_loop * 1193182) / elapsed_pulses
-        // freq_mhz = freq_hz / 1_000_000
-        // We use rounded division: (numerator + denominator / 2) / denominator
-        let denom = elapsed_pulses * 1_000_000;
-        let freq_mhz =
-            (iterations as u64 * cycles_per_loop as u64 * 1_193_182 + (denom / 2)) / denom;
-        freq_mhz as u32
-    }
+/// Reads a 32-bit dword from a 32-bit linear address (Protected Mode).
+#[cfg(dos32a)]
+#[inline(always)]
+pub fn peek_u32(addr: u32) -> u32 {
+    unsafe { core::ptr::read_volatile(addr as *const u32) }
 }

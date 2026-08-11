@@ -98,15 +98,127 @@ pub fn format_compatible_pair(pair: Vec<String>) -> String {
     format!("{vendor} {model}")
 }
 
+/// Normalize a string for comparison: trim and collapse runs of whitespace.
+fn normalize_for_compare(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut last_was_space = false;
+    for c in s.trim().chars() {
+        if c.is_whitespace() {
+            if !last_was_space && !out.is_empty() {
+                out.push(' ');
+            }
+            last_was_space = true;
+        } else {
+            out.push(c.to_ascii_lowercase());
+            last_was_space = false;
+        }
+    }
+    out
+}
+
+/// Returns true when a DMI / device-tree value is a firmware placeholder or
+/// other generic string that does not identify the actual hardware.
+fn is_generic_value(raw: &str) -> bool {
+    const GENERIC: &[&str] = &[
+        "to be filled by o.e.m.",
+        "to be filled",
+        "not specified by o.e.m.",
+        "system product name",
+        "system name",
+        "product name",
+        "all series",
+        "default string",
+        "not specified",
+        "not applicable",
+        "unknown",
+        "none",
+        "generic",
+        "oem",
+        "o.e.m.",
+        "i386",
+        "x86",
+        "x64",
+        "laptop",
+    ];
+
+    let normalized = normalize_for_compare(raw);
+    normalized.is_empty() || GENERIC.contains(&normalized.as_str())
+}
+
+/// Vendor strings that identify a hypervisor rather than a physical machine.
+fn is_known_hypervisor_vendor(vendor: &str) -> bool {
+    let vendor = normalize_for_compare(vendor);
+    const HYPERVISORS: &[&str] = &[
+        "qemu",
+        "bochs",
+        "kvm",
+        "vmware",
+        "vmware, inc.",
+        "innotek gmbh",
+        "microsoft corporation",
+        "xen",
+        "parallels",
+        "parallels software international inc.",
+        "openstack foundation",
+        "amazon ec2",
+        "google",
+    ];
+    HYPERVISORS.contains(&vendor.as_str())
+}
+
+/// Read a DMI field from sysfs, trying both the virtual and class mount
+/// points, and return its first NUL-delimited value trimmed.
+fn get_dmi_field(field: &str) -> Option<String> {
+    for root in ["/sys/devices/virtual/dmi/id", "/sys/class/dmi/id"] {
+        let path = format!("{root}/{field}");
+        if let Ok(raw) = std::fs::read_to_string(&path) {
+            let value = raw.split('\0').next().unwrap_or("").trim().to_string();
+            if !value.is_empty() {
+                return Some(value);
+            }
+        }
+    }
+    None
+}
+
+/// Read several DMI fields and join their non-generic values with a space,
+/// e.g. combining `sys_vendor` + `product_name` into "QEMU Standard PC ...".
+/// When `vendor_only` is set, only produce a result for known hypervisors so
+/// that real hardware strings are not prefixed with their manufacturer.
+fn get_combined_dmi(fields: &[&str], vendor_only: bool) -> Option<String> {
+    let mut parts = Vec::new();
+    for (i, field) in fields.iter().enumerate() {
+        if vendor_only && i == 0 {
+            continue;
+        }
+        let value = get_dmi_field(field)?;
+        if is_generic_value(&value) {
+            return None;
+        }
+        parts.push(value);
+    }
+
+    if vendor_only && !parts.is_empty() {
+        let vendor = get_dmi_field(fields[0])?;
+        if !is_known_hypervisor_vendor(&vendor) {
+            return None;
+        }
+        parts.insert(0, vendor);
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" "))
+    }
+}
+
 fn get_raw_system_name() -> Option<String> {
     // Let's look for a few possibilities that may have the formatted device name,
     // or at least the easier to use system name
     let simple_paths: Vec<_> = vec![
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
-        "/sys/devices/virtual/dmi/id/product_family",
-        "/sys/devices/virtual/dmi/id/product_name",
-        "/sys/class/dmi/id/product_name",
     ];
 
     for path in simple_paths {
@@ -117,13 +229,33 @@ fn get_raw_system_name() -> Option<String> {
                 let raw = raw?;
                 let trimmed = raw.trim();
 
-                if trimmed.is_empty() || trimmed.contains("To Be Filled") {
+                if is_generic_value(trimmed) {
                     continue;
                 }
 
                 return Some(String::from(trimmed));
             }
         }
+    }
+
+    for field in ["product_family", "product_name"] {
+        if let Some(name) = get_dmi_field(field)
+            && !is_generic_value(&name)
+        {
+            return Some(name);
+        }
+    }
+
+    // For hypervisors, fold the vendor in so we get useful names like
+    // "QEMU Standard PC (i440FX + PIIX, 1996)" instead of generic DMI strings.
+    if let Some(name) = get_combined_dmi(&["sys_vendor", "product_name"], true) {
+        return Some(name);
+    }
+
+    // When the product is a placeholder but the board is specific (common on
+    // white-box ASUS/Gigabyte systems), fall back to the board identity.
+    if let Some(name) = get_combined_dmi(&["board_vendor", "board_name"], false) {
+        return Some(name);
     }
 
     // If we see nothing in sysfs, check the device tree 'compatible' value
@@ -185,6 +317,7 @@ impl TOSData for OS {
         if let Some(last) = get_proc_cpuinfo_data().last()
             && (!last.contains_key("processor"))
             && let Some(raw) = last.get("Model")
+            && !is_generic_value(raw.trim())
         {
             return Some(String::from(raw.trim()));
         }
@@ -603,5 +736,73 @@ mod tests {
     fn test_expand_cpu_list_empty() {
         let empty: Vec<u32> = Vec::new();
         assert_eq!(expand_cpu_list(""), empty);
+    }
+
+    #[test]
+    fn test_is_generic_value_placeholders() {
+        for value in [
+            "To Be Filled By O.E.M.",
+            "To Be Filled",
+            "System Product Name",
+            "System Name",
+            "Product Name",
+            "All Series",
+            "Default string",
+            "Not Specified",
+            "Not Applicable",
+            "Unknown",
+            "Generic",
+            "OEM",
+            "O.E.M.",
+        ] {
+            assert!(is_generic_value(value), "{value:?} should be generic");
+        }
+    }
+
+    #[test]
+    fn test_is_generic_value_whitespace_and_case() {
+        assert!(is_generic_value("  DEFAULT   STRING  "));
+        assert!(is_generic_value("to be filled by o.e.m."));
+        assert!(is_generic_value("\tSystem Product Name\n"));
+        assert!(is_generic_value(""));
+    }
+
+    #[test]
+    fn test_is_generic_value_real_names() {
+        for value in [
+            "ThinkPad X1 Carbon",
+            "HP Spectre x360",
+            "MacBookPro18,3",
+            "Dell XPS 13 9310",
+            "QEMU Standard PC (i440FX + PIIX, 1996)",
+            "Orange Pi 5",
+        ] {
+            assert!(!is_generic_value(value), "{value:?} should be real");
+        }
+    }
+
+    #[test]
+    fn test_is_known_hypervisor_vendor() {
+        for vendor in [
+            "QEMU",
+            "VMware, Inc.",
+            "innotek GmbH",
+            "Microsoft Corporation",
+        ] {
+            assert!(is_known_hypervisor_vendor(vendor));
+        }
+        for vendor in ["Dell Inc.", "ASUSTeK COMPUTER INC.", "LENOVO"] {
+            assert!(!is_known_hypervisor_vendor(vendor));
+        }
+    }
+
+    #[test]
+    fn test_normalize_for_compare() {
+        assert_eq!(
+            normalize_for_compare("  Default   String "),
+            "default string"
+        );
+        assert_eq!(normalize_for_compare("QEMU"), "qemu");
+        assert_eq!(normalize_for_compare(""), "");
     }
 }

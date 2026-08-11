@@ -11,10 +11,10 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 use super::provider;
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 use crate::common::TOSData;
 
 /// CPU feature class/level enumeration.
@@ -190,7 +190,7 @@ impl CpuSignature {
 
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
-        #[cfg(dos)]
+        #[cfg(any(dos, dos32a))]
         if !has_cpuid() {
             use super::vendor::cyrix::Cyrix;
 
@@ -204,6 +204,7 @@ impl CpuSignature {
                 }
             }
 
+            #[cfg(dos)]
             if let Some(mut reset_sig) = super::get_reset_signature() {
                 reset_sig.source = DataSource::CpuReset;
                 return reset_sig;
@@ -249,7 +250,7 @@ pub struct CpuCore {
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     /// The system name, if applicable
-    #[cfg(not(dos))]
+    #[cfg(not(any(dos, dos32a)))]
     pub system: Option<String>,
     /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,
@@ -543,7 +544,7 @@ impl TDetect for Cpu {
     /// Performs full CPU detection including architecture, microarchitecture,
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         let system = if provider::info_source() == provider::CpuidInfoSource::DumpFile {
             None
         } else {
@@ -554,18 +555,18 @@ impl TDetect for Cpu {
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect();
 
-        #[cfg(not(dos))]
+        #[cfg(not(any(dos, dos32a)))]
         let cores = if is_intel() {
             Self::detect_core_types()
         } else {
             Vec::new()
         };
 
-        #[cfg(dos)]
+        #[cfg(any(dos, dos32a))]
         let cores = Vec::new();
 
         Self {
-            #[cfg(not(dos))]
+            #[cfg(not(any(dos, dos32a)))]
             system,
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
@@ -584,7 +585,7 @@ impl TDetect for Cpu {
     }
 }
 
-#[cfg(not(dos))]
+#[cfg(not(any(dos, dos32a)))]
 impl Cpu {
     /// Enumerates all logical processors to discover unique core types.
     ///

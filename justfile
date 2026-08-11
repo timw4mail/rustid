@@ -7,8 +7,13 @@ default:
 base_run := if arch() == "powerpc" { "cargo +nightly run -Z build-std" } else { "cargo run" }
 base_check := if arch() == "powerpc" { "cargo +nightly check -Z build-std --all-targets" } else { "cargo check --all-targets" }
 
+[linux, unix]
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
+
+[windows]
+_cargo_cross:
+	@where cargo-cross >nul 2>&1 || cargo install cargo-cross
 
 # Check code validity and style
 check:
@@ -50,29 +55,40 @@ _build-dos-tools:
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
 _build-dos-debug: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features="debug dos-build" --bin debug --release
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/debug debug.exe
-
-_build-dos-dump: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --features dos-build --bin dump --release
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dump dump.exe
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --features="debug dos-build" --bin debug86 --release
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/debug86 debug86.exe
 
 # Build for DOS (EXE format)
-build-dos: _build-dos-tools _build-dos-debug _build-dos-dump
-	@RUSTFLAGS="-C link-arg=-Tlink-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target i486-dos.json --release --features dos-build --bin dos_rustid
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rustid.exe
-	# Verify that the binary size is reasonable (EXE doesn't have 64K hard limit but we keep tests)
+build-dos-real: _build-dos-tools _build-dos-debug
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin rust86
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/rust86 rust86.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 
-# Build for modern windows (cli),  requires visual studio to be installed
+_build-dos32a-tools:
+	# Fetch required tools (if they aren't already installed)
+	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
+
+_build-dos32a-rustid: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos_rustid rustid.le
+	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; fi
+	@if [ -f RUSTID.EXE ]; then cp RUSTID.EXE rustid.exe; rm RUSTID.EXE; fi
+
+# Build for DOS/32A (LE format bound executable)
+build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
+
+# Build all dos binaries
+build-dos: build-dos32a build-dos-real
+
+# Build for modern windows (cli), requires visual studio to be installed
 [windows]
 build-windows:
-	@if ! rustup target list --installed | grep -q x86_64-pc-windows-msvc; then rustup target add x86_64-pc-windows-msvc; fi
+	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
 	cargo build --target x86_64-pc-windows-msvc --release
 
 [windows]
 build-windows-arm:
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
+	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
 	cargo build --target aarch64-pc-windows-msvc --release
 
 # Build for modern windows (cli), can be easier than msvc build
@@ -103,14 +119,22 @@ build-mac-arm: _cargo_cross
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
-	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target i486-linux.json --release
+	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
 # Remove build files
-clean:
+clean: clean-files
 	@cargo clean
+
+# Remove various artifacts in root
+clean-files:
 	@rm -f *.com
 	@rm -f *.exe
+	@rm -f *.EXE
+	@rm -f *.le
+	@rm -f *.lx
+	@rm -f *.LX
 	@rm -f *.bin
+	@rm -f *.log
 
 # Build and run the app
 run arg="":
@@ -127,7 +151,7 @@ from-file arg="":
 # Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
 [windows]
 run-x86-emu arg="":
-	@if ! rustup target list --installed | grep -q arm64ec-pc-windows-msvc; then rustup target add arm64ec-pc-windows-msvc; fi
+	@rustup target list --installed | findstr /c:"arm64ec-pc-windows-msvc" >nul || rustup target add arm64ec-pc-windows-msvc
 	cargo run --target arm64ec-pc-windows-msvc {{arg}}
 
 # Run the dos build in DOSBox-X
@@ -135,7 +159,7 @@ run-x86-emu arg="":
 run-dos: build-dos
 	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
 
-# Run the dos debug build in DOSBox-X
+# Run the dos build in DOSBox-X
 [linux, unix]
 run-dos: build-dos
 	dosbox-x . -fastlaunch rustid.exe
@@ -167,12 +191,11 @@ test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
 	cargo cross test --target aarch64-unknown-linux-musl
 
-# Run windwos arm tests
+# Run Windows arm tests
 [windows]
 test-arm: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
+	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
 	cargo cross test --target aarch64-pc-windows-gnu
-
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]
@@ -183,5 +206,5 @@ test-x86: _cargo_cross
 # Run tests for 32-bit x86
 [windows]
 test-x86:
-	@if ! rustup target list --installed | grep -q i686-pc-windows-msvc; then rustup target add i686-pc-windows-msvc; fi
+	@rustup target list --installed | findstr /c:"i686-pc-windows-msvc" >nul || rustup target add i686-pc-windows-msvc
 	cargo test --target i686-pc-windows-msvc

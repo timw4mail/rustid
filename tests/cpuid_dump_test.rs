@@ -129,7 +129,6 @@ mod tm5700 {
 
 mod ppro {
     use super::*;
-    use rustid::x86::mp::MpTable;
 
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("dump/p6x2.txt");
@@ -159,13 +158,6 @@ mod ppro {
         with_mock_cpu(|| {
             assert_eq!(Cpu::raw_model_string(), UNK);
         })
-    }
-
-    #[test]
-    fn test_socket_count() {
-        let file = raw_path("linux-cpuinfo/p6x2.txt");
-        let mp = MpTable::detect_cpuinfo(file.to_str().expect("Test file missing"));
-        assert_eq!(mp.socket_count(), 2);
     }
 }
 
