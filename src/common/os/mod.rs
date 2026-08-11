@@ -11,7 +11,7 @@ pub mod linux;
 #[cfg(target_os = "macos")]
 pub mod macos;
 
-#[cfg(all(target_family = "unix", not(target_os = "haiku")))]
+#[cfg(any(bsd, target_os = "macos"))]
 pub mod sysctl;
 
 #[cfg(target_os = "haiku")]
@@ -22,9 +22,6 @@ pub mod windows;
 
 // ----------------------------------------------------------------------------
 
-#[cfg(bsd)]
-pub use bsd::*;
-
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use linux::*;
 
@@ -34,7 +31,7 @@ pub use macos::*;
 #[cfg(target_os = "haiku")]
 pub use haiku::*;
 
-#[cfg(all(target_family = "unix", not(any(target_os = "haiku", dos, dos32a))))]
+#[cfg(any(bsd, target_os = "macos"))]
 pub use sysctl::*;
 
 // ----------------------------------------------------------------------------
