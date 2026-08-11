@@ -237,9 +237,9 @@ impl Cpu {
     #[cfg(not(dos))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
         #[cfg(dos32a)]
-        use alloc::vec::Vec;
-        #[cfg(dos32a)]
         use alloc::format;
+        #[cfg(dos32a)]
+        use alloc::vec::Vec;
         let centaur_map = vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let mut list: Vec<String> = Vec::new();

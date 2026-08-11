@@ -208,7 +208,11 @@ impl Topology {
     /// Returns (sockets, total_cores, total_threads)
     fn count_domains(domains: &DomainList) -> (TopologyTier, TopologyTier, TopologyTier) {
         // 1. Get raw counts from fallback sources
-        let sockets = if domains.is_empty() { get_platform_socket_count() } else { TopologyTier::default() };
+        let sockets = if domains.is_empty() {
+            get_platform_socket_count()
+        } else {
+            TopologyTier::default()
+        };
         let threads = get_thread_count();
         let cores = get_core_count();
 
