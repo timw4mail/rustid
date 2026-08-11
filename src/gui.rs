@@ -142,9 +142,9 @@ fn push_row_and_blank(rows: &mut Vec<RowData>, label: &str, sublabel: &str, valu
 // x86 / x86_64
 // ---------------------------------------------------------------------------
 #[cfg(x86_cpu)]
-fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
+fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::x86::Cpu) {
     use crate::common::UNK;
-    use crate::cpuid::{FeatureClass, HypervisorBrand, micro_arch::MicroArch};
+    use crate::x86::{FeatureClass, HypervisorBrand, micro_arch::MicroArch};
 
     let disp = CpuDisplay {
         flags: CliFlags {
@@ -203,7 +203,7 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
     }
 
     if !cpu.has_cpuid {
-        push_row_and_blank(rows, "CPUID", "", "No");
+        push_row_and_blank(rows, "x86", "", "No");
     }
     if cpu.signature.is_overdrive {
         push_row_and_blank(rows, "Overdrive", "", "Yes");
@@ -256,8 +256,8 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
     }
 
     #[cfg(not(dos))]
-    if crate::cpuid::is_centaur() {
-        let centaur_map = crate::cpuid::vendor::Centaur::get_feature_list();
+    if crate::x86::is_centaur() {
+        let centaur_map = crate::x86::vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let list: Vec<&str> = centaur_map
                 .iter()
@@ -271,8 +271,8 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
     }
 
     #[cfg(target_arch = "x86")]
-    if crate::cpuid::is_cyrix() {
-        let cyrix = crate::cpuid::vendor::Cyrix::detect();
+    if crate::x86::is_cyrix() {
+        let cyrix = crate::x86::vendor::Cyrix::detect();
         if cyrix.dir0 != 0xFF {
             push_row(
                 rows,
@@ -296,7 +296,7 @@ fn build_x86_rows(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
 }
 
 #[cfg(x86_cpu)]
-fn build_x86_model(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
+fn build_x86_model(rows: &mut Vec<RowData>, cpu: &crate::x86::Cpu) {
     use crate::common::UNK;
 
     let raw_model = crate::Cpu::raw_model_string();
@@ -313,7 +313,7 @@ fn build_x86_model(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
 }
 
 #[cfg(x86_cpu)]
-fn build_x86_cores(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
+fn build_x86_cores(rows: &mut Vec<RowData>, cpu: &crate::x86::Cpu) {
     push_row(
         rows,
         "Cpu Topology",
@@ -354,7 +354,7 @@ fn build_x86_cores(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
 }
 
 #[cfg(x86_cpu)]
-fn build_x86_topology(rows: &mut Vec<RowData>, cpu: &crate::cpuid::Cpu) {
+fn build_x86_topology(rows: &mut Vec<RowData>, cpu: &crate::x86::Cpu) {
     let multi_core = cpu.topology.cores.count > 1 || cpu.topology.sockets.count > 1;
     if multi_core {
         if cpu.topology.sockets.count > 1 {
@@ -595,9 +595,9 @@ fn build_speed_rows(rows: &mut Vec<RowData>, speed: &crate::common::Speed) {
 }
 
 #[cfg(x86_cpu)]
-fn build_signature_rows(rows: &mut Vec<RowData>, sig: &crate::cpuid::cpu::CpuSignature) {
+fn build_signature_rows(rows: &mut Vec<RowData>, sig: &crate::x86::cpu::CpuSignature) {
     use crate::common::DataSource;
-    use crate::cpuid::cpu::CpuSignature;
+    use crate::x86::cpu::CpuSignature;
 
     if *sig == CpuSignature::default() {
         return;
