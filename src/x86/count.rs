@@ -13,7 +13,7 @@ use super::{info_source, provider::CpuidInfoSource};
 pub fn get_platform_socket_count() -> TopologyTier {
     #[cfg(any(dos, dos32a))]
     let sockets_detected = TopologyTier::new(
-        super::mp::MpTable::detect().socket_count(),
+        crate::x86::dos::mp::MpTable::detect().socket_count(),
         DataSource::MpTable,
     );
 

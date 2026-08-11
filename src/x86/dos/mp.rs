@@ -1,3 +1,4 @@
+#![cfg(any(dos, dos32a))]
 //! MultiProcessor (MP) table detection for x86 systems.
 //!
 //! This module implements scanning and parsing of the Intel MP specification
@@ -25,13 +26,11 @@ impl MpTable {
 }
 
 /// MP Floating Pointer Structure signature: "_MP_"
-#[cfg(any(dos, dos32a))]
 const MP_SIGNATURE: [u8; 4] = *b"_MP_";
 
 /// MP Floating Pointer Structure from the Intel MP Specification.
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
-#[cfg(any(dos, dos32a))]
 struct MpFloatingPointer {
     /// Structure signature ("_MP_")
     signature: [u8; 4],
@@ -81,14 +80,13 @@ fn peek_u16_so(seg: u16, off: u16) -> u16 {
     crate::x86::dos::peek_u16(addr)
 }
 
-#[cfg(any(dos, dos32a))]
 impl MpTable {
     /// Detects the number of sockets using the Intel MP Specification.
     pub fn detect() -> MpTable {
         let mut table = MpTable { sockets: 1 };
 
         // MP Table lookup is only applicable to certain CPUs
-        if !(super::is_intel() || super::is_vortex() || super::is_centaur()) {
+        if !(crate::x86::is_intel() || crate::x86::is_vortex() || crate::x86::is_centaur()) {
             return table;
         }
 

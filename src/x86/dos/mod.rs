@@ -8,6 +8,7 @@ use core::fmt::Write;
 
 pub mod allocator;
 pub use allocator::init_heap;
+pub mod mp;
 
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.

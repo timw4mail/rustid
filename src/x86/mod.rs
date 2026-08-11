@@ -22,7 +22,6 @@ pub mod dump;
 pub mod features;
 pub mod fns;
 pub mod micro_arch;
-pub mod mp;
 
 #[cfg(not(any(dos, dos32a)))]
 pub mod provider;
