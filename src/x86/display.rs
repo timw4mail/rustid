@@ -234,9 +234,13 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(any(dos, dos32a)))]
+    #[cfg(not(dos))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
-        let centaur_map = super::vendor::Centaur::get_feature_list();
+        #[cfg(dos32a)]
+        use alloc::vec::Vec;
+        #[cfg(dos32a)]
+        use alloc::format;
+        let centaur_map = vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let mut list: Vec<String> = Vec::new();
             for (name, enabled) in &centaur_map {
@@ -268,7 +272,7 @@ impl Cpu {
             }
 
             // Centaur features list
-            #[cfg(not(any(dos, dos32a)))]
+            #[cfg(not(dos))]
             if is_centaur() {
                 self.print_centaur_features(flags, disp);
             }
