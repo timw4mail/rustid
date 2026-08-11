@@ -90,10 +90,6 @@ pub fn file_version() {
 
 #[cfg(any(target_arch = "x86", dos, dos32a))]
 pub fn cyrix_cpuid_check() {
-    #[cfg(not(any(dos, dos32a)))]
-    use crate::println;
-
-    #[cfg(any(dos, dos32a))]
     use crate::println;
 
     #[cfg(x86_cpu)]

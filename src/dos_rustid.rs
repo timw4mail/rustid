@@ -36,10 +36,9 @@ fn help() {
     println!("  ?, H, HELP      Show this help message");
     println!();
     println!("Flags (use / or - prefix):");
-    println!("  /M, /MONO    Don't output color");
     println!("  /V, /VERBOSE Output more detailed information");
     println!();
-    println!("Examples:  RUSTID32 /M E   RUSTID32 /VERBOSE");
+    println!("Examples:  RUSTID /E   RUSTID /VERBOSE");
 }
 
 #[cfg(dos32a)]
@@ -104,10 +103,6 @@ pub extern "C" fn rust_main() -> ! {
 
         // Try long-form keywords first (more than one char, not all single-char flags)
         match &upper[..] {
-            "MONO" => {
-                flags.color = false;
-                continue 'args;
-            }
             "VERBOSE" => {
                 flags.verbose = true;
                 continue 'args;
@@ -138,7 +133,6 @@ pub extern "C" fn rust_main() -> ! {
         // Fall back to per-character single-char flags (e.g. /MV = mono + verbose)
         for c in upper.chars() {
             match c {
-                'M' => flags.color = false,
                 'V' => flags.verbose = true,
                 'D' => action = "debug",
                 'E' => action = "everything",
