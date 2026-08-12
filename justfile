@@ -121,6 +121,11 @@ build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
+# Build for 32-bit Linux musl via cross (works on 486-class cpus)
+build-486-musl: _cargo_cross
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
+	cargo cross +nightly build -t i586-unknown-linux-musl --rustflag '-C' --rustflag 'target-cpu=i486' --rustflag '-C' --rustflag 'link-arg=-Wl,-Bstatic' --rustflag '-C' --rustflag 'link-arg=-lgcc' --rustflag '-C' --rustflag 'link-arg=-latomic' --build-std --panic-immediate-abort --release
+
 # Remove build files
 clean: clean-files
 	@cargo clean

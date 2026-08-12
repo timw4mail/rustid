@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -158,6 +158,11 @@ build-mac-arm: _cargo_cross
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
+
+# Build for 32-bit Linux musl via cross (works on 486-class cpus)
+build-486-musl: _cargo_cross
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
+	cargo cross +nightly build -t i586-unknown-linux-musl --rustflag '-C' --rustflag 'target-cpu=i486' --rustflag '-C' --rustflag 'link-arg=-Wl,-Bstatic' --rustflag '-C' --rustflag 'link-arg=-lgcc' --rustflag '-C' --rustflag 'link-arg=-latomic' --build-std --panic-immediate-abort --release
 
 # Remove various artifacts in root
 clean-files:
