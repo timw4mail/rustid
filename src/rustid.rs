@@ -1,4 +1,4 @@
-#![cfg(not(dos))]
+#![cfg(not(any(dos, dos32a)))]
 
 use rustid::common::{TCpuDisplay, TDetect};
 use rustid::{Cpu, version};
@@ -6,7 +6,6 @@ use rustid::{Cpu, version};
 #[cfg(target_arch = "x86")]
 use rustid::cyrix_cpuid_check;
 
-#[cfg(not(dos))]
 fn help() {
     println!("Usage: rustid [FLAGS] [COMMAND]");
     println!();
@@ -22,13 +21,13 @@ fn help() {
     println!("  h, help          Show this help message");
     println!();
     println!("Flags:");
+    println!("  c, compact       Display information in compact mode");
     println!("  m, mono          Don't output color");
     println!("  v, verbose       Output more detailed information");
     println!();
     println!("All commands accept optional leading dashes. Flags can be combined, e.g. -me");
 }
 
-#[cfg(not(dos))]
 fn main() {
     use rustid::common::CliFlags;
     #[cfg(x86_cpu)]
@@ -55,6 +54,7 @@ fn main() {
             .unwrap_or_else(|| arg.strip_prefix('-').unwrap_or(&arg));
 
         match stripped {
+            "c" | "compact" => flags.compact = true,
             "m" | "mono" => flags.color = false,
             "e" | "everything" => action = "everything",
             "r" | "dump" => action = "dump",
@@ -74,6 +74,7 @@ fn main() {
             _ if arg.starts_with('-') && !arg.starts_with("--") => {
                 for c in arg.chars().skip(1) {
                     match c {
+                        'c' => flags.compact = true,
                         'm' => flags.color = false,
                         'e' => action = "everything",
                         'r' => action = "dump",

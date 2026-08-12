@@ -73,12 +73,16 @@ impl CpuDisplay {
         println!("{}{}", l, v);
 
         #[cfg(not(any(dos, dos32a)))]
-        println!();
+        {
+            self.newline();
+        }
     }
 
-    pub fn newline() {
+    pub fn newline(&self) {
         #[cfg(not(any(dos, dos32a)))]
-        println!();
+        if !self.flags.compact {
+            println!();
+        }
     }
 
     pub fn format_frequency(mhz: impl Into<u64>) -> String {
@@ -191,7 +195,7 @@ impl CpuDisplay {
                 }
             }
 
-            Self::newline();
+            self.newline();
         }
     }
 
@@ -413,6 +417,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -424,6 +429,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -435,6 +441,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -479,6 +486,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: true,
+                compact: false,
                 verbose: false,
             },
         };
@@ -545,6 +553,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -559,6 +568,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -570,6 +580,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };
@@ -581,6 +592,7 @@ mod tests {
         let disp = CpuDisplay {
             flags: CliFlags {
                 color: false,
+                compact: false,
                 verbose: false,
             },
         };

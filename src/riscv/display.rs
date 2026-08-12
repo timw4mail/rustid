@@ -4,43 +4,43 @@ use crate::riscv::brand::format_uarch;
 
 impl CpuDisplay {
     pub fn display(cpu_info: &Cpu, flags: CliFlags) {
-        let cpu = CpuDisplay { flags };
+        let disp = CpuDisplay { flags };
 
-        println!();
+        disp.newline();
 
         if let Some(system) = &cpu_info.system {
-            cpu.simple_line("System", &cpu.format_system_name(system));
+            disp.simple_line("System", &disp.format_system_name(system));
         }
 
-        cpu.simple_line("Architecture", &cpu_info.isa_string);
+        disp.simple_line("Architecture", &cpu_info.isa_string);
 
-        cpu.simple_line("SoC", &cpu_info.model);
+        disp.simple_line("SoC", &cpu_info.model);
 
         let ma = cpu_info.cpu_arch.micro_arch.as_str();
         if ma != UNK {
-            cpu.simple_line("CPU Core", ma);
+            disp.simple_line("CPU Core", ma);
         } else if let Some(uarch) = cpu_info.raw.get("uarch") {
             if !uarch.is_empty() {
-                cpu.simple_line("CPU Core", &format_uarch(uarch));
+                disp.simple_line("CPU Core", &format_uarch(uarch));
             }
         } else {
             let cpu_vendor_str: &str = cpu_info.cpu_arch.vendor.into();
-            cpu.simple_line("CPU Vendor", cpu_vendor_str);
+            disp.simple_line("CPU Vendor", cpu_vendor_str);
         }
 
         if !(cpu_info.cpu_arch.code_name == UNK || cpu_info.cpu_arch.code_name == ma) {
-            cpu.simple_line("Codename", cpu_info.cpu_arch.code_name);
+            disp.simple_line("Codename", cpu_info.cpu_arch.code_name);
         }
 
         if let Some(tech) = cpu_info.cpu_arch.technology {
-            cpu.simple_line("Process Node", tech);
+            disp.simple_line("Process Node", tech);
         }
 
         // Display topology
         if !cpu_info.cores.is_empty() {
             let total_cores: u32 = cpu_info.cores.values().map(|c| c.count).sum();
-            println!("{}{} cores", cpu.label("Topology"), total_cores);
-            CpuDisplay::newline();
+            println!("{}{} cores", disp.label("Topology"), total_cores);
+            disp.newline();
         }
 
         // Display cache at top level
@@ -49,7 +49,7 @@ impl CpuDisplay {
             let first_core = cpu_info.cores.values().next().unwrap();
             let cc =
                 |share_count: u32| -> String { CpuDisplay::cache_count(share_count, total_cores) };
-            cpu.display_cache(first_core.cache, &cc, 0);
+            disp.display_cache(first_core.cache, &cc, 0);
         }
 
         // Display features
@@ -70,10 +70,10 @@ impl CpuDisplay {
             for key in keys {
                 if let Some(feat_str) = cpu_info.features.get(key) {
                     if first {
-                        println!("{}{}", cpu.inline_sublabel("Features", key), feat_str);
+                        println!("{}{}", disp.inline_sublabel("Features", key), feat_str);
                         first = false;
                     } else {
-                        println!("{}{}", cpu.sublabel(key), feat_str);
+                        println!("{}{}", disp.sublabel(key), feat_str);
                     }
                 }
             }

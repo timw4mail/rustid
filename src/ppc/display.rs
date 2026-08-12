@@ -8,33 +8,33 @@ impl TCpuDisplay for Cpu {
     }
 
     fn display_table(&self, flags: CliFlags) {
-        println!();
+        let disp = CpuDisplay { flags };
 
-        let cpu = CpuDisplay { flags };
+        disp.newline();
 
         if let Some(system) = &self.system {
-            cpu.simple_line("System", &cpu.format_system_name(&system));
+            disp.simple_line("System", &disp.format_system_name(&system));
         }
 
-        cpu.simple_line("Model", self.cpu_arch.marketing_name);
-        cpu.simple_line("MicroArch", self.cpu_arch.micro_arch.into());
-        cpu.simple_line("Code Name", self.cpu_arch.code_name);
+        disp.simple_line("Model", self.cpu_arch.marketing_name);
+        disp.simple_line("MicroArch", self.cpu_arch.micro_arch.into());
+        disp.simple_line("Codename", self.cpu_arch.code_name);
         if let Some(tech) = self.cpu_arch.technology {
-            cpu.simple_line("Process", tech);
+            disp.simple_line("Process", tech);
         }
 
         if let Some(clock_mhz) = self.clock_speed {
             println!(
                 "{}{}",
-                cpu.label("Frequency"),
+                disp.label("Frequency"),
                 CpuDisplay::format_frequency(clock_mhz)
             );
-            CpuDisplay::newline();
+            disp.newline();
         }
 
         // TODO handle multiple cores/sockets
         let cc = |s| CpuDisplay::cache_count(s, 1);
-        cpu.display_cache(self.cache, &cc, 0);
+        disp.display_cache(self.cache, &cc, 0);
 
         println!();
     }

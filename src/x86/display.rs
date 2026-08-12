@@ -47,7 +47,7 @@ impl Cpu {
                     println!("{}{}", disp.label("Model (raw)"), raw_model);
                 }
 
-                CpuDisplay::newline();
+                disp.newline();
             }
         }
     }
@@ -61,7 +61,7 @@ impl Cpu {
                 self.topology.threads.count,
                 self.cores.len()
             );
-            CpuDisplay::newline();
+            disp.newline();
 
             for (i, core) in self.cores.iter().enumerate() {
                 let core_label = alloc::format!("Core #{}", i + 1);
@@ -113,7 +113,7 @@ impl Cpu {
                 println!("{}{} cores", lbl, self.topology.cores.count);
             }
 
-            CpuDisplay::newline();
+            disp.newline();
         }
     }
 
@@ -141,7 +141,7 @@ impl Cpu {
                 );
             }
 
-            CpuDisplay::newline();
+            disp.newline();
         }
     }
 
@@ -193,7 +193,7 @@ impl Cpu {
                 );
             }
 
-            CpuDisplay::newline();
+            disp.newline();
         }
     }
 }
@@ -277,7 +277,7 @@ impl Cpu {
                 self.print_centaur_features(flags, disp);
             }
 
-            CpuDisplay::newline();
+            disp.newline();
         }
     }
 }
@@ -319,7 +319,7 @@ impl TCpuDisplay for Cpu {
                 self.arch.brand_name
             );
 
-            CpuDisplay::newline();
+            disp.newline();
         }
 
         // Hypervisor vendor_string (brand_name)
@@ -328,7 +328,7 @@ impl TCpuDisplay for Cpu {
             let hyp = HypervisorBrand::from(hyp_str.as_str());
             println!("{}{} ({})", disp.label("Hypervisor"), hyp_str, hyp.to_str());
 
-            CpuDisplay::newline();
+            disp.newline();
         }
 
         // Cpu model string

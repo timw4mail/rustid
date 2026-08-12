@@ -5,29 +5,29 @@ use crate::common::{CliFlags, CpuDisplay};
 
 impl CpuDisplay {
     pub fn display(cpu_info: &Cpu, flags: CliFlags) {
-        let cpu = CpuDisplay { flags };
+        let disp = CpuDisplay { flags };
 
-        println!();
+        disp.newline();
 
         if let Some(system) = &cpu_info.system {
-            cpu.simple_line("System", &cpu.format_system_name(system));
+            disp.simple_line("System", &disp.format_system_name(system));
         }
 
         if let Some(soc_model) = &cpu_info.soc_model {
-            cpu.simple_line("SoC", soc_model);
+            disp.simple_line("SoC", soc_model);
         }
 
-        cpu.simple_line(
+        disp.simple_line(
             "Implementer",
             <brand::Vendor as Into<&str>>::into(cpu_info.cpu_arch.implementer),
         );
 
-        cpu.simple_line("Model", &cpu_info.cpu_arch.model);
+        disp.simple_line("Model", &cpu_info.cpu_arch.model);
 
-        cpu.simple_line("Codename", cpu_info.cpu_arch.code_name);
+        disp.simple_line("Codename", cpu_info.cpu_arch.code_name);
 
         if let Some(tech) = cpu_info.cpu_arch.technology {
-            cpu.simple_line("Process", tech);
+            disp.simple_line("Process", tech);
         }
 
         #[allow(clippy::explicit_counter_loop)]
@@ -35,26 +35,26 @@ impl CpuDisplay {
             let mut i = 1;
             for core in cpu_info.cores.values() {
                 let core_num = format!("Core #{i}");
-                println!("{}", cpu.label(&core_num));
-                println!("{}{}", cpu.label("Count"), core.count);
+                println!("{}", disp.label(&core_num));
+                println!("{}{}", disp.label("Count"), core.count);
                 let name = Into::<&str>::into(core.kind);
-                println!("{}{}", cpu.label("Type"), name);
+                println!("{}{}", disp.label("Type"), name);
 
                 if let Some(name) = core.name.clone() {
-                    println!("{}{}", cpu.label("Codename"), name);
+                    println!("{}{}", disp.label("Codename"), name);
                 }
 
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
-                cpu.display_cache(core.cache, &cc, 0);
+                disp.display_cache(core.cache, &cc, 0);
 
                 if core.cache.is_none() {
-                    CpuDisplay::newline();
+                    disp.newline();
                 }
 
                 i += 1;
             }
         } else {
-            println!("{}", cpu.label("Cores"));
+            println!("{}", disp.label("Cores"));
             let keys: Vec<_> = cpu_info.cores.keys().collect();
             let core = cpu_info
                 .cores
@@ -62,13 +62,13 @@ impl CpuDisplay {
                 .expect("There should be a core to display");
 
             if let Some(name) = core.name.clone() {
-                println!("{}{}", cpu.label("Name"), name);
+                println!("{}{}", disp.label("Name"), name);
             }
 
-            println!("{}{}", cpu.label("Count"), core.count);
+            println!("{}{}", disp.label("Count"), core.count);
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
-            cpu.display_cache(core.cache, &cc, 0);
+            disp.display_cache(core.cache, &cc, 0);
         }
 
         // Display features
@@ -77,9 +77,9 @@ impl CpuDisplay {
             for key in keys {
                 if let Some(feat_str) = cpu_info.features.get(key) {
                     if key == "Base" {
-                        println!("{}{}", cpu.inline_sublabel("Features", "Base"), feat_str);
+                        println!("{}{}", disp.inline_sublabel("Features", "Base"), feat_str);
                     } else {
-                        println!("{}{}", cpu.sublabel(key), feat_str);
+                        println!("{}{}", disp.sublabel(key), feat_str);
                     }
                 }
             }

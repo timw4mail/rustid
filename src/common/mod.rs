@@ -37,6 +37,7 @@ pub fn cleanup_soc_vendor(s: &str) -> String {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CliFlags {
+    pub compact: bool,
     pub color: bool,
     pub verbose: bool,
 }
@@ -314,9 +315,11 @@ mod tests {
     fn test_cli_flags_explicit() {
         let f = CliFlags {
             color: true,
+            compact: true,
             verbose: true,
         };
         assert!(f.color);
+        assert!(f.compact);
         assert!(f.verbose);
     }
 }
