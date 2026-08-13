@@ -11,13 +11,15 @@ pub unsafe extern "efiapi" fn efi_main(
     system_table: *mut rustid::x86::efi::EfiSystemTable,
 ) -> usize {
     unsafe { rustid::x86::efi::init_efi(image_handle, system_table) };
+    rustid::x86::efi::clear_screen_black();
 
     use rustid::common::{CliFlags, TCpuDisplay, TDetect};
     use rustid::{Cpu, version};
 
     version();
     let cpu = Cpu::detect();
-    let flags = CliFlags::default();
+    let mut flags = CliFlags::default();
+    flags.color = true;
     cpu.display_table(flags);
 
     let is_vm = rustid::x86::is_hypervisor_guest();

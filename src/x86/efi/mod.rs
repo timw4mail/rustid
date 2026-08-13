@@ -171,6 +171,23 @@ pub fn get_system_table() -> *mut EfiSystemTable {
     unsafe { SYSTEM_TABLE }
 }
 
+/// Clears the console screen and sets a black background with bright white text.
+pub fn clear_screen_black() {
+    let st = get_system_table();
+    if st.is_null() {
+        return;
+    }
+    let con_out = unsafe { (*st).con_out };
+    if con_out.is_null() {
+        return;
+    }
+    unsafe {
+        // Attribute 0x0F: Bright White text (0xF) on Black background (0x0)
+        let _ = ((*con_out).set_attribute)(con_out, 0x0F);
+        let _ = ((*con_out).clear_screen)(con_out);
+    }
+}
+
 /// Prompts the user to press a key to shutdown.
 /// If `timeout_seconds` is `Some(secs)`, automatically shuts down after `secs` seconds if no key is pressed.
 /// If `timeout_seconds` is `None`, waits indefinitely for a keypress.
@@ -332,7 +349,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     }
 }
 
-/// Prints a formatted string to the UEFI console output.
+/// Prints a formatted string to the UEFI console output with ANSI color sequence support.
 pub fn _print_str(s: &str) {
     let st = get_system_table();
     if st.is_null() {
@@ -345,16 +362,64 @@ pub fn _print_str(s: &str) {
 
     let mut utf16_buf = [0u16; 128];
     let mut idx = 0;
+    let mut chars = s.chars().peekable();
 
-    for ch in s.chars() {
+    let flush = |buf: &mut [u16; 128], idx: &mut usize| {
+        if *idx > 0 {
+            buf[*idx] = 0;
+            unsafe { ((*con_out).output_string)(con_out, buf.as_ptr()) };
+            *idx = 0;
+        }
+    };
+
+    while let Some(ch) = chars.next() {
+        // Parse ANSI escape sequence \x1b[...m
+        if ch == '\x1b' && chars.peek() == Some(&'[') {
+            chars.next(); // Consume '['
+            let mut code = 0u32;
+            let mut has_code = false;
+            while let Some(&c) = chars.peek() {
+                if c.is_ascii_digit() {
+                    code = code * 10 + (c as u32 - '0' as u32);
+                    has_code = true;
+                    chars.next();
+                } else if c == ';' || c == 'm' {
+                    chars.next();
+                    let attr = match code {
+                        0 => 0x0F,       // Reset -> Bright White on Black
+                        32 => 0x0A,      // Green -> Light Green
+                        34 | 94 => 0x0B, // Blue / Bright Blue -> Light Cyan
+                        33 | 93 => 0x0E, // Yellow
+                        31 | 91 => 0x0C, // Red -> Light Red
+                        36 | 96 => 0x0B, // Cyan -> Light Cyan
+                        90 => 0x08,      // Dark Gray
+                        _ => 0x0F,
+                    };
+                    flush(&mut utf16_buf, &mut idx);
+                    unsafe { ((*con_out).set_attribute)(con_out, attr) };
+                    if c == 'm' {
+                        break;
+                    }
+                    code = 0;
+                    has_code = false;
+                } else {
+                    break;
+                }
+            }
+            if !has_code && chars.peek() == Some(&'m') {
+                chars.next();
+                flush(&mut utf16_buf, &mut idx);
+                unsafe { ((*con_out).set_attribute)(con_out, 0x0F) };
+            }
+            continue;
+        }
+
         if ch == '\n' {
             if idx > 0 && utf16_buf[idx - 1] != ('\r' as u16) {
                 utf16_buf[idx] = '\r' as u16;
                 idx += 1;
                 if idx >= utf16_buf.len() - 2 {
-                    utf16_buf[idx] = 0;
-                    unsafe { ((*con_out).output_string)(con_out, utf16_buf.as_ptr()) };
-                    idx = 0;
+                    flush(&mut utf16_buf, &mut idx);
                 }
             }
         }
@@ -365,17 +430,12 @@ pub fn _print_str(s: &str) {
             utf16_buf[idx] = u;
             idx += 1;
             if idx >= utf16_buf.len() - 2 {
-                utf16_buf[idx] = 0;
-                unsafe { ((*con_out).output_string)(con_out, utf16_buf.as_ptr()) };
-                idx = 0;
+                flush(&mut utf16_buf, &mut idx);
             }
         }
     }
 
-    if idx > 0 {
-        utf16_buf[idx] = 0;
-        unsafe { ((*con_out).output_string)(con_out, utf16_buf.as_ptr()) };
-    }
+    flush(&mut utf16_buf, &mut idx);
 }
 
 pub struct EfiWriter;
