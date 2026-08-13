@@ -20,6 +20,11 @@ pub unsafe extern "efiapi" fn efi_main(
     let flags = CliFlags::default();
     cpu.display_table(flags);
 
+    let is_vm = rustid::x86::is_hypervisor_guest();
+    if !is_vm {
+        rustid::x86::efi::wait_for_keypress(None);
+    }
+
     rustid::x86::efi::exit(0)
 }
 

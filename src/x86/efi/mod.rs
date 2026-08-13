@@ -64,6 +64,21 @@ pub enum EfiMemoryType {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct EfiInputKey {
+    pub scan_code: u16,
+    pub unicode_char: u16,
+}
+
+#[repr(C)]
+pub struct SimpleTextInputProtocol {
+    pub reset: unsafe extern "efiapi" fn(*mut SimpleTextInputProtocol, bool) -> EfiStatus,
+    pub read_key_stroke:
+        unsafe extern "efiapi" fn(*mut SimpleTextInputProtocol, *mut EfiInputKey) -> EfiStatus,
+    pub wait_for_key: *mut c_void,
+}
+
+#[repr(C)]
 pub struct BootServices {
     pub hdr: EfiTableHeader,
     pub raise_tpl: *const c_void,
@@ -73,6 +88,28 @@ pub struct BootServices {
     pub get_memory_map: *const c_void,
     pub allocate_pool: unsafe extern "efiapi" fn(EfiMemoryType, usize, *mut *mut u8) -> EfiStatus,
     pub free_pool: unsafe extern "efiapi" fn(*mut u8) -> EfiStatus,
+    pub create_event: *const c_void,
+    pub set_timer: *const c_void,
+    pub wait_for_event: *const c_void,
+    pub signal_event: *const c_void,
+    pub close_event: *const c_void,
+    pub check_event: *const c_void,
+    pub install_protocol_interface: *const c_void,
+    pub reinstall_protocol_interface: *const c_void,
+    pub uninstall_protocol_interface: *const c_void,
+    pub handle_protocol: *const c_void,
+    pub reserved: *const c_void,
+    pub register_protocol_notify: *const c_void,
+    pub locate_handle: *const c_void,
+    pub locate_device_path: *const c_void,
+    pub install_configuration_table: *const c_void,
+    pub image_load: *const c_void,
+    pub image_start: *const c_void,
+    pub exit: *const c_void,
+    pub image_unload: *const c_void,
+    pub exit_boot_services: *const c_void,
+    pub get_next_monotonic_count: *const c_void,
+    pub stall: unsafe extern "efiapi" fn(microseconds: usize) -> EfiStatus,
 }
 
 #[repr(u32)]
@@ -111,7 +148,7 @@ pub struct EfiSystemTable {
     pub firmware_vendor: *const u16,
     pub firmware_revision: u32,
     pub console_in_handle: EfiHandle,
-    pub con_in: *mut c_void,
+    pub con_in: *mut SimpleTextInputProtocol,
     pub console_out_handle: EfiHandle,
     pub con_out: *mut SimpleTextOutputProtocol,
     pub standard_error_handle: EfiHandle,
@@ -132,6 +169,58 @@ pub unsafe fn init_efi(image_handle: EfiHandle, system_table: *mut EfiSystemTabl
 
 pub fn get_system_table() -> *mut EfiSystemTable {
     unsafe { SYSTEM_TABLE }
+}
+
+/// Prompts the user to press a key to shutdown.
+/// If `timeout_seconds` is `Some(secs)`, automatically shuts down after `secs` seconds if no key is pressed.
+/// If `timeout_seconds` is `None`, waits indefinitely for a keypress.
+pub fn wait_for_keypress(timeout_seconds: Option<u32>) {
+    use crate::println;
+
+    let st = get_system_table();
+    if st.is_null() {
+        return;
+    }
+
+    let con_in = unsafe { (*st).con_in };
+    let bs = unsafe { (*st).boot_services };
+
+    if con_in.is_null() {
+        return;
+    }
+
+    // Reset console input buffer to clear any queued keypresses
+    unsafe { ((*con_in).reset)(con_in, false) };
+
+    if let Some(secs) = timeout_seconds {
+        println!(
+            "\nPress any key to shutdown (auto-shutdown in {}s)...",
+            secs
+        );
+        let loops = secs * 10;
+        for _ in 0..loops {
+            let mut key = EfiInputKey::default();
+            let status = unsafe { ((*con_in).read_key_stroke)(con_in, &mut key) };
+            if status == EFI_SUCCESS {
+                break;
+            }
+            if !bs.is_null() {
+                unsafe { ((*bs).stall)(100_000) };
+            }
+        }
+    } else {
+        println!("\nPress any key to shutdown...");
+        loop {
+            let mut key = EfiInputKey::default();
+            let status = unsafe { ((*con_in).read_key_stroke)(con_in, &mut key) };
+            if status == EFI_SUCCESS {
+                break;
+            }
+            if !bs.is_null() {
+                unsafe { ((*bs).stall)(100_000) };
+            }
+        }
+    }
 }
 
 /// Exits the EFI application or shuts down QEMU/system.
@@ -163,9 +252,13 @@ pub fn exit(code: u8) -> ! {
 
     loop {
         #[cfg(target_arch = "x86_64")]
-        unsafe { asm!("hlt") };
+        unsafe {
+            asm!("hlt")
+        };
         #[cfg(target_arch = "x86")]
-        unsafe { asm!("hlt") };
+        unsafe {
+            asm!("hlt")
+        };
     }
 }
 
