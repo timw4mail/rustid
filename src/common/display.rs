@@ -71,14 +71,14 @@ impl CpuDisplay {
         let l = self.label(l);
         println!("{}{}", l, v);
 
-        #[cfg(not(any(nostd_os)))]
+        #[cfg(not(any(dos, dos32a)))]
         {
             self.newline();
         }
     }
 
     pub fn newline(&self) {
-        #[cfg(not(any(nostd_os)))]
+        #[cfg(not(any(dos, dos32a)))]
         if !self.flags.compact {
             println!();
         }
