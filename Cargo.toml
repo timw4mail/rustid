@@ -20,7 +20,7 @@ panic = "abort"
 [target.'cfg(all(target_os = "windows", any(target_arch="aarch64", target_arch="arm64ec")))'.dependencies]
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Registry", "Win32_System_Threading"] }
 
-[target.'cfg(not(any(target_os = "none", target_arch = "arm")))'.dependencies]
+[target.'cfg(not(any(target_os = "none", target_os = "uefi", target_arch = "arm")))'.dependencies]
 core_affinity = "0.8.3"
 
 [[bin]]
@@ -42,8 +42,13 @@ name = "dos_rustid"
 required-features = ["dos32a-build"]
 path= "src/dos_rustid.rs"
 
+[[bin]]
+name = "efi_rustid"
+required-features = ["efi-build"]
+path = "src/efi_rustid.rs"
+
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)', 'cfg(uefi)', 'cfg(nostd_os)'] }
 
 [lints.clippy]
 unwrap_used = "warn"
@@ -53,3 +58,4 @@ default = []
 debug = []
 dos-build = []
 dos32a-build = []
+efi-build = []

@@ -3,11 +3,10 @@ use super::micro_arch::MicroArch;
 use super::*;
 
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
-#[cfg(not(any(dos, dos32a)))]
 use crate::println;
-#[cfg(any(dos, dos32a))]
-use crate::println;
+use alloc::format;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 fn yes_no(b: bool) -> &'static str {
     if b { "Yes" } else { "No" }
@@ -236,10 +235,6 @@ impl Cpu {
 
     #[cfg(not(dos))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
-        #[cfg(dos32a)]
-        use alloc::format;
-        #[cfg(dos32a)]
-        use alloc::vec::Vec;
         let centaur_map = vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let mut list: Vec<String> = Vec::new();
@@ -301,7 +296,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
-        #[cfg(not(any(dos, dos32a)))]
+        #[cfg(not(nostd_os))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }

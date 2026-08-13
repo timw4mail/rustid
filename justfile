@@ -121,6 +121,19 @@ build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
+# Build 64-bit x86 EFI application
+build-efi-64:
+	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
+	cargo build --target x86_64-unknown-uefi --features efi-build --bin efi_rustid --release
+
+# Build 32-bit x86 EFI application
+build-efi-32:
+	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
+	cargo build --target i686-unknown-uefi --features efi-build --bin efi_rustid --release
+
+# Build both 32-bit and 64-bit EFI binaries
+build-efi: build-efi-64 build-efi-32
+
 # Remove build files
 clean: clean-files
 	@cargo clean
@@ -164,6 +177,20 @@ run-dos: build-dos
 [linux, unix]
 test-dos: build-dos
 	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
+
+# Run 64-bit EFI build in QEMU
+[linux, unix]
+run-efi-64: build-efi-64
+	@mkdir -p target/efi-disk/EFI/BOOT
+	@cp target/x86_64-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTX64.EFI
+	@CODE=$(find /usr/share /usr/lib -name "*OVMF_CODE*.fd" -o -name "*ovmf_code*.fd" 2>/dev/null | grep -v 32 | head -n1); VARS=$(find /usr/share /usr/lib -name "*OVMF_VARS*.fd" -o -name "*ovmf_vars*.fd" 2>/dev/null | grep -v 32 | head -n1); SINGLE=$(find /usr/share /usr/lib -name "OVMF.fd" -o -name "ovmf.fd" 2>/dev/null | head -n1); if [ -n "$CODE" ] && [ -n "$VARS" ]; then cp "$VARS" target/OVMF64_VARS.fd && qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file="$CODE" -drive if=pflash,format=raw,file=target/OVMF64_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$SINGLE" ]; then qemu-system-x86_64 -bios "$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF firmware not found"; exit 1; fi
+
+# Run 32-bit EFI build in QEMU
+[linux, unix]
+run-efi-32: build-efi-32
+	@mkdir -p target/efi-disk/EFI/BOOT
+	@cp target/i686-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTIA32.EFI
+	@CODE=$(find /usr/share /usr/lib -name "*OVMF32_CODE*.fd" -o -name "*ovmf32_code*.fd" 2>/dev/null | head -n1); VARS=$(find /usr/share /usr/lib -name "*OVMF32_VARS*.fd" -o -name "*ovmf32_vars*.fd" 2>/dev/null | head -n1); SINGLE=$(find /usr/share /usr/lib -name "*OVMF32.fd" -o -name "*ovmf32.fd" 2>/dev/null | head -n1); if [ -n "$CODE" ] && [ -n "$VARS" ]; then cp "$VARS" target/OVMF32_VARS.fd && qemu-system-i386 -drive if=pflash,format=raw,readonly=on,file="$CODE" -drive if=pflash,format=raw,file=target/OVMF32_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$SINGLE" ]; then qemu-system-i386 -bios "$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF32 firmware not found. On Debian/Ubuntu, install with: sudo apt install ovmf-ia32"; exit 1; fi
 
 # Run the dos build in DOSBox-x, and return the output to a file
 [windows]

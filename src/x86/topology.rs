@@ -4,7 +4,7 @@ use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::x86::count::{get_core_count, get_platform_socket_count, get_thread_count};
 use alloc::vec::Vec;
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 use super::{info_source, provider::CpuidInfoSource};
 
 impl Speed {
@@ -55,29 +55,29 @@ impl Speed {
     }
 
     fn measure() -> Self {
-        #[cfg(not(any(dos, dos32a)))]
-        if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
-            return Speed::default();
-        }
+        #[cfg(nostd_os)]
+        return Speed::default();
 
-        #[cfg(not(any(dos, dos32a)))]
-        if !super::has_tsc() {
-            return Speed::default();
-        }
+        #[cfg(not(nostd_os))]
+        {
+            if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
+                return Speed::default();
+            }
 
-        let freq = Self::measure_frequency();
-        if freq == 0 {
-            return Speed::default();
-        }
+            let freq = Self::measure_frequency();
+            if freq == 0 {
+                return Speed::default();
+            }
 
-        Speed {
-            base: freq,
-            boost: freq,
-            measured: true,
+            Speed {
+                base: freq,
+                boost: freq,
+                measured: true,
+            }
         }
     }
 
-    #[cfg(not(any(dos, dos32a)))]
+    #[cfg(not(nostd_os))]
     fn measure_frequency() -> u32 {
         #[cfg(target_arch = "x86")]
         use core::arch::x86::_rdtsc as rdtsc;

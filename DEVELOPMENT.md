@@ -4,7 +4,7 @@
 - **Rust Toolchain**: `rustup` and `cargo`. Nightly toolchain with `rust-src` component is required for DOS builds (`-Z build-std`).
 - **`just` or `make`**: Task runner to execute build scripts. Install with `cargo install just` or use `make`.
 - **DOSBox-X**: **Required** for building `rustid.exe` (invokes `dos32a.exe` inside DOSBox-X to bind the Linear Executable `.le` payload) and running/testing DOS binaries (`just run-dos` / `just test-dos`).
-- **`cargo-cross`** (optional): Used for cross-compiling target architectures (`just build-arm64`, `just build-ppc`, `just test-arm`, etc.).
+- **QEMU & OVMF** (optional): Used for running and testing UEFI binaries (`just run-efi-64` / `just run-efi-32`).
 
 ## Building
 
@@ -13,6 +13,19 @@
 just build-release
 # or: make build-release
 ```
+
+**Build for EFI / UEFI (x86 & x86_64):**
+```bash
+just build-efi
+# or: make build-efi
+```
+This produces EFI binaries using standard `x86_64-unknown-uefi` and `i686-unknown-uefi` targets with zero external dependencies:
+- `target/x86_64-unknown-uefi/release/efi_rustid.efi` (64-bit EFI)
+- `target/i686-unknown-uefi/release/efi_rustid.efi` (32-bit EFI)
+
+Individual EFI Builds:
+- `just build-efi-64` — 64-bit x86_64 EFI binary
+- `just build-efi-32` — 32-bit x86 EFI binary
 
 **Build for DOS:**
 ```bash
@@ -66,6 +79,16 @@ just run
 Run with CPUID dump input file:
 ```bash
 just from-file -- path/to/dump.txt
+```
+
+Launch 64-bit EFI binary in QEMU:
+```bash
+just run-efi-64
+```
+
+Launch 32-bit EFI binary in QEMU:
+```bash
+just run-efi-32
 ```
 
 Launch DOS build in DOSBox-X:

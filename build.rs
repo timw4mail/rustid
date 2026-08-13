@@ -212,6 +212,8 @@ fn main() {
     cfg_aliases! {
         dos: { all(target_os = "none", target_arch= "x86", not(feature = "dos32a-build")) },
         dos32a: { all(target_os = "none", target_arch= "x86", feature = "dos32a-build") },
+        uefi: { target_os = "uefi" },
+        nostd_os: { any(target_os = "none", target_os = "uefi") },
         bsd: { any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
         arm_cpu: { any(target_arch = "arm", target_arch="aarch64", target_arch="arm64ec") },
         ppc_cpu: { any(target_arch = "powerpc", target_arch = "powerpc64") },

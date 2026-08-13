@@ -21,8 +21,7 @@
 //! cpu.display_table(flags);
 //! # assert_ne!(cpu, Cpu::default());
 //! ```
-#![cfg_attr(all(not(test), dos), no_std)]
-#![cfg_attr(all(not(test), dos32a), no_std)]
+#![cfg_attr(all(not(test), nostd_os), no_std)]
 
 extern crate alloc;
 
@@ -34,17 +33,25 @@ const APP: &str = "Rust86";
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 const ARCH: &str = std::env::consts::ARCH;
 #[cfg(any(dos, dos32a))]
 const ARCH: &str = "x86";
+#[cfg(target_os = "uefi")]
+const ARCH: &str = if cfg!(target_arch = "x86_64") {
+    "x86_64"
+} else {
+    "x86"
+};
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 const OS: &str = std::env::consts::OS;
 #[cfg(any(dos, dos32a))]
 const OS: &str = "DOS";
+#[cfg(target_os = "uefi")]
+const OS: &str = "UEFI";
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 extern crate std;
 
 pub mod common;
@@ -72,7 +79,10 @@ pub use riscv::Cpu;
 #[cfg(any(dos, dos32a))]
 pub use x86::dos::*;
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(target_os = "uefi")]
+pub use x86::efi::*;
+
+#[cfg(not(nostd_os))]
 pub use std::{print, println};
 
 pub fn version() {
@@ -82,7 +92,7 @@ pub fn version() {
     );
 }
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 #[cfg(x86_cpu)]
 pub fn file_version() {
     println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");

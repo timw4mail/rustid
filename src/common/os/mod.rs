@@ -49,3 +49,10 @@ pub trait TOSData {
 
     fn get_socket_count() -> TopologyTier;
 }
+
+#[cfg(nostd_os)]
+impl TOSData for OS {
+    fn get_socket_count() -> TopologyTier {
+        TopologyTier::default()
+    }
+}

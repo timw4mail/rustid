@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-efi-64 build-efi-32 build-efi run-efi-64 run-efi-32 build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -158,6 +158,31 @@ build-mac-arm: _cargo_cross
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
+
+# Build 64-bit x86 EFI application
+build-efi-64:
+	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
+	cargo build --target x86_64-unknown-uefi --features efi-build --bin efi_rustid --release
+
+# Build 32-bit x86 EFI application
+build-efi-32:
+	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
+	cargo build --target i686-unknown-uefi --features efi-build --bin efi_rustid --release
+
+# Build both 32-bit and 64-bit EFI binaries
+build-efi: build-efi-64 build-efi-32
+
+# Run 64-bit EFI build in QEMU
+run-efi-64: build-efi-64
+	@mkdir -p target/efi-disk/EFI/BOOT
+	@cp target/x86_64-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTX64.EFI
+	@CODE=$$(find /usr/share /usr/lib -name "*OVMF_CODE*.fd" -o -name "*ovmf_code*.fd" 2>/dev/null | grep -v 32 | head -n1); VARS=$$(find /usr/share /usr/lib -name "*OVMF_VARS*.fd" -o -name "*ovmf_vars*.fd" 2>/dev/null | grep -v 32 | head -n1); SINGLE=$$(find /usr/share /usr/lib -name "OVMF.fd" -o -name "ovmf.fd" 2>/dev/null | head -n1); if [ -n "$$CODE" ] && [ -n "$$VARS" ]; then cp "$$VARS" target/OVMF64_VARS.fd && qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file="$$CODE" -drive if=pflash,format=raw,file=target/OVMF64_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$$SINGLE" ]; then qemu-system-x86_64 -bios "$$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF firmware not found"; exit 1; fi
+
+# Run 32-bit EFI build in QEMU
+run-efi-32: build-efi-32
+	@mkdir -p target/efi-disk/EFI/BOOT
+	@cp target/i686-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTIA32.EFI
+	@CODE=$$(find /usr/share /usr/lib -name "*OVMF32_CODE*.fd" -o -name "*ovmf32_code*.fd" 2>/dev/null | head -n1); VARS=$$(find /usr/share /usr/lib -name "*OVMF32_VARS*.fd" -o -name "*ovmf32_vars*.fd" 2>/dev/null | head -n1); SINGLE=$$(find /usr/share /usr/lib -name "*OVMF32.fd" -o -name "*ovmf32.fd" 2>/dev/null | head -n1); if [ -n "$$CODE" ] && [ -n "$$VARS" ]; then cp "$$VARS" target/OVMF32_VARS.fd && qemu-system-i386 -drive if=pflash,format=raw,readonly=on,file="$$CODE" -drive if=pflash,format=raw,file=target/OVMF32_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$$SINGLE" ]; then qemu-system-i386 -bios "$$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF32 firmware not found. On Debian/Ubuntu, install with: sudo apt install ovmf-ia32"; exit 1; fi
 
 # Remove various artifacts in root
 clean-files:

@@ -5,7 +5,6 @@ use alloc::format;
 use alloc::string::String;
 
 use crate::common::CliFlags;
-#[cfg(any(dos, dos32a))]
 use crate::println;
 
 pub struct CpuDisplay {

@@ -18,12 +18,15 @@ pub mod display;
 #[cfg(any(dos, dos32a))]
 pub mod dos;
 
+#[cfg(target_os = "uefi")]
+pub mod efi;
+
 pub mod dump;
 pub mod features;
 pub mod fns;
 pub mod micro_arch;
 
-#[cfg(not(any(dos, dos32a)))]
+#[cfg(not(nostd_os))]
 pub mod provider;
 
 pub mod topology;
