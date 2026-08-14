@@ -1,6 +1,6 @@
 # Rustid
 
-A lightweight CPU identification tool for Windows, Linux, and DOS. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets. There is also support for ARM, RISC V, and PowerPC cpu detection.
+A lightweight CPU identification tool for Windows, Linux, DOS, and UEFI/EFI. `rustid` queries processor information using the `CPUID` instruction and maps it to specific microarchitectures and feature sets. There is also support for ARM, RISC V, and PowerPC cpu detection.
 
 ### AI Disclaimer:
 
@@ -15,6 +15,7 @@ This application is developed using *some* AI, mostly related to:
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
 - **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a single binary that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
+- **UEFI Compatibility:** Compiles to a standalone UEFI application (32-bit and 64-bit x86) with zero external dependencies.
 
 ## Platform Support
 
@@ -22,15 +23,15 @@ This application is developed using *some* AI, mostly related to:
 
 Primary platforms, with the majority of testing effort.
 
-|               | DOS    | Windows | macOS  | Linux  | Haiku  |
-|--------------:|:------:|:-------:|:------:|:------:|:------:|
-| **x86_64**    | —      | ✅      | ✅     | 🟢     | ✅     |
-| **x86_32**    | ✅[¹](#note-1) | ✅ | — | 🟢 | ✅ |
-| **ARM 64**    | —      | ⚠️[⁵](#note-5) | ✅ | 🟢 | ❌ |
-| **ARM 32**    | —      | —       | —      | ✅     | —      |
-| **RISC-V 64** | —      | —       | —      | ✅     | —      |
-| **PowerPC**   | —      | —       | —      | ✅     | —      |
-| **PowerPC 64**| —      | —       | —      | ⚠️[⁴](#note-4) | — |
+|               | DOS    | EFI    | Windows | macOS  | Linux  | Haiku  |
+|--------------:|:------:|:------:|:-------:|:------:|:------:|:------:|
+| **x86_64**    | —      | ✅     | ✅ | ✅ | 🟢 | ✅     |
+| **x86_32**    | ✅[¹](#note-1) | ✅ | ✅ | — | 🟢 | ✅ |
+| **ARM 64**    | —      | —      | ⚠️[⁵](#note-5) | ✅ | 🟢 | ❌ |
+| **ARM 32**    | —      | —      | —       | —      | ✅     | —      |
+| **RISC-V 64** | —      | —      | —       | —      | ✅     | —      |
+| **PowerPC**   | —      | —      | —       | —      | ✅     | —      |
+| **PowerPC 64**| —      | —      | —       | —      | ⚠️[⁴](#note-4) | — |
 
 ### Tier 2
 
@@ -63,6 +64,9 @@ These are best-effort platforms: they should work, but information may be more l
 
 ### Installing (DOS)
 For DOS, there are binaries on Github for each release.
+
+### Installing (EFI / UEFI)
+Copy the EFI binaries (`BOOTX64.EFI` for 64-bit, `BOOTIA32.EFI` for 32-bit) to the `EFI/BOOT` directory of the EFI System Partition. They can also be run from a USB drive.
 
 ### Installing (MacOS, Linux, Windows, etc.)
 - Rust (`cargo` needs to be installed)
