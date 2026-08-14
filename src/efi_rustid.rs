@@ -18,8 +18,10 @@ pub unsafe extern "efiapi" fn efi_main(
 
     version();
     let cpu = Cpu::detect();
-    let mut flags = CliFlags::default();
-    flags.color = true;
+    let flags = CliFlags {
+        color: true,
+        ..Default::default()
+    };
     cpu.display_table(flags);
 
     let is_vm = rustid::x86::is_hypervisor_guest();
@@ -27,7 +29,7 @@ pub unsafe extern "efiapi" fn efi_main(
         rustid::x86::efi::wait_for_keypress(None);
     }
 
-    rustid::x86::efi::exit(0)
+    0
 }
 
 #[cfg(not(target_os = "uefi"))]

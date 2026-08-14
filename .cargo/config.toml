@@ -24,3 +24,9 @@ rustflags = [
 rustflags = [
 	"-C", "target-cpu=i486",
 ]
+
+[target.i686-unknown-uefi]
+rustflags = [
+	"-C", "link-arg=/SUBSYSTEM:EFI_APPLICATION,1.10",
+	"-C", "link-arg=/BASE:0",
+]
