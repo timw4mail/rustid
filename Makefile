@@ -15,7 +15,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-efi-64 build-efi-32 build-efi run-efi-64 run-efi-32 build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
+.PHONY: default check check-riscv lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools _build-dos-debug build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-efi-64 build-efi-32 build-efi run-efi-64 run-efi-32 build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -183,6 +183,11 @@ run-efi-64: build-efi-64
 # Run 32-bit EFI build in QEMU
 run-efi-32: build-efi-32
 	@CODE=$$(find /usr/share /usr/lib -name "*OVMF32_CODE*.fd" -o -name "*ovmf32_code*.fd" 2>/dev/null | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); VARS=$$(find /usr/share /usr/lib -name "*OVMF32_VARS*.fd" -o -name "*ovmf32_vars*.fd" 2>/dev/null | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); SINGLE=$$(find /usr/share /usr/lib -name "*OVMF32.fd" -o -name "*ovmf32.fd" 2>/dev/null | head -n1); if [ -n "$$CODE" ] && [ -n "$$VARS" ]; then cp "$$VARS" target/OVMF32_VARS.fd && qemu-system-i386 -drive if=pflash,format=raw,readonly=on,file="$$CODE" -drive if=pflash,format=raw,file=target/OVMF32_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$$SINGLE" ]; then qemu-system-i386 -bios "$$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF32 firmware not found. On Debian/Ubuntu, install with: sudo apt install ovmf-ia32"; exit 1; fi
+
+# Build for 32-bit Linux musl via cross (works on 486-class cpus)
+build-486-musl: _cargo_cross
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
+	cargo cross +nightly build -t i586-unknown-linux-musl --rustflag '-C' --rustflag 'target-cpu=i486' --rustflag '-C' --rustflag 'link-arg=-Wl,-Bstatic' --rustflag '-C' --rustflag 'link-arg=-lgcc' --rustflag '-C' --rustflag 'link-arg=-latomic' --build-std --panic-immediate-abort --release
 
 # Remove various artifacts in root
 clean-files:
