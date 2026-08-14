@@ -5,7 +5,9 @@ use core::ffi::c_void;
 use core::fmt::Write;
 
 use super::font;
-use super::os::{EFI_SUCCESS, EfiGuid, EfiStatus, get_system_table, locate_protocol_compat};
+use super::os::{
+    EFI_SUCCESS, EfiGuid, EfiHandle, EfiStatus, get_system_table, locate_protocol_compat,
+};
 
 pub const EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID: EfiGuid = EfiGuid {
     a: 0x9042a9de,
@@ -14,11 +16,11 @@ pub const EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID: EfiGuid = EfiGuid {
     d: [0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a],
 };
 
-pub const EFI_APPLE_FRAMEBUFFER_INFO_PROTOCOL_GUID: EfiGuid = EfiGuid {
+pub const EFI_APPLE_SCREEN_INFO_PROTOCOL_GUID: EfiGuid = EfiGuid {
     a: 0xe316e100,
-    b: 0x07e4,
-    c: 0x457d,
-    d: [0x9b, 0x5e, 0xcc, 0xaa, 0xcb, 0xd0, 0xdd, 0x18],
+    b: 0x0751,
+    c: 0x4c49,
+    d: [0x90, 0x56, 0x48, 0x6c, 0x7e, 0x47, 0x29, 0x03],
 };
 
 pub const EFI_UGA_DRAW_PROTOCOL_GUID: EfiGuid = EfiGuid {
@@ -27,6 +29,19 @@ pub const EFI_UGA_DRAW_PROTOCOL_GUID: EfiGuid = EfiGuid {
     c: 0x4226,
     d: [0x9e, 0x46, 0x16, 0x9d, 0x36, 0x95, 0xaa, 0x62],
 };
+
+#[repr(C)]
+pub struct EfiAppleScreenInfoProtocol {
+    pub get_info: unsafe extern "efiapi" fn(
+        *mut EfiAppleScreenInfoProtocol,
+        *mut u64,
+        *mut u64,
+        *mut u32,
+        *mut u32,
+        *mut u32,
+        *mut u32,
+    ) -> EfiStatus,
+}
 
 #[repr(C)]
 pub struct EfiGraphicsOutputModeInformation {
@@ -59,18 +74,6 @@ pub struct EfiGraphicsOutputProtocol {
     pub set_mode: unsafe extern "efiapi" fn(*mut EfiGraphicsOutputProtocol, u32) -> EfiStatus,
     pub blt: *const c_void,
     pub mode: *mut EfiGraphicsOutputProtocolMode,
-}
-
-#[repr(C)]
-pub struct EfiAppleFramebufferInfoProtocol {
-    pub get_framebuffer_info: unsafe extern "efiapi" fn(
-        *mut EfiAppleFramebufferInfoProtocol,
-        *mut *mut u8,
-        *mut u32,
-        *mut u32,
-        *mut u32,
-        *mut u32,
-    ) -> EfiStatus,
 }
 
 #[repr(u32)]
@@ -163,55 +166,21 @@ pub struct EfiConsoleControlProtocol {
     pub lock_std_in: *const c_void,
 }
 
-#[cfg(target_arch = "x86")]
-pub unsafe fn sync_gma950_display_plane() {
-    unsafe fn pci_outl(port: u16, val: u32) {
-        unsafe {
-            core::arch::asm!("out dx, eax", in("dx") port, in("eax") val,
-                options(nomem, nostack, preserves_flags));
-        }
+pub unsafe fn get_protocol_on_handle<T>(handle: EfiHandle, guid: &EfiGuid) -> *mut T {
+    let st = get_system_table();
+    if st.is_null() || handle.is_null() {
+        return core::ptr::null_mut();
     }
-    unsafe fn pci_inl(port: u16) -> u32 {
-        let v: u32;
-        unsafe {
-            core::arch::asm!("in eax, dx", out("eax") v, in("dx") port,
-                options(nomem, nostack, preserves_flags));
-        }
-        v
+    let bs = unsafe { (*st).boot_services };
+    if bs.is_null() {
+        return core::ptr::null_mut();
     }
-    unsafe fn pci_read32(bus: u8, dev: u8, func: u8, offset: u8) -> u32 {
-        let addr = 0x8000_0000u32
-            | ((bus as u32) << 16)
-            | ((dev as u32) << 11)
-            | ((func as u32) << 8)
-            | (offset as u32 & 0xFC);
-        unsafe {
-            pci_outl(0xCF8, addr);
-            pci_inl(0xCFC)
-        }
-    }
-
-    unsafe {
-        let mch_id = pci_read32(0, 0, 0, 0x00);
-        if (mch_id & 0xFFFF) == 0x8086 {
-            let mmio_base = pci_read32(0, 2, 0, 0x10) & 0xFFFFFFF0;
-            if mmio_base != 0 {
-                let mmio = mmio_base as *mut u32;
-                let dspasurf_ptr = mmio.add(0x70184 / 4);
-                let dspbsurf_ptr = mmio.add(0x71184 / 4);
-
-                let active_surf = dspasurf_ptr.read_volatile() & 0xFFFFF000;
-                if active_surf != 0 {
-                    if !GFX_STATE.fb.is_null() {
-                        let target_addr = GFX_STATE.fb as u32;
-                        dspasurf_ptr.write_volatile(target_addr);
-                        dspbsurf_ptr.write_volatile(target_addr);
-                    } else {
-                        GFX_STATE.fb = active_surf as *mut u32;
-                    }
-                }
-            }
-        }
+    let mut interface: *mut c_void = core::ptr::null_mut();
+    let status = unsafe { ((*bs).handle_protocol)(handle, guid, &mut interface) };
+    if status == EFI_SUCCESS && !interface.is_null() {
+        interface as *mut T
+    } else {
+        core::ptr::null_mut()
     }
 }
 
@@ -222,9 +191,30 @@ pub fn init_gfx() {
         return;
     }
 
+    let console_handle = unsafe { (*st).console_out_handle };
+
+    // Locate ConsoleControl for use in UGA/fallback paths.
+    // Do NOT switch to graphics mode here — that silences ConOut.
+    // GOP and Apple FB paths have a direct linear framebuffer and don't need ConsoleControl.
+    // The UGA path will switch to text mode so ConOut->output_string is visible.
+    let cc_ptr = unsafe { locate_protocol_compat(&EFI_CONSOLE_CONTROL_PROTOCOL_GUID) }
+        as *mut EfiConsoleControlProtocol;
+
     // 1. Try GOP (UEFI 2.0+ / 64-bit EFI)
-    let gop_ptr = unsafe { locate_protocol_compat(&EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID) }
-        as *mut EfiGraphicsOutputProtocol;
+    let mut gop_ptr = if !console_handle.is_null() {
+        unsafe {
+            get_protocol_on_handle::<EfiGraphicsOutputProtocol>(
+                console_handle,
+                &EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID,
+            )
+        }
+    } else {
+        core::ptr::null_mut()
+    };
+    if gop_ptr.is_null() {
+        gop_ptr = unsafe { locate_protocol_compat(&EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID) }
+            as *mut EfiGraphicsOutputProtocol;
+    }
 
     if !gop_ptr.is_null() {
         let mode_ptr = unsafe { (*gop_ptr).mode };
@@ -286,9 +276,82 @@ pub fn init_gfx() {
         }
     }
 
-    // 2. Try UGA (EFI 1.10 / 32-bit Apple EFI)
-    let uga_ptr =
-        unsafe { locate_protocol_compat(&EFI_UGA_DRAW_PROTOCOL_GUID) } as *mut EfiUgaDrawProtocol;
+    // 2. Try Apple Screen Info Protocol (32-bit & early 64-bit Apple EFI)
+    let mut apple_screen_ptr = if !console_handle.is_null() {
+        unsafe {
+            get_protocol_on_handle::<EfiAppleScreenInfoProtocol>(
+                console_handle,
+                &EFI_APPLE_SCREEN_INFO_PROTOCOL_GUID,
+            )
+        }
+    } else {
+        core::ptr::null_mut()
+    };
+    if apple_screen_ptr.is_null() {
+        apple_screen_ptr = unsafe { locate_protocol_compat(&EFI_APPLE_SCREEN_INFO_PROTOCOL_GUID) }
+            as *mut EfiAppleScreenInfoProtocol;
+    }
+
+    if !apple_screen_ptr.is_null() {
+        let mut base_addr = 0u64;
+        let mut fb_size = 0u64;
+        let mut bytes_per_row = 0u32;
+        let mut width = 0u32;
+        let mut height = 0u32;
+        let mut depth = 0u32;
+        let res = unsafe {
+            ((*apple_screen_ptr).get_info)(
+                apple_screen_ptr,
+                &mut base_addr,
+                &mut fb_size,
+                &mut bytes_per_row,
+                &mut width,
+                &mut height,
+                &mut depth,
+            )
+        };
+        if res == EFI_SUCCESS && base_addr != 0 && width > 0 && height > 0 {
+            let stride = if bytes_per_row >= 4 {
+                bytes_per_row / 4
+            } else {
+                width
+            };
+            unsafe {
+                GFX_STATE.fb = base_addr as usize as *mut u32;
+                GFX_STATE.uga = core::ptr::null_mut();
+                GFX_STATE.width = width;
+                GFX_STATE.height = height;
+                GFX_STATE.stride = stride;
+                GFX_STATE.cursor_x = 16;
+                GFX_STATE.cursor_y = 16;
+                GFX_STATE.fg_color = 0xFFFFFFFF;
+                GFX_STATE.is_valid = true;
+
+                // Clear linear framebuffer to pitch black
+                let total_pixels = (stride * height) as usize;
+                for i in 0..total_pixels {
+                    *GFX_STATE.fb.add(i) = 0xFF000000;
+                }
+            }
+            return;
+        }
+    }
+
+    // 3. Try UGA (EFI 1.10 / 32-bit Apple EFI)
+    let mut uga_ptr = if !console_handle.is_null() {
+        unsafe {
+            get_protocol_on_handle::<EfiUgaDrawProtocol>(
+                console_handle,
+                &EFI_UGA_DRAW_PROTOCOL_GUID,
+            )
+        }
+    } else {
+        core::ptr::null_mut()
+    };
+    if uga_ptr.is_null() {
+        uga_ptr = unsafe { locate_protocol_compat(&EFI_UGA_DRAW_PROTOCOL_GUID) }
+            as *mut EfiUgaDrawProtocol;
+    }
 
     if !uga_ptr.is_null() {
         let mut width = 0u32;
@@ -300,7 +363,6 @@ pub fn init_gfx() {
         };
         if res == EFI_SUCCESS && width > 0 && height > 0 {
             unsafe {
-                let _ = ((*uga_ptr).set_mode)(uga_ptr, width, height, depth, refresh);
                 GFX_STATE.fb = core::ptr::null_mut();
                 GFX_STATE.uga = uga_ptr;
                 GFX_STATE.width = width;
@@ -308,176 +370,30 @@ pub fn init_gfx() {
                 GFX_STATE.stride = width;
                 GFX_STATE.cursor_x = 16;
                 GFX_STATE.cursor_y = 16;
-                GFX_STATE.fg_color = 0xFFFFFFFF;
+                GFX_STATE.fg_color = 0x00FFFFFF;
                 GFX_STATE.is_valid = true;
 
-                // Clear screen row by row to pitch black via EfiUgaBltBufferToVideo
-                let black_row = [0xFF000000u32; 2560];
-                let row_pixels = (width as usize).min(black_row.len());
-                for y in 0..height {
-                    let _ = ((*uga_ptr).blt)(
-                        uga_ptr,
-                        black_row.as_ptr() as *mut u32,
-                        EfiUgaBltOperation::EfiUgaBltBufferToVideo,
-                        0,
-                        0,
-                        0,
-                        y as usize,
-                        row_pixels,
-                        1,
-                        row_pixels * 4,
-                    );
-                }
+                // Clear the screen to pitch black via EfiUgaVideoFill
+                let black_pixel: u32 = 0x00000000;
+                let _ = ((*uga_ptr).blt)(
+                    uga_ptr,
+                    &black_pixel as *const u32 as *mut u32,
+                    EfiUgaBltOperation::EfiUgaVideoFill,
+                    0,
+                    0,
+                    0,
+                    0,
+                    width as usize,
+                    height as usize,
+                    0,
+                );
             }
             return;
         }
     }
 
-    // 3. Try Apple Framebuffer Info (32-bit & 64-bit Apple EFI)
-    let apple_fb_ptr = unsafe { locate_protocol_compat(&EFI_APPLE_FRAMEBUFFER_INFO_PROTOCOL_GUID) }
-        as *mut EfiAppleFramebufferInfoProtocol;
-
-    if !apple_fb_ptr.is_null() {
-        let mut fb_base: *mut u8 = core::ptr::null_mut();
-        let mut fb_size = 0u32;
-        let mut depth = 0u32;
-        let mut width = 0u32;
-        let mut height = 0u32;
-        let res = unsafe {
-            ((*apple_fb_ptr).get_framebuffer_info)(
-                apple_fb_ptr,
-                &mut fb_base,
-                &mut fb_size,
-                &mut depth,
-                &mut width,
-                &mut height,
-            )
-        };
-        if res == EFI_SUCCESS && !fb_base.is_null() && width > 0 && height > 0 {
-            unsafe {
-                GFX_STATE.fb = fb_base as *mut u32;
-                GFX_STATE.uga = core::ptr::null_mut();
-                GFX_STATE.width = width;
-                GFX_STATE.height = height;
-                GFX_STATE.stride = width;
-                GFX_STATE.cursor_x = 16;
-                GFX_STATE.cursor_y = 16;
-                GFX_STATE.fg_color = 0xFFFFFFFF;
-                GFX_STATE.is_valid = true;
-
-                // Clear framebuffer screen to pitch black
-                let total_pixels = (width * height) as usize;
-                for i in 0..total_pixels {
-                    *GFX_STATE.fb.add(i) = 0xFF000000;
-                }
-            }
-            return;
-        }
-    }
-
-    // 4. Intel GMA 950 direct PCI framebuffer (32-bit Apple EFI — Core Duo/Core 2 Duo Macs).
-    //    When all EFI protocol lookups fail (as they do on Apple EFI 1.10), read the
-    //    Intel i945GM/i945G display registers directly via PCI config space + MMIO.
-    //    All 32-bit Apple EFI machines (MacBook 1,1/2,1; Mac mini 1,1; Xserve 1,1) have GMA 950.
-    #[cfg(target_arch = "x86")]
+    // 3. No graphics protocol found — fall back to ConsoleControl text mode.
     if unsafe { !GFX_STATE.is_valid } {
-        unsafe fn pci_outl(port: u16, val: u32) {
-            unsafe {
-                core::arch::asm!("out dx, eax", in("dx") port, in("eax") val,
-                    options(nomem, nostack, preserves_flags));
-            }
-        }
-        unsafe fn pci_inl(port: u16) -> u32 {
-            let v: u32;
-            unsafe {
-                core::arch::asm!("in eax, dx", out("eax") v, in("dx") port,
-                    options(nomem, nostack, preserves_flags));
-            }
-            v
-        }
-        unsafe fn pci_read32(bus: u8, dev: u8, func: u8, offset: u8) -> u32 {
-            let addr = 0x8000_0000u32
-                | ((bus as u32) << 16)
-                | ((dev as u32) << 11)
-                | ((func as u32) << 8)
-                | (offset as u32 & 0xFC);
-            unsafe {
-                pci_outl(0xCF8, addr);
-                pci_inl(0xCFC)
-            }
-        }
-
-        unsafe {
-            // Verify Intel MCH at Bus 0, Dev 0, Func 0
-            let mch_id = pci_read32(0, 0, 0, 0x00);
-            if (mch_id & 0xFFFF) == 0x8086 {
-                // BSM (Base Stolen Memory) at MCH offset 0x5C — i945GM/G
-                // Bits [31:14] = physical base address of stolen memory (16 KB aligned)
-                let bsm = pci_read32(0, 0, 0, 0x5C) & 0xFFFFC000;
-
-                // GMA 950 MMIO base — Bus 0, Dev 2, Func 0, BAR 0 (offset 0x10)
-                let mmio_base = pci_read32(0, 2, 0, 0x10) & 0xFFFFFFF0;
-
-                if bsm != 0 && mmio_base != 0 {
-                    // PIPEASRC (0x6001C): bits [28:16] = width-1, bits [12:0] = height-1
-                    let pipeasrc = (mmio_base as *const u32).add(0x6001C / 4).read_volatile();
-                    let width = ((pipeasrc >> 16) & 0x1FFF) + 1;
-                    let height = (pipeasrc & 0x1FFF) + 1;
-
-                    // DSPASTRIDE (0x70188): bytes per scan line
-                    let stride_bytes =
-                        (mmio_base as *const u32).add(0x70188 / 4).read_volatile() & 0x0000FFFF;
-                    let stride_pixels = if stride_bytes >= 4 {
-                        stride_bytes / 4
-                    } else {
-                        width
-                    };
-
-                    if (640..=2560).contains(&width) && (480..=1600).contains(&height) {
-                        GFX_STATE.fb = bsm as *mut u32;
-                        GFX_STATE.uga = core::ptr::null_mut();
-                        GFX_STATE.width = width;
-                        GFX_STATE.height = height;
-                        GFX_STATE.stride = stride_pixels;
-                        GFX_STATE.cursor_x = 16;
-                        GFX_STATE.cursor_y = 16;
-                        GFX_STATE.fg_color = 0xFFFFFFFF;
-                        GFX_STATE.is_valid = true;
-
-                        // Clear framebuffer to black
-                        let total = (stride_pixels * height) as usize;
-                        for i in 0..total {
-                            *GFX_STATE.fb.add(i) = 0xFF00_0000;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Flush Apple firmware display driver by calling con_out.output_string with space
-    // to force Apple's video driver FlushDisplay() to update the GPU surface register (DSPASURF).
-    if unsafe { GFX_STATE.is_valid } {
-        let con_out = unsafe { (*st).con_out };
-        if !con_out.is_null() {
-            let space_buf = [0x0020u16, 0u16];
-            unsafe {
-                let _ = ((*con_out).output_string)(con_out, space_buf.as_ptr());
-            }
-        }
-    }
-
-    #[cfg(target_arch = "x86")]
-    unsafe {
-        sync_gma950_display_plane();
-    }
-
-    // 5. No graphics protocol found — fall back to ConsoleControl text mode so that
-    //    ConOut->output_string() produces visible output on Apple EFI (which boots in
-    //    graphics mode where ConOut is silenced). Only reached when is_valid=false.
-    if unsafe { !GFX_STATE.is_valid } {
-        let cc_ptr = unsafe { locate_protocol_compat(&EFI_CONSOLE_CONTROL_PROTOCOL_GUID) }
-            as *mut EfiConsoleControlProtocol;
         if !cc_ptr.is_null() {
             unsafe {
                 let _ = ((*cc_ptr).set_mode)(
@@ -523,7 +439,7 @@ pub fn gfx_draw_char(c: char) {
 
         let font_glyph = &font::FONT_8X16[ascii_idx * 16..(ascii_idx + 1) * 16];
 
-        // 1. Direct Linear Framebuffer (GOP / Apple Framebuffer Info)
+        // 1. Direct Linear Framebuffer (GOP)
         if !GFX_STATE.fb.is_null() {
             for (row, &byte) in font_glyph.iter().enumerate() {
                 let py = GFX_STATE.cursor_y + row as u32;
@@ -556,7 +472,7 @@ pub fn gfx_draw_char(c: char) {
                     glyph_pixels[row * 8 + col] = if is_set {
                         GFX_STATE.fg_color
                     } else {
-                        0xFF000000
+                        0x00000000
                     };
                 }
             }
@@ -571,7 +487,7 @@ pub fn gfx_draw_char(c: char) {
                 GFX_STATE.cursor_y as usize,
                 8,
                 16,
-                32, // Explicit 32 bytes stride (8 pixels * 4 bytes/pixel)
+                0,
             );
         }
 
@@ -609,9 +525,11 @@ pub fn _print_str(s: &str) {
     let mut idx = 0;
     let mut chars = s.chars().peekable();
 
-    // Suppress ConOut whenever ANY graphics protocol is active (GOP, UGA, or Apple Framebuffer).
-    // On 32-bit Apple EFI, calling ConOut alongside UGA blt corrupts the display.
-    let suppress_conout = unsafe { GFX_STATE.is_valid };
+    // Suppress ConOut only when we have a direct linear framebuffer (GOP / Apple FB).
+    // In UGA mode (Apple 32-bit EFI), ConOut->output_string IS the visible output path —
+    // Apple's UGA console splitter routes ConOut text to the display surface.
+    // Individual UGA Blt calls for glyphs silently fail on Apple EFI 1.10.
+    let suppress_conout = unsafe { GFX_STATE.is_valid && !GFX_STATE.fb.is_null() };
 
     let flush = |buf: &mut [u16; 256], idx: &mut usize| {
         if *idx > 0 && !proto.is_null() && !suppress_conout {

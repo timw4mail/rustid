@@ -205,6 +205,82 @@ pub fn get_system_table() -> *mut EfiSystemTable {
     unsafe { SYSTEM_TABLE }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct EfiFirmwareInfo {
+    pub vendor: [char; 64],
+    pub vendor_len: usize,
+    pub revision: u32,
+    pub is_apple: bool,
+    pub is_efi_1_10: bool,
+    pub is_apple_32bit: bool,
+}
+
+pub fn detect_firmware() -> EfiFirmwareInfo {
+    let st = get_system_table();
+    let mut info = EfiFirmwareInfo {
+        vendor: ['\0'; 64],
+        vendor_len: 0,
+        revision: 0,
+        is_apple: false,
+        is_efi_1_10: false,
+        is_apple_32bit: false,
+    };
+    if st.is_null() {
+        return info;
+    }
+    unsafe {
+        info.revision = (*st).hdr.revision;
+        info.is_efi_1_10 = (info.revision >> 16) == 1;
+        let vendor_ptr = (*st).firmware_vendor;
+        if !vendor_ptr.is_null() {
+            let mut i = 0;
+            while i < 63 {
+                let u = *vendor_ptr.add(i);
+                if u == 0 {
+                    break;
+                }
+                if let Some(ch) = char::from_u32(u as u32) {
+                    info.vendor[i] = ch;
+                }
+                i += 1;
+            }
+            info.vendor_len = i;
+
+            let apple_match = ['A', 'p', 'p', 'l', 'e'];
+            let mut apple_idx = 0;
+            let mut is_apple = false;
+            for &ch in &info.vendor[..i] {
+                if ch.to_ascii_uppercase() == apple_match[apple_idx].to_ascii_uppercase() {
+                    apple_idx += 1;
+                    if apple_idx == apple_match.len() {
+                        is_apple = true;
+                        break;
+                    }
+                } else {
+                    apple_idx = 0;
+                }
+            }
+            info.is_apple = is_apple;
+        }
+        #[cfg(target_arch = "x86")]
+        {
+            info.is_apple_32bit = info.is_apple && info.is_efi_1_10;
+        }
+    }
+    info
+}
+
+pub fn print_firmware_header() {
+    let info = detect_firmware();
+    let major = (info.revision >> 16) & 0xFFFF;
+    let minor = info.revision & 0xFFFF;
+    crate::print!("Firmware Vendor: ");
+    for &ch in &info.vendor[..info.vendor_len] {
+        crate::print!("{}", ch);
+    }
+    crate::println!(" | EFI Spec Revision: {}.{:02}", major, minor);
+}
+
 /// Backward/forward compatible protocol locator (EFI 1.0, EFI 1.10, UEFI 2.x).
 pub unsafe fn locate_protocol_compat(guid: &EfiGuid) -> *mut c_void {
     let st = get_system_table();
