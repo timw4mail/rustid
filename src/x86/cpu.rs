@@ -555,14 +555,14 @@ impl TDetect for Cpu {
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect();
 
-        #[cfg(not(nostd_os))]
+        #[cfg(any(not(nostd_os), target_os = "uefi"))]
         let cores = if is_intel() {
             Self::detect_core_types()
         } else {
             Vec::new()
         };
 
-        #[cfg(nostd_os)]
+        #[cfg(all(nostd_os, not(target_os = "uefi")))]
         let cores = Vec::new();
 
         Self {
@@ -585,11 +585,11 @@ impl TDetect for Cpu {
     }
 }
 
-#[cfg(not(nostd_os))]
+#[cfg(any(not(nostd_os), target_os = "uefi"))]
 impl Cpu {
     /// Enumerates all logical processors to discover unique core types.
     ///
-    /// On non-DOS systems, pins to each logical processor and reads CPUID
+    /// On non-DOS systems and UEFI, targets each logical processor and reads CPUID
     /// leaf 0x1A to detect core type, aggregating separate entries for
     /// hybrid architectures (e.g., Intel P-cores and E-cores).
     /// Falls back to a single entry for DOS or if enumeration fails.
@@ -676,6 +676,46 @@ impl Cpu {
                 };
 
                 // Make sure we know the MicroArch before pushing to core types
+                if micro_arch == MicroArch::Unknown {
+                    continue;
+                }
+
+                let name_str = micro_arch.as_str();
+                let name = if name_str != UNK {
+                    Some(name_str)
+                } else {
+                    None
+                };
+
+                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
+            }
+        }
+
+        #[cfg(target_os = "uefi")]
+        if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
+            let proc_count = mp.processor_count();
+            let cache = Cache::detect();
+
+            for cpu_idx in 0..proc_count {
+                let mut core_type = CoreType::default();
+                let mut sig = CpuSignature::default();
+                let mut raw_model = alloc::string::String::new();
+                let mut vendor = alloc::string::String::new();
+
+                mp.run_on_processor(cpu_idx, || {
+                    core_type = core_type_from_cpuid();
+                    sig = CpuSignature::detect();
+                    raw_model = Cpu::raw_model_string();
+                    vendor = vendor_str();
+                });
+
+                let arch = CpuArch::find(&raw_model, sig, &vendor);
+                let micro_arch = if is_intel() {
+                    Intel::core_micro_arch(arch.micro_arch, core_type)
+                } else {
+                    arch.micro_arch
+                };
+
                 if micro_arch == MicroArch::Unknown {
                     continue;
                 }

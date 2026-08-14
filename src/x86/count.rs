@@ -18,7 +18,14 @@ pub fn get_platform_socket_count() -> TopologyTier {
     );
 
     #[cfg(target_os = "uefi")]
-    let sockets_detected = TopologyTier::default();
+    let sockets_detected = if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
+        TopologyTier::new(
+            mp.socket_count() as u32,
+            DataSource::Calculated("EFI MP Services"),
+        )
+    } else {
+        TopologyTier::default()
+    };
 
     #[cfg(not(nostd_os))]
     let sockets_detected = if info_source() == CpuidInfoSource::Cpu {
@@ -39,6 +46,14 @@ pub fn get_thread_count() -> TopologyTier {
 }
 
 fn get_platform_thread_count() -> TopologyTier {
+    #[cfg(target_os = "uefi")]
+    if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
+        return TopologyTier::new(
+            mp.processor_count() as u32,
+            DataSource::Calculated("EFI MP Services"),
+        );
+    }
+
     TopologyTier::default()
 }
 
