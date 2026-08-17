@@ -30,3 +30,6 @@ jobs:
 
       - name: Build DOS binaries
         run: just build-dos
+
+      - name: Build EFI binaries
+        run: just build-efi

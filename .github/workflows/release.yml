@@ -26,21 +26,34 @@ jobs:
       - name: Clean build environment
         run: cargo clean && just clean
 
-      - name: Build dos
+      - name: Build DOS binaries
         run: just build-dos
 
       - name: Package DOS binaries
         run: |
           zip rustid-dos.zip rustid.exe rust86.exe debug86.exe
 
-      - name: Upload artifact
+      - name: Build EFI binaries
+        run: just build-efi
+
+      - name: Package EFI binaries
+        run: |
+          (cd target/efi-disk && zip -r ../../rustid-efi.zip EFI)
+
+      - name: Upload DOS artifact
         uses: actions/upload-artifact@v6
         with:
           name: rustid-dos
           path: rustid-dos.zip
 
+      - name: Upload EFI artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rustid-efi
+          path: rustid-efi.zip
+
       - name: Publish binaries
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create --generate-notes ${{ github.ref }} './rustid-dos.zip#DOS Binaries (rustid-dos.zip)'
+          gh release create --generate-notes ${{ github.ref }} './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)'
