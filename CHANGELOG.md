@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.9.0]
+
+### Added
+- EFI/UEFI application support for 32-bit and 64-bit x86 firmware (`just build-efi`, `just run-efi-64`, `just run-efi-32`)
+- EFI MP Services for core/thread/socket topology detection on UEFI systems
+- Graphical display mode with custom font rendering for EFI
+- Colored EFI output via ANSI escape sequences
+- Compact display mode that removes extra newlines between sections (`c` / `compact` flag)
+- Centaur/VIA feature list now shown in DOS32A extended builds
+- i486 Linux musl build target (`just build-486-musl`)
+
+### Changed
+- Separated DOS argument parsing and speed detection into dedicated submodules (`src/x86/dos/args.rs`, `src/x86/dos/speed.rs`)
+- Moved MP Table detection under DOS sub-module (`src/x86/dos/mp.rs`)
+- EFI binaries placed in their own target directory (`target/efi-disk/`)
+- Cleaned up legacy CPU socket count detection code
+- Updated README platform support tables with EFI column
+
 ## [1.8.0]
 
 ### Added
