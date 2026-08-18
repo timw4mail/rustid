@@ -23,6 +23,15 @@ pub fn get_platform_socket_count() -> TopologyTier {
             mp.socket_count() as u32,
             DataSource::Calculated("EFI MP Services"),
         )
+    } else if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
+        if !smbios.processors.is_empty() {
+            TopologyTier::new(
+                smbios.processors.len() as u32,
+                DataSource::Calculated("SMBIOS"),
+            )
+        } else {
+            TopologyTier::default()
+        }
     } else {
         TopologyTier::default()
     };
@@ -52,6 +61,11 @@ fn get_platform_thread_count() -> TopologyTier {
             mp.processor_count() as u32,
             DataSource::Calculated("EFI MP Services"),
         );
+    } else if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
+        let total_threads: u32 = smbios.processors.iter().map(|p| p.thread_count).sum();
+        if total_threads > 0 {
+            return TopologyTier::new(total_threads, DataSource::Calculated("SMBIOS"));
+        }
     }
 
     TopologyTier::default()

@@ -5,6 +5,11 @@ use alloc::string::String;
 #[cfg(bsd)]
 pub mod bsd;
 
+#[cfg(target_os = "uefi")]
+pub mod efi;
+
+pub mod common;
+
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub mod linux;
 
@@ -21,6 +26,8 @@ pub mod haiku;
 pub mod windows;
 
 // ----------------------------------------------------------------------------
+
+pub use common::*;
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use linux::*;
@@ -47,11 +54,6 @@ pub trait TOSData {
         None
     }
 
-    fn get_socket_count() -> TopologyTier;
-}
-
-#[cfg(nostd_os)]
-impl TOSData for OS {
     fn get_socket_count() -> TopologyTier {
         TopologyTier::default()
     }

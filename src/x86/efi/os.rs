@@ -20,6 +20,13 @@ pub struct EfiGuid {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct EfiConfigurationTable {
+    pub vendor_guid: EfiGuid,
+    pub vendor_table: *mut c_void,
+}
+
+#[repr(C)]
 pub struct EfiTableHeader {
     pub signature: u64,
     pub revision: u32,
@@ -270,17 +277,6 @@ pub fn detect_firmware() -> EfiFirmwareInfo {
     info
 }
 
-pub fn print_firmware_header() {
-    let info = detect_firmware();
-    let major = (info.revision >> 16) & 0xFFFF;
-    let minor = info.revision & 0xFFFF;
-    crate::print!("Firmware Vendor: ");
-    for &ch in &info.vendor[..info.vendor_len] {
-        crate::print!("{}", ch);
-    }
-    crate::println!(" | EFI Spec Revision: {}.{:02}", major, minor);
-}
-
 /// Backward/forward compatible protocol locator (EFI 1.0, EFI 1.10, UEFI 2.x).
 pub unsafe fn locate_protocol_compat(guid: &EfiGuid) -> *mut c_void {
     let st = get_system_table();
@@ -492,6 +488,7 @@ unsafe impl GlobalAlloc for EfiAllocator {
     }
 }
 
+#[cfg(target_os = "uefi")]
 #[global_allocator]
 static ALLOCATOR: EfiAllocator = EfiAllocator;
 

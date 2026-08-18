@@ -17,7 +17,6 @@ pub unsafe extern "efiapi" fn efi_main(
     use rustid::{Cpu, version};
 
     version();
-    rustid::x86::efi::print_firmware_header();
     let cpu = Cpu::detect();
     let flags = CliFlags {
         color: true,

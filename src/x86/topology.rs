@@ -55,17 +55,43 @@ impl Speed {
     }
 
     fn measure() -> Self {
-        #[cfg(nostd_os)]
+        #[cfg(all(nostd_os, not(target_os = "uefi")))]
         return Speed::default();
 
-        #[cfg(not(nostd_os))]
+        #[cfg(any(not(nostd_os), target_os = "uefi"))]
         {
+            #[cfg(not(nostd_os))]
             if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
+                return Speed::default();
+            }
+
+            #[cfg(target_os = "uefi")]
+            if !super::has_tsc() {
                 return Speed::default();
             }
 
             let freq = Self::measure_frequency();
             if freq == 0 {
+                #[cfg(target_os = "uefi")]
+                if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
+                    if let Some(proc) = smbios.processors.first() {
+                        let speed = if proc.current_speed_mhz > 0 {
+                            proc.current_speed_mhz as u32
+                        } else if proc.max_speed_mhz > 0 {
+                            proc.max_speed_mhz as u32
+                        } else {
+                            0
+                        };
+                        if speed > 0 {
+                            let max_speed = proc.max_speed_mhz as u32;
+                            return Speed {
+                                base: speed,
+                                boost: if max_speed > speed { max_speed } else { speed },
+                                measured: false,
+                            };
+                        }
+                    }
+                }
                 return Speed::default();
             }
 
@@ -109,6 +135,33 @@ impl Speed {
         let freq_mhz = (tsc_delta * MHZ_DIVISOR) / elapsed;
 
         (freq_mhz / 1000) as u32
+    }
+
+    #[cfg(target_os = "uefi")]
+    fn measure_frequency() -> u32 {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_rdtsc as rdtsc;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_rdtsc as rdtsc;
+
+        let st = crate::x86::efi::os::get_system_table();
+        if st.is_null() {
+            return 0;
+        }
+        let bs = unsafe { (*st).boot_services };
+        if bs.is_null() {
+            return 0;
+        }
+
+        let start_tsc = unsafe { rdtsc() };
+        let status = unsafe { ((*bs).stall)(10_000) };
+        if status != 0 {
+            return 0;
+        }
+        let end_tsc = unsafe { rdtsc() };
+
+        let tsc_delta = end_tsc.saturating_sub(start_tsc);
+        (tsc_delta / 10_000) as u32
     }
 }
 

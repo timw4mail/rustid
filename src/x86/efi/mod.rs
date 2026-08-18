@@ -5,7 +5,9 @@ pub mod display;
 pub mod font;
 pub mod mp;
 pub mod os;
+pub mod smbios;
 
 pub use display::*;
 pub use mp::*;
 pub use os::*;
+pub use smbios::*;

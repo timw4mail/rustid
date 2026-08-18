@@ -296,7 +296,24 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
-        #[cfg(not(nostd_os))]
+        #[cfg(target_os = "uefi")]
+        {
+            let fw = crate::x86::efi::os::detect_firmware();
+            let mut vendor = alloc::string::String::new();
+            for &ch in &fw.vendor[..fw.vendor_len] {
+                vendor.push(ch);
+            }
+            let major = (fw.revision >> 16) & 0xFFFF;
+            let minor = fw.revision & 0xFFFF;
+            let val = if vendor.is_empty() {
+                alloc::format!("EFI {}.{:02}", major, minor)
+            } else {
+                alloc::format!("{} (EFI {}.{:02})", vendor, major, minor)
+            };
+            disp.simple_line("Firmware", &val);
+        }
+
+        #[cfg(any(not(nostd_os), target_os = "uefi"))]
         if let Some(system) = &self.system {
             disp.simple_line("System", &disp.format_system_name(system));
         }

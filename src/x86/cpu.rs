@@ -14,7 +14,7 @@ use alloc::vec::Vec;
 #[cfg(not(nostd_os))]
 use super::provider;
 
-#[cfg(not(nostd_os))]
+#[cfg(any(not(nostd_os), target_os = "uefi"))]
 use crate::common::TOSData;
 
 /// CPU feature class/level enumeration.
@@ -250,7 +250,7 @@ pub struct CpuCore {
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     /// The system name, if applicable
-    #[cfg(not(nostd_os))]
+    #[cfg(any(not(nostd_os), target_os = "uefi"))]
     pub system: Option<String>,
     /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,
@@ -544,11 +544,19 @@ impl TDetect for Cpu {
     /// Performs full CPU detection including architecture, microarchitecture,
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
-        #[cfg(not(nostd_os))]
-        let system = if provider::info_source() == provider::CpuidInfoSource::DumpFile {
-            None
-        } else {
-            crate::common::OS::get_system_name()
+        #[cfg(any(not(nostd_os), target_os = "uefi"))]
+        let system = {
+            #[cfg(not(nostd_os))]
+            if provider::info_source() == provider::CpuidInfoSource::DumpFile {
+                None
+            } else {
+                crate::common::OS::get_system_name()
+            }
+
+            #[cfg(target_os = "uefi")]
+            {
+                crate::common::OS::get_system_name()
+            }
         };
 
         let sig = CpuSignature::detect();
@@ -566,7 +574,7 @@ impl TDetect for Cpu {
         let cores = Vec::new();
 
         Self {
-            #[cfg(not(nostd_os))]
+            #[cfg(any(not(nostd_os), target_os = "uefi"))]
             system,
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
