@@ -201,6 +201,7 @@ impl CpuDisplay {
     /// Format the system name if it is a Mac, or other known string
     pub fn format_system_name(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
+        // Additional models based on information in MacTracker App
         let model = match raw {
             // Arm64 (Apple Silicon)
             "MacBookPro18,3" | "MacBookPro18,4" => "MacBook Pro (14-inch, 2021)",
@@ -286,7 +287,12 @@ impl CpuDisplay {
             "MacBookPro5,3" => "MacBook Pro (15-inch, Mid 2009)",
             "MacBookPro5,2" => "MacBook Pro (17-inch, Mid/Early 2009)",
             "MacBookPro5,1" => "MacBook Pro (15-inch, Late 2008)",
-            "MacBookPro4,1" => "MacBook Pro (17/15-inch, Early 2008)",
+            "MacBookPro4,1" => "MacBook Pro (15/17-inch, Early 2008)",
+            "MacBookPro3,1" => "MacBook Pro (15/17-inch Mid/Late 2007)",
+            "MacBookPro2,2" => "MacBook Pro (15-inch Core 2 Duo)",
+            "MacBookPro2,1" => "MacBook Pro (17-inch Core 2 Duo)",
+            "MacBookPro1,2" => "MacBook Pro (17-inch)",
+            "MacBookPro1,1" => "MacBook Pro",
             "MacBookAir9,1" => "MacBook Air (Retina, 13-inch, 2020)",
             "MacBookAir8,2" => "MacBook Air (Retina, 13-inch, 2019)",
             "MacBookAir8,1" => "MacBook Air (Retina, 13-inch, 2018)",
@@ -300,7 +306,8 @@ impl CpuDisplay {
             "MacBookAir4,1" => "MacBook Air (11-inch, Mid 2011)",
             "MacBookAir3,2" => "MacBook Air (13-inch, Late 2010)",
             "MacBookAir3,1" => "MacBook Air (11-inch, Late 2010)",
-            "MacBookAir2,1" => "MacBook Air (Mid 2009)",
+            "MacBookAir2,1" => "MacBook Air (Late 2008/Mid 2009)",
+            "MacBookAir1,1" => "MacBook Air",
             "Macmini8,1" => "Mac mini (2018)",
             "Macmini7,1" => "Mac mini (Mid 2014)",
             "Macmini6,1" | "Macmini6,2" => "Mac mini (Late 2012)",
@@ -313,10 +320,18 @@ impl CpuDisplay {
             "MacBook7,1" => "MacBook (13-inch, Mid 2010)",
             "MacBook6,1" => "MacBook (13-inch, Late 2009)",
             "MacBook5,2" => "MacBook (13-inch, Early/Mid 2009)",
+            "MacBook5,1" => "MacBook (13-inch, Aluminum, Late 2008)",
+            "MacBook4,1" => "MacBook (13-inch, 2008)",
+            "MacBook3,1" => "MacBook (13-inch, Late 2007)",
+            "MacBook2,1" => "MacBook (13-inch, Late 2006/Mid 2007)",
+            "MacBook1,1" => "MacBook (13-inch)",
             "MacPro7,1" => "Mac Pro (2019)",
             "MacPro6,1" => "Mac Pro (Late 2013)",
             "MacPro5,1" => "Mac Pro (Mid 2010 - Mid 2012)",
             "MacPro4,1" => "Mac Pro (Early 2009)",
+            "MacPro3,1" => "Mac Pro (Early 2008)",
+            "MacPro2,1" => "Mac Pro (8-core)",
+            "MacPro1,1" => "Mac Pro",
             "iMacPro1,1" => "iMac Pro (2017)",
             "iMac20,1" | "iMac20,2" => "iMac (Retina 5K, 27-inch, 2020)",
             "iMac19,1" => "iMac (Retina 5K, 27-inch, 2019)",
@@ -337,24 +352,42 @@ impl CpuDisplay {
             "iMac12,1" => "iMac (21.5-inch, Mid 2011)",
             "iMac11,3" => "iMac (27-inch, Mid 2010)",
             "iMac11,2" => "iMac (21.5-inch, Mid 2010)",
+            "iMac11,1" => "iMac (27-inch, Late 2009)",
             "iMac10,1" => "iMac (27/21.5-inch, Late 2009)",
-            "iMac9,1" => "iMac (24/20-inch, Early 2009)",
+            "iMac9,1" => "iMac (24/20-inch, Early/Mid 2009)",
+            "iMac8,1" => "iMach (20/24-inch Early 2008)",
+            "iMac7,1" => "iMac (20/24-inch Mid 2007)",
+            "iMac6,1" => "iMac (24-inch)",
+            "iMac5,2" => "iMac (17-inch Late 2006 CD)",
+            "iMac5,1" => "iMac (Late 2006)",
+            "iMac4,2" => "iMac (Mid 2006 17-inch)",
+            "iMac4,1" => "iMac (Early 2006)",
             "Xserve3,1" => "XServe (Early 2009)",
             "Xserve2,1" => "XServe (Early 2008)",
             "Xserve1,1" => "XServe (Late 2006)",
 
             // PowerPC
+            "iMac,1" => "iMac (Original, 5 Flavors)",
+            "PowerMac12,1" => "iMac G5 (17/20-inch iSight)",
             "PowerMac11,2" => "Power Mac G5 (Late 2005)",
             "PowerMac9,1" => "Power Mac G5 (Late 2004)",
+            "PowerMac8,2" => "iMac G5 (Ambient Light Sensor)",
+            "PowerMac8,1" => "iMac G5 (17/20-inch)",
             "PowerMac7,3" => "Power Mac G5 (June 2004 | Early 2005)",
             "PowerMac7,2" => "Power Mac G5 (June 2003 | Early 2005)",
+            "PowerMac6,3" => "iMac (15/17/20-inch USB 2.0)",
+            "PowerMac6,1" => "iMac (15/17-inch Flat Panel, 1GHz/USB 2.0)",
             "PowerMac5,1" => "Power Mac G4 Cube",
-            "PowerMac4,2" => "iMac (15-inch Early 2003)",
+            "PowerMac4,5" => "iMac (17-inch Flat Panel)",
+            "PowerMac4,2" => "iMac (15-inch Flat Panel)",
+            "PowerMac4,1" => "iMac (Early/Summer 2001)",
             "PowerMac3,6" => "Power Mac G4 (FW 800 | Mirrored Drive Doors)",
             "PowerMac3,5" => "Power Mac G4 (Quicksilver)",
             "PowerMac3,4" => "Power Mac G4 (Digital Audio)",
             "PowerMac3,3" => "Power Mac G4 (Gigabit Ethernet)",
             "PowerMac3,1" => "Power Mac G4 (AGP Graphics)",
+            "PowerMac2,2" => "iMac/iMac DV/iMac DV+/iMac DV SE (Summer 2000)",
+            "PowerMac2,1" => "iMac/iMac DV/iMac DV SE (Slot Loading)",
             "PowerMac1,2" => "Power Mac G4 (PCI Graphics)",
             "PowerMac1,1" => "Power Macintosh G3 (Blue and White)",
             "PowerBook6,7" => "iBook G4 (Mid 2005)",
@@ -373,7 +406,11 @@ impl CpuDisplay {
             _ => raw,
         };
 
-        String::from(model)
+        if model != raw {
+            format!("{model} [{raw}]")
+        } else {
+            String::from(raw)
+        }
     }
 
     #[inline]
@@ -558,7 +595,7 @@ mod tests {
         };
         assert_eq!(
             disp.format_system_name("MacBookAir10,1"),
-            "MacBook Air (M1, 2020)"
+            "MacBook Air (M1, 2020) [MacBookAir10,1]"
         );
     }
 
@@ -583,7 +620,10 @@ mod tests {
                 verbose: false,
             },
         };
-        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
+        assert_eq!(
+            disp.format_system_name("MacPro7,1"),
+            "Mac Pro (2019) [MacPro7,1]"
+        );
     }
 
     #[test]
@@ -597,7 +637,7 @@ mod tests {
         };
         assert_eq!(
             disp.format_system_name("PowerMac11,2"),
-            "Power Mac G5 (Late 2005)"
+            "Power Mac G5 (Late 2005) [PowerMac11,2]"
         );
     }
 }
