@@ -95,22 +95,32 @@ impl Cpu {
 
         if multi_core || flags.verbose {
             let lbl = disp.label("Topology");
-            if self.topology.sockets.count > 1 || flags.verbose {
-                println!(
-                    "{}{} sockets, {} cores, {} threads",
-                    lbl,
-                    self.topology.sockets.count,
-                    self.topology.cores.count,
-                    self.topology.threads.count
-                );
-            } else if self.topology.cores.count != self.topology.threads.count {
-                println!(
-                    "{}{} cores ({} threads)",
-                    lbl, self.topology.cores.count, self.topology.threads.count
-                );
+            let socket_str = if self.topology.sockets.count == 1 {
+                "socket"
             } else {
-                println!("{}{} cores", lbl, self.topology.cores.count);
-            }
+                "sockets"
+            };
+            let core_str = if self.topology.cores.count == 1 {
+                "core"
+            } else {
+                "cores"
+            };
+            let thread_str = if self.topology.threads.count == 1 {
+                "thread"
+            } else {
+                "threads"
+            };
+
+            println!(
+                "{}{} {}, {} {}, {} {}",
+                lbl,
+                self.topology.sockets.count,
+                socket_str,
+                self.topology.cores.count,
+                core_str,
+                self.topology.threads.count,
+                thread_str
+            );
 
             disp.newline();
         }

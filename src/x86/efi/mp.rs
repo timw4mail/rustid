@@ -42,6 +42,16 @@ pub struct EfiProcessorInformation {
     pub extended_information: [u32; 6],
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct FrameworkProcessorContext {
+    pub processor_id: u64,
+    pub status_flag: u8,
+    pub reserved: [u8; 3],
+    pub location: EfiCpuPhysicalLocation,
+    pub health_flags: u32,
+}
+
 pub type EfiApProcedure = unsafe extern "efiapi" fn(*mut c_void);
 
 #[repr(C)]
@@ -76,6 +86,43 @@ pub struct EfiMpServicesProtocol {
     pub who_am_i: unsafe extern "efiapi" fn(*mut EfiMpServicesProtocol, *mut usize) -> EfiStatus,
 }
 
+#[repr(C)]
+pub struct FrameworkMpServicesProtocol {
+    pub get_number_of_processors: unsafe extern "efiapi" fn(
+        *mut FrameworkMpServicesProtocol,
+        *mut usize,
+        *mut usize,
+    ) -> EfiStatus,
+    pub get_processor_context: unsafe extern "efiapi" fn(
+        *mut FrameworkMpServicesProtocol,
+        usize,
+        *mut usize,
+        *mut FrameworkProcessorContext,
+    ) -> EfiStatus,
+    pub startup_all_aps: unsafe extern "efiapi" fn(
+        *mut FrameworkMpServicesProtocol,
+        EfiApProcedure,
+        bool,
+        *mut c_void,
+        usize,
+        *mut c_void,
+        *mut *mut usize,
+    ) -> EfiStatus,
+    pub startup_this_ap: unsafe extern "efiapi" fn(
+        *mut FrameworkMpServicesProtocol,
+        EfiApProcedure,
+        usize,
+        *mut c_void,
+        usize,
+        *mut c_void,
+        *mut bool,
+    ) -> EfiStatus,
+    pub switch_bsp: *const c_void,
+    pub enable_disable_ap: *const c_void,
+    pub who_am_i:
+        unsafe extern "efiapi" fn(*mut FrameworkMpServicesProtocol, *mut usize) -> EfiStatus,
+}
+
 #[derive(Debug, Copy, Clone, Default)]
 pub struct EfiProcessorInfo {
     pub index: usize,
@@ -87,8 +134,14 @@ pub struct EfiProcessorInfo {
 }
 
 #[derive(Copy, Clone)]
+pub enum EfiMpKind {
+    Pi(*mut EfiMpServicesProtocol),
+    Framework(*mut FrameworkMpServicesProtocol),
+}
+
+#[derive(Copy, Clone)]
 pub struct EfiMpServices {
-    proto: *mut EfiMpServicesProtocol,
+    kind: EfiMpKind,
 }
 
 struct ApClosureContext<'a> {
@@ -111,20 +164,24 @@ impl EfiMpServices {
         }
 
         // 1. Try UEFI PI 1.2+ MP Services Protocol
-        let mut proto_ptr = unsafe { locate_protocol_compat(&EFI_MP_SERVICES_PROTOCOL_GUID) }
+        let pi_ptr = unsafe { locate_protocol_compat(&EFI_MP_SERVICES_PROTOCOL_GUID) }
             as *mut EfiMpServicesProtocol;
+        if !pi_ptr.is_null() {
+            return Some(Self {
+                kind: EfiMpKind::Pi(pi_ptr),
+            });
+        }
 
         // 2. Fall back to Framework / EFI 1.10 MP Services Protocol
-        if proto_ptr.is_null() {
-            proto_ptr = unsafe { locate_protocol_compat(&FRAMEWORK_EFI_MP_SERVICES_PROTOCOL_GUID) }
-                as *mut EfiMpServicesProtocol;
+        let fw_ptr = unsafe { locate_protocol_compat(&FRAMEWORK_EFI_MP_SERVICES_PROTOCOL_GUID) }
+            as *mut FrameworkMpServicesProtocol;
+        if !fw_ptr.is_null() {
+            return Some(Self {
+                kind: EfiMpKind::Framework(fw_ptr),
+            });
         }
 
-        if !proto_ptr.is_null() {
-            Some(Self { proto: proto_ptr })
-        } else {
-            None
-        }
+        None
     }
 
     /// Returns the total number of logical processors and enabled processors.
@@ -132,7 +189,14 @@ impl EfiMpServices {
         let mut total = 1usize;
         let mut enabled = 1usize;
         let status = unsafe {
-            ((*self.proto).get_number_of_processors)(self.proto, &mut total, &mut enabled)
+            match self.kind {
+                EfiMpKind::Pi(proto) => {
+                    ((*proto).get_number_of_processors)(proto, &mut total, &mut enabled)
+                }
+                EfiMpKind::Framework(proto) => {
+                    ((*proto).get_number_of_processors)(proto, &mut total, &mut enabled)
+                }
+            }
         };
         if status == EFI_SUCCESS {
             (total, enabled)
@@ -148,27 +212,54 @@ impl EfiMpServices {
 
     /// Retrieves detailed information for a specific logical processor by index.
     pub fn get_processor_info(&self, index: usize) -> Option<EfiProcessorInfo> {
-        let mut raw_info = EfiProcessorInformation::default();
-        let status =
-            unsafe { ((*self.proto).get_processor_info)(self.proto, index, &mut raw_info) };
-        if status == EFI_SUCCESS {
-            Some(EfiProcessorInfo {
-                index,
-                processor_id: raw_info.processor_id,
-                is_bsp: (raw_info.status_flag & PROCESSOR_AS_BSP_BIT) != 0,
-                is_enabled: (raw_info.status_flag & PROCESSOR_ENABLED_BIT) != 0,
-                is_healthy: (raw_info.status_flag & PROCESSOR_HEALTH_STATUS_BIT) != 0,
-                location: raw_info.location,
-            })
-        } else {
-            None
+        match self.kind {
+            EfiMpKind::Pi(proto) => {
+                let mut raw_info = EfiProcessorInformation::default();
+                let status = unsafe { ((*proto).get_processor_info)(proto, index, &mut raw_info) };
+                if status == EFI_SUCCESS {
+                    Some(EfiProcessorInfo {
+                        index,
+                        processor_id: raw_info.processor_id,
+                        is_bsp: (raw_info.status_flag & PROCESSOR_AS_BSP_BIT) != 0,
+                        is_enabled: (raw_info.status_flag & PROCESSOR_ENABLED_BIT) != 0,
+                        is_healthy: (raw_info.status_flag & PROCESSOR_HEALTH_STATUS_BIT) != 0,
+                        location: raw_info.location,
+                    })
+                } else {
+                    None
+                }
+            }
+            EfiMpKind::Framework(proto) => {
+                let mut ctx = FrameworkProcessorContext::default();
+                let mut buf_len = core::mem::size_of::<FrameworkProcessorContext>();
+                let status = unsafe {
+                    ((*proto).get_processor_context)(proto, index, &mut buf_len, &mut ctx)
+                };
+                if status == EFI_SUCCESS {
+                    Some(EfiProcessorInfo {
+                        index,
+                        processor_id: ctx.processor_id,
+                        is_bsp: ctx.status_flag != 0,
+                        is_enabled: true,
+                        is_healthy: (ctx.health_flags & 0x04) != 0 || ctx.health_flags != 0,
+                        location: ctx.location,
+                    })
+                } else {
+                    None
+                }
+            }
         }
     }
 
     /// Returns the index of the logical processor currently executing.
     pub fn who_am_i(&self) -> usize {
         let mut index = 0usize;
-        let status = unsafe { ((*self.proto).who_am_i)(self.proto, &mut index) };
+        let status = unsafe {
+            match self.kind {
+                EfiMpKind::Pi(proto) => ((*proto).who_am_i)(proto, &mut index),
+                EfiMpKind::Framework(proto) => ((*proto).who_am_i)(proto, &mut index),
+            }
+        };
         if status == EFI_SUCCESS { index } else { 0 }
     }
 
@@ -216,15 +307,26 @@ impl EfiMpServices {
         let timeout_us = 2_000_000usize; // 2-second timeout
 
         let _ = unsafe {
-            ((*self.proto).startup_this_ap)(
-                self.proto,
-                ap_procedure_thunk,
-                proc_idx,
-                core::ptr::null_mut(), // Synchronous blocking execution (NULL event)
-                timeout_us,
-                &mut ctx as *mut _ as *mut c_void,
-                &mut finished,
-            )
+            match self.kind {
+                EfiMpKind::Pi(proto) => ((*proto).startup_this_ap)(
+                    proto,
+                    ap_procedure_thunk,
+                    proc_idx,
+                    core::ptr::null_mut(), // Synchronous blocking execution (NULL event)
+                    timeout_us,
+                    &mut ctx as *mut _ as *mut c_void,
+                    &mut finished,
+                ),
+                EfiMpKind::Framework(proto) => ((*proto).startup_this_ap)(
+                    proto,
+                    ap_procedure_thunk,
+                    proc_idx,
+                    core::ptr::null_mut(), // Synchronous blocking execution (NULL event)
+                    timeout_us,
+                    &mut ctx as *mut _ as *mut c_void,
+                    &mut finished,
+                ),
+            }
         };
     }
 }
