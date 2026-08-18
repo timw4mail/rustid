@@ -84,6 +84,13 @@ pub struct SmbiosBoardInfo {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct SmbiosChassisInfo {
+    pub manufacturer: Option<String>,
+    pub chassis_type: u8,
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct SmbiosProcessorInfo {
     pub socket_designation: Option<String>,
     pub processor_type: u8,
@@ -94,6 +101,9 @@ pub struct SmbiosProcessorInfo {
     pub external_clock_mhz: u16,
     pub max_speed_mhz: u16,
     pub current_speed_mhz: u16,
+    pub status: u8,
+    pub is_populated: bool,
+    pub is_enabled: bool,
     pub core_count: u32,
     pub core_enabled: u32,
     pub thread_count: u32,
@@ -221,6 +231,7 @@ impl<'a> Iterator for SmbiosTableParser<'a> {
 pub struct SmbiosData {
     pub system: Option<SmbiosSystemInfo>,
     pub board: Option<SmbiosBoardInfo>,
+    pub chassis: Option<SmbiosChassisInfo>,
     pub bios: Option<SmbiosBiosInfo>,
     pub processors: Vec<SmbiosProcessorInfo>,
 }
@@ -286,6 +297,21 @@ impl SmbiosData {
                         });
                     }
                 }
+                3 => {
+                    // Type 3: System Enclosure or Chassis
+                    if s.formatted.len() >= 0x06 {
+                        let manufacturer = s.get_string(s.formatted[0x04]);
+                        let raw_type = s.formatted[0x05];
+                        let chassis_type = raw_type & 0x7F;
+                        let version = s.get_string(s.formatted[0x06]);
+
+                        data.chassis = Some(SmbiosChassisInfo {
+                            manufacturer,
+                            chassis_type,
+                            version,
+                        });
+                    }
+                }
                 4 => {
                     // Type 4: Processor Information
                     if s.formatted.len() >= 0x1A {
@@ -301,6 +327,10 @@ impl SmbiosData {
                             u16::from_le_bytes([s.formatted[0x14], s.formatted[0x15]]);
                         let current_speed_mhz =
                             u16::from_le_bytes([s.formatted[0x16], s.formatted[0x17]]);
+                        let status = s.formatted[0x18];
+                        let is_populated = (status & 0x40) != 0;
+                        let cpu_status = status & 0x07;
+                        let is_enabled = cpu_status == 1 || cpu_status == 0;
 
                         let mut core_count = if s.formatted.len() >= 0x24 {
                             s.formatted[0x23] as u32
@@ -346,6 +376,9 @@ impl SmbiosData {
                             external_clock_mhz,
                             max_speed_mhz,
                             current_speed_mhz,
+                            status,
+                            is_populated,
+                            is_enabled,
                             core_count,
                             core_enabled,
                             thread_count,
@@ -357,6 +390,47 @@ impl SmbiosData {
         }
 
         data
+    }
+
+    /// Checks if the machine is a laptop / notebook based on chassis type or product name.
+    pub fn is_laptop(&self) -> bool {
+        if let Some(chassis) = &self.chassis {
+            match chassis.chassis_type {
+                0x08 | 0x09 | 0x0A | 0x0B | 0x0E | 0x1E | 0x1F | 0x20 => return true,
+                _ => {}
+            }
+        }
+        if let Some(sys) = &self.system {
+            if let Some(prod) = &sys.product_name {
+                let p = prod.to_ascii_lowercase();
+                if p.contains("laptop")
+                    || p.contains("notebook")
+                    || p.contains("macbook")
+                    || p.contains("thinkpad")
+                    || p.contains("elitebook")
+                    || p.contains("latitude")
+                    || p.contains("inspiron")
+                    || p.contains("zenbook")
+                {
+                    return true;
+                }
+            }
+            if let Some(fam) = &sys.family {
+                let f = fam.to_ascii_lowercase();
+                if f.contains("laptop")
+                    || f.contains("notebook")
+                    || f.contains("macbook")
+                    || f.contains("thinkpad")
+                    || f.contains("elitebook")
+                    || f.contains("latitude")
+                    || f.contains("inspiron")
+                    || f.contains("zenbook")
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Determines the best human-readable system name matching Linux/macOS heuristics.
@@ -590,5 +664,61 @@ mod tests {
         assert_eq!(proc.external_clock_mhz, 100);
         assert_eq!(proc.core_count, 16);
         assert_eq!(proc.thread_count, 24);
+    }
+
+    #[test]
+    fn test_smbios_type_3_chassis_and_is_laptop() {
+        let mut table = Vec::new();
+        // Type 3: Enclosure/Chassis info: type=3, len=9, handle=1
+        // Formatted: mfg=1, type=0x0A (Notebook), ver=2
+        table.extend_from_slice(&[3, 9, 1, 0, 1, 0x0A, 2, 0, 0]);
+        table.extend_from_slice(b"Apple Inc.\0");
+        table.extend_from_slice(b"MacBookPro\0");
+        table.push(0);
+
+        // Type 127
+        table.extend_from_slice(&[127, 4, 2, 0, 0, 0]);
+
+        let smbios = SmbiosData::parse(&table);
+        assert!(smbios.chassis.is_some());
+        let chassis = smbios.chassis.as_ref().unwrap();
+        assert_eq!(chassis.chassis_type, 0x0A);
+        assert_eq!(chassis.manufacturer.as_deref(), Some("Apple Inc."));
+        assert!(smbios.is_laptop());
+    }
+
+    #[test]
+    fn test_smbios_unpopulated_socket() {
+        let mut table = Vec::new();
+        // Type 4: Socket 0 (Populated, Enabled)
+        let mut type4_cpu0 = vec![0u8; 0x20];
+        type4_cpu0[0] = 4;
+        type4_cpu0[1] = 0x20;
+        type4_cpu0[4] = 1; // "CPU0"
+        type4_cpu0[5] = 3;
+        type4_cpu0[0x18] = 0x41; // Populated (bit 6 = 1), CPU Enabled (status = 1)
+        table.extend_from_slice(&type4_cpu0);
+        table.extend_from_slice(b"CPU0\0");
+        table.push(0);
+
+        // Type 4: Socket 1 (Unpopulated)
+        let mut type4_cpu1 = vec![0u8; 0x20];
+        type4_cpu1[0] = 4;
+        type4_cpu1[1] = 0x20;
+        type4_cpu1[4] = 1; // "CPU1"
+        type4_cpu1[5] = 3;
+        type4_cpu1[0x18] = 0x00; // Unpopulated (bit 6 = 0), CPU Status = 0
+        table.extend_from_slice(&type4_cpu1);
+        table.extend_from_slice(b"CPU1\0");
+        table.push(0);
+
+        // Type 127
+        table.extend_from_slice(&[127, 4, 3, 0, 0, 0]);
+
+        let smbios = SmbiosData::parse(&table);
+        assert_eq!(smbios.processors.len(), 2);
+        assert!(smbios.processors[0].is_populated);
+        assert!(smbios.processors[0].is_enabled);
+        assert!(!smbios.processors[1].is_populated);
     }
 }

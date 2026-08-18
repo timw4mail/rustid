@@ -1151,6 +1151,92 @@ mod vortex86dx3 {
     }
 }
 
+mod via_edenx2 {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/edenx2.txt");
+        test();
+    }
+
+    #[test]
+    fn test_edenx2_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_CENTAUR);
+        });
+    }
+
+    #[test]
+    fn test_edenx2_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::detect().display_model_string();
+            assert_eq!(brand, "VIA Nano X2 U4200");
+        });
+    }
+
+    #[test]
+    fn test_edenx2_signature() {
+        with_mock_cpu(|| {
+            let (xfamily, family, xmodel, model, stepping) = get_signature();
+            assert_eq!(xfamily, 0);
+            assert_eq!(family, 6);
+            assert_eq!(xmodel, 0);
+            assert_eq!(model, 15);
+            assert_eq!(stepping, 13);
+        });
+    }
+
+    #[test]
+    fn test_edenx2_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 2);
+            assert_eq!(cpu.topology.threads.count, 2);
+        });
+    }
+
+    #[test]
+    fn test_edenx2_features() {
+        with_mock_cpu(|| {
+            assert!(has_mmx());
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
+            assert!(has_ssse3());
+            assert!(has_sse41());
+            assert!(has_amd64());
+            assert!(has_cx16());
+            assert!(has_popcnt());
+        });
+    }
+
+    #[test]
+    fn test_edenx2_padlock_features() {
+        with_mock_cpu(|| {
+            use rustid::x86::vendor::centaur;
+            assert!(centaur::has_rng(), "Eden X2 has RNG");
+            assert!(centaur::has_ace(), "Eden X2 has ACE");
+            assert!(centaur::has_phe(), "Eden X2 has PHE");
+            assert!(centaur::has_pmm(), "Eden X2 has PMM");
+        });
+    }
+
+    #[test]
+    fn test_edenx2_cache_detection() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(
+                cache.l1.size(),
+                131072,
+                "L1 should be 128KB (64KB D + 64KB I)"
+            );
+        });
+    }
+}
+
 #[test]
 fn test_cpuid_struct_default() {
     let cpuid = Cpuid::default();

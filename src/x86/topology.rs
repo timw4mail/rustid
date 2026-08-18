@@ -270,10 +270,17 @@ impl Topology {
         let cores = get_core_count();
 
         if domains.is_empty() {
+            let total_cores = cores
+                .count
+                .max(crate::x86::cpuid_cores_per_package() * sockets.count);
+            let total_threads = threads
+                .count
+                .max(crate::x86::cpuid_threads_per_package() * sockets.count);
+
             return (
                 sockets,
-                TopologyTier::new(cores.count * sockets.count, cores.source),
-                TopologyTier::new(threads.count * sockets.count, threads.source),
+                TopologyTier::new(total_cores, cores.source),
+                TopologyTier::new(total_threads, threads.source),
             );
         }
 

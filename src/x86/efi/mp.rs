@@ -13,12 +13,12 @@ pub const EFI_MP_SERVICES_PROTOCOL_GUID: EfiGuid = EfiGuid {
     d: [0xad, 0x29, 0x12, 0xf4, 0x53, 0x1b, 0x3d, 0x08],
 };
 
-/// Framework / Legacy EFI 1.10 MP Services Protocol GUID: `{3fdda604-8630-43c3-9802-be90f0aa52fb}`
+/// Framework / Legacy EFI 1.10 MP Services Protocol GUID: `{f33261e7-23cb-11d5-bd5c-0080c73c8881}`
 pub const FRAMEWORK_EFI_MP_SERVICES_PROTOCOL_GUID: EfiGuid = EfiGuid {
-    a: 0x3fdda604,
-    b: 0x8630,
-    c: 0x43c3,
-    d: [0x98, 0x02, 0xbe, 0x90, 0xf0, 0xaa, 0x52, 0xfb],
+    a: 0xf33261e7,
+    b: 0x23cb,
+    c: 0x11d5,
+    d: [0xbd, 0x5c, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81],
 };
 
 pub const PROCESSOR_AS_BSP_BIT: u32 = 0x00000001;
@@ -45,11 +45,15 @@ pub struct EfiProcessorInformation {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct FrameworkProcessorContext {
-    pub processor_id: u64,
-    pub status_flag: u8,
-    pub reserved: [u8; 3],
-    pub location: EfiCpuPhysicalLocation,
-    pub health_flags: u32,
+    pub apic_id: u32,
+    pub enabled: bool,
+    pub designation: bool,
+    pub health: u32,
+    pub package_number: u32,
+    pub number_of_cores: u32,
+    pub number_of_threads: u32,
+    pub pal_flags: u64,
+    pub test_mask: u32,
 }
 
 pub type EfiApProcedure = unsafe extern "efiapi" fn(*mut c_void);
@@ -88,8 +92,11 @@ pub struct EfiMpServicesProtocol {
 
 #[repr(C)]
 pub struct FrameworkMpServicesProtocol {
-    pub get_number_of_processors: unsafe extern "efiapi" fn(
+    pub get_general_mp_info: unsafe extern "efiapi" fn(
         *mut FrameworkMpServicesProtocol,
+        *mut usize,
+        *mut usize,
+        *mut usize,
         *mut usize,
         *mut usize,
     ) -> EfiStatus,
@@ -118,6 +125,7 @@ pub struct FrameworkMpServicesProtocol {
         *mut bool,
     ) -> EfiStatus,
     pub switch_bsp: *const c_void,
+    pub send_ipi: *const c_void,
     pub enable_disable_ap: *const c_void,
     pub who_am_i:
         unsafe extern "efiapi" fn(*mut FrameworkMpServicesProtocol, *mut usize) -> EfiStatus,
@@ -194,7 +202,17 @@ impl EfiMpServices {
                     ((*proto).get_number_of_processors)(proto, &mut total, &mut enabled)
                 }
                 EfiMpKind::Framework(proto) => {
-                    ((*proto).get_number_of_processors)(proto, &mut total, &mut enabled)
+                    let mut max_cpus = 0usize;
+                    let mut r_int = 0usize;
+                    let mut r_len = 0usize;
+                    ((*proto).get_general_mp_info)(
+                        proto,
+                        &mut total,
+                        &mut max_cpus,
+                        &mut enabled,
+                        &mut r_int,
+                        &mut r_len,
+                    )
                 }
             }
         };
@@ -238,11 +256,15 @@ impl EfiMpServices {
                 if status == EFI_SUCCESS {
                     Some(EfiProcessorInfo {
                         index,
-                        processor_id: ctx.processor_id,
-                        is_bsp: ctx.status_flag != 0,
-                        is_enabled: true,
-                        is_healthy: (ctx.health_flags & 0x04) != 0 || ctx.health_flags != 0,
-                        location: ctx.location,
+                        processor_id: ctx.apic_id as u64,
+                        is_bsp: ctx.designation,
+                        is_enabled: ctx.enabled,
+                        is_healthy: (ctx.health & 0x04) != 0 || ctx.health != 0,
+                        location: EfiCpuPhysicalLocation {
+                            package: ctx.package_number,
+                            core: ctx.number_of_cores,
+                            thread: ctx.number_of_threads,
+                        },
                     })
                 } else {
                     None
@@ -278,10 +300,17 @@ impl EfiMpServices {
             }
         }
 
-        if found_any {
+        let detected = if found_any {
             (max_package as usize) + 1
         } else {
             1
+        };
+
+        let threads_per_pkg = crate::x86::cpuid_threads_per_package() as usize;
+        if threads_per_pkg > 0 && count <= threads_per_pkg {
+            1
+        } else {
+            detected
         }
     }
 
