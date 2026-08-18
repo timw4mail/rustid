@@ -191,16 +191,35 @@ pub fn init_gfx() {
         return;
     }
 
-    let console_handle = unsafe { (*st).console_out_handle };
-
-    // Locate ConsoleControl for use in UGA/fallback paths.
-    // Do NOT switch to graphics mode here — that silences ConOut.
-    // GOP and Apple FB paths have a direct linear framebuffer and don't need ConsoleControl.
-    // The UGA path will switch to text mode so ConOut->output_string is visible.
     let cc_ptr = unsafe { locate_protocol_compat(&EFI_CONSOLE_CONTROL_PROTOCOL_GUID) }
         as *mut EfiConsoleControlProtocol;
 
+    // On virtualized hypervisors (QEMU, KVM, VMware, Hyper-V, VirtualBox, etc.),
+    // switch ConsoleControl to text mode and return without initializing GOP/graphics.
+    // This allows text output (ConOut) to be captured cleanly without overlapping graphics.
+    if crate::x86::is_hypervisor_guest() {
+        if !cc_ptr.is_null() {
+            unsafe {
+                let _ = ((*cc_ptr).set_mode)(
+                    cc_ptr,
+                    EfiConsoleControlScreenMode::EfiConsoleControlScreenText,
+                );
+            }
+        }
+        if !st.is_null() {
+            let con_out = unsafe { (*st).con_out };
+            if !con_out.is_null() {
+                unsafe {
+                    let _ = ((*con_out).set_mode)(con_out, 0);
+                    let _ = ((*con_out).clear_screen)(con_out);
+                }
+            }
+        }
+        return;
+    }
+
     // 1. Try GOP (UEFI 2.0+ / 64-bit EFI)
+    let console_handle = unsafe { (*st).console_out_handle };
     let mut gop_ptr = if !console_handle.is_null() {
         unsafe {
             get_protocol_on_handle::<EfiGraphicsOutputProtocol>(
@@ -526,9 +545,7 @@ pub fn _print_str(s: &str) {
     let mut chars = s.chars().peekable();
 
     // Suppress ConOut only when we have a direct linear framebuffer (GOP / Apple FB).
-    // In UGA mode (Apple 32-bit EFI), ConOut->output_string IS the visible output path —
-    // Apple's UGA console splitter routes ConOut text to the display surface.
-    // Individual UGA Blt calls for glyphs silently fail on Apple EFI 1.10.
+    // In UGA mode (Apple 32-bit EFI) or text mode, ConOut->output_string IS the output path.
     let suppress_conout = unsafe { GFX_STATE.is_valid && !GFX_STATE.fb.is_null() };
 
     let flush = |buf: &mut [u16; 256], idx: &mut usize| {
