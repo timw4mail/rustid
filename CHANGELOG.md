@@ -1,6 +1,21 @@
 # Changelog
 
-## [1.9.0]
+## [1.9.5] — EFI system detection, cache fallbacks, and improved topology
+
+### Added
+- SMBIOS 2.x/3.x table parser for EFI, enabling system name and CPU speed detection on UEFI firmware (`src/x86/efi/smbios.rs`)
+- OS-level cache detection with share-count fallback merging for ARM, PPC, RISC-V, and x86 (`src/common/cache.rs`)
+- Additional Mac model mappings and raw model identifier display in system output
+- Via EdenX2 CPUID dump for testing
+
+### Changed
+- Topology display now consistently shows sockets, cores, and threads across EFI and non-EFI builds
+- EFI QEMU runner forces text mode so output is visible in `run-efi-32` and `run-efi-64`
+- Improved x86 cache count detection with additional fallback paths
+- Improved robustness of CPU topology counts on EFI via MP Services and SMBIOS data
+- Additional integration tests verifying cache and topology detection
+
+## [1.9.0] — EFI/UEFI support, compact display, and VIA features
 
 ### Added
 - EFI/UEFI application support for 32-bit and 64-bit x86 firmware (`just build-efi`, `just run-efi-64`, `just run-efi-32`)
@@ -18,7 +33,7 @@
 - Cleaned up legacy CPU socket count detection code
 - Updated README platform support tables with EFI column
 
-## [1.8.0]
+## [1.8.0] — DOS32A protected-mode support and cross-architecture cleanup
 
 ### Added
 - DOS32A DOS Extender support for 32-bit protected-mode DOS binaries (`rustid.exe` built with DOS32A) - this allows showing more information, adding program arguments, and removes the 64K size limitation of the original real-mode dos binaries
@@ -36,7 +51,7 @@
 - Patched DOS32A binary to suppress startup banner and warnings
 - An issue where Intel/Zhaoxin CPUs with multiple cores may show the core count as socket count, and multiply the core count by the spurious socket count
 
-## [1.7.0]
+## [1.7.0] — RISC-V support and improved system name detection
 
 ### Added
  - Initial Risc V (64bit) support
@@ -52,7 +67,7 @@
  - System name no longer returns empty strings
  - System name lookup skips placeholder strings instead of misreporting them
 
-## [1.6.0]
+## [1.6.0] — ARM Mac model detection and cross-platform Mac model lookup
 
 ### Added
 - System/device model detection from Linux devicetree `compatible` string
@@ -75,7 +90,7 @@
 - System formatting and string filtering for Mac model detection
 - PowerPC system display (correct property reference, code errors, missing borrow)
 
-## [1.5.0]
+## [1.5.0] — ARM core types, BSD support, and feature trait unification
 
 ### Added
 - SoC/device model name shown in ARM output when available from `/proc/cpuinfo`
@@ -115,7 +130,7 @@
 - Corrected PPC G4 codename labels for 7447, 7455, 7457 variants
 - Eliminated double blank line in ARM output when a core type has no cache information
 
-## [1.4.0]
+## [1.4.0] — Hybrid x86 core type details
 
 ### Added
 - Support for showing core type details for hybrid x86 cpus
@@ -129,7 +144,7 @@
 ### Fixed
 - Corrected ARM cpu mapping for Cortex-A76 (found in Raspberry Pi 5)
 
-## [1.3.0]
+## [1.3.0] — Hypervisor detection and cache improvements
 
 ### Added
 - Hypervisor vendor string in debug output
@@ -143,7 +158,7 @@
 - Fix crash for Cyrix cpus in dos due to excessive memory allocations
 - Fix other memory allocation crash for dos
 
-## [1.2.0]
+## [1.2.0] — Verbose mode and x86 display refactoring
 
 ### Added
 - Verbose flag added to cli options
@@ -165,7 +180,7 @@
 - Read hypervisor vendor string in the correct byte order
 - Improved core and thread count detection for AMD cpus
 
-## [1.1.0]
+## [1.1.0] — Hypervisor info, categorized features, and Makefile
 
 ### Added
 - Makefile for users who prefer it over Just or in environments that don't support just
@@ -185,7 +200,7 @@
 - Improved output for cpu dumps when displaying dumps on x86_64 for x86 cpus
 - Allow color output on Windows
 
-## [1.0.0]
+## [1.0.0] — Zen5 support, color output, and reorganized test data
 
 ### Added
 - Zen5 CPU support
@@ -218,7 +233,7 @@
 - Removed wildly inaccurate speed measurement for some Cyrix CPUs
 - Tweaked display of cleaned-up model strings
 
-## [0.11.4]
+## [0.11.4] — Brand ID lookup, multi-core ARM, and CPUID dump rendering
 
 ### Added
 - OS and CPU Architecture in version string
@@ -248,7 +263,7 @@
 - Show L3 cache count for multiple sockets
 - Fix string truncation bug in DOS, increase fixed string sizes for multi-byte characters
 
-## [0.10.1]
+## [0.10.1] — AMD 5x86 synthetic model and improved Cyrix detection
 
 ### Added
 - Synthetic model name for AMD 5x86
@@ -266,7 +281,7 @@
 ### Fixed
 - Don't show enable cpuid message for 5x86 chips that don't support it
 
-## [0.9.5]
+## [0.9.5] — Apple Silicon codenames, AES/SHA flags, and cache associativity
 
 ### Added
 - Intel N100 CPU mapping
@@ -303,7 +318,7 @@
 - Removed Windows code for getting MP tables (packages won't run on old CPUs)
 - Removed arm-only dependency from x86/x86_64 Windows builds
 
-## [0.8.6]
+## [0.8.6] — Apple Silicon detection and Transmeta support
 
 ### Added
 - Apple Silicon detection with core codenames and cache info
@@ -320,7 +335,7 @@
 - Refactored vendor-specific micro-arch mapping into vendor sub-modules
 - Simplified Linux multi-socket detection via /proc/cpuinfo
 
-## [0.7.6]
+## [0.7.6] — Socket count detection and example output
 
 ### Added
 - Examples folder with output from real systems
@@ -333,7 +348,7 @@
 - Refactored mp module to split implementations by OS
 - Re-wrapped __cpuid function in unsafe block for compatibility with older Rust versions
 
-## [0.7.0]
+## [0.7.0] — Core/thread count display and cache multiplier
 
 ### Added
 - Core/thread count display for DOS
@@ -343,7 +358,7 @@
 ### Fixed
 - Intel core/thread count detection
 
-## [0.6.2]
+## [0.6.2] — Cache associativity and AMD core detection
 
 ### Added
 - Cyrix-specific matching for fallback cache lookup
@@ -354,7 +369,7 @@
 ### Fixed
 - Logic for determining if Intel cache fallback works
 
-## [0.5.1]
+## [0.5.1] — Architecture line and cache information display
 
 ### Added
 - Architecture line to output (i386/i686/x86_64_v1/etc)
@@ -365,7 +380,7 @@
 - Reformatted Cyrix-specific block
 
 
-## [0.4.0]
+## [0.4.0] — ARM, PowerPC, and clock speed support
 
 ### Added
 - Experimental ARM CPU support
@@ -381,7 +396,7 @@
 - Removed ufmt dependency
 - Improved formatting of output
 
-## [0.3.9]
+## [0.3.9] — Initial release
 
 ### Added
 - Initial release
