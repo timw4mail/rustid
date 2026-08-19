@@ -2,6 +2,7 @@ use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
 use super::*;
 
+use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
 use alloc::format;
@@ -437,11 +438,35 @@ impl TCpuDisplay for Cpu {
                 )
             };
 
-            disp.display_cache(
-                self.topology.cache,
-                &cache_count,
-                self.topology.sockets.count,
-            );
+            if is_asymmetric_dual_ccd_x3d(&self.display_model_string(), self.topology.dies.count)
+                && let Some(cache) = self.topology.cache
+                && let Some(l3) = cache.l3
+            {
+                let x3d_mb = l3.size / (1024 * 1024);
+                const NON_X3D_MB: u32 = 32;
+
+                let override_str = if l3.assoc > 0 {
+                    format!(
+                        "{}MB {}-way (X3D) + {}MB {}-way",
+                        x3d_mb, l3.assoc, NON_X3D_MB, l3.assoc
+                    )
+                } else {
+                    format!("{}MB (X3D) + {}MB", x3d_mb, NON_X3D_MB)
+                };
+
+                disp.display_cache_ext(
+                    self.topology.cache,
+                    &cache_count,
+                    self.topology.sockets.count,
+                    Some(&override_str),
+                );
+            } else {
+                disp.display_cache(
+                    self.topology.cache,
+                    &cache_count,
+                    self.topology.sockets.count,
+                );
+            }
         }
 
         // Clock Speed (Base/Boost)

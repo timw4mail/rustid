@@ -463,9 +463,39 @@ impl Cache {
     }
 }
 
+/// Returns true if the processor is a dual-CCD AMD Ryzen X3D CPU with asymmetric L3 cache layout.
+#[must_use]
+pub fn is_asymmetric_dual_ccd_x3d(model: &str, dies: u32) -> bool {
+    let model_upper = model.to_uppercase();
+    dies == 2
+        && model_upper.contains("X3D")
+        && !model_upper.contains("X3D2")
+        && !model_upper.contains("X3D-2")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_asymmetric_dual_ccd_x3d() {
+        assert!(is_asymmetric_dual_ccd_x3d(
+            "AMD Ryzen 9 7950X3D 16-Core Processor",
+            2
+        ));
+        assert!(is_asymmetric_dual_ccd_x3d(
+            "AMD Ryzen 9 7900X3D 12-Core Processor",
+            2
+        ));
+        assert!(!is_asymmetric_dual_ccd_x3d(
+            "AMD Ryzen 7 7800X3D 8-Core Processor",
+            1
+        ));
+        assert!(!is_asymmetric_dual_ccd_x3d(
+            "AMD Ryzen 9 7950X 16-Core Processor",
+            2
+        ));
+    }
 
     #[test]
     fn test_cache_level() {

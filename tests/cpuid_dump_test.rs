@@ -490,6 +490,14 @@ cpuid_testsuite!(
             let cpu = Cpu::detect();
             assert_cache_counts(&cpu, (16, "16x "), (16, "16x "), Some((16, "16x ")), Some((2, "2x ")));
         }
+
+        test asymmetric_x3d {
+            let cpu = Cpu::detect();
+            assert!(rustid::x86::cache::is_asymmetric_dual_ccd_x3d(
+                &cpu.display_model_string(),
+                cpu.topology.dies.count
+            ));
+        }
     }
 );
 

@@ -106,6 +106,16 @@ impl CpuDisplay {
         cache_count: &dyn Fn(u32) -> String,
         l3_socket_count: u32,
     ) {
+        self.display_cache_ext(cache, cache_count, l3_socket_count, None);
+    }
+
+    pub fn display_cache_ext(
+        &self,
+        cache: Option<Cache>,
+        cache_count: &dyn Fn(u32) -> String,
+        l3_socket_count: u32,
+        l3_override: Option<&str>,
+    ) {
         if let Some(cache) = cache {
             match cache.l1 {
                 Level1Cache::Unified(l1) => {
@@ -170,24 +180,28 @@ impl CpuDisplay {
             }
 
             if let Some(l3) = cache.l3 {
-                let (num, unit) = Self::cache_size(l3.size);
-                let count: String = if l3_socket_count > 1 {
-                    format!("{}x ", l3_socket_count)
+                if let Some(override_str) = l3_override {
+                    println!("{} {}", self.sublabel("L3"), override_str);
                 } else {
-                    cache_count(l3.share_count)
-                };
+                    let (num, unit) = Self::cache_size(l3.size);
+                    let count: String = if l3_socket_count > 1 {
+                        format!("{}x ", l3_socket_count)
+                    } else {
+                        cache_count(l3.share_count)
+                    };
 
-                if l3.assoc > 0 {
-                    println!(
-                        "{} {}{} {}, {}-way",
-                        self.sublabel("L3"),
-                        count,
-                        num,
-                        unit,
-                        l3.assoc
-                    );
-                } else {
-                    println!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
+                    if l3.assoc > 0 {
+                        println!(
+                            "{} {}{} {}, {}-way",
+                            self.sublabel("L3"),
+                            count,
+                            num,
+                            unit,
+                            l3.assoc
+                        );
+                    } else {
+                        println!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
+                    }
                 }
             }
 
