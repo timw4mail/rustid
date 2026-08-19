@@ -133,7 +133,10 @@ pub fn detect() -> OsCpuInfo {
     // Count cores from cpuinfo entries
     let core_count = cpuinfo.len() as u32;
     let core_type = CoreType::Performance;
-    let cache = Cache::detect();
+    let mut cache = Cache::detect();
+    if let Some(c) = &mut cache {
+        c.resolve_share_counts(core_count, core_count, 1);
+    }
     let cores = if core_count > 0 {
         let mut map = BTreeMap::new();
         map.insert(

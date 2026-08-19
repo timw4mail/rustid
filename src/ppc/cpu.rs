@@ -144,7 +144,10 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
-        let cache = Self::detect_cache();
+        let mut cache = Self::detect_cache();
+        if let Some(c) = &mut cache {
+            c.resolve_share_counts(1, 1, 1);
+        }
         let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
 
         Self {

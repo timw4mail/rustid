@@ -739,6 +739,12 @@ impl Cpu {
             }
         }
 
+        for c in &mut cores {
+            if let Some(ref mut cache) = c.cache {
+                cache.resolve_share_counts(c.count, c.threads, 1);
+            }
+        }
+
         cores
     }
 }

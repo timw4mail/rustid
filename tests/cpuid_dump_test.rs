@@ -1107,7 +1107,7 @@ mod zhaoxin_kx5640 {
     fn test_zhaoxin_cache_counts() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_cache_counts(&cpu, (1, ""), (1, ""), Some((1, "")), None);
+            assert_cache_counts(&cpu, (4, "4x "), (4, "4x "), Some((1, "")), None);
         });
     }
 
@@ -1544,7 +1544,7 @@ mod via_edenx2 {
     fn test_edenx2_cache_counts() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_cache_counts(&cpu, (1, ""), (1, ""), None, None);
+            assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), None, None);
         });
     }
 }

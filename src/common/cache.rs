@@ -164,6 +164,169 @@ pub struct Cache {
     pub source: DataSource,
 }
 
+impl Cache {
+    /// Detects cache using platform/OS specific information sources.
+    #[must_use]
+    pub fn detect_os() -> Option<Cache> {
+        #[cfg(x86_cpu)]
+        {
+            if crate::x86::provider::info_source()
+                == crate::x86::provider::CpuidInfoSource::DumpFile
+            {
+                return None;
+            }
+        }
+        #[cfg(any(target_os = "android", target_os = "linux"))]
+        {
+            Cache::from_sys_fs()
+        }
+        #[cfg(not(any(target_os = "android", target_os = "linux")))]
+        {
+            None
+        }
+    }
+
+    /// Returns true if any active cache level is missing share_count information (share_count == 0).
+    #[must_use]
+    pub fn needs_share_count_fallback(&self) -> bool {
+        match self.l1 {
+            Level1Cache::Unified(l1) => {
+                if l1.size > 0 && l1.share_count == 0 {
+                    return true;
+                }
+            }
+            Level1Cache::Split { data, instruction } => {
+                if (data.size > 0 && data.share_count == 0)
+                    || (instruction.size > 0 && instruction.share_count == 0)
+                {
+                    return true;
+                }
+            }
+        }
+        if let Some(l2) = self.l2
+            && l2.size > 0
+            && l2.share_count == 0
+        {
+            return true;
+        }
+        if let Some(l3) = self.l3
+            && l3.size > 0
+            && l3.share_count == 0
+        {
+            return true;
+        }
+        false
+    }
+
+    /// Merges missing share counts from another Cache (e.g. from platform/OS sources).
+    pub fn merge_share_counts(&mut self, other: &Cache) {
+        match (&mut self.l1, &other.l1) {
+            (Level1Cache::Unified(l1), Level1Cache::Unified(ol1)) => {
+                if l1.share_count == 0 && ol1.share_count > 0 {
+                    l1.share_count = ol1.share_count;
+                }
+            }
+            (
+                Level1Cache::Split { data, instruction },
+                Level1Cache::Split {
+                    data: odata,
+                    instruction: oinstruction,
+                },
+            ) => {
+                if data.share_count == 0 && odata.share_count > 0 {
+                    data.share_count = odata.share_count;
+                }
+                if instruction.share_count == 0 && oinstruction.share_count > 0 {
+                    instruction.share_count = oinstruction.share_count;
+                }
+            }
+            _ => {}
+        }
+        if let Some(l2) = &mut self.l2
+            && l2.share_count == 0
+            && let Some(ol2) = &other.l2
+            && ol2.share_count > 0
+        {
+            l2.share_count = ol2.share_count;
+        }
+        if let Some(l3) = &mut self.l3
+            && l3.share_count == 0
+            && let Some(ol3) = &other.l3
+            && ol3.share_count > 0
+        {
+            l3.share_count = ol3.share_count;
+        }
+    }
+
+    /// Resolves missing share counts (`share_count == 0`) using platform-specific information
+    /// sources first, and then applying final fallback rules.
+    pub fn resolve_share_counts(&mut self, core_count: u32, thread_count: u32, socket_count: u32) {
+        // 1. Try platform-specific information sources if share counts are missing
+        if self.needs_share_count_fallback()
+            && let Some(platform_cache) = Self::detect_os()
+        {
+            self.merge_share_counts(&platform_cache);
+        }
+
+        // 2. Final fallback logic for any remaining missing share counts
+        self.resolve_share_counts_final_fallback(core_count, thread_count, socket_count);
+    }
+
+    /// Applies the final fallback rules for any remaining missing share counts:
+    /// - L1i & L1d = core-count (per-core)
+    /// - If L3, L2 = core-count (per-core)
+    /// - Otherwise (L3 or L2 without L3) = shared per socket
+    pub fn resolve_share_counts_final_fallback(
+        &mut self,
+        core_count: u32,
+        thread_count: u32,
+        socket_count: u32,
+    ) {
+        let core_count = core_count.max(1);
+        let thread_count = thread_count.max(core_count);
+        let socket_count = socket_count.max(1);
+
+        let smt_width = (thread_count / core_count).max(1);
+        let threads_per_socket = (thread_count / socket_count).max(1);
+        let has_l3 = self.l3.as_ref().is_some_and(|l| l.size > 0);
+
+        match &mut self.l1 {
+            Level1Cache::Unified(l1) => {
+                if l1.size > 0 && l1.share_count == 0 {
+                    l1.share_count = smt_width;
+                }
+            }
+            Level1Cache::Split { data, instruction } => {
+                if data.size > 0 && data.share_count == 0 {
+                    data.share_count = smt_width;
+                }
+                if instruction.size > 0 && instruction.share_count == 0 {
+                    instruction.share_count = smt_width;
+                }
+            }
+        }
+
+        if let Some(l2) = &mut self.l2
+            && l2.size > 0
+            && l2.share_count == 0
+        {
+            if has_l3 {
+                // "If L3, L2 = core-count" (per-core)
+                l2.share_count = smt_width;
+            } else {
+                l2.share_count = threads_per_socket;
+            }
+        }
+
+        if let Some(l3) = &mut self.l3
+            && l3.size > 0
+            && l3.share_count == 0
+        {
+            l3.share_count = threads_per_socket;
+        }
+    }
+}
+
 #[cfg(not(x86_cpu))]
 impl Cache {
     #[cfg(not(any(target_os = "android", target_os = "linux")))]
@@ -276,5 +439,80 @@ mod tests {
         assert_eq!(format!("{:?}", CacheType::Data), "Data");
         assert_eq!(format!("{:?}", CacheType::Instruction), "Instruction");
         assert_eq!(format!("{:?}", CacheType::Invalid), "Invalid");
+    }
+
+    #[test]
+    fn test_resolve_share_counts_no_l3() {
+        let mut c = Cache {
+            l1: Level1Cache::Split {
+                data: CacheLevel::no_count(32768, CacheType::Data, 8),
+                instruction: CacheLevel::no_count(32768, CacheType::Instruction, 8),
+            },
+            l2: Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8)),
+            l3: None,
+            source: DataSource::DefaultValue,
+        };
+
+        // 4 cores, 4 threads, 1 socket (SMT = 1)
+        c.resolve_share_counts_final_fallback(4, 4, 1);
+
+        if let Level1Cache::Split { data, instruction } = c.l1 {
+            assert_eq!(data.share_count, 1); // L1d = core-count (1 thread per core)
+            assert_eq!(instruction.share_count, 1); // L1i = core-count (1 thread per core)
+        } else {
+            panic!("Expected split cache");
+        }
+        assert_eq!(c.l2.expect("L2 expected").share_count, 4); // L2 = per-socket (4 threads per socket)
+    }
+
+    #[test]
+    fn test_resolve_share_counts_with_l3() {
+        let mut c = Cache {
+            l1: Level1Cache::Split {
+                data: CacheLevel::no_count(32768, CacheType::Data, 8),
+                instruction: CacheLevel::no_count(32768, CacheType::Instruction, 8),
+            },
+            l2: Some(CacheLevel::no_count(512 * 1024, CacheType::Unified, 8)),
+            l3: Some(CacheLevel::no_count(
+                8 * 1024 * 1024,
+                CacheType::Unified,
+                16,
+            )),
+            source: DataSource::DefaultValue,
+        };
+
+        // 4 cores, 8 threads, 1 socket (SMT = 2)
+        c.resolve_share_counts_final_fallback(4, 8, 1);
+
+        if let Level1Cache::Split { data, instruction } = c.l1 {
+            assert_eq!(data.share_count, 2); // L1d = 2 threads per core
+            assert_eq!(instruction.share_count, 2); // L1i = 2 threads per core
+        } else {
+            panic!("Expected split cache");
+        }
+        assert_eq!(c.l2.expect("L2 expected").share_count, 2); // L2 = per-core (2 threads per core, because L3 exists)
+        assert_eq!(c.l3.expect("L3 expected").share_count, 8); // L3 = per-socket (8 threads per socket)
+    }
+
+    #[test]
+    fn test_resolve_share_counts_already_set() {
+        let mut c = Cache {
+            l1: Level1Cache::Split {
+                data: CacheLevel::new(32768, CacheType::Data, 8, 2),
+                instruction: CacheLevel::new(32768, CacheType::Instruction, 8, 2),
+            },
+            l2: Some(CacheLevel::new(512 * 1024, CacheType::Unified, 8, 2)),
+            l3: Some(CacheLevel::new(8 * 1024 * 1024, CacheType::Unified, 16, 8)),
+            source: DataSource::DefaultValue,
+        };
+
+        c.resolve_share_counts_final_fallback(4, 8, 1);
+
+        if let Level1Cache::Split { data, instruction } = c.l1 {
+            assert_eq!(data.share_count, 2);
+            assert_eq!(instruction.share_count, 2);
+        }
+        assert_eq!(c.l2.expect("L2 expected").share_count, 2);
+        assert_eq!(c.l3.expect("L3 expected").share_count, 8);
     }
 }

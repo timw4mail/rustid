@@ -222,9 +222,13 @@ impl Topology {
     #[must_use]
     pub fn detect() -> Self {
         let speed = Speed::detect();
-        let cache = Cache::detect();
+        let mut cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
         let (sockets, cores, threads) = Self::count_domains(&domains);
+
+        if let Some(c) = &mut cache {
+            c.resolve_share_counts(cores.count, threads.count, sockets.count);
+        }
 
         let mut threads_per_socket = 0u32;
         let mut threads_per_die = 0u32;

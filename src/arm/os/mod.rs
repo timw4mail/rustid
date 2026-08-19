@@ -70,6 +70,12 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
             });
     }
 
+    for core in cores.values_mut() {
+        if let Some(c) = &mut core.cache {
+            c.resolve_share_counts(core.count, core.count, 1);
+        }
+    }
+
     cores
 }
 

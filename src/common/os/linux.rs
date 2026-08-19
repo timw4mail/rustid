@@ -7,7 +7,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-#[cfg(not(x86_cpu))]
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
 #[cfg(arm_cpu)]
@@ -333,8 +332,8 @@ impl TDetect for TopologyCount {
     }
 }
 
-#[cfg(not(x86_cpu))]
 impl Cache {
+    #[cfg(not(x86_cpu))]
     pub fn detect() -> Option<Cache> {
         if let Some(cache) = Self::from_sys_fs() {
             return Some(cache);
@@ -347,7 +346,7 @@ impl Cache {
         None
     }
 
-    fn from_sys_fs() -> Option<Cache> {
+    pub(crate) fn from_sys_fs() -> Option<Cache> {
         Self::read_cpu_cache(0)
     }
 
@@ -360,8 +359,10 @@ impl Cache {
             return None;
         }
 
-        let mut cache = Cache::default();
-        cache.source = DataSource::LinuxSysFs;
+        let mut cache = Cache {
+            source: DataSource::LinuxSysFs,
+            ..Default::default()
+        };
         let mut found_cache = false;
 
         let dir = fs::read_dir(&root).ok()?;
@@ -521,6 +522,7 @@ impl Cache {
         }
     }
 
+    #[cfg(not(x86_cpu))]
     fn from_lscpu_command() -> Option<Cache> {
         let output = match std::process::Command::new("lscpu").arg("-C").output() {
             Ok(o) => o.stdout,
@@ -532,8 +534,10 @@ impl Cache {
             Err(_) => return None,
         };
 
-        let mut cache = Cache::default();
-        cache.source = DataSource::Lscpu;
+        let mut cache = Cache {
+            source: DataSource::Lscpu,
+            ..Default::default()
+        };
         let mut found_cache = false;
 
         let lines: Vec<&str> = output_str.lines().collect();
