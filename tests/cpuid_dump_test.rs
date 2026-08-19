@@ -41,8 +41,9 @@ fn set_file_cpuid_provider(path: &str) {
 }
 
 // ----------------------------------------------------------------------------
-// ! Test Helpers
+// ! Test Helpers & Macros
 // ----------------------------------------------------------------------------
+
 fn get_signature() -> (u32, u32, u32, u32, u32) {
     let sig = CpuSignature::detect();
 
@@ -66,6 +67,39 @@ fn count_topology_domains(leaf: u32) -> usize {
         count += 1;
     }
     count
+}
+
+fn assert_vendor(expected: &str) {
+    let vendor = vendor_str();
+    assert_eq!(&*vendor, expected);
+}
+
+fn assert_brand_contains(substring: &str) {
+    let brand = Cpu::detect().display_model_string();
+    assert!(
+        brand.contains(substring),
+        "Expected brand string to contain '{substring}', got '{brand}'"
+    );
+}
+
+fn assert_brand_eq(expected: &str) {
+    let brand = Cpu::detect().display_model_string();
+    assert_eq!(brand, expected);
+}
+
+fn assert_topology(sockets: u32, cores: u32, threads: u32) {
+    let cpu = Cpu::detect();
+    assert_eq!(cpu.topology.sockets.count, sockets, "Sockets mismatch");
+    assert_eq!(cpu.topology.cores.count, cores, "Cores mismatch");
+    assert_eq!(cpu.topology.threads.count, threads, "Threads mismatch");
+}
+
+fn assert_topology_full(sockets: u32, dies: u32, cores: u32, threads: u32) {
+    let cpu = Cpu::detect();
+    assert_eq!(cpu.topology.sockets.count, sockets, "Sockets mismatch");
+    assert_eq!(cpu.topology.dies.count, dies, "Dies mismatch");
+    assert_eq!(cpu.topology.cores.count, cores, "Cores mismatch");
+    assert_eq!(cpu.topology.threads.count, threads, "Threads mismatch");
 }
 
 fn assert_cache_counts(
@@ -156,287 +190,194 @@ fn assert_cache_counts(
     }
 }
 
-mod tm5700 {
-    use super::*;
+macro_rules! cpuid_testsuite {
+    (
+        $mod_name:ident,
+        $dump_file:expr,
+        {
+            $(
+                $(#[$meta:meta])*
+                test $name:ident {
+                    $($body:tt)*
+                }
+            )*
+        }
+    ) => {
+        mod $mod_name {
+            use super::*;
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/tm5700.txt");
-        test();
-    }
+            fn with_mock_cpu(test: impl FnOnce()) {
+                set_file_cpuid_provider($dump_file);
+                test();
+            }
 
-    #[test]
-    fn test_vendor_detection() {
-        with_mock_cpu(|| assert_eq!(vendor_str(), VENDOR_TRANSMETA))
-    }
+            $(
+                $(#[$meta])*
+                #[test]
+                fn $name() {
+                    with_mock_cpu(|| {
+                        $($body)*
+                    });
+                }
+            )*
+        }
+    };
+}
 
-    #[test]
-    fn test_max_leaf() {
-        with_mock_cpu(|| {
-            assert_eq!(max_leaf(), LEAF_1);
-            assert_eq!(max_extended_leaf(), EXT_LEAF_6);
-            assert_eq!(max_vendor_leaf(), TRANSMETA_LEAF_7);
-        })
-    }
+// ----------------------------------------------------------------------------
+// ! CPUID Dump Test Suites
+// ----------------------------------------------------------------------------
 
-    #[test]
-    fn test_signature() {
-        with_mock_cpu(|| {
+cpuid_testsuite!(
+    tm5700,
+    "dump/tm5700.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_TRANSMETA);
+        }
+
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), LEAF_1);
+            assert_eq!(super::max_extended_leaf(), EXT_LEAF_6);
+            assert_eq!(super::max_vendor_leaf(), TRANSMETA_LEAF_7);
+        }
+
+        test signature {
             assert_eq!(get_signature(), (0, 5, 0, 4, 3));
-        });
-    }
+        }
 
-    #[test]
-    fn test_model_str() {
-        with_mock_cpu(|| {
+        test model_str {
             let model_string = Cpu::raw_model_string();
             assert_eq!(model_string, "Transmeta(tm) Crusoe(tm) Processor TM5700");
-        })
-    }
+        }
 
-    #[test]
-    fn test_version_str() {
-        with_mock_cpu(|| {
+        test version_str {
             let transmeta = rustid::x86::vendor::Transmeta::detect();
             assert_eq!(
                 transmeta.version_str,
                 "20040614 15:00 official release 4.5.2#1"
             );
-        })
-    }
+        }
 
-    #[test]
-    fn test_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.sockets.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-            assert_eq!(cache.l1.size(), 131072, "TM5700 L1 should be 128KB");
-            assert_eq!(
-                cache.l2.expect("L2").size(),
-                262144,
-                "TM5700 L2 should be 256KB"
-            );
-        });
+            assert_eq!(cache.l1.size(), 131_072, "TM5700 L1 should be 128KB");
+            assert_eq!(cache.l2.expect("L2").size(), 262_144, "TM5700 L2 should be 256KB");
+        }
     }
-}
+);
 
-mod ppro {
-    use super::*;
-
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/p6x2.txt");
-        test();
-    }
-
-    #[test]
-    fn test_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_INTEL);
+cpuid_testsuite!(
+    ppro,
+    "dump/p6x2.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
             assert!(is_intel());
-        });
-    }
+        }
 
-    #[test]
-    fn test_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 1, 9));
-        });
-    }
+        }
 
-    #[test]
-    fn test_model_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert_eq!(brand, "Intel Pentium Pro");
-        });
-    }
+        test model_string {
+            assert_brand_eq("Intel Pentium Pro");
+        }
 
-    #[test]
-    fn test_raw_model_string() {
-        with_mock_cpu(|| {
+        test raw_model_string {
             assert_eq!(Cpu::raw_model_string(), UNK);
-        })
-    }
+        }
 
-    #[test]
-    fn test_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-            assert_eq!(cache.l1.size(), 16384, "Pentium Pro L1 should be 16KB");
-            assert_eq!(
-                cache.l2.expect("L2").size(),
-                1048576,
-                "Pentium Pro L2 should be 1MB"
-            );
-        });
+            assert_eq!(cache.l1.size(), 16_384, "Pentium Pro L1 should be 16KB");
+            assert_eq!(cache.l2.expect("L2").size(), 1_048_576, "Pentium Pro L2 should be 1MB");
+        }
     }
-}
+);
 
-mod m3_8100y {
-    use super::*;
+cpuid_testsuite!(
+    m3_8100y,
+    "dump/m3-8100y.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
+            assert!(is_intel());
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/m3-8100y.txt");
-        test();
-    }
+        test brand_string {
+            assert_brand_contains("m3-8100Y");
+        }
 
-    #[test]
-    fn test_intel_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_INTEL);
-        });
-    }
-
-    #[test]
-    fn test_intel_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("Intel"));
-            assert!(brand.contains("m3-8100Y"));
-        });
-    }
-
-    #[test]
-    fn test_intel_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 8, 14, 9));
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_max_leaf() {
-        with_mock_cpu(|| {
-            let res = max_leaf();
-            assert_eq!(res, 0x16);
-        });
-    }
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x16);
+            assert_eq!(super::max_extended_leaf(), 0x80000008);
+        }
 
-    #[test]
-    fn test_intel_max_extended_leaf() {
-        with_mock_cpu(|| {
-            let res = max_extended_leaf();
-            assert_eq!(res, 0x80000008);
-        });
-    }
+        test topology {
+            assert_topology(1, 2, 4);
+        }
 
-    #[test]
-    fn test_intel_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 2);
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
-
-    #[test]
-    fn test_intel_feature_class() {
-        with_mock_cpu(|| {
+        test feature_class {
             let fc = FeatureClass::detect();
             assert_eq!(fc, FeatureClass::x86_64_v3);
             assert_eq!(fc.to_str(), "x86_64-v3");
-        })
-    }
+        }
 
-    #[test]
-    fn test_intel_topology_leaf_1f() {
-        with_mock_cpu(|| {
+        test topology_leaf_1f {
             let domains = count_topology_domains(0x1F);
             let domains_b = count_topology_domains(0xB);
-            assert!(
-                domains >= 2 || domains_b >= 2,
-                "Expected at least 2 topology domains"
-            );
-        });
-    }
+            assert!(domains >= 2 || domains_b >= 2, "Expected at least 2 topology domains");
+        }
 
-    #[test]
-    fn test_intel_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
-            assert_eq!(cache.l1.size(), 65536, "L1 should be 64KB total");
-            assert!(
-                cache.l1.is_split(),
-                "L1 cache should be split (separate I/D)"
-            );
-
+            assert_eq!(cache.l1.size(), 65_536, "L1 should be 64KB total");
+            assert!(cache.l1.is_split(), "L1 cache should be split (separate I/D)");
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
-                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.size(), 262_144, "L2 should be 256KB");
                 assert_eq!(l2.assoc(), 4, "L2 should be 4-way");
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_cache_assoc() {
-        with_mock_cpu(|| {
+        test cache_assoc {
             use rustid::common::cache::Level1Cache;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
             match cache.l1 {
                 Level1Cache::Split { data, instruction } => {
-                    assert_eq!(data.size(), 32768, "L1 data cache should be 32KB");
+                    assert_eq!(data.size(), 32_768, "L1 data cache should be 32KB");
                     assert_eq!(data.assoc(), 8, "L1 data cache should be 8-way");
-                    assert_eq!(
-                        instruction.size(),
-                        32768,
-                        "L1 instruction cache should be 32KB"
-                    );
-                    assert_eq!(
-                        instruction.assoc(),
-                        8,
-                        "L1 instruction cache should be 8-way"
-                    );
+                    assert_eq!(instruction.size(), 32_768, "L1 instruction cache should be 32KB");
+                    assert_eq!(instruction.assoc(), 8, "L1 instruction cache should be 8-way");
                 }
                 _ => panic!("There's not unified cache here"),
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_cache_counts() {
-        with_mock_cpu(|| {
+        test cache_counts {
             let cpu = Cpu::detect();
-            assert_cache_counts(
-                &cpu,
-                (2, "2x "),
-                (2, "2x "),
-                Some((2, "2x ")),
-                Some((1, "")),
-            );
-        });
-    }
+            assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), Some((2, "2x ")), Some((1, "")));
+        }
 
-    #[test]
-    fn test_intel_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_ht());
             assert!(has_fpu());
             assert!(has_tsc());
@@ -456,319 +397,172 @@ mod m3_8100y {
             assert!(has_rdrand());
             assert!(has_bmi1());
             assert!(has_bmi2());
-        });
+        }
     }
-}
+);
 
-mod e5_2407 {
-    use super::*;
+cpuid_testsuite!(
+    e5_2407,
+    "dump/e5-2407.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/e5-2407.txt");
-        test();
-    }
+        test brand_string {
+            assert_brand_contains("E5-2407");
+        }
 
-    #[test]
-    fn test_intel_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_INTEL);
-        });
-    }
-
-    #[test]
-    fn test_intel_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("Intel"));
-            assert!(brand.contains("E5-2407"));
-        });
-    }
-
-    #[test]
-    fn test_intel_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 2, 13, 7));
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_max_leaf() {
-        with_mock_cpu(|| {
-            let res = max_leaf();
-            assert_eq!(res, 0xd);
-        });
-    }
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0xd);
+        }
 
-    #[test]
-    fn test_intel_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 4);
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
+        test topology {
+            assert_topology(1, 4, 4);
+        }
 
-    #[test]
-    fn test_intel_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
-            assert_eq!(
-                cache.l1.size(),
-                65536,
-                "L1 should be 64KB total (32KB D + 32KB I)"
-            );
+            assert_eq!(cache.l1.size(), 65_536, "L1 should be 64KB total (32KB D + 32KB I)");
             assert!(cache.l1.is_split(), "L1 cache should be split");
-
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
-                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.size(), 262_144, "L2 should be 256KB");
                 assert_eq!(l2.assoc(), 8, "L2 should be 8-way");
             }
-
             if let Some(l3) = cache.l3 {
                 assert_eq!(l3.kind(), CacheType::Unified);
-                assert_eq!(l3.size(), 10485760, "L3 should be 10MB");
+                assert_eq!(l3.size(), 10_485_760, "L3 should be 10MB");
                 assert_eq!(l3.assoc(), 20, "L3 should be 20-way");
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_cache_assoc() {
-        with_mock_cpu(|| {
+        test cache_assoc {
             use rustid::common::cache::Level1Cache;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
             match cache.l1 {
                 Level1Cache::Split { data, instruction } => {
-                    assert_eq!(data.size(), 32768, "L1 data cache should be 32KB");
+                    assert_eq!(data.size(), 32_768, "L1 data cache should be 32KB");
                     assert_eq!(data.assoc(), 8, "L1 data cache should be 8-way");
-                    assert_eq!(
-                        instruction.size(),
-                        32768,
-                        "L1 instruction cache should be 32KB"
-                    );
-                    assert_eq!(
-                        instruction.assoc(),
-                        8,
-                        "L1 instruction cache should be 8-way"
-                    );
+                    assert_eq!(instruction.size(), 32_768, "L1 instruction cache should be 32KB");
+                    assert_eq!(instruction.assoc(), 8, "L1 instruction cache should be 8-way");
                 }
                 _ => panic!("Expected split cache"),
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_intel_cache_counts() {
-        with_mock_cpu(|| {
+        test cache_counts {
             let cpu = Cpu::detect();
-            assert_cache_counts(
-                &cpu,
-                (4, "4x "),
-                (4, "4x "),
-                Some((4, "4x ")),
-                Some((1, "")),
-            );
-        });
+            assert_cache_counts(&cpu, (4, "4x "), (4, "4x "), Some((4, "4x ")), Some((1, "")));
+        }
     }
-}
+);
 
-mod amd_7950x3d {
-    use super::*;
-
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/7950x3d.txt");
-        test();
-    }
-
-    #[test]
-    fn test_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_AMD);
+cpuid_testsuite!(
+    amd_7950x3d,
+    "dump/7950x3d.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
             assert!(is_amd());
-        });
-    }
+        }
 
-    #[test]
-    fn test_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (10, 15, 6, 1, 2));
-        });
-    }
+        }
 
-    #[test]
-    fn test_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert_eq!(brand, "AMD Ryzen 9 7950X3D 16-Core Processor");
-        });
-    }
+        test brand_string {
+            assert_brand_eq("AMD Ryzen 9 7950X3D 16-Core Processor");
+        }
 
-    #[test]
-    fn test_topology() {
-        with_mock_cpu(|| {
+        test topology {
+            assert_topology_full(1, 2, 16, 32);
+        }
+
+        test cache_counts {
             let cpu = Cpu::detect();
-
-            assert_eq!(cpu.topology.dies.count, 2);
-            assert_eq!(cpu.topology.threads.count, 32);
-            assert_eq!(cpu.topology.cores.count, 16);
-            assert_eq!(cpu.topology.sockets.count, 1);
-        });
+            assert_cache_counts(&cpu, (16, "16x "), (16, "16x "), Some((16, "16x ")), Some((2, "2x ")));
+        }
     }
+);
 
-    #[test]
-    fn test_cache_counts() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_cache_counts(
-                &cpu,
-                (16, "16x "),
-                (16, "16x "),
-                Some((16, "16x ")),
-                Some((2, "2x ")),
-            );
-        });
-    }
-}
+cpuid_testsuite!(
+    amd_5900xt,
+    "dump/5900XT.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
+        }
 
-mod amd_5900xt {
-    use super::*;
+        test brand_string {
+            assert_brand_contains("5900");
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/5900XT.txt");
-        test();
-    }
-
-    #[test]
-    fn test_amd_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_AMD);
-        });
-    }
-
-    #[test]
-    fn test_amd_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("AMD"));
-            assert!(brand.contains("5900"));
-        });
-    }
-
-    #[test]
-    fn test_amd_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (10, 15, 2, 1, 2));
-        });
-    }
+        }
 
-    #[test]
-    fn test_amd_max_leaf() {
-        with_mock_cpu(|| {
-            assert_eq!(max_leaf(), 0x10);
-        });
-    }
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x10);
+            assert_eq!(super::max_extended_leaf(), 0x80000023);
+        }
 
-    #[test]
-    fn test_amd_max_extended_leaf() {
-        with_mock_cpu(|| {
-            assert_eq!(max_extended_leaf(), 0x80000023);
-        });
-    }
+        test topology {
+            assert_topology_full(1, 1, 16, 32);
+        }
 
-    #[test]
-    fn test_amd_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.dies.count, 1);
-            assert_eq!(cpu.topology.cores.count, 16);
-            assert_eq!(cpu.topology.threads.count, 32);
-        });
-    }
-
-    #[test]
-    fn test_amd_topology_leaf_b() {
-        with_mock_cpu(|| {
+        test topology_leaf_b {
             let domains = count_topology_domains(0xB);
             assert!(domains >= 2);
-        });
-    }
+        }
 
-    #[test]
-    fn test_amd_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
-            assert_eq!(
-                cache.l1.size(),
-                65536,
-                "L1 cache should be 64KB total (32KB data + 32KB instruction)"
-            );
-
+            assert_eq!(cache.l1.size(), 65_536, "L1 cache should be 64KB total (32KB data + 32KB instruction)");
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
                 assert_eq!(l2.share_count(), 2);
-                assert_eq!(l2.size(), 524288, "L2 should be 512KB");
+                assert_eq!(l2.size(), 524_288, "L2 should be 512KB");
                 assert_eq!(l2.assoc(), 8, "L2 should be 8-way");
             }
-
             if let Some(l3) = cache.l3 {
                 assert_eq!(l3.kind(), CacheType::Unified);
                 assert_eq!(l3.share_count(), 16);
-                assert_eq!(l3.size(), 33554432, "L3 should be 32MB");
+                assert_eq!(l3.size(), 33_554_432, "L3 should be 32MB");
                 assert_eq!(l3.assoc(), 16, "L3 should be 16-way");
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_amd_cache_assoc() {
-        with_mock_cpu(|| {
+        test cache_assoc {
             use rustid::common::cache::Level1Cache;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
             match cache.l1 {
                 Level1Cache::Split { data, instruction } => {
-                    assert_eq!(data.size(), 32768, "L1 data should be 32KB");
+                    assert_eq!(data.size(), 32_768, "L1 data should be 32KB");
                     assert_eq!(data.assoc(), 8, "L1 data should be 8-way");
-                    assert_eq!(instruction.size(), 32768, "L1 instruction should be 32KB");
+                    assert_eq!(instruction.size(), 32_768, "L1 instruction should be 32KB");
                     assert_eq!(instruction.assoc(), 8, "L1 instruction should be 8-way");
                 }
                 _ => panic!("There's not unified cache here"),
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_amd_cache_counts() {
-        with_mock_cpu(|| {
+        test cache_counts {
             let cpu = Cpu::detect();
-            assert_cache_counts(
-                &cpu,
-                (16, "16x "),
-                (16, "16x "),
-                Some((16, "16x ")),
-                Some((2, "2x ")),
-            );
-        });
-    }
+            assert_cache_counts(&cpu, (16, "16x "), (16, "16x "), Some((16, "16x ")), Some((2, "2x ")));
+        }
 
-    #[test]
-    fn test_amd_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_ht());
             assert!(has_mmx());
             assert!(has_sse());
@@ -788,179 +582,102 @@ mod amd_5900xt {
             assert!(has_x2apic());
             assert!(!has_3dnow());
             assert!(!has_3dnow_plus());
-        });
+        }
     }
-}
+);
 
-mod amd_2700u {
-    use super::*;
+cpuid_testsuite!(
+    amd_2700u,
+    "dump/2700U.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/2700U.txt");
-        test();
-    }
+        test brand_string {
+            assert_brand_contains("2700U");
+        }
 
-    #[test]
-    fn test_amd_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_AMD);
-        });
-    }
-
-    #[test]
-    fn test_amd_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("2700U"));
-        });
-    }
-
-    #[test]
-    fn test_amd_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (8, 15, 1, 1, 0));
-        });
-    }
+        }
 
-    #[test]
-    fn test_amd_topology() {
-        with_mock_cpu(|| {
+        test topology {
+            assert_topology_full(1, 1, 4, 8);
+        }
+
+        test cache_counts {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 8);
-            assert_eq!(cpu.topology.cores.count, 4);
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.dies.count, 1);
-        });
+            assert_cache_counts(&cpu, (4, "4x "), (4, "4x "), Some((4, "4x ")), Some((1, "")));
+        }
     }
+);
 
-    #[test]
-    fn test_amd_cache_counts() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_cache_counts(
-                &cpu,
-                (4, "4x "),
-                (4, "4x "),
-                Some((4, "4x ")),
-                Some((1, "")),
-            );
-        });
-    }
-}
+cpuid_testsuite!(
+    zhaoxin_kx5640,
+    "dump/kx5640.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_CENTAUR);
+        }
 
-mod zhaoxin_kx5640 {
-    use super::*;
+        test brand_string {
+            assert_brand_contains("KX-5640");
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/kx5640.txt");
-        test();
-    }
-
-    #[test]
-    fn test_zhaoxin_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_CENTAUR);
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("KX-5640") || brand.contains("ZHAOXIN"));
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 7, 1, 11, 0));
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_max_leaf() {
-        with_mock_cpu(|| {
-            let res = x86_cpuid_count(0, 0);
-            assert_eq!(res.eax, 0xD);
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_max_extended_leaf() {
-        with_mock_cpu(|| {
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0xD);
             let res = x86_cpuid_count(0x80000000, 0);
             assert_eq!(res.eax, 0x80000008);
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 4);
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
+        test topology {
+            assert_topology(1, 4, 4);
+        }
 
-    #[test]
-    fn test_zhaoxin_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::{Level1Cache, cache::CacheType};
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
 
             assert!(cache.l1.size() > 0, "L1 cache should exist");
-
             match cache.l1 {
                 Level1Cache::Split { data, instruction } => {
-                    assert_eq!(data.size(), 32768, "L1 data should be 32KB");
+                    assert_eq!(data.size(), 32_768, "L1 data should be 32KB");
                     assert_eq!(data.assoc(), 8, "L1 data should have associativity");
-                    assert_eq!(instruction.size(), 32768);
+                    assert_eq!(instruction.size(), 32_768);
                     assert_eq!(instruction.assoc(), 8);
                 }
                 _ => panic!("There's not unified cache here"),
             }
-
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
-                assert_eq!(l2.size(), 4194304);
+                assert_eq!(l2.size(), 4_194_304);
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_cache_counts() {
-        with_mock_cpu(|| {
+        test cache_counts {
             let cpu = Cpu::detect();
             assert_cache_counts(&cpu, (4, "4x "), (4, "4x "), Some((1, "")), None);
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_ht());
             assert!(has_sse());
             assert!(has_sse2());
             assert!(has_avx());
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_centaur_extended() {
-        with_mock_cpu(|| {
+        test centaur_extended {
             let res = x86_cpuid_count(0xC0000000, 0);
             assert_eq!(res.eax, 0xC0000004);
-        });
-    }
+        }
 
-    #[test]
-    fn test_zhaoxin_padlock_features() {
-        with_mock_cpu(|| {
+        test padlock_features {
             use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "KX-5640 has RNG");
             assert!(centaur::rng_enabled(), "KX-5640 rng enabled");
@@ -978,102 +695,59 @@ mod zhaoxin_kx5640 {
             assert!(centaur::pmm_enabled(), "KX-5640 has PMM enabled");
             assert!(centaur::has_rsa(), "KX-5640 has RSA");
             assert!(centaur::rsa_enabled(), "KX-5640 has RSA enabled");
-        });
+        }
     }
-}
+);
 
-mod via_c7d {
-    use super::*;
+cpuid_testsuite!(
+    via_c7d,
+    "dump/c7d.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_CENTAUR);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/c7d.txt");
-        test();
-    }
+        test brand_string {
+            assert_brand_contains("C7");
+        }
 
-    #[test]
-    fn test_via_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_CENTAUR);
-        });
-    }
-
-    #[test]
-    fn test_via_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("C7") || !brand.is_empty());
-        });
-    }
-
-    #[test]
-    fn test_via_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 10, 9));
-        });
-    }
+        }
 
-    #[test]
-    fn test_via_max_leaf() {
-        with_mock_cpu(|| {
-            assert_eq!(max_leaf(), 0x1);
-        });
-    }
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x1);
+            assert_eq!(super::max_extended_leaf(), 0x80000006);
+        }
 
-    #[test]
-    fn test_via_max_extended_leaf() {
-        with_mock_cpu(|| {
-            assert_eq!(max_extended_leaf(), 0x80000006);
-        });
-    }
-
-    #[test]
-    fn test_via_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(!has_ht());
             assert!(has_sse());
             assert!(has_sse2());
             assert!(has_sse3());
-        });
-    }
+        }
 
-    #[test]
-    fn test_via_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::cache::CacheType;
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
             assert!(cache.l1.size() > 0, "L1 cache should exist");
-
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
                 assert!(l2.size() > 0);
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_via_centaur_extended() {
-        with_mock_cpu(|| {
+        test centaur_extended {
             let res = x86_cpuid_count(0xC000_0000, 0);
             assert_eq!(res.eax, 0xC000_0002);
-        });
-    }
+        }
 
-    #[test]
-    fn test_via_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_via_padlock_features() {
-        with_mock_cpu(|| {
+        test padlock_features {
             use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "C7-D has RNG");
             assert!(centaur::rng_enabled(), "C7-D has RNG enabled");
@@ -1085,46 +759,27 @@ mod via_c7d {
             assert!(centaur::has_phe(), "C7-D has PHE");
             assert!(!centaur::has_phe2(), "C7-D does not have PHE2");
             assert!(centaur::has_pmm(), "C7-D has PMM");
-        });
+        }
     }
-}
+);
 
-mod olpc {
-    use super::*;
+cpuid_testsuite!(
+    olpc,
+    "dump/olpc.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_CENTAUR);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/olpc.txt");
-        test();
-    }
-
-    #[test]
-    fn test_olpc_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_CENTAUR);
-        });
-    }
-
-    #[test]
-    fn test_olpc_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 13, 0));
-        });
-    }
+        }
 
-    #[test]
-    fn test_olpc_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_olpc_padlock_features() {
-        with_mock_cpu(|| {
+        test padlock_features {
             use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "C7-M has RNG");
             assert!(centaur::rng_enabled(), "C7-M has RNG enabled");
@@ -1136,46 +791,27 @@ mod olpc {
             assert!(centaur::has_phe(), "C7-M has PHE");
             assert!(!centaur::has_phe2(), "C7-M does not have PHE2");
             assert!(centaur::has_pmm(), "C7-M has PMM");
-        });
+        }
     }
-}
+);
 
-mod idt_w2b {
-    use super::*;
+cpuid_testsuite!(
+    idt_w2b,
+    "dump/W2B-DUMP.TXT",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_CENTAUR);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/W2B-DUMP.TXT");
-        test();
-    }
-
-    #[test]
-    fn test_w2b_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_CENTAUR);
-        });
-    }
-
-    #[test]
-    fn test_w2b_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 5, 0, 8, 10));
-        });
-    }
+        }
 
-    #[test]
-    fn test_w2b_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_w2b_padlock_features() {
-        with_mock_cpu(|| {
+        test padlock_features {
             use rustid::x86::vendor::centaur;
             assert!(!centaur::has_rng(), "Winchip 2B has no RNG");
             assert!(!centaur::has_rng2(), "Winchip 2B has no RNG2");
@@ -1184,156 +820,89 @@ mod idt_w2b {
             assert!(!centaur::has_phe(), "Winchip 2B has no PHE");
             assert!(!centaur::has_phe2(), "Winchip 2B has no PHE2");
             assert!(!centaur::has_pmm(), "Winchip 2B has no PMM");
-        });
+        }
     }
-}
+);
 
-mod vortex86dx3 {
-    use rustid::x86::{has_ht, has_mmx, max_extended_leaf};
+#[cfg(target_arch = "x86")]
+cpuid_testsuite!(
+    vortex86dx3,
+    "dump/vortex86dx3.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_DMP);
+        }
 
-    use super::*;
+        test brand_string {
+            assert_brand_contains("Vortex86");
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/vortex86dx3.txt");
-        test();
-    }
-
-    #[test]
-    fn test_vortex86_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_DMP);
-        });
-    }
-
-    #[test]
-    fn test_vortex86_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("Vortex86"));
-        });
-    }
-
-    #[test]
-    fn test_vortex86_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 1, 1));
-        });
-    }
+        }
 
-    #[test]
-    fn test_vortex86_max_leaf() {
-        with_mock_cpu(|| {
-            let res = max_leaf();
-            assert_eq!(res, 0x3);
-        });
-    }
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x3);
+            assert_eq!(super::max_extended_leaf(), 0x80000004);
+        }
 
-    #[test]
-    fn test_vortex86_max_extended_leaf() {
-        with_mock_cpu(|| {
-            let res = max_extended_leaf();
-            assert_eq!(res, 0x80000004);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_vortex86_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
-
-    #[test]
-    fn test_vortex86_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             use rustid::common::{Level1Cache, cache::CacheType};
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-
-            assert_eq!(
-                cache.l1.size(),
-                32768,
-                "L1 should be 32KB (16KB data + 16KB instruction)"
-            );
+            assert_eq!(cache.l1.size(), 32_768, "L1 should be 32KB (16KB data + 16KB instruction)");
             assert!(cache.l1.is_split(), "L1 should be split");
-
             match cache.l1 {
                 Level1Cache::Unified(_) => panic!("Expected split L1 cache"),
                 Level1Cache::Split { data, instruction } => {
-                    assert_eq!(data.size(), 16384, "L1 data should be 16KB");
+                    assert_eq!(data.size(), 16_384, "L1 data should be 16KB");
                     assert_eq!(data.assoc(), 4, "L1 data should be 4-way");
-                    assert_eq!(instruction.size(), 16384, "L1 instruction should be 16KB");
+                    assert_eq!(instruction.size(), 16_384, "L1 instruction should be 16KB");
                     assert_eq!(instruction.assoc(), 4, "L1 instruction should be 4-way");
                 }
             }
-
             if let Some(l2) = cache.l2 {
                 assert_eq!(l2.kind(), CacheType::Unified);
-                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.size(), 262_144, "L2 should be 256KB");
                 assert_eq!(l2.assoc(), 4, "L2 should be 4-way");
             }
-        });
-    }
+        }
 
-    #[test]
-    fn test_vortex86_features() {
-        with_mock_cpu(|| {
+        test features {
+            use rustid::x86::{has_ht, has_mmx};
             assert!(!has_ht());
             assert!(has_mmx());
             let fc = FeatureClass::detect();
             assert!(matches!(fc, FeatureClass::i686_SSE));
-        });
+        }
     }
-}
+);
 
-mod via_edenx2 {
-    use super::*;
+cpuid_testsuite!(
+    via_edenx2,
+    "dump/edenx2.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_CENTAUR);
+        }
 
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/edenx2.txt");
-        test();
-    }
+        test brand_string {
+            assert_brand_eq("VIA Nano X2 U4200");
+        }
 
-    #[test]
-    fn test_edenx2_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_CENTAUR);
-        });
-    }
-
-    #[test]
-    fn test_edenx2_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert_eq!(brand, "VIA Nano X2 U4200");
-        });
-    }
-
-    #[test]
-    fn test_edenx2_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 15, 13));
-        });
-    }
+        }
 
-    #[test]
-    fn test_edenx2_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 2);
-            assert_eq!(cpu.topology.threads.count, 2);
-        });
-    }
+        test topology {
+            assert_topology(1, 2, 2);
+        }
 
-    #[test]
-    fn test_edenx2_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_mmx());
             assert!(has_sse());
             assert!(has_sse2());
@@ -1343,101 +912,58 @@ mod via_edenx2 {
             assert!(has_amd64());
             assert!(has_cx16());
             assert!(has_popcnt());
-        });
-    }
+        }
 
-    #[test]
-    fn test_edenx2_padlock_features() {
-        with_mock_cpu(|| {
+        test padlock_features {
             use rustid::x86::vendor::centaur;
             assert!(centaur::has_rng(), "Eden X2 has RNG");
             assert!(centaur::has_ace(), "Eden X2 has ACE");
             assert!(centaur::has_phe(), "Eden X2 has PHE");
             assert!(centaur::has_pmm(), "Eden X2 has PMM");
-        });
-    }
+        }
 
-    #[test]
-    fn test_edenx2_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-            assert_eq!(
-                cache.l1.size(),
-                131072,
-                "L1 should be 128KB (64KB D + 64KB I)"
-            );
-        });
-    }
+            assert_eq!(cache.l1.size(), 131_072, "L1 should be 128KB (64KB D + 64KB I)");
+        }
 
-    #[test]
-    fn test_edenx2_cache_counts() {
-        with_mock_cpu(|| {
+        test cache_counts {
             let cpu = Cpu::detect();
             assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), None, None);
-        });
+        }
     }
-}
+);
 
-mod intel_12700h {
-    use super::*;
-
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/12700H.txt");
-        test();
-    }
-
-    #[test]
-    fn test_12700h_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_INTEL);
+cpuid_testsuite!(
+    intel_12700h,
+    "dump/12700H.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
             assert!(is_intel());
-        });
-    }
+        }
 
-    #[test]
-    fn test_12700h_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 9, 10, 3));
-        });
-    }
+        }
 
-    #[test]
-    fn test_12700h_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("12700H"));
-        });
-    }
+        test brand_string {
+            assert_brand_contains("12700H");
+        }
 
-    #[test]
-    fn test_12700h_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 10);
-            assert_eq!(cpu.topology.threads.count, 20);
-        });
-    }
+        test topology {
+            assert_topology(1, 10, 20);
+        }
 
-    #[test]
-    fn test_12700h_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
             assert!(cache.l3.is_some());
-            assert_eq!(
-                cache.l3.expect("L3 cache").size(),
-                25165824,
-                "L3 should be 24MB"
-            );
-        });
-    }
+            assert_eq!(cache.l3.expect("L3 cache").size(), 25_165_824, "L3 should be 24MB");
+        }
 
-    #[test]
-    fn test_12700h_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_mmx());
             assert!(has_sse());
             assert!(has_sse2());
@@ -1449,75 +975,49 @@ mod intel_12700h {
             assert!(has_avx2());
             assert!(has_fma());
             assert!(has_aes());
-        });
+        }
     }
-}
+);
 
-mod intel_eeepc {
-    use super::*;
-
-    fn with_mock_cpu(test: impl FnOnce()) {
-        set_file_cpuid_provider("dump/eeepc.txt");
-        test();
-    }
-
-    #[test]
-    fn test_eeepc_vendor_detection() {
-        with_mock_cpu(|| {
-            let vendor = vendor_str();
-            assert_eq!(&*vendor, VENDOR_INTEL);
+cpuid_testsuite!(
+    intel_eeepc,
+    "dump/eeepc.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
             assert!(is_intel());
-        });
-    }
+        }
 
-    #[test]
-    fn test_eeepc_signature() {
-        with_mock_cpu(|| {
+        test signature {
             assert_eq!(get_signature(), (0, 6, 0, 13, 8));
-        });
-    }
+        }
 
-    #[test]
-    fn test_eeepc_brand_string() {
-        with_mock_cpu(|| {
-            let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("Celeron"));
-        });
-    }
+        test brand_string {
+            assert_brand_contains("Celeron");
+        }
 
-    #[test]
-    fn test_eeepc_topology() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.sockets.count, 1);
-            assert_eq!(cpu.topology.cores.count, 1);
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
+        test topology {
+            assert_topology(1, 1, 1);
+        }
 
-    #[test]
-    fn test_eeepc_cache_detection() {
-        with_mock_cpu(|| {
+        test cache_detection {
             let cpu = Cpu::detect();
             let cache = cpu.topology.cache.expect("Expected cache to be detected");
-            assert_eq!(
-                cache.l2.expect("L2").size(),
-                262144,
-                "Eee PC L2 should be 256KB"
-            );
-        });
-    }
+            assert_eq!(cache.l2.expect("L2").size(), 262_144, "Eee PC L2 should be 256KB");
+        }
 
-    #[test]
-    fn test_eeepc_features() {
-        with_mock_cpu(|| {
+        test features {
             assert!(has_mmx());
             assert!(has_sse());
             assert!(has_sse2());
             assert!(!has_sse3());
-        });
+        }
     }
-}
+);
+
+// ----------------------------------------------------------------------------
+// ! Miscellaneous Tests
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_cpuid_struct_default() {
