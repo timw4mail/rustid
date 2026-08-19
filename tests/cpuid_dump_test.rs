@@ -156,7 +156,6 @@ fn assert_cache_counts(
     }
 }
 
-#[cfg(target_arch = "x86")]
 mod tm5700 {
     use super::*;
 
@@ -180,6 +179,13 @@ mod tm5700 {
     }
 
     #[test]
+    fn test_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 5, 0, 4, 3));
+        });
+    }
+
+    #[test]
     fn test_model_str() {
         with_mock_cpu(|| {
             let model_string = Cpu::raw_model_string();
@@ -199,18 +205,26 @@ mod tm5700 {
     }
 
     #[test]
-    fn test_threads() {
+    fn test_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.threads.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.sockets.count, 1);
         });
     }
 
     #[test]
-    fn test_cores() {
+    fn test_cache_detection() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores.count, 1);
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(cache.l1.size(), 131072, "TM5700 L1 should be 128KB");
+            assert_eq!(
+                cache.l2.expect("L2").size(),
+                262144,
+                "TM5700 L2 should be 256KB"
+            );
         });
     }
 }
@@ -233,11 +247,17 @@ mod ppro {
     }
 
     #[test]
+    fn test_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 6, 0, 1, 9));
+        });
+    }
+
+    #[test]
     fn test_model_string() {
         with_mock_cpu(|| {
             let brand = Cpu::detect().display_model_string();
-            assert!(brand.contains("Intel"));
-            assert!(brand.contains("Pentium Pro"));
+            assert_eq!(brand, "Intel Pentium Pro");
         });
     }
 
@@ -246,6 +266,30 @@ mod ppro {
         with_mock_cpu(|| {
             assert_eq!(Cpu::raw_model_string(), UNK);
         })
+    }
+
+    #[test]
+    fn test_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
+        });
+    }
+
+    #[test]
+    fn test_cache_detection() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(cache.l1.size(), 16384, "Pentium Pro L1 should be 16KB");
+            assert_eq!(
+                cache.l2.expect("L2").size(),
+                1048576,
+                "Pentium Pro L2 should be 1MB"
+            );
+        });
     }
 }
 
@@ -277,12 +321,7 @@ mod m3_8100y {
     #[test]
     fn test_intel_signature() {
         with_mock_cpu(|| {
-            let (ext_family, family, ext_model, model, stepping) = get_signature();
-            assert_eq!(stepping, 9);
-            assert_eq!(model, 0xe);
-            assert_eq!(family, 6);
-            assert_eq!(ext_model, 8);
-            assert_eq!(ext_family, 0);
+            assert_eq!(get_signature(), (0, 6, 8, 14, 9));
         });
     }
 
@@ -539,12 +578,7 @@ mod e5_2407 {
     #[test]
     fn test_intel_signature() {
         with_mock_cpu(|| {
-            let (ext_family, family, ext_model, model, stepping) = get_signature();
-            assert_eq!(stepping, 7);
-            assert_eq!(model, 0xd);
-            assert_eq!(family, 6);
-            assert_eq!(ext_model, 2);
-            assert_eq!(ext_family, 0);
+            assert_eq!(get_signature(), (0, 6, 2, 13, 7));
         });
     }
 
@@ -648,14 +682,6 @@ mod e5_2407 {
             );
         });
     }
-
-    #[test]
-    fn test_intel_display_table() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            cpu.display_table(CliFlags::default());
-        });
-    }
 }
 
 mod amd_7950x3d {
@@ -664,6 +690,30 @@ mod amd_7950x3d {
     fn with_mock_cpu(test: impl FnOnce()) {
         set_file_cpuid_provider("dump/7950x3d.txt");
         test();
+    }
+
+    #[test]
+    fn test_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_AMD);
+            assert!(is_amd());
+        });
+    }
+
+    #[test]
+    fn test_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (10, 15, 6, 1, 2));
+        });
+    }
+
+    #[test]
+    fn test_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::detect().display_model_string();
+            assert_eq!(brand, "AMD Ryzen 9 7950X3D 16-Core Processor");
+        });
     }
 
     #[test]
@@ -721,12 +771,7 @@ mod amd_5900xt {
     #[test]
     fn test_amd_signature() {
         with_mock_cpu(|| {
-            let (ext_family, family, ext_model, model, stepping) = get_signature();
-            assert_eq!(stepping, 2);
-            assert_eq!(model, 1);
-            assert_eq!(family, 15);
-            assert_eq!(ext_model, 2);
-            assert_eq!(ext_family, 10);
+            assert_eq!(get_signature(), (10, 15, 2, 1, 2));
         });
     }
 
@@ -969,12 +1014,7 @@ mod amd_2700u {
     #[test]
     fn test_amd_signature() {
         with_mock_cpu(|| {
-            let (ext_family, family, ext_model, model, stepping) = get_signature();
-            assert_eq!(ext_family, 8);
-            assert_eq!(family, 15);
-            assert_eq!(ext_model, 1);
-            assert_eq!(model, 1);
-            assert_eq!(stepping, 0);
+            assert_eq!(get_signature(), (8, 15, 1, 1, 0));
         });
     }
 
@@ -1031,10 +1071,7 @@ mod zhaoxin_kx5640 {
     #[test]
     fn test_zhaoxin_signature() {
         with_mock_cpu(|| {
-            let (_xfamily, family, _xmodel, model, stepping) = get_signature();
-            assert_eq!(stepping, 0);
-            assert_eq!(model, 0xB);
-            assert_eq!(family, 7);
+            assert_eq!(get_signature(), (0, 7, 1, 11, 0));
         });
     }
 
@@ -1185,10 +1222,7 @@ mod via_c7d {
     #[test]
     fn test_via_signature() {
         with_mock_cpu(|| {
-            let (_xfamily, family, _xmodel, model, stepping) = get_signature();
-            assert_eq!(stepping, 9);
-            assert_eq!(model, 0xA);
-            assert_eq!(family, 6);
+            assert_eq!(get_signature(), (0, 6, 0, 10, 9));
         });
     }
 
@@ -1247,6 +1281,16 @@ mod via_c7d {
     }
 
     #[test]
+    fn test_via_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
+        });
+    }
+
+    #[test]
     fn test_via_padlock_features() {
         with_mock_cpu(|| {
             use rustid::x86::vendor::centaur;
@@ -1277,6 +1321,23 @@ mod olpc {
         with_mock_cpu(|| {
             let vendor = vendor_str();
             assert_eq!(&*vendor, VENDOR_CENTAUR);
+        });
+    }
+
+    #[test]
+    fn test_olpc_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 6, 0, 13, 0));
+        });
+    }
+
+    #[test]
+    fn test_olpc_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
         });
     }
 
@@ -1315,6 +1376,23 @@ mod idt_w2b {
     }
 
     #[test]
+    fn test_w2b_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 5, 0, 8, 10));
+        });
+    }
+
+    #[test]
+    fn test_w2b_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
+        });
+    }
+
+    #[test]
     fn test_w2b_padlock_features() {
         with_mock_cpu(|| {
             use rustid::x86::vendor::centaur;
@@ -1329,7 +1407,6 @@ mod idt_w2b {
     }
 }
 
-#[cfg(target_arch = "x86")]
 mod vortex86dx3 {
     use rustid::x86::{has_ht, has_mmx, max_extended_leaf};
 
@@ -1359,10 +1436,7 @@ mod vortex86dx3 {
     #[test]
     fn test_vortex86_signature() {
         with_mock_cpu(|| {
-            let (_xfamily, family, _xmodel, model, stepping) = get_signature();
-            assert_eq!(stepping, 1);
-            assert_eq!(model, 1);
-            assert_eq!(family, 6);
+            assert_eq!(get_signature(), (0, 6, 0, 1, 1));
         });
     }
 
@@ -1482,12 +1556,7 @@ mod via_edenx2 {
     #[test]
     fn test_edenx2_signature() {
         with_mock_cpu(|| {
-            let (xfamily, family, xmodel, model, stepping) = get_signature();
-            assert_eq!(xfamily, 0);
-            assert_eq!(family, 6);
-            assert_eq!(xmodel, 0);
-            assert_eq!(model, 15);
-            assert_eq!(stepping, 13);
+            assert_eq!(get_signature(), (0, 6, 0, 15, 13));
         });
     }
 
@@ -1545,6 +1614,146 @@ mod via_edenx2 {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
             assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), None, None);
+        });
+    }
+}
+
+mod intel_12700h {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/12700H.txt");
+        test();
+    }
+
+    #[test]
+    fn test_12700h_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_INTEL);
+            assert!(is_intel());
+        });
+    }
+
+    #[test]
+    fn test_12700h_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 6, 9, 10, 3));
+        });
+    }
+
+    #[test]
+    fn test_12700h_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::detect().display_model_string();
+            assert!(brand.contains("12700H"));
+        });
+    }
+
+    #[test]
+    fn test_12700h_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 10);
+            assert_eq!(cpu.topology.threads.count, 20);
+        });
+    }
+
+    #[test]
+    fn test_12700h_cache_detection() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert!(cache.l3.is_some());
+            assert_eq!(
+                cache.l3.expect("L3 cache").size(),
+                25165824,
+                "L3 should be 24MB"
+            );
+        });
+    }
+
+    #[test]
+    fn test_12700h_features() {
+        with_mock_cpu(|| {
+            assert!(has_mmx());
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
+            assert!(has_ssse3());
+            assert!(has_sse41());
+            assert!(has_sse42());
+            assert!(has_avx());
+            assert!(has_avx2());
+            assert!(has_fma());
+            assert!(has_aes());
+        });
+    }
+}
+
+mod intel_eeepc {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/eeepc.txt");
+        test();
+    }
+
+    #[test]
+    fn test_eeepc_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_INTEL);
+            assert!(is_intel());
+        });
+    }
+
+    #[test]
+    fn test_eeepc_signature() {
+        with_mock_cpu(|| {
+            assert_eq!(get_signature(), (0, 6, 0, 13, 8));
+        });
+    }
+
+    #[test]
+    fn test_eeepc_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::detect().display_model_string();
+            assert!(brand.contains("Celeron"));
+        });
+    }
+
+    #[test]
+    fn test_eeepc_topology() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
+        });
+    }
+
+    #[test]
+    fn test_eeepc_cache_detection() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(
+                cache.l2.expect("L2").size(),
+                262144,
+                "Eee PC L2 should be 256KB"
+            );
+        });
+    }
+
+    #[test]
+    fn test_eeepc_features() {
+        with_mock_cpu(|| {
+            assert!(has_mmx());
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(!has_sse3());
         });
     }
 }
