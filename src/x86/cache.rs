@@ -48,14 +48,12 @@ impl Cache {
                 }
             }
             VENDOR_CENTAUR => {
-                if is_valid_leaf(EXT_LEAF_5) {
+                if is_valid_leaf(LEAF_4) {
+                    Cache::detect_general(LEAF_4)
+                } else if is_valid_leaf(EXT_LEAF_5) {
                     Cache::detect_ext_5_6()
                 } else {
-                    if is_valid_leaf(LEAF_4) {
-                        Cache::detect_general(LEAF_4)
-                    } else {
-                        Cache::detect_fallback()
-                    }
+                    Cache::detect_fallback()
                 }
             }
             VENDOR_TRANSMETA => {

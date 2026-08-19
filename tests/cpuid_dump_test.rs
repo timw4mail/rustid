@@ -930,7 +930,7 @@ cpuid_testsuite!(
 
         test cache_counts {
             let cpu = Cpu::detect();
-            assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), None, None);
+            assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), Some((2, "2x ")), None);
         }
     }
 );
