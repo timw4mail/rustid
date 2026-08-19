@@ -342,25 +342,12 @@ mod m3_8100y {
     }
 
     #[test]
-    fn test_intel_ht_support() {
-        with_mock_cpu(|| {
-            assert!(has_ht());
-        });
-    }
-
-    #[test]
-    fn test_intel_threads() {
+    fn test_intel_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
-
-    #[test]
-    fn test_intel_cores() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
             assert_eq!(cpu.topology.cores.count, 2);
+            assert_eq!(cpu.topology.threads.count, 4);
         });
     }
 
@@ -448,104 +435,27 @@ mod m3_8100y {
     }
 
     #[test]
-    fn test_intel_sse_support() {
+    fn test_intel_features() {
         with_mock_cpu(|| {
+            assert!(has_ht());
+            assert!(has_fpu());
+            assert!(has_tsc());
+            assert!(has_mmx());
             assert!(has_sse());
             assert!(has_sse2());
             assert!(has_sse3());
+            assert!(has_ssse3());
             assert!(has_sse41());
             assert!(has_sse42());
-        });
-    }
-
-    #[test]
-    fn test_intel_avx_support() {
-        with_mock_cpu(|| {
             assert!(has_avx());
-        });
-    }
-
-    #[test]
-    fn test_intel_avx2_support() {
-        with_mock_cpu(|| {
             assert!(has_avx2());
-        });
-    }
-
-    #[test]
-    fn test_intel_aes_support() {
-        with_mock_cpu(|| {
-            assert!(has_aes());
-        });
-    }
-
-    #[test]
-    fn test_intel_fpu_support() {
-        with_mock_cpu(|| {
-            assert!(has_fpu());
-        });
-    }
-
-    #[test]
-    fn test_intel_tsc_support() {
-        with_mock_cpu(|| {
-            assert!(has_tsc());
-        });
-    }
-
-    #[test]
-    fn test_intel_mmx_support() {
-        with_mock_cpu(|| {
-            assert!(has_mmx());
-        });
-    }
-
-    #[test]
-    fn test_intel_ssse3_support() {
-        with_mock_cpu(|| {
-            assert!(has_ssse3());
-        });
-    }
-
-    #[test]
-    fn test_intel_fma_support() {
-        with_mock_cpu(|| {
             assert!(has_fma());
-        });
-    }
-
-    #[test]
-    fn test_intel_cx16_support() {
-        with_mock_cpu(|| {
-            assert!(has_cx16());
-        });
-    }
-
-    #[test]
-    fn test_intel_rdrand_support() {
-        with_mock_cpu(|| {
-            assert!(has_rdrand());
-        });
-    }
-
-    #[test]
-    fn test_intel_bmi1_support() {
-        with_mock_cpu(|| {
-            assert!(has_bmi1());
-        });
-    }
-
-    #[test]
-    fn test_intel_bmi2_support() {
-        with_mock_cpu(|| {
-            assert!(has_bmi2());
-        });
-    }
-
-    #[test]
-    fn test_intel_f16c_support() {
-        with_mock_cpu(|| {
             assert!(has_f16c());
+            assert!(has_aes());
+            assert!(has_cx16());
+            assert!(has_rdrand());
+            assert!(has_bmi1());
+            assert!(has_bmi2());
         });
     }
 }
@@ -591,26 +501,12 @@ mod e5_2407 {
     }
 
     #[test]
-    fn test_intel_cores() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.cores.count, 4);
-        });
-    }
-
-    #[test]
-    fn test_intel_threads() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
-
-    #[test]
-    fn test_intel_sockets() {
+    fn test_intel_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
             assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.cores.count, 4);
+            assert_eq!(cpu.topology.threads.count, 4);
         });
     }
 
@@ -790,33 +686,13 @@ mod amd_5900xt {
     }
 
     #[test]
-    fn test_amd_ht_support() {
-        with_mock_cpu(|| {
-            assert!(has_ht());
-        });
-    }
-
-    #[test]
-    fn test_amd_logical_cores() {
+    fn test_amd_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 32);
-        });
-    }
-
-    #[test]
-    fn test_amd_threads() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 32);
-        });
-    }
-
-    #[test]
-    fn test_amd_cores() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+            assert_eq!(cpu.topology.dies.count, 1);
             assert_eq!(cpu.topology.cores.count, 16);
+            assert_eq!(cpu.topology.threads.count, 32);
         });
     }
 
@@ -891,96 +767,25 @@ mod amd_5900xt {
     }
 
     #[test]
-    fn test_amd_sse_support() {
+    fn test_amd_features() {
         with_mock_cpu(|| {
+            assert!(has_ht());
+            assert!(has_mmx());
             assert!(has_sse());
             assert!(has_sse2());
             assert!(has_sse3());
+            assert!(has_ssse3());
             assert!(has_sse41());
             assert!(has_sse42());
-        });
-    }
-
-    #[test]
-    fn test_amd_avx_support() {
-        with_mock_cpu(|| {
-            assert!(has_avx());
-        });
-    }
-
-    #[test]
-    fn test_amd_avx2_support() {
-        with_mock_cpu(|| {
-            assert!(has_avx2());
-        });
-    }
-
-    #[test]
-    fn test_amd_popcnt_support() {
-        with_mock_cpu(|| {
-            assert!(has_popcnt());
-        });
-    }
-
-    #[test]
-    fn test_amd_aes_support() {
-        with_mock_cpu(|| {
-            assert!(has_aes());
-        });
-    }
-
-    #[test]
-    fn test_amd_mmx_support() {
-        with_mock_cpu(|| {
-            assert!(has_mmx());
-        });
-    }
-
-    #[test]
-    fn test_amd_ssse3_support() {
-        with_mock_cpu(|| {
-            assert!(has_ssse3());
-        });
-    }
-
-    #[test]
-    fn test_amd_fma_support() {
-        with_mock_cpu(|| {
-            assert!(has_fma());
-        });
-    }
-
-    #[test]
-    fn test_amd_sse4a_support() {
-        with_mock_cpu(|| {
             assert!(has_sse4a());
-        });
-    }
-
-    #[test]
-    fn test_amd_amd64_support() {
-        with_mock_cpu(|| {
-            assert!(has_amd64());
-        });
-    }
-
-    #[test]
-    fn test_amd_f16c_support() {
-        with_mock_cpu(|| {
+            assert!(has_avx());
+            assert!(has_avx2());
+            assert!(has_fma());
             assert!(has_f16c());
-        });
-    }
-
-    #[test]
-    fn test_amd_x2apic_support() {
-        with_mock_cpu(|| {
+            assert!(has_aes());
+            assert!(has_popcnt());
+            assert!(has_amd64());
             assert!(has_x2apic());
-        });
-    }
-
-    #[test]
-    fn test_amd_3dnow_support() {
-        with_mock_cpu(|| {
             assert!(!has_3dnow());
             assert!(!has_3dnow_plus());
         });
@@ -1092,25 +897,12 @@ mod zhaoxin_kx5640 {
     }
 
     #[test]
-    fn test_zhaoxin_no_ht() {
-        with_mock_cpu(|| {
-            assert!(has_ht());
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_threads() {
+    fn test_zhaoxin_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 4);
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_cores() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
             assert_eq!(cpu.topology.cores.count, 4);
+            assert_eq!(cpu.topology.threads.count, 4);
         });
     }
 
@@ -1149,16 +941,11 @@ mod zhaoxin_kx5640 {
     }
 
     #[test]
-    fn test_zhaoxin_sse_support() {
+    fn test_zhaoxin_features() {
         with_mock_cpu(|| {
+            assert!(has_ht());
             assert!(has_sse());
             assert!(has_sse2());
-        });
-    }
-
-    #[test]
-    fn test_zhaoxin_avx_support() {
-        with_mock_cpu(|| {
             assert!(has_avx());
         });
     }
@@ -1241,9 +1028,12 @@ mod via_c7d {
     }
 
     #[test]
-    fn test_via_no_ht() {
+    fn test_via_features() {
         with_mock_cpu(|| {
             assert!(!has_ht());
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
         });
     }
 
@@ -1260,15 +1050,6 @@ mod via_c7d {
                 assert_eq!(l2.kind(), CacheType::Unified);
                 assert!(l2.size() > 0);
             }
-        });
-    }
-
-    #[test]
-    fn test_via_sse_support() {
-        with_mock_cpu(|| {
-            assert!(has_sse());
-            assert!(has_sse2());
-            assert!(has_sse3());
         });
     }
 
@@ -1457,26 +1238,12 @@ mod vortex86dx3 {
     }
 
     #[test]
-    fn test_vortex86_no_ht() {
-        with_mock_cpu(|| {
-            let res = has_ht();
-            assert_eq!(res, false);
-        });
-    }
-
-    #[test]
-    fn test_vortex86_threads() {
+    fn test_vortex86_topology() {
         with_mock_cpu(|| {
             let cpu = Cpu::detect();
-            assert_eq!(cpu.topology.threads.count, 1);
-        });
-    }
-
-    #[test]
-    fn test_vortex86_cores() {
-        with_mock_cpu(|| {
-            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
             assert_eq!(cpu.topology.cores.count, 1);
+            assert_eq!(cpu.topology.threads.count, 1);
         });
     }
 
@@ -1513,19 +1280,13 @@ mod vortex86dx3 {
     }
 
     #[test]
-    fn test_vortex86_has_mmx() {
+    fn test_vortex86_features() {
         with_mock_cpu(|| {
-            let res = has_mmx();
-            assert_eq!(res, true, "Vortex86 has MMX support");
-        });
-    }
-
-    #[test]
-    fn test_vortex86_feature_class() {
-        with_mock_cpu(|| {
+            assert!(!has_ht());
+            assert!(has_mmx());
             let fc = FeatureClass::detect();
             assert!(matches!(fc, FeatureClass::i686_SSE));
-        })
+        });
     }
 }
 
