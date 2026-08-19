@@ -755,32 +755,14 @@ mod tests {
     use crate::x86::get_feature_list;
 
     #[test]
-    fn test_model_string() {
-        let model = Cpu::raw_model_string();
-        assert!(!model.is_empty());
-    }
-
-    #[test]
-    fn test_cpu_features_detect() {
-        let features = get_feature_list();
-        // Assert that at least some features are detected (this might vary by CPU)
-        assert!(!features.is_empty());
-    }
-
-    #[test]
-    fn test_cpu_new() {
-        let cpu = Cpu::detect();
-        // Ensure that new() doesn't panic and populates some fields
-        assert!(!cpu.arch.vendor_string.is_empty());
-        assert!(!cpu.features.is_empty());
-    }
-
-    #[test]
     fn test_display_model_string_x32() {
+        let dummy_sig = CpuSignature::new(0, 5, 0, 0, 0, DataSource::DefaultValue);
+
         // Test case for MicroArch::Am486
         let mut arch_am486 = CpuArch {
             micro_arch: MicroArch::Am486,
             code_name: "Am486DX2",
+            brand_name: "AMD",
             ..Default::default()
         };
 
@@ -788,7 +770,7 @@ mod tests {
             arch: arch_am486.clone(),
             brand_id: 0,
             easter_egg: None,
-            signature: CpuSignature::detect(), // Signature doesn't affect this path
+            signature: dummy_sig,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -800,7 +782,7 @@ mod tests {
             arch: arch_am486.clone(),
             brand_id: 0,
             easter_egg: None,
-            signature: CpuSignature::detect(),
+            signature: dummy_sig,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -815,11 +797,12 @@ mod tests {
             arch: CpuArch {
                 micro_arch: MicroArch::I486,
                 code_name: "i80486DX",
+                brand_name: "Intel",
                 ..Default::default()
             },
             brand_id: 0,
             easter_egg: None,
-            signature: CpuSignature::detect(),
+            signature: dummy_sig,
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()

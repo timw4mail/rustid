@@ -6,7 +6,7 @@
 use super::constants::*;
 use super::vendor::TMicroArch;
 use super::vendor::*;
-use super::{CpuBrand, CpuSignature, is_centaur, is_zhaoxin};
+use super::{CpuBrand, CpuSignature};
 #[cfg(test)]
 use crate::common::DataSource;
 use alloc::string::String;
@@ -405,7 +405,7 @@ impl CpuArch {
         let unknown_model = brand_arch(MicroArch::Unknown, UNK, None);
 
         // Brand for Centaur CPUs is by signature, not vendor string
-        if is_centaur() || is_zhaoxin() {
+        if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
             return Centaur::micro_arch(model, s);
         }
 
