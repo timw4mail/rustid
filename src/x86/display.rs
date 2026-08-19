@@ -2,16 +2,19 @@ use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
 use super::*;
 
+#[cfg(not(dos))]
 use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
 use alloc::format;
+#[cfg(not(dos))]
 use alloc::string::String;
 
 fn yes_no(b: bool) -> &'static str {
     if b { "Yes" } else { "No" }
 }
 
+#[cfg(not(dos))]
 impl CpuDisplay {
     /// Computes the number of cache instances on x86 taking SMT / APIC ID allocation into account.
     pub fn x86_cache_instances(
@@ -336,13 +339,61 @@ impl TCpuDisplay for Cpu {
         #[cfg(not(any(dos, dos32a)))]
         println!("{:#?}", self);
 
-        #[cfg(any(all(dos, feature = "debug"), dos32a))]
+        #[cfg(dos32a)]
         {
             use super::is_cyrix;
 
             println!("{:?}", self);
             if is_cyrix() {
                 println!("{:?}", super::vendor::Cyrix::detect());
+            }
+        }
+
+        #[cfg(dos)]
+        {
+            use super::is_cyrix;
+
+            println!("Cpu {{");
+            println!("  has_cpuid: {}", self.has_cpuid);
+            println!(
+                "  arch: CpuArch {{ model: \"{}\", micro_arch: \"{}\", code_name: \"{}\", brand: \"{}\" }}",
+                self.arch.model,
+                self.arch.micro_arch.as_str(),
+                self.arch.code_name,
+                self.arch.brand_name
+            );
+            println!(
+                "  signature: CpuSignature {{ family: {}, model: {}, stepping: {}, source: \"{}\" }}",
+                self.signature.display_family,
+                self.signature.display_model,
+                self.signature.stepping,
+                match self.signature.source {
+                    DataSource::CpuReset => "CpuReset",
+                    DataSource::CpuMsr => "CpuMsr",
+                    DataSource::Cpuid => "Cpuid",
+                    _ => "Other",
+                }
+            );
+            println!(
+                "  topology: Sockets={}, Cores={}, Threads={}, Speed={}MHz (measured={})",
+                self.topology.sockets.count,
+                self.topology.cores.count,
+                self.topology.threads.count,
+                self.topology.speed.base,
+                self.topology.speed.measured
+            );
+            println!("}}");
+
+            if is_cyrix() {
+                let cyrix = super::vendor::Cyrix::detect();
+                println!(
+                    "Cyrix {{ dir0: {:02X}h, revision: {:02X}h, stepping: {:X}h, multiplier: \"{}\", model: \"{}\" }}",
+                    cyrix.dir0,
+                    cyrix.revision,
+                    cyrix.stepping,
+                    cyrix.multiplier,
+                    cyrix.emodel.to_str()
+                );
             }
         }
     }
@@ -428,6 +479,7 @@ impl TCpuDisplay for Cpu {
         self.print_topology(flags, &disp);
 
         // Cache
+        #[cfg(not(dos))]
         if self.cores.is_empty() {
             let cache_count = |share_count: u32| -> String {
                 CpuDisplay::x86_cache_count(

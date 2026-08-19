@@ -9,15 +9,18 @@ use core::fmt::Write;
 pub mod allocator;
 pub use allocator::init_heap;
 
-#[cfg(dos32a)]
 pub mod args;
+pub use args::*;
+
+#[cfg(dos)]
+pub mod cache;
+
+pub mod fallback;
+pub use fallback::*;
 
 pub mod mp;
 
 pub mod speed;
-
-#[cfg(dos32a)]
-pub use args::*;
 
 /// Custom panic handler for no-std environments.
 /// Loops indefinitely on panic to prevent undefined behavior.

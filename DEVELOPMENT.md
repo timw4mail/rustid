@@ -32,14 +32,13 @@ Individual EFI Builds:
 just build-dos
 # or: make build-dos
 ```
-This produces three binaries in the project root:
+This produces two binaries in the project root:
 - `rustid.exe` — 32-bit protected-mode DOS32A binary (`dos_rustid` cargo binary)
-- `rust86.exe` — 16-bit real-mode fallback binary (`rust86` cargo binary)
-- `debug86.exe` — 16-bit real-mode debug binary (`debug86` cargo binary)
+- `rust86.exe` — 16-bit real-mode fallback binary with debug support (`rust86` cargo binary)
 
 **Individual DOS Builds:**
 - `just build-dos32a` — Build 32-bit DOS32A extender binary (`rustid.exe`)
-- `just build-dos-real` — Build 16-bit real-mode binaries (`rust86.exe`, `debug86.exe`)
+- `just build-dos-real` — Build 16-bit real-mode binary (`rust86.exe`)
 
 **Cross-Compilation & Platform Builds:**
 - `just build-arm64` — Linux AArch64

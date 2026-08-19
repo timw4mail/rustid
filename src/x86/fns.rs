@@ -347,169 +347,186 @@ pub fn amd_logical_cores() -> u32 {
 }
 
 /// Returns the number of physical cores per package for Intel CPUs.
-#[must_use]
-pub fn intel_cores_per_package() -> u32 {
-    if is_intel() && is_valid_leaf(LEAF_4) {
-        let res = x86_cpuid_count(LEAF_4, 0);
-        let count = ((res.eax >> 26) & 0x3F) + 1;
-        if count > 0 {
-            return count;
-        }
-    }
-    1
-}
+#[cfg(dos)]
+pub use super::dos::{
+    dos_cores_per_package as cpuid_cores_per_package,
+    dos_threads_per_core as cpuid_threads_per_core,
+    dos_threads_per_package as cpuid_threads_per_package,
+};
 
-/// Returns the number of logical threads per package for Intel CPUs.
-#[must_use]
-pub fn intel_threads_per_package() -> u32 {
-    if is_intel() && is_valid_leaf(LEAF_1) {
-        let res = x86_cpuid(LEAF_1);
-        if (res.edx & (1 << 28)) != 0 {
-            let count = (res.ebx >> 16) & 0xFF;
+#[cfg(not(dos))]
+pub use cpuid_counts::*;
+
+#[cfg(not(dos))]
+mod cpuid_counts {
+    use super::*;
+
+    /// Returns the number of physical cores per package for Intel CPUs.
+    #[must_use]
+    pub fn intel_cores_per_package() -> u32 {
+        if is_intel() && is_valid_leaf(LEAF_4) {
+            let res = x86_cpuid_count(LEAF_4, 0);
+            let count = ((res.eax >> 26) & 0x3F) + 1;
             if count > 0 {
                 return count;
             }
         }
-    }
-    intel_cores_per_package()
-}
-
-/// Returns the number of logical threads per physical core for Intel CPUs.
-#[must_use]
-pub fn intel_threads_per_core() -> u32 {
-    let cores = intel_cores_per_package();
-    let threads = intel_threads_per_package();
-    if threads >= cores {
-        threads.checked_div(cores).unwrap_or(1)
-    } else {
         1
     }
-}
 
-/// Returns the number of logical threads per physical core for AMD CPUs.
-#[must_use]
-pub fn amd_threads_per_core() -> u32 {
-    if is_amd() && is_valid_leaf(EXT_LEAF_1E) {
-        let res = x86_cpuid(EXT_LEAF_1E);
-        let count = (res.ebx >> 8) & 0xFF;
-        count + 1
-    } else {
-        1u32
-    }
-}
-
-/// Returns the number of physical cores per package for AMD CPUs.
-#[must_use]
-pub fn amd_cores_per_package() -> u32 {
-    let threads = amd_logical_cores();
-    let threads_per_core = amd_threads_per_core();
-    threads.checked_div(threads_per_core).unwrap_or(threads)
-}
-
-/// Returns the number of logical threads per package for AMD CPUs.
-#[must_use]
-pub fn amd_threads_per_package() -> u32 {
-    amd_logical_cores()
-}
-
-/// Returns the number of physical cores per package for Centaur / VIA / Zhaoxin CPUs.
-#[must_use]
-pub fn centaur_cores_per_package() -> u32 {
-    if is_centaur() || is_zhaoxin() {
-        // 1. For VIA Nano / Isaiah family, inspect model / brand string
-        let raw_model = read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4);
-        if !raw_model.is_empty() {
-            let m = raw_model.to_ascii_lowercase();
-            if m.contains("quadcore") || m.contains("quad-core") || m.contains("4-core") {
-                return 4;
-            }
-            if m.contains("x2")
-                || m.contains("dual-core")
-                || m.contains("dual core")
-                || m.contains("2-core")
-            {
-                return 2;
-            }
-            if m.contains("nano") || m.contains("eden") || m.contains("c7") || m.contains("c3") {
-                return 1;
-            }
-        }
-
-        // 2. Zhaoxin / modern Centaur implements Intel-style Leaf 4 with core count in EAX[31:26]
-        if is_valid_leaf(LEAF_4) {
-            let res = x86_cpuid_count(LEAF_4, 0);
-            let count = ((res.eax >> 26) & 0x3F) + 1;
-            if count > 1 {
-                return count;
-            }
-        }
-
-        // 3. Fallback: check Leaf 1 EBX[23:16] only if 1 or 2
-        if is_valid_leaf(LEAF_1) {
+    /// Returns the number of logical threads per package for Intel CPUs.
+    #[must_use]
+    pub fn intel_threads_per_package() -> u32 {
+        if is_intel() && is_valid_leaf(LEAF_1) {
             let res = x86_cpuid(LEAF_1);
             if (res.edx & (1 << 28)) != 0 {
                 let count = (res.ebx >> 16) & 0xFF;
-                if count == 1 || count == 2 {
+                if count > 0 {
                     return count;
                 }
             }
         }
-    }
-
-    1
-}
-
-/// Returns the number of logical threads per package for Centaur / VIA / Zhaoxin CPUs.
-#[must_use]
-pub fn centaur_threads_per_package() -> u32 {
-    centaur_cores_per_package()
-}
-
-/// Returns the number of logical threads per physical core for Centaur / VIA / Zhaoxin CPUs.
-#[must_use]
-pub fn centaur_threads_per_core() -> u32 {
-    1
-}
-
-/// Returns the number of physical cores per package from CPUID across all vendors.
-#[must_use]
-pub fn cpuid_cores_per_package() -> u32 {
-    if is_intel() {
         intel_cores_per_package()
-    } else if is_amd() {
-        amd_cores_per_package()
-    } else if is_centaur() || is_zhaoxin() {
+    }
+
+    /// Returns the number of logical threads per physical core for Intel CPUs.
+    #[must_use]
+    pub fn intel_threads_per_core() -> u32 {
+        let cores = intel_cores_per_package();
+        let threads = intel_threads_per_package();
+        if threads >= cores {
+            threads.checked_div(cores).unwrap_or(1)
+        } else {
+            1
+        }
+    }
+
+    /// Returns the number of logical threads per physical core for AMD CPUs.
+    #[must_use]
+    pub fn amd_threads_per_core() -> u32 {
+        if is_amd() && is_valid_leaf(EXT_LEAF_1E) {
+            let res = x86_cpuid(EXT_LEAF_1E);
+            let count = (res.ebx >> 8) & 0xFF;
+            count + 1
+        } else {
+            1u32
+        }
+    }
+
+    /// Returns the number of physical cores per package for AMD CPUs.
+    #[must_use]
+    pub fn amd_cores_per_package() -> u32 {
+        let threads = amd_logical_cores();
+        let threads_per_core = amd_threads_per_core();
+        threads.checked_div(threads_per_core).unwrap_or(threads)
+    }
+
+    /// Returns the number of logical threads per package for AMD CPUs.
+    #[must_use]
+    pub fn amd_threads_per_package() -> u32 {
+        amd_logical_cores()
+    }
+
+    /// Returns the number of physical cores per package for Centaur / VIA / Zhaoxin CPUs.
+    #[must_use]
+    pub fn centaur_cores_per_package() -> u32 {
+        if is_centaur() || is_zhaoxin() {
+            // 1. For VIA Nano / Isaiah family, inspect model / brand string
+            let raw_model = read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4);
+            if !raw_model.is_empty() {
+                let m = raw_model.to_ascii_lowercase();
+                if m.contains("quadcore") || m.contains("quad-core") || m.contains("4-core") {
+                    return 4;
+                }
+                if m.contains("x2")
+                    || m.contains("dual-core")
+                    || m.contains("dual core")
+                    || m.contains("2-core")
+                {
+                    return 2;
+                }
+                if m.contains("nano") || m.contains("eden") || m.contains("c7") || m.contains("c3")
+                {
+                    return 1;
+                }
+            }
+
+            // 2. Zhaoxin / modern Centaur implements Intel-style Leaf 4 with core count in EAX[31:26]
+            if is_valid_leaf(LEAF_4) {
+                let res = x86_cpuid_count(LEAF_4, 0);
+                let count = ((res.eax >> 26) & 0x3F) + 1;
+                if count > 1 {
+                    return count;
+                }
+            }
+
+            // 3. Fallback: check Leaf 1 EBX[23:16] only if 1 or 2
+            if is_valid_leaf(LEAF_1) {
+                let res = x86_cpuid(LEAF_1);
+                if (res.edx & (1 << 28)) != 0 {
+                    let count = (res.ebx >> 16) & 0xFF;
+                    if count == 1 || count == 2 {
+                        return count;
+                    }
+                }
+            }
+        }
+
+        1
+    }
+
+    /// Returns the number of logical threads per package for Centaur / VIA / Zhaoxin CPUs.
+    #[must_use]
+    pub fn centaur_threads_per_package() -> u32 {
         centaur_cores_per_package()
-    } else {
+    }
+
+    /// Returns the number of logical threads per physical core for Centaur / VIA / Zhaoxin CPUs.
+    #[must_use]
+    pub fn centaur_threads_per_core() -> u32 {
         1
     }
-}
 
-/// Returns the number of logical threads per package from CPUID across all vendors.
-#[must_use]
-pub fn cpuid_threads_per_package() -> u32 {
-    if is_intel() {
-        intel_threads_per_package()
-    } else if is_amd() {
-        amd_threads_per_package()
-    } else if is_centaur() || is_zhaoxin() {
-        centaur_threads_per_package()
-    } else {
-        1
+    /// Returns the number of physical cores per package from CPUID across all vendors.
+    #[must_use]
+    pub fn cpuid_cores_per_package() -> u32 {
+        if is_intel() {
+            intel_cores_per_package()
+        } else if is_amd() {
+            amd_cores_per_package()
+        } else if is_centaur() || is_zhaoxin() {
+            centaur_cores_per_package()
+        } else {
+            1
+        }
     }
-}
 
-/// Returns the number of logical threads per physical core from CPUID across all vendors.
-#[must_use]
-pub fn cpuid_threads_per_core() -> u32 {
-    if is_intel() {
-        intel_threads_per_core()
-    } else if is_amd() {
-        amd_threads_per_core()
-    } else if is_centaur() || is_zhaoxin() {
-        centaur_threads_per_core()
-    } else {
-        1
+    /// Returns the number of logical threads per package from CPUID across all vendors.
+    #[must_use]
+    pub fn cpuid_threads_per_package() -> u32 {
+        if is_intel() {
+            intel_threads_per_package()
+        } else if is_amd() {
+            amd_threads_per_package()
+        } else if is_centaur() || is_zhaoxin() {
+            centaur_threads_per_package()
+        } else {
+            1
+        }
+    }
+
+    /// Returns the number of logical threads per physical core from CPUID across all vendors.
+    #[must_use]
+    pub fn cpuid_threads_per_core() -> u32 {
+        if is_intel() {
+            intel_threads_per_core()
+        } else if is_amd() {
+            amd_threads_per_core()
+        } else if is_centaur() || is_zhaoxin() {
+            centaur_threads_per_core()
+        } else {
+            1
+        }
     }
 }
 

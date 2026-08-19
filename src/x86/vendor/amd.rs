@@ -1,16 +1,19 @@
+use crate::x86::CpuSignature;
+#[cfg(not(dos))]
+use crate::x86::amd_logical_cores;
 use crate::x86::constants::*;
 use crate::x86::micro_arch::{CpuArch, MicroArch};
 use crate::x86::vendor::TMicroArch;
-use crate::x86::{CpuSignature, amd_logical_cores};
 
 /// AMD-specific microarchitecture detection.
 pub struct Amd;
 
-impl TMicroArch for Amd {
-    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand_arch = CpuArch::brand_arch(model, "AMD", VENDOR_AMD);
-
-        match (
+impl Amd {
+    fn legacy_micro_arch(
+        s: CpuSignature,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> Option<CpuArch> {
+        let arch = match (
             s.extended_family,
             s.family,
             s.extended_model,
@@ -27,7 +30,23 @@ impl TMicroArch for Amd {
             (0, 4, 0, 9, _) => brand_arch(MicroArch::Am486, "Am486DX4WB", None),
             (0, 4, 0, 14, _) => brand_arch(MicroArch::Am5x86, "Am5x86", None),
             (0, 4, 0, 15, _) => brand_arch(MicroArch::Am5x86, "Am5x86WB", None),
+            _ => return None,
+        };
+        Some(arch)
+    }
 
+    #[cfg(not(dos))]
+    fn modern_micro_arch(
+        s: CpuSignature,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> Option<CpuArch> {
+        let arch = match (
+            s.extended_family,
+            s.family,
+            s.extended_model,
+            s.model,
+            s.stepping,
+        ) {
             // K5
             (0, 5, 0, 0, _) => brand_arch(MicroArch::SSA5, "SSA/5", Some(N350)),
             (0, 5, 0, 1..=3, _) => brand_arch(MicroArch::K5, "5k86", Some(N350)),
@@ -118,8 +137,26 @@ impl TMicroArch for Amd {
             (10, 15, 7, 4, 1) => brand_arch(MicroArch::Zen4, "Phoenix", Some(N4)),
 
             (11, 15, 4, 4, _) => brand_arch(MicroArch::Zen5, "Granite Ridge", Some(N4)),
-            _ => brand_arch(MicroArch::Unknown, UNK, None),
+            _ => return None,
+        };
+        Some(arch)
+    }
+}
+
+impl TMicroArch for Amd {
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+        let brand_arch = CpuArch::brand_arch(model, "AMD", VENDOR_AMD);
+
+        if let Some(arch) = Self::legacy_micro_arch(s, &brand_arch) {
+            return arch;
         }
+
+        #[cfg(not(dos))]
+        if let Some(arch) = Self::modern_micro_arch(s, &brand_arch) {
+            return arch;
+        }
+
+        brand_arch(MicroArch::Unknown, UNK, None)
     }
 }
 

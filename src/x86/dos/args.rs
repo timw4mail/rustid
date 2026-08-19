@@ -1,6 +1,6 @@
-#![cfg(dos32a)]
+#![cfg(any(dos, dos32a))]
 // ============================================================================
-// Command-line arguments parsing (DOS/32A protected mode only)
+// Command-line arguments parsing (DOS Real Mode & Protected Mode)
 // ============================================================================
 
 use super::*;
@@ -21,6 +21,7 @@ impl Args {
 
 static mut TAIL_BUF: [u8; 128] = [0; 128];
 
+#[cfg(dos32a)]
 pub fn selector_base(selector: u16) -> Option<u32> {
     let mut base_high: u16 = 0;
     let mut base_low: u16 = 0;
@@ -44,6 +45,7 @@ pub fn selector_base(selector: u16) -> Option<u32> {
     }
 }
 
+#[cfg(dos32a)]
 pub fn psp_base() -> Option<u32> {
     let mut psp_val: u32 = 0;
     unsafe {
@@ -65,6 +67,53 @@ pub fn psp_base() -> Option<u32> {
     }
 }
 
+#[cfg(dos)]
+pub fn get_args() -> Args {
+    let mut tokens = [""; MAX_ARGS];
+    let mut count = 0;
+
+    let psp_seg: u16;
+    unsafe {
+        asm!(
+            "mov ah, 0x51",
+            "int 0x21",
+            out("bx") psp_seg,
+            out("ax") _,
+            out("cx") _,
+            out("dx") _,
+        );
+    }
+
+    let raw_len = peek_u8(psp_seg, 0x80);
+    let len = (raw_len as usize).min(127);
+    for i in 0..len {
+        unsafe {
+            TAIL_BUF[i] = peek_u8(psp_seg, 0x81 + i as u16);
+        }
+    }
+
+    let tail: &'static str = unsafe {
+        let bytes = &TAIL_BUF[..len];
+        let trimmed = if bytes.last() == Some(&0x0D) {
+            &bytes[..bytes.len() - 1]
+        } else {
+            bytes
+        };
+        core::str::from_utf8_unchecked(trimmed)
+    };
+
+    for token in tail.split(|c: char| c == ' ' || c == '\t') {
+        let t = token.trim();
+        if !t.is_empty() && count < MAX_ARGS {
+            tokens[count] = t;
+            count += 1;
+        }
+    }
+
+    Args { tokens, count }
+}
+
+#[cfg(dos32a)]
 pub fn get_args() -> Args {
     let mut tokens = [""; MAX_ARGS];
     let mut count = 0;
@@ -96,8 +145,6 @@ pub fn get_args() -> Args {
             TAIL_BUF[i] = peek_u8(base + 0x81 + i as u32);
         }
     }
-
-    let len = (raw_len as usize).min(127);
 
     let tail: &'static str = unsafe {
         let bytes = &TAIL_BUF[..len];

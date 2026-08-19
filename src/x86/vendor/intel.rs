@@ -1,3 +1,4 @@
+#[cfg(any(not(nostd_os), target_os = "uefi"))]
 use crate::common::CoreType;
 use crate::x86::CpuSignature;
 use crate::x86::constants::*;
@@ -7,12 +8,12 @@ use crate::x86::vendor::TMicroArch;
 /// Intel-specific microarchitecture detection.
 pub struct Intel;
 
-impl TMicroArch for Intel {
-    /// Detects the Intel microarchitecture based on the CPU model string and signature.
-    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand_arch = CpuArch::brand_arch(model, "Intel", VENDOR_INTEL);
-
-        match (
+impl Intel {
+    fn legacy_micro_arch(
+        s: CpuSignature,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> Option<CpuArch> {
+        let arch = match (
             s.extended_family,
             s.family,
             s.extended_model,
@@ -31,7 +32,23 @@ impl TMicroArch for Intel {
             (0, 4, 0, 7, _) => brand_arch(MicroArch::I486, "i80486DX2WB", None),
             (0, 4, 0, 8, _) => brand_arch(MicroArch::I486, "i80486DX4", None),
             (0, 4, 0, 9, _) => brand_arch(MicroArch::I486, "i80486DX4WB", None),
+            _ => return None,
+        };
+        Some(arch)
+    }
 
+    #[cfg(not(dos))]
+    fn modern_micro_arch(
+        s: CpuSignature,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> Option<CpuArch> {
+        let arch = match (
+            s.extended_family,
+            s.family,
+            s.extended_model,
+            s.model,
+            s.stepping,
+        ) {
             // Pentium
             (0, 5, 0, 0, _) => brand_arch(MicroArch::P5, "P5 A-step", Some(N800)),
             (0, 5, 0, 1, _) => brand_arch(MicroArch::P5, "P5", Some(N800)),
@@ -98,11 +115,31 @@ impl TMicroArch for Intel {
             (0, 6, 8, 14, 9) => brand_arch(MicroArch::AmberLake, "Amber Lake-Y", Some(N14)),
             (0, 6, 9, 10, 3) => brand_arch(MicroArch::AlderLake, "Alder Lake-H", Some(N10)),
             (0, 6, 11, 14, _) => brand_arch(MicroArch::AlderLake, "Alder Lake-N", Some(N10)),
-            _ => brand_arch(MicroArch::Unknown, UNK, None),
-        }
+            _ => return None,
+        };
+        Some(arch)
     }
 }
 
+impl TMicroArch for Intel {
+    /// Detects the Intel microarchitecture based on the CPU model string and signature.
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+        let brand_arch = CpuArch::brand_arch(model, "Intel", VENDOR_INTEL);
+
+        if let Some(arch) = Self::legacy_micro_arch(s, &brand_arch) {
+            return arch;
+        }
+
+        #[cfg(not(dos))]
+        if let Some(arch) = Self::modern_micro_arch(s, &brand_arch) {
+            return arch;
+        }
+
+        brand_arch(MicroArch::Unknown, UNK, None)
+    }
+}
+
+#[cfg(any(not(nostd_os), target_os = "uefi"))]
 impl Intel {
     pub fn core_micro_arch(parent: MicroArch, core_type: CoreType) -> MicroArch {
         match (parent, core_type) {

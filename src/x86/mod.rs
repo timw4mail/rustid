@@ -9,7 +9,10 @@ compile_error!("This crate only supports x86 and x86_64 architectures.");
 // ----------------------------------------------------------------------------
 
 pub mod brand;
+
+#[cfg(not(dos))]
 pub mod cache;
+
 pub mod constants;
 pub mod count;
 pub mod cpu;

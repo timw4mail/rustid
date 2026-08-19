@@ -22,12 +22,13 @@ fn centaur_cpu_brand() -> CpuBrand {
     }
 }
 
-impl TMicroArch for Centaur {
-    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
-        let brand = centaur_cpu_brand();
-        let brand_arch = CpuArch::brand_arch(model, brand.to_brand_name(), VENDOR_CENTAUR);
-
-        match (
+impl Centaur {
+    #[cfg(not(dos))]
+    fn modern_micro_arch(
+        s: CpuSignature,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> Option<CpuArch> {
+        let arch = match (
             s.extended_family,
             s.family,
             s.extended_model,
@@ -66,9 +67,23 @@ impl TMicroArch for Centaur {
             (0, 7, 1, 11, 0) => brand_arch(MicroArch::Wudaokou, "WuDaoKou", Some(N28)),
             (0, 7, 3, 11, _) => brand_arch(MicroArch::Lujiazui, "LuJiaZui", Some(N16)),
 
-            // Anything else
-            _ => brand_arch(MicroArch::Unknown, UNK, None),
+            _ => return None,
+        };
+        Some(arch)
+    }
+}
+
+impl TMicroArch for Centaur {
+    fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
+        let brand = centaur_cpu_brand();
+        let brand_arch = CpuArch::brand_arch(model, brand.to_brand_name(), VENDOR_CENTAUR);
+
+        #[cfg(not(dos))]
+        if let Some(arch) = Self::modern_micro_arch(s, &brand_arch) {
+            return arch;
         }
+
+        brand_arch(MicroArch::Unknown, UNK, None)
     }
 }
 

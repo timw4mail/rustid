@@ -1,8 +1,11 @@
 use super::CpuBrand;
 use super::constants::{EXT_LEAF_1, LEAF_1, LEAF_7};
 use super::fns::{is_amd, is_cyrix, is_valid_leaf, x86_cpuid};
+#[cfg(not(dos))]
 use alloc::collections::BTreeMap;
+#[cfg(not(dos))]
 use alloc::string::String;
+#[cfg(not(dos))]
 use alloc::vec::Vec;
 
 /// CPUID register selector for feature bit checking.
@@ -378,46 +381,7 @@ pub type FeatureFn = fn() -> bool;
 type FeatureMap<'a> = &'a [(&'static str, FeatureFn)];
 
 #[cfg(dos)]
-pub fn get_feature_list() -> BTreeMap<&'static str, String> {
-    let mut map = BTreeMap::new();
-
-    const FEATURES: FeatureMap = &[
-        ("FPU", has_fpu),
-        ("TSC", has_tsc),
-        ("CMPXCHG8B", has_cx8),
-        ("CMPXCHG16B", has_cx16),
-        ("CMOV", has_cmov),
-        ("MMX", has_mmx),
-        ("MMX+", has_mmx_plus),
-        ("3DNow!", has_3dnow),
-        ("3DNow!+", has_3dnow_plus),
-        ("APIC", has_apic),
-        ("AMD64", has_amd64),
-        ("SSE", has_sse),
-        ("SSE2", has_sse2),
-        ("SSE3", has_sse3),
-        ("SSE4A", has_sse4a),
-        ("SSE4.1", has_sse41),
-        ("SSE4.2", has_sse42),
-        ("SSSE3", has_ssse3),
-        ("AES", has_aes),
-        ("SHA", has_sha),
-    ];
-
-    let mut features: Vec<&'static str> = Vec::with_capacity(FEATURES.len());
-
-    for (name, check) in FEATURES {
-        if check() {
-            features.push(name);
-        }
-    }
-
-    if !features.is_empty() {
-        map.insert("Base", features.join(" "));
-    }
-
-    map
-}
+pub use super::dos::dos_feature_list as get_feature_list;
 
 /// Get the full list of detected features.
 #[cfg(not(dos))]

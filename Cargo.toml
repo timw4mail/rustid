@@ -33,11 +33,6 @@ required-features = ["dos-build"]
 path= "src/rust86.rs"
 
 [[bin]]
-name = "debug86"
-required-features = ["debug", "dos-build"]
-path= "src/debug86.rs"
-
-[[bin]]
 name = "dos_rustid"
 required-features = ["dos32a-build"]
 path= "src/dos_rustid.rs"

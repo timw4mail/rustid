@@ -54,12 +54,8 @@ _build-dos-tools:
 	# Fetch required tools (if they aren't already installed)
 	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
 
-_build-dos-debug: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --features="debug dos-build" --bin debug86 --release
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/debug86 debug86.exe
-
 # Build for DOS (EXE format)
-build-dos-real: _build-dos-tools _build-dos-debug
+build-dos-real: _build-dos-tools
 	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin rust86
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/rust86 rust86.exe
 	@cargo test --test dos_binary_size_test --features dos-build

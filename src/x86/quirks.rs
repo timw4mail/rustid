@@ -243,7 +243,7 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     ))
 }
 
-#[cfg(feature = "debug")]
+#[cfg(any(feature = "debug", dos))]
 pub fn debug_quirks() {
     use crate::println;
 
@@ -254,7 +254,11 @@ pub fn debug_quirks() {
     println!("  is_386: {}", is_386());
     println!("  is_486: {}", is_486());
 
-    println!("Signature: {:?}", CpuSignature::detect());
+    let sig = CpuSignature::detect();
+    println!(
+        "Signature: family={} model={} stepping={}",
+        sig.display_family, sig.display_model, sig.stepping
+    );
 
     println!("Vendor Detection:");
     println!("  has_cyrix_5_2_quirk:  {}", has_cyrix_5_2_quirk());

@@ -13,10 +13,9 @@ Binaries produced:
 | Binary | Cargo bin | Mode | Purpose |
 |--------|-----------|------|---------|
 | `rustid.exe` | `dos_rustid` | 32-bit DOS32A | Main CPU identification (formatted table output) |
-| `rust86.exe` | `rust86` | 16-bit Real Mode | Real-mode fallback CPU identification |
-| `debug86.exe` | `debug86` | 16-bit Real Mode | Real-mode debug & pre-CPUID reset diagnostics |
+| `rust86.exe` | `rust86` | 16-bit Real Mode | Real-mode fallback CPU identification & debug diagnostics (`/D`) |
 
-**Note**: In most cases, you will only need to directly run `rustid.exe`, as the other two binaries will be run if needed by the main binary. 
+**Note**: In most cases, you will only need to directly run `rustid.exe`, as `rust86.exe` will be executed automatically if running on a pre-CPUID CPU.
 
 ## Prerequisites
 
@@ -40,16 +39,16 @@ just build-dos
 
 This will:
 1. Build 32-bit protected mode binary (`dos_rustid` using `build-config/i486-dos32a.json`), converting via `tools/elf2le` and invoking `dos32a.exe` inside DOSBox-X to generate `rustid.exe`
-2. Build 16-bit real-mode binaries (`rust86`, `debug86` using `build-config/i486-dos.json`) and convert via `tools/make_exe` into `rust86.exe` and `debug86.exe`
+2. Build 16-bit real-mode binary (`rust86` using `build-config/i486-dos.json`) and convert via `tools/make_exe` into `rust86.exe`
 3. Run the binary size and integration tests
 
-The resulting executables (`rustid.exe`, `rust86.exe`, `debug86.exe`) appear in the project root.
+The resulting executables (`rustid.exe`, `rust86.exe`) appear in the project root.
 
 ## Running
 
 - **In DOSBox-X**: `just run-dos` or `make run-dos` (launches `rustid.exe` using `tools/dosbox-x.conf`)
 - **Automated test run**: `just test-dos` or `make test-dos` (runs in DOSBox-X with console logging)
-- **On real hardware**: Copy `.exe` files to a DOS system and execute `rustid.exe`, `rust86.exe`, or `debug86.exe`.
+- **On real hardware**: Copy `.exe` files to a DOS system and execute `rustid.exe` or `rust86.exe`.
 
 ## How It Works
 

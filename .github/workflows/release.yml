@@ -31,7 +31,7 @@ jobs:
 
       - name: Package DOS binaries
         run: |
-          zip rustid-dos.zip rustid.exe rust86.exe debug86.exe
+          zip rustid-dos.zip rustid.exe rust86.exe
 
       - name: Build EFI binaries
         run: just build-efi

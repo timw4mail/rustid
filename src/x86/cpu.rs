@@ -278,6 +278,7 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
+    #[cfg(not(dos))]
     fn intel_brand_index(&self) -> Option<&'static str> {
         let brand_id = get_brand_id();
 
@@ -382,6 +383,7 @@ impl Cpu {
             }
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
+                #[cfg(not(dos))]
                 if let Some(model_name) = self.intel_brand_index() {
                     return String::from(model_name);
                 }

@@ -159,16 +159,12 @@ pub extern "C" fn rust_main() -> ! {
         && !rustid::x86::has_cpuid()
         && !rustid::x86::is_cyrix()
     {
-        let prog = if action == "debug" {
-            "debug86.exe"
-        } else {
-            "rust86.exe"
-        };
-        if let Err(err) = exec_dos_binary(prog, "") {
+        let cmd_tail = if action == "debug" { "/D" } else { "" };
+        if let Err(err) = exec_dos_binary("rust86.exe", cmd_tail) {
             use rustid::println;
             println!(
-                "Failed to execute real mode binary {} (error {})",
-                prog, err
+                "Failed to execute real mode binary rust86.exe (error {})",
+                err
             );
             exit(1);
         }
