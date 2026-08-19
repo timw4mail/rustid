@@ -68,6 +68,94 @@ fn count_topology_domains(leaf: u32) -> usize {
     count
 }
 
+fn assert_cache_counts(
+    cpu: &Cpu,
+    l1d: (u32, &str),
+    l1i: (u32, &str),
+    l2: Option<(u32, &str)>,
+    l3: Option<(u32, &str)>,
+) {
+    use rustid::common::cache::Level1Cache;
+
+    let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+    match cache.l1 {
+        Level1Cache::Split { data, instruction } => {
+            let (expected_d_inst, expected_d_prefix) = l1d;
+            let (expected_i_inst, expected_i_prefix) = l1i;
+
+            let d_inst = CpuDisplay::x86_cache_instances(
+                data.share_count(),
+                cpu.topology.cores.count,
+                cpu.topology.threads.count,
+                cpu.topology.sockets.count,
+            );
+            let i_inst = CpuDisplay::x86_cache_instances(
+                instruction.share_count(),
+                cpu.topology.cores.count,
+                cpu.topology.threads.count,
+                cpu.topology.sockets.count,
+            );
+            assert_eq!(d_inst, expected_d_inst, "L1d instance count mismatch");
+            assert_eq!(i_inst, expected_i_inst, "L1i instance count mismatch");
+
+            let d_prefix = CpuDisplay::x86_cache_count(
+                data.share_count(),
+                cpu.topology.cores.count,
+                cpu.topology.threads.count,
+                cpu.topology.sockets.count,
+            );
+            let i_prefix = CpuDisplay::x86_cache_count(
+                instruction.share_count(),
+                cpu.topology.cores.count,
+                cpu.topology.threads.count,
+                cpu.topology.sockets.count,
+            );
+            assert_eq!(d_prefix, expected_d_prefix, "L1d prefix mismatch");
+            assert_eq!(i_prefix, expected_i_prefix, "L1i prefix mismatch");
+        }
+        _ => panic!("Expected split L1 cache"),
+    }
+
+    if let Some((expected_l2_inst, expected_l2_prefix)) = l2 {
+        let l2 = cache.l2.expect("Expected L2 cache to be present");
+        let l2_inst = CpuDisplay::x86_cache_instances(
+            l2.share_count(),
+            cpu.topology.cores.count,
+            cpu.topology.threads.count,
+            cpu.topology.sockets.count,
+        );
+        assert_eq!(l2_inst, expected_l2_inst, "L2 instance count mismatch");
+
+        let l2_prefix = CpuDisplay::x86_cache_count(
+            l2.share_count(),
+            cpu.topology.cores.count,
+            cpu.topology.threads.count,
+            cpu.topology.sockets.count,
+        );
+        assert_eq!(l2_prefix, expected_l2_prefix, "L2 prefix mismatch");
+    }
+
+    if let Some((expected_l3_inst, expected_l3_prefix)) = l3 {
+        let l3 = cache.l3.expect("Expected L3 cache to be present");
+        let l3_inst = CpuDisplay::x86_cache_instances(
+            l3.share_count(),
+            cpu.topology.cores.count,
+            cpu.topology.threads.count,
+            cpu.topology.sockets.count,
+        );
+        assert_eq!(l3_inst, expected_l3_inst, "L3 instance count mismatch");
+
+        let l3_prefix = CpuDisplay::x86_cache_count(
+            l3.share_count(),
+            cpu.topology.cores.count,
+            cpu.topology.threads.count,
+            cpu.topology.sockets.count,
+        );
+        assert_eq!(l3_prefix, expected_l3_prefix, "L3 prefix mismatch");
+    }
+}
+
 #[cfg(target_arch = "x86")]
 mod tm5700 {
     use super::*;
@@ -307,6 +395,20 @@ mod m3_8100y {
     }
 
     #[test]
+    fn test_intel_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(
+                &cpu,
+                (2, "2x "),
+                (2, "2x "),
+                Some((2, "2x ")),
+                Some((1, "")),
+            );
+        });
+    }
+
+    #[test]
     fn test_intel_sse_support() {
         with_mock_cpu(|| {
             assert!(has_sse());
@@ -409,19 +511,185 @@ mod m3_8100y {
     }
 }
 
+mod e5_2407 {
+    use super::*;
+
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/e5-2407.txt");
+        test();
+    }
+
+    #[test]
+    fn test_intel_vendor_detection() {
+        with_mock_cpu(|| {
+            let vendor = vendor_str();
+            assert_eq!(&*vendor, VENDOR_INTEL);
+        });
+    }
+
+    #[test]
+    fn test_intel_brand_string() {
+        with_mock_cpu(|| {
+            let brand = Cpu::detect().display_model_string();
+            assert!(brand.contains("Intel"));
+            assert!(brand.contains("E5-2407"));
+        });
+    }
+
+    #[test]
+    fn test_intel_signature() {
+        with_mock_cpu(|| {
+            let (ext_family, family, ext_model, model, stepping) = get_signature();
+            assert_eq!(stepping, 7);
+            assert_eq!(model, 0xd);
+            assert_eq!(family, 6);
+            assert_eq!(ext_model, 2);
+            assert_eq!(ext_family, 0);
+        });
+    }
+
+    #[test]
+    fn test_intel_max_leaf() {
+        with_mock_cpu(|| {
+            let res = max_leaf();
+            assert_eq!(res, 0xd);
+        });
+    }
+
+    #[test]
+    fn test_intel_cores() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.cores.count, 4);
+        });
+    }
+
+    #[test]
+    fn test_intel_threads() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.threads.count, 4);
+        });
+    }
+
+    #[test]
+    fn test_intel_sockets() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.sockets.count, 1);
+        });
+    }
+
+    #[test]
+    fn test_intel_cache_detection() {
+        with_mock_cpu(|| {
+            use rustid::common::cache::CacheType;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            assert_eq!(
+                cache.l1.size(),
+                65536,
+                "L1 should be 64KB total (32KB D + 32KB I)"
+            );
+            assert!(cache.l1.is_split(), "L1 cache should be split");
+
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.size(), 262144, "L2 should be 256KB");
+                assert_eq!(l2.assoc(), 8, "L2 should be 8-way");
+            }
+
+            if let Some(l3) = cache.l3 {
+                assert_eq!(l3.kind(), CacheType::Unified);
+                assert_eq!(l3.size(), 10485760, "L3 should be 10MB");
+                assert_eq!(l3.assoc(), 20, "L3 should be 20-way");
+            }
+        });
+    }
+
+    #[test]
+    fn test_intel_cache_assoc() {
+        with_mock_cpu(|| {
+            use rustid::common::cache::Level1Cache;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 32768, "L1 data cache should be 32KB");
+                    assert_eq!(data.assoc(), 8, "L1 data cache should be 8-way");
+                    assert_eq!(
+                        instruction.size(),
+                        32768,
+                        "L1 instruction cache should be 32KB"
+                    );
+                    assert_eq!(
+                        instruction.assoc(),
+                        8,
+                        "L1 instruction cache should be 8-way"
+                    );
+                }
+                _ => panic!("Expected split cache"),
+            }
+        });
+    }
+
+    #[test]
+    fn test_intel_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(
+                &cpu,
+                (4, "4x "),
+                (4, "4x "),
+                Some((4, "4x ")),
+                Some((1, "")),
+            );
+        });
+    }
+
+    #[test]
+    fn test_intel_display_table() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            cpu.display_table(CliFlags::default());
+        });
+    }
+}
+
 mod amd_7950x3d {
     use super::*;
 
+    fn with_mock_cpu(test: impl FnOnce()) {
+        set_file_cpuid_provider("dump/7950x3d.txt");
+        test();
+    }
+
     #[test]
     fn test_topology() {
-        set_file_cpuid_provider("dump/7950x3d.txt");
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
 
-        let cpu = Cpu::detect();
+            assert_eq!(cpu.topology.dies.count, 2);
+            assert_eq!(cpu.topology.threads.count, 32);
+            assert_eq!(cpu.topology.cores.count, 16);
+            assert_eq!(cpu.topology.sockets.count, 1);
+        });
+    }
 
-        assert_eq!(cpu.topology.dies.count, 2);
-        assert_eq!(cpu.topology.threads.count, 32);
-        assert_eq!(cpu.topology.cores.count, 16);
-        assert_eq!(cpu.topology.sockets.count, 1);
+    #[test]
+    fn test_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(
+                &cpu,
+                (16, "16x "),
+                (16, "16x "),
+                Some((16, "16x ")),
+                Some((2, "2x ")),
+            );
+        });
     }
 }
 
@@ -560,6 +828,20 @@ mod amd_5900xt {
                 }
                 _ => panic!("There's not unified cache here"),
             }
+        });
+    }
+
+    #[test]
+    fn test_amd_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(
+                &cpu,
+                (16, "16x "),
+                (16, "16x "),
+                Some((16, "16x ")),
+                Some((2, "2x ")),
+            );
         });
     }
 
@@ -706,6 +988,20 @@ mod amd_2700u {
             assert_eq!(cpu.topology.dies.count, 1);
         });
     }
+
+    #[test]
+    fn test_amd_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(
+                &cpu,
+                (4, "4x "),
+                (4, "4x "),
+                Some((4, "4x ")),
+                Some((1, "")),
+            );
+        });
+    }
 }
 
 mod zhaoxin_kx5640 {
@@ -804,6 +1100,14 @@ mod zhaoxin_kx5640 {
                 assert_eq!(l2.kind(), CacheType::Unified);
                 assert_eq!(l2.size(), 4194304);
             }
+        });
+    }
+
+    #[test]
+    fn test_zhaoxin_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(&cpu, (1, ""), (1, ""), Some((1, "")), None);
         });
     }
 
@@ -1233,6 +1537,14 @@ mod via_edenx2 {
                 131072,
                 "L1 should be 128KB (64KB D + 64KB I)"
             );
+        });
+    }
+
+    #[test]
+    fn test_edenx2_cache_counts() {
+        with_mock_cpu(|| {
+            let cpu = Cpu::detect();
+            assert_cache_counts(&cpu, (1, ""), (1, ""), None, None);
         });
     }
 }

@@ -12,6 +12,42 @@ fn yes_no(b: bool) -> &'static str {
     if b { "Yes" } else { "No" }
 }
 
+impl CpuDisplay {
+    /// Computes the number of cache instances on x86 taking SMT / APIC ID allocation into account.
+    pub fn x86_cache_instances(
+        share_count: u32,
+        core_count: u32,
+        thread_count: u32,
+        socket_count: u32,
+    ) -> u32 {
+        if share_count == 0 {
+            socket_count.max(1)
+        } else {
+            let smt_width = cpuid_threads_per_core()
+                .max(thread_count / core_count.max(1))
+                .max(1);
+            let cores_sharing = (share_count / smt_width).max(1);
+            let count = core_count / cores_sharing;
+            count.max(socket_count.max(1))
+        }
+    }
+
+    /// Computes the cache count display prefix for x86 CPUs (e.g. "4x " or "").
+    pub fn x86_cache_count(
+        share_count: u32,
+        core_count: u32,
+        thread_count: u32,
+        socket_count: u32,
+    ) -> String {
+        let count = Self::x86_cache_instances(share_count, core_count, thread_count, socket_count);
+        if count < 2 {
+            String::new()
+        } else {
+            alloc::format!("{}x ", count)
+        }
+    }
+}
+
 // Formatting/display helpers
 impl Cpu {
     fn print_misc_flags(&self, flags: CliFlags, disp: &CpuDisplay) {
@@ -84,7 +120,13 @@ impl Cpu {
                     println!("{}{} cores", disp.label("Topology"), core.count);
                 }
 
-                let cc = |s: u32| CpuDisplay::cache_count(s, core.count);
+                let smt = cpuid_threads_per_core()
+                    .max(core.threads / core.count.max(1))
+                    .max(1);
+                let cc = |s: u32| {
+                    let cores_sharing = if s == 0 { 1 } else { (s / smt).max(1) };
+                    CpuDisplay::cache_count(cores_sharing, core.count)
+                };
                 disp.display_cache(core.cache, &cc, self.topology.sockets.count);
             }
 
@@ -386,18 +428,12 @@ impl TCpuDisplay for Cpu {
         // Cache
         if self.cores.is_empty() {
             let cache_count = |share_count: u32| -> String {
-                #[allow(clippy::manual_checked_ops)]
-                let count = if share_count == 0 {
-                    self.topology.sockets.count
-                } else {
-                    self.topology.threads.count / share_count
-                };
-
-                if count < 2 {
-                    String::new()
-                } else {
-                    alloc::format!("{}x ", count)
-                }
+                CpuDisplay::x86_cache_count(
+                    share_count,
+                    self.topology.cores.count,
+                    self.topology.threads.count,
+                    self.topology.sockets.count,
+                )
             };
 
             disp.display_cache(
