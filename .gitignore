@@ -159,6 +159,7 @@ Cargo.lock
 ## Build artifacts
 *.com
 *.exe
+*.EXE
 *.lx
 *.py
 *.le

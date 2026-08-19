@@ -6,7 +6,6 @@ use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
 use alloc::format;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 fn yes_no(b: bool) -> &'static str {
     if b { "Yes" } else { "No" }
@@ -43,7 +42,7 @@ impl CpuDisplay {
         if count < 2 {
             String::new()
         } else {
-            alloc::format!("{}x ", count)
+            format!("{}x ", count)
         }
     }
 }
@@ -99,7 +98,7 @@ impl Cpu {
             disp.newline();
 
             for (i, core) in self.cores.iter().enumerate() {
-                let core_label = alloc::format!("Core #{}", i + 1);
+                let core_label = format!("Core #{}", i + 1);
                 println!("{}", disp.label(&core_label));
 
                 let type_str: &str = core.kind.into();
@@ -287,6 +286,8 @@ impl Cpu {
 
     #[cfg(not(dos))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
+        use alloc::vec::Vec;
+
         let centaur_map = vendor::Centaur::get_feature_list();
         if !centaur_map.is_empty() {
             let mut list: Vec<String> = Vec::new();
@@ -358,9 +359,9 @@ impl TCpuDisplay for Cpu {
             let major = (fw.revision >> 16) & 0xFFFF;
             let minor = fw.revision & 0xFFFF;
             let val = if vendor.is_empty() {
-                alloc::format!("EFI {}.{:02}", major, minor)
+                format!("EFI {}.{:02}", major, minor)
             } else {
-                alloc::format!("{} (EFI {}.{:02})", vendor, major, minor)
+                format!("{} (EFI {}.{:02})", vendor, major, minor)
             };
             disp.simple_line("Firmware", &val);
         }
