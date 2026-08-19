@@ -360,7 +360,13 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String {
-        match CpuBrand::detect() {
+        let brand = if !self.arch.vendor_string.is_empty() && self.arch.vendor_string != UNK {
+            CpuBrand::from(self.arch.vendor_string.as_str())
+        } else {
+            CpuBrand::detect()
+        };
+
+        match brand {
             CpuBrand::AMD
                 // The Geode NX is special
                 if CpuBrand::detect() == CpuBrand::AMD
@@ -763,6 +769,7 @@ mod tests {
             micro_arch: MicroArch::Am486,
             code_name: "Am486DX2",
             brand_name: "AMD",
+            vendor_string: String::from(VENDOR_AMD),
             ..Default::default()
         };
 
@@ -798,6 +805,7 @@ mod tests {
                 micro_arch: MicroArch::I486,
                 code_name: "i80486DX",
                 brand_name: "Intel",
+                vendor_string: String::from(VENDOR_INTEL),
                 ..Default::default()
             },
             brand_id: 0,
@@ -811,20 +819,13 @@ mod tests {
 
         // Test case for "No CPUID"
         let cpu_no_cpuid = Cpu {
-            arch: CpuArch::default(),
+            arch: CpuArch {
+                vendor_string: String::from("UnknownVendor"),
+                ..CpuArch::default()
+            },
             brand_id: 0,
             easter_egg: None,
-            signature: CpuSignature {
-                extended_family: 0,
-                family: 0,
-                extended_model: 0,
-                model: 0,
-                stepping: 0,
-                display_family: 0,
-                display_model: 0,
-                is_overdrive: false,
-                source: DataSource::DefaultValue,
-            },
+            signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
@@ -836,20 +837,14 @@ mod tests {
     fn test_display_model_string() {
         // Test case for "Unknown"
         let cpu_unknown = Cpu {
-            arch: CpuArch::default(),
+            arch: CpuArch {
+                model: String::from("Unknown"),
+                vendor_string: String::from("UnknownVendor"),
+                ..CpuArch::default()
+            },
             brand_id: 0,
             easter_egg: None,
-            signature: CpuSignature {
-                extended_family: 1, // Make it not all zeros
-                family: 1,
-                extended_model: 1,
-                model: 1,
-                stepping: 1,
-                display_family: 1,
-                display_model: 1,
-                is_overdrive: false,
-                source: DataSource::DefaultValue,
-            },
+            signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
             features: get_feature_list(),
             topology: Topology::default(),
             ..Default::default()
