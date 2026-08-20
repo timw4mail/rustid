@@ -285,15 +285,15 @@ impl Cache {
                 let assoc = cache_rel.Associativity as u32;
                 let size_bytes = cache_rel.CacheSize;
                 let cache_type = match cache_rel.Type {
-                    CacheData => CacheType::Data,
-                    CacheInstruction => CacheType::Instruction,
-                    CacheUnified => CacheType::Unified,
+                    c if c == CacheData => CacheType::Data,
+                    c if c == CacheInstruction => CacheType::Instruction,
+                    c if c == CacheUnified => CacheType::Unified,
                     _ => {
                         offset += item.Size as usize;
                         continue;
                     }
                 };
-                let mask = cache_rel.Anonymous.GroupMask.Mask;
+                let mask = unsafe { cache_rel.Anonymous.GroupMask.Mask };
                 let share_count = mask.count_ones();
 
                 match level {

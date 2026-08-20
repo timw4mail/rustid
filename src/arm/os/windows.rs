@@ -8,7 +8,7 @@ use crate::arm::TArmFeatures;
 use crate::arm::brand::{IMPL_ARM, Vendor};
 use crate::arm::micro_arch::*;
 use crate::common::DataSource;
-use crate::common::OS::TOSData;
+use crate::common::os::TOSData;
 use std::collections::{BTreeMap, HashSet};
 use windows::Win32::System::Threading::*;
 
