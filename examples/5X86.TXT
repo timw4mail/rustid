@@ -1,0 +1,13 @@
+--------------- Rustid 1.9.5 (x86-DOS) ---------------
+  Architecture: i486
+        Vendor: CyrixInstead (Cyrix/IBM/ST/TI)
+ Model (synth): Cyrix 5x86
+     MicroArch: Cx5x86
+      Codename: M0.9
+         CPUID: No
+ Synthetic Sig: Family 4h, Model 9h, Stepping 0h
+                (0, 4, 0, 9, 0)
+         Cyrix: Model number: 2Dh
+                Revision: 5h
+                Stepping: 0h
+                Bus Multiplier: 3x
