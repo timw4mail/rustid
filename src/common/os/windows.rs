@@ -293,7 +293,7 @@ impl Cache {
                         continue;
                     }
                 };
-                let mask = cache_rel.GroupMask.Mask;
+                let mask = cache_rel.Anonymous.GroupMask.Mask;
                 let share_count = mask.count_ones();
 
                 match level {
