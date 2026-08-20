@@ -82,12 +82,12 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md)
 Output varies by architecture. Here is an example for x86_64:
 
 ```text
---------------- Rustid 1.2.0 (x86_64-windows) ---------------
+--------------- Rustid 1.9.5 (x86_64-linux) ---------------
+        System: N7 B650E
+
   Architecture: x86_64-v4
 
         Vendor: AuthenticAMD (AMD)
-
-    Hypervisor: Microsoft Hv (Microsoft HyperV)
 
          Model: AMD Ryzen 9 9950X3D2 16-Core Processor
 
@@ -97,7 +97,7 @@ Output varies by architecture. Here is an example for x86_64:
 
   Process Node: 4nm
 
-      Topology: 16 cores (32 threads)
+      Topology: 1 socket, 16 cores, 32 threads
 
          Cache: L1d: 16x 48 KB, 12-way
                 L1i: 16x 32 KB, 8-way
@@ -113,10 +113,9 @@ Output varies by architecture. Here is an example for x86_64:
                 SSE: SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3
                 AVX: AVX AVX2 AVX-VNNI VPCLMULQDQ
                 AVX512: F DQ IFMA CD BW VL BITALG VPOPCNTDQ VP2INTERSECT
-                Security: NX RDSEED RDRAND AES VAES SHA
+                Security: NX RDSEED RDRAND AES VAES SHA AMD-V
                 Math: FMA BMI1 BMI2 F16C
                 Other: POPCNT
-
 ```
 
 For ARM, Risc V, and PowerPC, the output includes different fields (e.g., brand/implementor, codename, cache per core type).
