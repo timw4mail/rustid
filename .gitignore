@@ -161,8 +161,10 @@ Cargo.lock
 *.exe
 *.EXE
 *.lx
-*.py
 *.le
+*.zip
+*.pyc
+__pycache__/
 
 ## Logs
 dos.log
