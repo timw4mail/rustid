@@ -178,7 +178,7 @@ pub fn exec_dos_binary(prog: &str, cmd_tail_str: &str) -> Result<(), u16> {
     unsafe {
         asm!(
             "mov ax, 0x0100",
-            "mov bx, 4",
+            "mov bx, 128",
             "int 0x31",
             "setc {carry}",
             out("ax") rm_seg,
@@ -203,7 +203,7 @@ pub fn exec_dos_binary(prog: &str, cmd_tail_str: &str) -> Result<(), u16> {
     let prog_bytes = prog.as_bytes();
     if prog_bytes.len() >= 16 {
         unsafe {
-            asm!("mov ax, 0x0101", in("dx") pm_sel, out("ax") _);
+            asm!("mov ax, 0x0101", "int 0x31", in("dx") pm_sel, out("ax") _);
         }
         return Err(1);
     }
@@ -269,37 +269,39 @@ pub fn exec_dos_binary(prog: &str, cmd_tail_str: &str) -> Result<(), u16> {
         gs: 0,
         ip: 0,
         cs: 0,
-        sp: 0,
-        ss: 0,
+        sp: 0x0800,
+        ss: rm_seg,
     };
 
-    let mut dpmi_flags: u8;
+    let mut dpmi_carry: u32;
+    let rms_ptr = &mut rms as *mut DpmiRealModeCall as u32;
 
     unsafe {
         asm!(
+            "push ds",
+            "pop es",
             "push esi",
-            "push edi",
             "mov ax, 0x0300",
             "mov bl, 0x21",
             "mov bh, 0",
             "mov cx, 0",
             "int 0x31",
-            "setc {carry}",
-            "pop edi",
+            "setc al",
+            "movzx eax, al",
             "pop esi",
-            in("edi") &mut rms as *mut DpmiRealModeCall as u32,
-            carry = out(reg_byte) dpmi_flags,
-            out("ax") _,
-            out("bx") _,
-            out("cx") _,
+            in("edi") rms_ptr,
+            out("eax") dpmi_carry,
+            out("ebx") _,
+            out("ecx") _,
+            out("edx") _,
         );
     }
 
     unsafe {
-        asm!("mov ax, 0x0101", in("dx") pm_sel, out("ax") _);
+        asm!("mov ax, 0x0101", "int 0x31", in("dx") pm_sel, out("ax") _);
     }
 
-    if dpmi_flags != 0 || (rms.flags & 1) != 0 {
+    if dpmi_carry != 0 || (rms.flags & 1) != 0 {
         Err(rms.eax as u16)
     } else {
         exit(0);

@@ -378,6 +378,8 @@ pub fn has_3dnow() -> bool {
 // ----------------------------------------------------------------------------
 
 pub type FeatureFn = fn() -> bool;
+
+#[cfg(not(dos))]
 type FeatureMap<'a> = &'a [(&'static str, FeatureFn)];
 
 #[cfg(dos)]

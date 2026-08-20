@@ -157,7 +157,7 @@ pub extern "C" fn rust_main() -> ! {
     // Real-mode fallback for non-Cyrix pre-CPUID CPUs in default and debug modes
     if (action == "default" || action == "debug")
         && !rustid::x86::has_cpuid()
-        && !rustid::x86::is_cyrix()
+        && !rustid::x86::vendor::Cyrix::has_device_ids()
     {
         let cmd_tail = if action == "debug" { "/D" } else { "" };
         if let Err(err) = exec_dos_binary("rust86.exe", cmd_tail) {
@@ -168,6 +168,7 @@ pub extern "C" fn rust_main() -> ! {
             );
             exit(1);
         }
+        exit(0);
     }
 
     if action != "dump" {

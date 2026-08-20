@@ -55,51 +55,45 @@ impl Speed {
     }
 
     fn measure() -> Self {
-        #[cfg(all(nostd_os, not(target_os = "uefi")))]
-        return Speed::default();
+        #[cfg(not(nostd_os))]
+        if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
+            return Speed::default();
+        }
 
-        #[cfg(any(not(nostd_os), target_os = "uefi"))]
-        {
-            #[cfg(not(nostd_os))]
-            if info_source() == CpuidInfoSource::DumpFile || !super::has_tsc() {
-                return Speed::default();
-            }
+        #[cfg(target_os = "uefi")]
+        if !super::has_tsc() {
+            return Speed::default();
+        }
 
+        let freq = Self::measure_frequency();
+        if freq == 0 {
             #[cfg(target_os = "uefi")]
-            if !super::has_tsc() {
-                return Speed::default();
-            }
-
-            let freq = Self::measure_frequency();
-            if freq == 0 {
-                #[cfg(target_os = "uefi")]
-                if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
-                    if let Some(proc) = smbios.processors.first() {
-                        let speed = if proc.current_speed_mhz > 0 {
-                            proc.current_speed_mhz as u32
-                        } else if proc.max_speed_mhz > 0 {
-                            proc.max_speed_mhz as u32
-                        } else {
-                            0
+            if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
+                if let Some(proc) = smbios.processors.first() {
+                    let speed = if proc.current_speed_mhz > 0 {
+                        proc.current_speed_mhz as u32
+                    } else if proc.max_speed_mhz > 0 {
+                        proc.max_speed_mhz as u32
+                    } else {
+                        0
+                    };
+                    if speed > 0 {
+                        let max_speed = proc.max_speed_mhz as u32;
+                        return Speed {
+                            base: speed,
+                            boost: if max_speed > speed { max_speed } else { speed },
+                            measured: false,
                         };
-                        if speed > 0 {
-                            let max_speed = proc.max_speed_mhz as u32;
-                            return Speed {
-                                base: speed,
-                                boost: if max_speed > speed { max_speed } else { speed },
-                                measured: false,
-                            };
-                        }
                     }
                 }
-                return Speed::default();
             }
+            return Speed::default();
+        }
 
-            Speed {
-                base: freq,
-                boost: freq,
-                measured: true,
-            }
+        Speed {
+            base: freq,
+            boost: freq,
+            measured: true,
         }
     }
 
