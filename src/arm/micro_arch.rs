@@ -577,7 +577,6 @@ impl CpuArch {
                 "Enyo",
                 None,
             ),
-
             (
                 0xD0C,
                 "ARM Neoverse N1",
