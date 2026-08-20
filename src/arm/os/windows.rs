@@ -54,16 +54,65 @@ pub fn detect() -> OsCpuInfo {
     );
     let cores = super::detect_cores(&all_midrs);
 
+    let model = crate::common::OS::get_soc().unwrap_or_default();
+    let raw = get_windows_raw_info();
+
     OsCpuInfo {
         midrs,
         vendor,
         cpu_arch,
         cores,
-        model: String::new(),
-        raw: BTreeMap::new(),
+        model,
+        raw,
         midr_source,
         features_source: DataSource::SystemCall,
     }
+}
+
+/// Query Windows registry for raw processor metadata.
+pub fn get_windows_raw_info() -> BTreeMap<String, String> {
+    use crate::common::os::windows::read_reg_string;
+    use windows::Win32::System::Registry::*;
+    use windows::core::w;
+
+    let mut raw = BTreeMap::new();
+    let mut hkey = HKEY::default();
+    let subkey = w!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
+    let result = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, None, KEY_READ, &mut hkey) };
+
+    if result.is_ok() {
+        if let Some(val) = read_reg_string(hkey, "ProcessorNameString") {
+            raw.insert("ProcessorNameString".to_string(), val);
+        }
+        if let Some(val) = read_reg_string(hkey, "Identifier") {
+            raw.insert("Identifier".to_string(), val);
+        }
+        if let Some(val) = read_reg_string(hkey, "VendorIdentifier") {
+            raw.insert("VendorIdentifier".to_string(), val);
+        }
+
+        let mut mhz: u32 = 0;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        let mut dw_type = REG_NONE;
+        let val_mhz = w!("~MHZ");
+        let res = unsafe {
+            RegQueryValueExW(
+                hkey,
+                val_mhz,
+                None,
+                Some(&mut dw_type),
+                Some(&mut mhz as *mut u32 as *mut u8),
+                Some(&mut size),
+            )
+        };
+        if res.is_ok() && dw_type == REG_DWORD {
+            raw.insert("~MHZ".to_string(), format!("{mhz} MHz"));
+        }
+
+        let _ = unsafe { RegCloseKey(hkey) };
+    }
+
+    raw
 }
 
 // ----------------------------------------------------------------------------

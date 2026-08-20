@@ -663,10 +663,7 @@ mod tests {
                 verbose: false,
             },
         };
-        assert_eq!(
-            disp.format_system_name("MacPro7,1"),
-            "Mac Pro (2019)"
-        );
+        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
     }
 
     #[test]
