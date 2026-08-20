@@ -101,7 +101,7 @@ impl CpuDisplay {
 
                 if Self::should_show_core_name(core.name.as_deref(), flags.verbose) {
                     if let Some(name) = &core.name {
-                        println!("{}{}", disp.label("Codename"), name);
+                        println!("{}{}", disp.label("Name"), name);
                     }
                 }
 
@@ -294,18 +294,9 @@ mod tests {
 
     #[test]
     fn test_should_show_core_name() {
-        assert!(CpuDisplay::should_show_core_name(
-            Some("Cortex-A53"),
-            false
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            Some("Cortex-A72"),
-            false
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            Some("FireStorm"),
-            false
-        ));
+        assert!(CpuDisplay::should_show_core_name(Some("Cortex-A53"), false));
+        assert!(CpuDisplay::should_show_core_name(Some("Cortex-A72"), false));
+        assert!(CpuDisplay::should_show_core_name(Some("FireStorm"), false));
         assert!(!CpuDisplay::should_show_core_name(None, false));
         assert!(!CpuDisplay::should_show_core_name(Some(UNK), false));
         assert!(!CpuDisplay::should_show_core_name(Some(""), false));
