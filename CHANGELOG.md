@@ -1,19 +1,29 @@
 # Changelog
 
-## [1.9.5] — EFI system detection, cache fallbacks, and improved topology
+## [1.9.5] — EFI system detection, cache fallbacks, real-mode DOS overhaul, and improved topology
 
 ### Added
 - SMBIOS 2.x/3.x table parser for EFI, enabling system name and CPU speed detection on UEFI firmware (`src/x86/efi/smbios.rs`)
 - OS-level cache detection with share-count fallback merging for ARM, PPC, RISC-V, and x86 (`src/common/cache.rs`)
-- Additional Mac model mappings and raw model identifier display in system output
-- Via EdenX2 CPUID dump for testing
+- Asymmetric 3D V-Cache display support for dual-CCD AMD Ryzen processors with single-CCD 3D V-Cache (e.g. Ryzen 7950X3D) (`src/x86/cache.rs`, `src/x86/display.rs`)
+- Additional Mac model mappings and raw model identifier display in system output (eg. MacBookPro10,2)
+- Additional x86 integration tests and CPUID dump test fixtures (Intel Core i7-12700H, Intel Celeron Eee PC, VIA EdenX2)
 
 ### Changed
+- Real-mode DOS binary (`rust86.exe`) refactored and merged with real-mode debug binary, eliminating the separate debug executable while significantly reducing binary footprint and adding simple CLI argument handling
+- Overhauled integration test suite with `make_tests!` macro, eliminating repetitive test boilerplate across CPUID fixtures
 - Topology display now consistently shows sockets, cores, and threads across EFI and non-EFI builds
 - EFI QEMU runner forces text mode so output is visible in `run-efi-32` and `run-efi-64`
 - Improved x86 cache count detection with additional fallback paths
 - Improved robustness of CPU topology counts on EFI via MP Services and SMBIOS data
-- Additional integration tests verifying cache and topology detection
+- Simplified Centaur / VIA feature extraction and CPU identification logic (`src/x86/vendor/centaur.rs`)
+- Restored fallback CPU speed measurement for DOS environments lacking TSC support (`src/x86/dos/speed.rs`, `src/x86/topology.rs`)
+
+### Fixed
+- Corrected L2 cache count detection for VIA Eden / Nano X2 dual-core processors (`src/x86/cache.rs`)
+- Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
+- Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings
+- Fixed and cleaned up Haiku OS test expectations and CPU topology parsing
 
 ## [1.9.0] — EFI/UEFI support, compact display, and VIA features
 
