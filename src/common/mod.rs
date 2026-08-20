@@ -161,6 +161,8 @@ pub enum DataSource {
     /// A default value , when lookup fails
     #[default]
     DefaultValue,
+    /// Value from Android getprop shell tool
+    AndroidGetprop,
     /// Value generated from other inputs
     Calculated(&'static str),
     /// x86 cpuid instruction

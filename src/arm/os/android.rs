@@ -1,8 +1,9 @@
-#![cfg(target_os = "linux")]
+#![cfg(target_os = "android")]
 
-//! Linux-specific ARM CPU feature detection.
+//! Android-specific ARM CPU feature detection.
 //!
-//! Uses text-based parsing of `/proc/cpuinfo` "Features" line.
+//! Uses core affinity pinning + MRS (`MIDR_EL1` via `HWCAP_CPUID` kernel trap)
+//! and text-based parsing of `/proc/cpuinfo` "Features" line.
 
 use super::OsCpuInfo;
 use crate::arm::brand::Vendor;
@@ -11,7 +12,7 @@ use crate::common::DataSource;
 use crate::common::get_proc_cpuinfo_data;
 use std::collections::{BTreeMap, HashSet};
 
-/// Linux-specific CPU detection via /sys, /proc/cpuinfo, and inline asm fallback.
+/// Android-specific CPU detection via core affinity MRS, sysfs, and /proc/cpuinfo fallback.
 pub fn detect() -> OsCpuInfo {
     let mut midrs: HashSet<Midr> = HashSet::new();
     let mut all_midrs: Vec<Midr> = Vec::new();
@@ -33,39 +34,33 @@ pub fn detect() -> OsCpuInfo {
         all_midrs.push(midr);
     }
 
-    // Prefer sysfs for reading the MIDR on 32-bit ARM to avoid
-    // inline asm (`mrc p15, ...`) which may cause SIGILL on
-    // systems where the coprocessor access is trapped or on
-    // older CPUs with LLVM codegen issues.
+    // On 32-bit ARM or when MRS returned uniform value on big.LITTLE,
+    // check sysfs or /proc/cpuinfo
     #[cfg(target_arch = "arm")]
     {
-        let linux_midrs = detect_linux_midrs();
-        if !linux_midrs.is_empty() {
-            for m_val in linux_midrs {
+        let fallback_midrs = detect_android_midrs();
+        if !fallback_midrs.is_empty() {
+            for m_val in fallback_midrs {
                 let midr = Midr::new(m_val);
                 midrs.insert(midr);
                 all_midrs.push(midr);
             }
-            midr_source = DataSource::LinuxSysFs;
-        } else {
-            panic!("Could not get midr value from sysfs");
+            midr_source = DataSource::LinuxProcCpuinfo;
         }
     }
 
-    // For AArch64 (where MRS is always available), try sysfs only when
-    // MRS returns a uniform value (kernel may emulate a single MIDR on big.LITTLE).
     #[cfg(not(target_arch = "arm"))]
     if midrs.len() == 1 || all_midrs.len() <= 1 {
-        let linux_midrs = detect_linux_midrs();
-        if !linux_midrs.is_empty() {
+        let fallback_midrs = detect_android_midrs();
+        if !fallback_midrs.is_empty() && fallback_midrs.len() > all_midrs.len() {
             all_midrs.clear();
             midrs.clear();
-            for m_val in linux_midrs {
+            for m_val in fallback_midrs {
                 let midr = Midr::new(m_val);
                 midrs.insert(midr);
                 all_midrs.push(midr);
             }
-            midr_source = DataSource::LinuxSysFs;
+            midr_source = DataSource::LinuxProcCpuinfo;
         }
     }
 
@@ -90,11 +85,11 @@ pub fn detect() -> OsCpuInfo {
     }
 }
 
-/// Reads MIDR values from sysfs or /proc/cpuinfo as a fallback when MRS
-/// returns a uniform value for all cores.
-fn detect_linux_midrs() -> Vec<usize> {
+/// Reads MIDR values from sysfs or /proc/cpuinfo as a fallback.
+fn detect_android_midrs() -> Vec<usize> {
     let mut midrs = Vec::new();
 
+    // 1. Try sysfs if readable
     let mut i = 0;
     loop {
         let path = format!(
@@ -115,6 +110,7 @@ fn detect_linux_midrs() -> Vec<usize> {
         return midrs;
     }
 
+    // 2. Parse /proc/cpuinfo per-processor blocks
     let cpuinfo = get_proc_cpuinfo_data();
     for map in &cpuinfo {
         let impl_ = map.get("CPU implementer").and_then(|s| {
@@ -168,7 +164,7 @@ fn detect_linux_midrs() -> Vec<usize> {
 }
 
 // ----------------------------------------------------------------------------
-// Feature detection via /proc/cpuinfo (text-based, primary method)
+// Feature detection via /proc/cpuinfo
 // ----------------------------------------------------------------------------
 
 /// Parses `/proc/cpuinfo` Features line to get a set of available features.
