@@ -92,7 +92,17 @@ pub fn format_compatible_pair(pair: Vec<String>) -> String {
     let raw_model = pair[1].clone();
 
     let vendor = cleanup_soc_vendor(raw_vendor.as_str());
-    let model = raw_model;
+
+    let model = if raw_model
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
+        && raw_model.chars().any(|c| c.is_ascii_lowercase())
+        && raw_model.chars().any(|c| c.is_ascii_digit())
+    {
+        raw_model.to_uppercase()
+    } else {
+        raw_model
+    };
 
     format!("{vendor} {model}")
 }
