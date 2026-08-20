@@ -20,6 +20,7 @@ pub unsafe extern "efiapi" fn efi_main(
     let cpu = Cpu::detect();
     let flags = CliFlags {
         color: true,
+        verbose: true,
         ..Default::default()
     };
     cpu.display_table(flags);

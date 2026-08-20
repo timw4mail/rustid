@@ -418,9 +418,9 @@ impl TCpuDisplay for Cpu {
             disp.simple_line("Firmware", &val);
         }
 
-        #[cfg(any(not(nostd_os), target_os = "uefi"))]
+        #[cfg(not(dos_os))]
         if let Some(system) = &self.system {
-            disp.simple_line("System", &disp.format_system_name(system));
+            disp.display_system(system, flags);
         }
 
         let ma = self.arch.micro_arch.as_str();

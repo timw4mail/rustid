@@ -209,6 +209,19 @@ impl CpuDisplay {
         }
     }
 
+    #[cfg(not(dos_os))]
+    pub fn display_system(&self, system: &str, flags: CliFlags) {
+        let formatted = &self.format_system_name(system);
+
+        if flags.verbose && system != formatted {
+            println!("{}{}", self.label("System"), formatted);
+            println!("{}{}", self.label("System (raw)"), system);
+            self.newline();
+        } else {
+            self.simple_line("System", formatted);
+        }
+    }
+
     /// Format the system name if it is a Mac, or other known string
     pub fn format_system_name(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
@@ -440,11 +453,7 @@ impl CpuDisplay {
             _ => raw,
         };
 
-        if model != raw {
-            format!("{model} [{raw}]")
-        } else {
-            String::from(raw)
-        }
+        String::from(model)
     }
 
     #[inline]

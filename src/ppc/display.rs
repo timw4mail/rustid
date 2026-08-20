@@ -13,7 +13,7 @@ impl TCpuDisplay for Cpu {
         disp.newline();
 
         if let Some(system) = &self.system {
-            disp.simple_line("System", &disp.format_system_name(&system));
+            disp.display_system(system, flags);
         }
 
         disp.simple_line("Model", self.cpu_arch.marketing_name);

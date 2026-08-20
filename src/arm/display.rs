@@ -10,7 +10,7 @@ impl CpuDisplay {
         disp.newline();
 
         if let Some(system) = &cpu_info.system {
-            disp.simple_line("System", &disp.format_system_name(system));
+            disp.display_system(system, flags);
         }
 
         if let Some(soc_model) = &cpu_info.soc_model {
