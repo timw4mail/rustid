@@ -638,7 +638,7 @@ mod tests {
         };
         assert_eq!(
             disp.format_system_name("MacBookAir10,1"),
-            "MacBook Air (M1, 2020) [MacBookAir10,1]"
+            "MacBook Air (M1, 2020)"
         );
     }
 
@@ -665,7 +665,7 @@ mod tests {
         };
         assert_eq!(
             disp.format_system_name("MacPro7,1"),
-            "Mac Pro (2019) [MacPro7,1]"
+            "Mac Pro (2019)"
         );
     }
 
@@ -680,7 +680,7 @@ mod tests {
         };
         assert_eq!(
             disp.format_system_name("PowerMac11,2"),
-            "Power Mac G5 (Late 2005) [PowerMac11,2]"
+            "Power Mac G5 (Late 2005)"
         );
     }
 }
