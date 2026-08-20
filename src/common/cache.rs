@@ -170,6 +170,7 @@ impl Cache {
     pub fn detect_os() -> Option<Cache> {
         #[cfg(any(target_os = "android", target_os = "linux"))]
         {
+            #[cfg(x86_cpu)]
             if crate::x86::provider::info_source()
                 == crate::x86::provider::CpuidInfoSource::DumpFile
             {
