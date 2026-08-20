@@ -12,32 +12,51 @@ fn is_duplicate(a: &str, b: &str) -> bool {
 }
 
 impl CpuDisplay {
-    pub fn should_show_codename(model: &str, code_name: &str, verbose: bool) -> bool {
+    pub fn should_show_model(cpu_info: &Cpu, verbose: bool) -> bool {
+        let model = &cpu_info.cpu_arch.model;
+        if model == UNK || model.is_empty() {
+            return false;
+        }
+        if verbose {
+            return true;
+        }
+        let code_name = cpu_info.cpu_arch.code_name;
+        if code_name != UNK && !code_name.is_empty() && is_duplicate(model, code_name) {
+            return false;
+        }
+        for core in cpu_info.cores.values() {
+            if let Some(name) = &core.name {
+                if name != UNK && !name.is_empty() && is_duplicate(model, name) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    pub fn should_show_codename(cpu_info: &Cpu, verbose: bool) -> bool {
+        let code_name = cpu_info.cpu_arch.code_name;
         if code_name == UNK || code_name.is_empty() {
             return false;
         }
         if verbose {
             return true;
         }
-        !is_duplicate(model, code_name)
+        for core in cpu_info.cores.values() {
+            if let Some(name) = &core.name {
+                if name != UNK && !name.is_empty() && is_duplicate(code_name, name) {
+                    return false;
+                }
+            }
+        }
+        true
     }
 
-    pub fn should_show_core_name(
-        _model: &str,
-        code_name: &str,
-        core_name: Option<&str>,
-        verbose: bool,
-    ) -> bool {
+    pub fn should_show_core_name(core_name: Option<&str>, _verbose: bool) -> bool {
         let Some(name) = core_name else {
             return false;
         };
-        if name == UNK || name.is_empty() {
-            return false;
-        }
-        if verbose {
-            return true;
-        }
-        !is_duplicate(name, code_name)
+        name != UNK && !name.is_empty()
     }
 
     pub fn display(cpu_info: &Cpu, flags: CliFlags) {
@@ -58,13 +77,11 @@ impl CpuDisplay {
             <brand::Vendor as Into<&str>>::into(cpu_info.cpu_arch.implementer),
         );
 
-        disp.simple_line("Model", &cpu_info.cpu_arch.model);
+        if Self::should_show_model(cpu_info, flags.verbose) {
+            disp.simple_line("Model", &cpu_info.cpu_arch.model);
+        }
 
-        if Self::should_show_codename(
-            &cpu_info.cpu_arch.model,
-            cpu_info.cpu_arch.code_name,
-            flags.verbose,
-        ) {
+        if Self::should_show_codename(cpu_info, flags.verbose) {
             disp.simple_line("Codename", cpu_info.cpu_arch.code_name);
         }
 
@@ -82,12 +99,7 @@ impl CpuDisplay {
                 let name = Into::<&str>::into(core.kind);
                 println!("{}{}", disp.label("Type"), name);
 
-                if Self::should_show_core_name(
-                    &cpu_info.cpu_arch.model,
-                    cpu_info.cpu_arch.code_name,
-                    core.name.as_deref(),
-                    flags.verbose,
-                ) {
+                if Self::should_show_core_name(core.name.as_deref(), flags.verbose) {
                     if let Some(name) = &core.name {
                         println!("{}{}", disp.label("Codename"), name);
                     }
@@ -105,12 +117,7 @@ impl CpuDisplay {
         } else if let Some(core) = cpu_info.cores.values().next() {
             println!("{}", disp.label("Cores"));
 
-            if Self::should_show_core_name(
-                &cpu_info.cpu_arch.model,
-                cpu_info.cpu_arch.code_name,
-                core.name.as_deref(),
-                flags.verbose,
-            ) {
+            if Self::should_show_core_name(core.name.as_deref(), flags.verbose) {
                 if let Some(name) = &core.name {
                     println!("{}{}", disp.label("Name"), name);
                 }
@@ -173,6 +180,39 @@ impl TCpuDisplay for Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arm::micro_arch::CpuArch;
+    use crate::common::CoreType;
+    use std::collections::BTreeMap;
+
+    fn make_test_cpu(model: &str, code_name: &'static str, core_names: &[&str]) -> Cpu {
+        let mut cores = BTreeMap::new();
+        for (i, &cname) in core_names.iter().enumerate() {
+            let midr = Midr::new(i);
+            cores.insert(
+                (CoreType::Performance, midr),
+                CpuCore {
+                    kind: CoreType::Performance,
+                    name: if cname.is_empty() {
+                        None
+                    } else {
+                        Some(cname.to_string())
+                    },
+                    cache: None,
+                    count: 4,
+                },
+            );
+        }
+
+        Cpu {
+            cpu_arch: CpuArch {
+                model: model.to_string(),
+                code_name,
+                ..Default::default()
+            },
+            cores,
+            ..Default::default()
+        }
+    }
 
     #[test]
     fn test_is_duplicate() {
@@ -194,172 +234,80 @@ mod tests {
     }
 
     #[test]
-    fn test_should_show_codename_duplicate() {
-        assert!(!CpuDisplay::should_show_codename(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            false
-        ));
-        assert!(CpuDisplay::should_show_codename(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            true
-        ));
-        assert!(!CpuDisplay::should_show_codename(
-            "Apple Swift",
-            "Swift",
-            false
-        ));
-        assert!(CpuDisplay::should_show_codename(
-            "Apple Swift",
-            "Swift",
-            true
-        ));
-        assert!(!CpuDisplay::should_show_codename(
-            "AmpereOne",
-            "AmpereOne",
-            false
-        ));
-        assert!(CpuDisplay::should_show_codename(
-            "AmpereOne",
-            "AmpereOne",
-            true
-        ));
+    fn test_should_show_model_suppressed_when_matching_core_or_codename() {
+        // Model "ARM Cortex-A53" matches core "Cortex-A53" and codename "Cortex-A53"
+        let cpu_a53 = make_test_cpu("ARM Cortex-A53", "Cortex-A53", &["Cortex-A53"]);
+        assert!(!CpuDisplay::should_show_model(&cpu_a53, false));
+        assert!(CpuDisplay::should_show_model(&cpu_a53, true));
+
+        // Model "ARM Cortex-A72" matches core "Cortex-A72" (even with different codename "Maya")
+        let cpu_a72 = make_test_cpu("ARM Cortex-A72", "Maya", &["Cortex-A72"]);
+        assert!(!CpuDisplay::should_show_model(&cpu_a72, false));
+        assert!(CpuDisplay::should_show_model(&cpu_a72, true));
+
+        // Model "AmpereOne" matches codename and core "AmpereOne"
+        let cpu_amp = make_test_cpu("AmpereOne", "AmpereOne", &["AmpereOne"]);
+        assert!(!CpuDisplay::should_show_model(&cpu_amp, false));
+        assert!(CpuDisplay::should_show_model(&cpu_amp, true));
+
+        // Model "Apple Swift" matches core "Swift"
+        let cpu_swift = make_test_cpu("Apple Swift", "Swift", &["Swift"]);
+        assert!(!CpuDisplay::should_show_model(&cpu_swift, false));
+        assert!(CpuDisplay::should_show_model(&cpu_swift, true));
     }
 
     #[test]
-    fn test_should_show_codename_different() {
-        assert!(CpuDisplay::should_show_codename(
-            "ARM Cortex-A72",
-            "Maya",
-            false
-        ));
-        assert!(CpuDisplay::should_show_codename(
-            "ARM Cortex-A72",
-            "Maya",
-            true
-        ));
-        assert!(CpuDisplay::should_show_codename(
-            "Apple A18 Pro",
-            "Tahiti",
-            false
-        ));
-        assert!(CpuDisplay::should_show_codename("Apple M1", "Tonga", false));
+    fn test_should_show_model_displayed_when_distinct() {
+        // Model "Apple M1" is distinct from codename "Tonga" and cores "FireStorm" / "IceStorm"
+        let cpu_m1 = make_test_cpu("Apple M1", "Tonga", &["FireStorm", "IceStorm"]);
+        assert!(CpuDisplay::should_show_model(&cpu_m1, false));
+        assert!(CpuDisplay::should_show_model(&cpu_m1, true));
+
+        // Model "Apple A18 Pro" is distinct from "Tahiti", "Everest", "Sawtooth"
+        let cpu_a18 = make_test_cpu("Apple A18 Pro", "Tahiti", &["Everest", "Sawtooth"]);
+        assert!(CpuDisplay::should_show_model(&cpu_a18, false));
+        assert!(CpuDisplay::should_show_model(&cpu_a18, true));
     }
 
     #[test]
-    fn test_should_show_codename_unknown() {
-        assert!(!CpuDisplay::should_show_codename(
-            "ARM Cortex-A53",
-            UNK,
-            false
-        ));
-        assert!(!CpuDisplay::should_show_codename(
-            "ARM Cortex-A53",
-            UNK,
-            true
-        ));
-        assert!(!CpuDisplay::should_show_codename(
-            "ARM Cortex-A53",
-            "",
-            false
-        ));
+    fn test_should_show_codename() {
+        // Codename "Cortex-A53" matches core "Cortex-A53" -> suppressed
+        let cpu_a53 = make_test_cpu("ARM Cortex-A53", "Cortex-A53", &["Cortex-A53"]);
+        assert!(!CpuDisplay::should_show_codename(&cpu_a53, false));
+        assert!(CpuDisplay::should_show_codename(&cpu_a53, true));
+
+        // Codename "Maya" differs from core "Cortex-A72" -> displayed
+        let cpu_a72 = make_test_cpu("ARM Cortex-A72", "Maya", &["Cortex-A72"]);
+        assert!(CpuDisplay::should_show_codename(&cpu_a72, false));
+        assert!(CpuDisplay::should_show_codename(&cpu_a72, true));
+
+        // Codename "Tahiti" differs from cores "Everest", "Sawtooth" -> displayed
+        let cpu_a18 = make_test_cpu("Apple A18 Pro", "Tahiti", &["Everest", "Sawtooth"]);
+        assert!(CpuDisplay::should_show_codename(&cpu_a18, false));
+        assert!(CpuDisplay::should_show_codename(&cpu_a18, true));
+
+        // Codename UNK -> always suppressed
+        let cpu_unk = make_test_cpu("ARM Cortex-A53", UNK, &["Cortex-A53"]);
+        assert!(!CpuDisplay::should_show_codename(&cpu_unk, false));
+        assert!(!CpuDisplay::should_show_codename(&cpu_unk, true));
     }
 
     #[test]
-    fn test_should_show_core_name_duplicate() {
-        assert!(!CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
+    fn test_should_show_core_name() {
+        assert!(CpuDisplay::should_show_core_name(
             Some("Cortex-A53"),
             false
         ));
         assert!(CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            Some("Cortex-A53"),
-            true
-        ));
-        assert!(!CpuDisplay::should_show_core_name(
-            "Apple Swift",
-            "Swift",
-            Some("Swift"),
-            false
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            "Apple Swift",
-            "Swift",
-            Some("Swift"),
-            true
-        ));
-    }
-
-    #[test]
-    fn test_should_show_core_name_different() {
-        // When codename is different from core name, both values should be shown
-        assert!(CpuDisplay::should_show_core_name(
-            "ARM Cortex-A72",
-            "Maya",
             Some("Cortex-A72"),
             false
         ));
         assert!(CpuDisplay::should_show_core_name(
-            "ARM Cortex-A72",
-            "Maya",
-            Some("Cortex-A72"),
-            true
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            "Apple M1",
-            "Tonga",
             Some("FireStorm"),
             false
         ));
-        assert!(CpuDisplay::should_show_core_name(
-            "Apple M1",
-            "Tonga",
-            Some("IceStorm"),
-            false
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            "Apple A18 Pro",
-            "Tahiti",
-            Some("Everest"),
-            false
-        ));
-        assert!(CpuDisplay::should_show_core_name(
-            "Apple A18 Pro",
-            "Tahiti",
-            Some("Sawtooth"),
-            false
-        ));
-    }
-
-    #[test]
-    fn test_should_show_core_name_none_or_unknown() {
-        assert!(!CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            None,
-            false
-        ));
-        assert!(!CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            None,
-            true
-        ));
-        assert!(!CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            Some(UNK),
-            false
-        ));
-        assert!(!CpuDisplay::should_show_core_name(
-            "ARM Cortex-A53",
-            "Cortex-A53",
-            Some(UNK),
-            true
-        ));
+        assert!(!CpuDisplay::should_show_core_name(None, false));
+        assert!(!CpuDisplay::should_show_core_name(Some(UNK), false));
+        assert!(!CpuDisplay::should_show_core_name(Some(""), false));
     }
 }
