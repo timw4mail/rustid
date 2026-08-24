@@ -328,8 +328,8 @@ impl SmbiosData {
                         let current_speed_mhz =
                             u16::from_le_bytes([s.formatted[0x16], s.formatted[0x17]]);
                         let status = s.formatted[0x18];
-                        let is_populated = (status & 0x40) != 0;
                         let cpu_status = status & 0x07;
+                        let is_populated = (status & 0x40) != 0 || cpu_status == 1;
                         let is_enabled = cpu_status == 1 || cpu_status == 0;
 
                         let mut core_count = if s.formatted.len() >= 0x24 {
@@ -720,5 +720,55 @@ mod tests {
         assert!(smbios.processors[0].is_populated);
         assert!(smbios.processors[0].is_enabled);
         assert!(!smbios.processors[1].is_populated);
+    }
+
+    #[test]
+    fn test_smbios_dual_socket_apple_server() {
+        let mut table = Vec::new();
+        // Type 1: System Info ("Apple Inc.", "Xserve1,1")
+        table.extend_from_slice(&[1, 8, 1, 0, 1, 2, 0, 0]);
+        table.extend_from_slice(b"Apple Inc.\0");
+        table.extend_from_slice(b"Xserve1,1\0");
+        table.push(0);
+
+        // Type 4: Socket 0 (CPU0, 0x20 legacy length for SMBIOS 2.4)
+        let mut type4_cpu0 = vec![0u8; 0x20];
+        type4_cpu0[0] = 4;
+        type4_cpu0[1] = 0x20;
+        type4_cpu0[4] = 1; // "CPU0"
+        type4_cpu0[5] = 3;
+        type4_cpu0[0x18] = 0x41; // Populated & Enabled
+        table.extend_from_slice(&type4_cpu0);
+        table.extend_from_slice(b"CPU0\0");
+        table.push(0);
+
+        // Type 4: Socket 1 (CPU1, 0x20 legacy length for SMBIOS 2.4)
+        let mut type4_cpu1 = vec![0u8; 0x20];
+        type4_cpu1[0] = 4;
+        type4_cpu1[1] = 0x20;
+        type4_cpu1[4] = 1; // "CPU1"
+        type4_cpu1[5] = 3;
+        type4_cpu1[0x18] = 0x41; // Populated & Enabled
+        table.extend_from_slice(&type4_cpu1);
+        table.extend_from_slice(b"CPU1\0");
+        table.push(0);
+
+        // Type 127
+        table.extend_from_slice(&[127, 4, 3, 0, 0, 0]);
+
+        let smbios = SmbiosData::parse(&table);
+        assert_eq!(smbios.processors.len(), 2);
+        assert!(smbios.processors[0].is_populated);
+        assert!(smbios.processors[0].is_enabled);
+        assert!(smbios.processors[1].is_populated);
+        assert!(smbios.processors[1].is_enabled);
+
+        let populated = smbios
+            .processors
+            .iter()
+            .filter(|p| p.is_populated && p.is_enabled)
+            .count();
+        assert_eq!(populated, 2);
+        assert!(!smbios.is_laptop());
     }
 }

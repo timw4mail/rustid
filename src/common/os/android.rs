@@ -1,8 +1,8 @@
 #![cfg(target_os = "android")]
 
 use crate::common::{
-    cleanup_soc_vendor, is_generic_value, DataSource, OS, TDetect, TOSData, TopologyCount,
-    TopologyTier,
+    DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, cleanup_soc_vendor,
+    is_generic_value,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -23,13 +23,16 @@ pub fn run_getprop_cmd(key: Option<&str>) -> Option<String> {
     if let Some(k) = key {
         cmd.arg(k);
     }
-    let output = cmd.output().or_else(|_| {
-        let mut fallback = std::process::Command::new("/system/bin/getprop");
-        if let Some(k) = key {
-            fallback.arg(k);
-        }
-        fallback.output()
-    }).ok()?;
+    let output = cmd
+        .output()
+        .or_else(|_| {
+            let mut fallback = std::process::Command::new("/system/bin/getprop");
+            if let Some(k) = key {
+                fallback.arg(k);
+            }
+            fallback.output()
+        })
+        .ok()?;
 
     if output.status.success() {
         String::from_utf8(output.stdout).ok()
@@ -124,7 +127,10 @@ pub fn extract_system_name(props: &HashMap<String, String>) -> Option<String> {
     }
 
     // 3. Device or product code name
-    if let Some(device) = props.get("ro.product.device").or_else(|| props.get("ro.product.name")) {
+    if let Some(device) = props
+        .get("ro.product.device")
+        .or_else(|| props.get("ro.product.name"))
+    {
         let trimmed = device.trim();
         if !trimmed.is_empty() && !is_generic_value(trimmed) {
             return Some(trimmed.to_string());
@@ -176,9 +182,7 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
     // 3. ro.board.platform (e.g. "taro", "lahaina", "sm8450", "exynos990", "mt6893")
     if let Some(platform) = props.get("ro.board.platform") {
         let trimmed = platform.trim();
-        if !trimmed.is_empty()
-            && !is_generic_value(trimmed)
-            && !trimmed.eq_ignore_ascii_case("gki")
+        if !trimmed.is_empty() && !is_generic_value(trimmed) && !trimmed.eq_ignore_ascii_case("gki")
         {
             return Some(trimmed.to_string());
         }
@@ -254,9 +258,7 @@ fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
         let res: Vec<_> = raw
             .split('\0')
             .filter(|s| !s.is_empty())
-            .map(|p| -> Vec<_> {
-                p.split(',').map(String::from).collect()
-            })
+            .map(|p| -> Vec<_> { p.split(',').map(String::from).collect() })
             .collect();
 
         return Some(res);
@@ -405,8 +407,10 @@ impl TDetect for TopologyCount {
 
         if topo.threads == 0 {
             let cpuinfo = get_proc_cpuinfo_data();
-            let proc_count =
-                cpuinfo.iter().filter(|m| m.contains_key("processor")).count() as u32;
+            let proc_count = cpuinfo
+                .iter()
+                .filter(|m| m.contains_key("processor"))
+                .count() as u32;
             if proc_count > 0 {
                 topo.threads = proc_count;
                 topo.cores = proc_count;
@@ -753,10 +757,22 @@ mod tests {
     #[test]
     fn test_parse_getprop_output() {
         let props = parse_getprop_output(PIXEL_GETPROP);
-        assert_eq!(props.get("ro.product.marketname").map(|s| s.as_str()), Some("Pixel 8 Pro"));
-        assert_eq!(props.get("ro.soc.model").map(|s| s.as_str()), Some("Tensor G3"));
-        assert_eq!(props.get("ro.soc.manufacturer").map(|s| s.as_str()), Some("Google"));
-        assert_eq!(props.get("ro.product.manufacturer").map(|s| s.as_str()), Some("Google"));
+        assert_eq!(
+            props.get("ro.product.marketname").map(|s| s.as_str()),
+            Some("Pixel 8 Pro")
+        );
+        assert_eq!(
+            props.get("ro.soc.model").map(|s| s.as_str()),
+            Some("Tensor G3")
+        );
+        assert_eq!(
+            props.get("ro.soc.manufacturer").map(|s| s.as_str()),
+            Some("Google")
+        );
+        assert_eq!(
+            props.get("ro.product.manufacturer").map(|s| s.as_str()),
+            Some("Google")
+        );
     }
 
     #[test]
@@ -768,13 +784,19 @@ mod tests {
     #[test]
     fn test_extract_system_name_galaxy() {
         let props = parse_getprop_output(GALAXY_GETPROP);
-        assert_eq!(extract_system_name(&props), Some("Samsung SM-S928B".to_string()));
+        assert_eq!(
+            extract_system_name(&props),
+            Some("Samsung SM-S928B".to_string())
+        );
     }
 
     #[test]
     fn test_extract_system_name_xiaomi() {
         let props = parse_getprop_output(QUALCOMM_GETPROP);
-        assert_eq!(extract_system_name(&props), Some("Xiaomi 12 Pro".to_string()));
+        assert_eq!(
+            extract_system_name(&props),
+            Some("Xiaomi 12 Pro".to_string())
+        );
     }
 
     #[test]
@@ -792,7 +814,10 @@ mod tests {
     #[test]
     fn test_extract_soc_qualcomm() {
         let props = parse_getprop_output(QUALCOMM_GETPROP);
-        assert_eq!(extract_soc(&props), Some("Qualcomm Snapdragon 8 Gen 1".to_string()));
+        assert_eq!(
+            extract_soc(&props),
+            Some("Qualcomm Snapdragon 8 Gen 1".to_string())
+        );
     }
 
     #[test]

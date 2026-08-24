@@ -306,11 +306,15 @@ impl EfiMpServices {
             1
         };
 
+        if detected > 1 {
+            return detected;
+        }
+
         let threads_per_pkg = crate::x86::cpuid_threads_per_package() as usize;
-        if threads_per_pkg > 0 && count <= threads_per_pkg {
-            1
+        if threads_per_pkg > 0 && count > threads_per_pkg {
+            count / threads_per_pkg
         } else {
-            detected
+            1
         }
     }
 
