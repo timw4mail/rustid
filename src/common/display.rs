@@ -67,11 +67,17 @@ impl CpuDisplay {
         format!("{}{s}{ANSI_RESET}", Self::ansi(code))
     }
 
+    /// Outputs a formatted label and value with an additional newline if flags.compact is false
     pub fn simple_line(&self, l: &str, v: &str) {
-        let l = self.label(l);
-        println!("{}{}", l, v);
+        self.section_line(l, v);
 
         self.newline();
+    }
+
+    /// Outputs a formatted label and value
+    pub fn section_line(&self, l: &str, v: &str) {
+        let l = self.label(l);
+        println!("{}{}", l, v);
     }
 
     pub fn newline(&self) {
@@ -214,8 +220,8 @@ impl CpuDisplay {
         let formatted = &self.format_system_name(system);
 
         if flags.verbose && system != formatted {
-            println!("{}{}", self.label("System"), formatted);
-            println!("{}{}", self.label("System (raw)"), system);
+            self.section_line("System", formatted);
+            self.section_line("System (raw)", system);
             self.newline();
         } else {
             self.simple_line("System", formatted);
@@ -663,10 +669,7 @@ mod tests {
                 verbose: false,
             },
         };
-        assert_eq!(
-            disp.format_system_name("MacPro7,1"),
-            "Mac Pro (2019)"
-        );
+        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
     }
 
     #[test]

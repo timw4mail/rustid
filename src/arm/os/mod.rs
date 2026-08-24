@@ -23,7 +23,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
 
     let runtime_cache = Cache::detect();
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     let sysfs_per_type = Cache::from_sys_fs_per_type();
 
     let mut core_cache_map: BTreeMap<usize, Option<Cache>> = BTreeMap::new();
@@ -33,14 +33,14 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
     unique_midrs.dedup();
 
     for midr in &unique_midrs {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "android", target_os = "linux"))]
         let cache = sysfs_per_type
             .as_ref()
             .and_then(|m| m.get(&midr.to_bits()).copied())
             .or_else(|| runtime_cache)
             .or(None);
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "android", target_os = "linux")))]
         let cache = runtime_cache.or(None);
 
         core_cache_map.insert(midr.to_bits(), cache);
@@ -89,12 +89,21 @@ pub mod macos;
 pub use macos::*;
 
 // ----------------------------------------------------------------------------
+// ! Android
+// ----------------------------------------------------------------------------
+
+#[cfg(target_os = "android")]
+pub mod android;
+#[cfg(target_os = "android")]
+pub use android::*;
+
+// ----------------------------------------------------------------------------
 // ! Linux
 // ----------------------------------------------------------------------------
 
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub mod linux;
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub use linux::*;
 
 // ----------------------------------------------------------------------------

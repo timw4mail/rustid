@@ -324,7 +324,10 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     // Base
     detected.insert("fp", f.has_fp());
     detected.insert("asimd", f.has_asimd());
-    detected.insert("cpuid", cfg!(target_os = "linux")); // Only on Linux via HWCAP_CPUID
+    detected.insert(
+        "cpuid",
+        cfg!(any(target_os = "android", target_os = "linux")),
+    ); // Only on Linux/Android via HWCAP_CPUID
 
     // SIMD
     detected.insert("neon", f.has_neon());

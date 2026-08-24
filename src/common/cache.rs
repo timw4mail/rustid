@@ -328,14 +328,8 @@ impl Cache {
 
 #[cfg(not(x86_cpu))]
 impl Cache {
-    #[cfg(not(any(target_os = "android", target_os = "linux")))]
+    #[cfg(any(bsd, target_os = "haiku"))]
     pub fn detect() -> Option<Cache> {
-        None
-    }
-
-    #[cfg(target_os = "windows")]
-    #[allow(dead_code)]
-    fn from_windows() -> Option<Cache> {
         None
     }
 }

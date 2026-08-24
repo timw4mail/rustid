@@ -1,7 +1,8 @@
-#![cfg(target_os = "linux")]
+#![cfg(target_os = "android")]
 
 use crate::common::{
-    DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, cleanup_soc_vendor,
+    cleanup_soc_vendor, is_generic_value, DataSource, OS, TDetect, TOSData, TopologyCount,
+    TopologyTier,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -12,9 +13,195 @@ use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 #[cfg(arm_cpu)]
 use std::collections::BTreeMap;
 
-/// Parse a Linux CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
+// ----------------------------------------------------------------------------
+// Android System Properties (Text-parsing of getprop)
+// ----------------------------------------------------------------------------
+
+/// Runs `getprop` or `/system/bin/getprop` with optional property key argument.
+pub fn run_getprop_cmd(key: Option<&str>) -> Option<String> {
+    let mut cmd = std::process::Command::new("getprop");
+    if let Some(k) = key {
+        cmd.arg(k);
+    }
+    let output = cmd.output().or_else(|_| {
+        let mut fallback = std::process::Command::new("/system/bin/getprop");
+        if let Some(k) = key {
+            fallback.arg(k);
+        }
+        fallback.output()
+    }).ok()?;
+
+    if output.status.success() {
+        String::from_utf8(output.stdout).ok()
+    } else {
+        None
+    }
+}
+
+/// Parses the output of `getprop` into a `HashMap<String, String>`.
+/// Expected format per line: `[key]: [value]`
+pub fn parse_getprop_output(output: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix('[') {
+            if let Some((key, val_part)) = rest.split_once("]: [") {
+                let val = val_part.strip_suffix(']').unwrap_or(val_part);
+                map.insert(key.trim().to_string(), val.trim().to_string());
+            }
+        }
+    }
+    map
+}
+
+/// Retrieves all Android system properties by calling `getprop`.
+pub fn get_props() -> HashMap<String, String> {
+    if let Some(out) = run_getprop_cmd(None) {
+        let map = parse_getprop_output(&out);
+        if !map.is_empty() {
+            return map;
+        }
+    }
+    HashMap::new()
+}
+
+/// Retrieves a specific property from the given map, or falls back to `getprop <key>`.
+pub fn get_property(props: &HashMap<String, String>, key: &str) -> Option<String> {
+    if let Some(val) = props.get(key) {
+        let trimmed = val.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    if let Some(out) = run_getprop_cmd(Some(key)) {
+        let trimmed = out.trim().to_string();
+        if !trimmed.is_empty() {
+            return Some(trimmed);
+        }
+    }
+    None
+}
+
+/// Extracts a friendly system/device name from Android system properties.
+pub fn extract_system_name(props: &HashMap<String, String>) -> Option<String> {
+    // 1. Market name (e.g., "Pixel 8 Pro", "Galaxy S24 Ultra")
+    if let Some(market) = props.get("ro.product.marketname") {
+        let trimmed = market.trim();
+        if !trimmed.is_empty() && !is_generic_value(trimmed) {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    // 2. Manufacturer / Brand + Model
+    let model = props
+        .get("ro.product.model")
+        .or_else(|| props.get("ro.product.odm.model"))
+        .or_else(|| props.get("ro.product.vendor.model"))
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && !is_generic_value(s));
+
+    let manufacturer = props
+        .get("ro.product.manufacturer")
+        .or_else(|| props.get("ro.product.brand"))
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && !is_generic_value(s));
+
+    if let (Some(mfg), Some(mdl)) = (manufacturer, model) {
+        let mfg_clean = cleanup_soc_vendor(mfg);
+        let mdl_lower = mdl.to_ascii_lowercase();
+        let mfg_lower = mfg.to_ascii_lowercase();
+        let mfg_clean_lower = mfg_clean.to_ascii_lowercase();
+
+        if mdl_lower.starts_with(&mfg_lower) || mdl_lower.starts_with(&mfg_clean_lower) {
+            return Some(mdl.to_string());
+        } else {
+            return Some(format!("{mfg_clean} {mdl}"));
+        }
+    }
+
+    if let Some(mdl) = model {
+        return Some(mdl.to_string());
+    }
+
+    // 3. Device or product code name
+    if let Some(device) = props.get("ro.product.device").or_else(|| props.get("ro.product.name")) {
+        let trimmed = device.trim();
+        if !trimmed.is_empty() && !is_generic_value(trimmed) {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    None
+}
+
+/// Extracts SoC manufacturer and model name from Android system properties.
+pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
+    // 1. ro.soc.manufacturer + ro.soc.model (Android 12+ / API 31+)
+    let soc_mfg = props
+        .get("ro.soc.manufacturer")
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && !is_generic_value(s));
+    let soc_model = props
+        .get("ro.soc.model")
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && !is_generic_value(s));
+
+    if let (Some(mfg), Some(model)) = (soc_mfg, soc_model) {
+        let mfg_clean = cleanup_soc_vendor(mfg);
+        let model_lower = model.to_ascii_lowercase();
+        let mfg_lower = mfg.to_ascii_lowercase();
+        let mfg_clean_lower = mfg_clean.to_ascii_lowercase();
+
+        if model_lower.starts_with(&mfg_lower) || model_lower.starts_with(&mfg_clean_lower) {
+            return Some(model.to_string());
+        } else {
+            return Some(format!("{mfg_clean} {model}"));
+        }
+    }
+
+    if let Some(model) = soc_model {
+        return Some(model.to_string());
+    }
+
+    // 2. Vendor-specific chip name properties
+    for key in ["ro.chipname", "ro.hardware.chipname", "ro.boot.hardware"] {
+        if let Some(val) = props.get(key) {
+            let trimmed = val.trim();
+            if !trimmed.is_empty() && !is_generic_value(trimmed) {
+                return Some(cleanup_soc_vendor(trimmed));
+            }
+        }
+    }
+
+    // 3. ro.board.platform (e.g. "taro", "lahaina", "sm8450", "exynos990", "mt6893")
+    if let Some(platform) = props.get("ro.board.platform") {
+        let trimmed = platform.trim();
+        if !trimmed.is_empty()
+            && !is_generic_value(trimmed)
+            && !trimmed.eq_ignore_ascii_case("gki")
+        {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    // 4. ro.hardware (e.g. "qcom", "exynos", "tensor")
+    if let Some(hw) = props.get("ro.hardware") {
+        let trimmed = hw.trim();
+        if !trimmed.is_empty() && !is_generic_value(trimmed) {
+            return Some(cleanup_soc_vendor(trimmed));
+        }
+    }
+
+    None
+}
+
+// ----------------------------------------------------------------------------
+// Helpers for CPU Lists & /proc/cpuinfo
+// ----------------------------------------------------------------------------
+
+/// Parse a Linux/Android CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
 /// the total number of CPUs it represents.
-fn parse_cpu_list_count(s: &str) -> u32 {
+pub fn parse_cpu_list_count(s: &str) -> u32 {
     let mut count = 0;
     for part in s.trim().split(',') {
         let part = part.trim();
@@ -31,8 +218,8 @@ fn parse_cpu_list_count(s: &str) -> u32 {
     count
 }
 
-/// Expand a Linux CPU list string into a vector of individual CPU IDs.
-fn expand_cpu_list(s: &str) -> Vec<u32> {
+/// Expand a Linux/Android CPU list string into a vector of individual CPU IDs.
+pub fn expand_cpu_list(s: &str) -> Vec<u32> {
     let mut cpus = Vec::new();
     for part in s.trim().split(',') {
         let part = part.trim();
@@ -62,37 +249,28 @@ fn get_soc_cpuinfo() -> Option<String> {
     None
 }
 
-pub fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
+fn get_devicetree_compatible() -> Option<Vec<Vec<String>>> {
     if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/compatible") {
         let res: Vec<_> = raw
             .split('\0')
             .filter(|s| !s.is_empty())
             .map(|p| -> Vec<_> {
-                // Since Mac Model strings contain commas, we don't want to split on those
-                if !(p.contains("Power") || p.contains("Mac")) {
-                    p.split(",").map(String::from).collect()
-                } else {
-                    vec![String::from(p)]
-                }
+                p.split(',').map(String::from).collect()
             })
             .collect();
 
         return Some(res);
     }
-
     None
 }
 
-pub fn format_compatible_pair(pair: Vec<String>) -> String {
+fn format_compatible_pair(pair: Vec<String>) -> String {
     if pair.len() < 2 {
         return pair[0].clone();
     }
-
     let raw_vendor = pair[0].clone();
     let raw_model = pair[1].clone();
-
     let vendor = cleanup_soc_vendor(raw_vendor.as_str());
-
     let model = if raw_model
         .chars()
         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
@@ -103,112 +281,7 @@ pub fn format_compatible_pair(pair: Vec<String>) -> String {
     } else {
         raw_model
     };
-
     format!("{vendor} {model}")
-}
-
-use super::{is_generic_value, is_known_hypervisor_vendor};
-
-/// Read a DMI field from sysfs, trying both the virtual and class mount
-/// points, and return its first NUL-delimited value trimmed.
-fn get_dmi_field(field: &str) -> Option<String> {
-    for root in ["/sys/devices/virtual/dmi/id", "/sys/class/dmi/id"] {
-        let path = format!("{root}/{field}");
-        if let Ok(raw) = std::fs::read_to_string(&path) {
-            let value = raw.split('\0').next().unwrap_or("").trim().to_string();
-            if !value.is_empty() {
-                return Some(value);
-            }
-        }
-    }
-    None
-}
-
-/// Read several DMI fields and join their non-generic values with a space,
-/// e.g. combining `sys_vendor` + `product_name` into "QEMU Standard PC ...".
-/// When `vendor_only` is set, only produce a result for known hypervisors so
-/// that real hardware strings are not prefixed with their manufacturer.
-fn get_combined_dmi(fields: &[&str], vendor_only: bool) -> Option<String> {
-    let mut parts = Vec::new();
-    for (i, field) in fields.iter().enumerate() {
-        if vendor_only && i == 0 {
-            continue;
-        }
-        let value = get_dmi_field(field)?;
-        if is_generic_value(&value) {
-            return None;
-        }
-        parts.push(value);
-    }
-
-    if vendor_only && !parts.is_empty() {
-        let vendor = get_dmi_field(fields[0])?;
-        if !is_known_hypervisor_vendor(&vendor) {
-            return None;
-        }
-        parts.insert(0, vendor);
-    }
-
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts.join(" "))
-    }
-}
-
-fn get_raw_system_name() -> Option<String> {
-    // Let's look for a few possibilities that may have the formatted device name,
-    // or at least the easier to use system name
-    let simple_paths: Vec<_> = vec![
-        "/proc/device-tree/model",
-        "/proc/device-tree/smbios/smbios/system/product",
-    ];
-
-    for path in simple_paths {
-        if let Ok(raw) = std::fs::read_to_string(path) {
-            let raw: Vec<_> = raw.split('\0').collect();
-            let raw = raw.first();
-            {
-                let raw = raw?;
-                let trimmed = raw.trim();
-
-                if is_generic_value(trimmed) {
-                    continue;
-                }
-
-                return Some(String::from(trimmed));
-            }
-        }
-    }
-
-    for field in ["product_family", "product_name"] {
-        if let Some(name) = get_dmi_field(field)
-            && !is_generic_value(&name)
-        {
-            return Some(name);
-        }
-    }
-
-    // For hypervisors, fold the vendor in so we get useful names like
-    // "QEMU Standard PC (i440FX + PIIX, 1996)" instead of generic DMI strings.
-    if let Some(name) = get_combined_dmi(&["sys_vendor", "product_name"], true) {
-        return Some(name);
-    }
-
-    // When the product is a placeholder but the board is specific (common on
-    // white-box ASUS/Gigabyte systems), fall back to the board identity.
-    if let Some(name) = get_combined_dmi(&["board_vendor", "board_name"], false) {
-        return Some(name);
-    }
-
-    // If we see nothing in sysfs, check the device tree 'compatible' value
-    if let Some(raw_pairs) = get_devicetree_compatible()
-        && let Some(pair) = raw_pairs.first().cloned()
-    {
-        return Some(format_compatible_pair(pair));
-    }
-
-    None
 }
 
 fn get_soc_devicetree() -> Option<String> {
@@ -217,7 +290,6 @@ fn get_soc_devicetree() -> Option<String> {
     {
         return Some(format_compatible_pair(pair));
     }
-
     None
 }
 
@@ -242,8 +314,17 @@ pub fn get_proc_cpuinfo_data() -> Vec<HashMap<String, String>> {
         .collect()
 }
 
+// ----------------------------------------------------------------------------
+// TOSData Implementation
+// ----------------------------------------------------------------------------
+
 impl TOSData for OS {
     fn get_soc() -> Option<String> {
+        let props = get_props();
+        if let Some(soc) = extract_soc(&props) {
+            return Some(soc);
+        }
+
         if let Some(soc) = get_soc_cpuinfo() {
             return Some(soc);
         }
@@ -256,7 +337,11 @@ impl TOSData for OS {
     }
 
     fn get_system_name() -> Option<String> {
-        // Let's try /proc/cpuinfo first, as that will be formatted nicely
+        let props = get_props();
+        if let Some(name) = extract_system_name(&props) {
+            return Some(name);
+        }
+
         if let Some(last) = get_proc_cpuinfo_data().last()
             && (!last.contains_key("processor"))
             && let Some(raw) = last.get("Model")
@@ -265,47 +350,27 @@ impl TOSData for OS {
             return Some(String::from(raw.trim()));
         }
 
-        let name = get_raw_system_name();
-
-        if name.is_some() {
-            return name;
+        if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/model") {
+            let raw: Vec<_> = raw.split('\0').collect();
+            if let Some(first) = raw.first() {
+                let trimmed = first.trim();
+                if !is_generic_value(trimmed) {
+                    return Some(String::from(trimmed));
+                }
+            }
         }
 
         None
     }
 
     fn get_socket_count() -> TopologyTier {
-        // Fallback: /proc/cpuinfo unique physical ids
-        let cpuinfo = get_proc_cpuinfo_data();
-        if !cpuinfo.is_empty() {
-            let mut entries = 0;
-            let mut physical_ids = HashSet::new();
-            let mut core_ids = HashSet::new();
-
-            for cpu_map in cpuinfo {
-                if let Some(id) = cpu_map.get("physical id") {
-                    physical_ids.insert(id.trim().to_string());
-                }
-
-                if let Some(id) = cpu_map.get("core id") {
-                    core_ids.insert(id.trim().to_string());
-                }
-
-                entries += 1;
-            }
-
-            // For the Pentium Pro, all the rules seem to be broken.
-            // There might be multiple entries in /proc/cpuinfo, all with identical ids
-            if physical_ids.len() == 1 && core_ids.len() == 1 && entries != 1 {
-                TopologyTier::new(entries, DataSource::LinuxProcCpuinfo)
-            } else {
-                TopologyTier::new(physical_ids.len() as u32, DataSource::LinuxProcCpuinfo)
-            }
-        } else {
-            TopologyTier::default()
-        }
+        TopologyTier::new(1, DataSource::AndroidGetprop)
     }
 }
+
+// ----------------------------------------------------------------------------
+// TopologyCount Detection
+// ----------------------------------------------------------------------------
 
 impl TDetect for TopologyCount {
     fn detect() -> Self {
@@ -317,30 +382,52 @@ impl TDetect for TopologyCount {
         };
 
         let cpu_root = Path::new("/sys/devices/system/cpu");
-        if !cpu_root.exists() {
-            return topo;
-        }
+        if cpu_root.exists() {
+            if let Ok(online) = fs::read_to_string(cpu_root.join("online")) {
+                topo.threads = parse_cpu_list_count(&online);
 
-        if let Ok(online) = fs::read_to_string(cpu_root.join("online")) {
-            topo.threads = parse_cpu_list_count(&online);
-
-            let cpus = expand_cpu_list(&online);
-            let mut core_ids = std::collections::HashSet::new();
-            for cpu_id in cpus {
-                let core_id_path = cpu_root
-                    .join(format!("cpu{}", cpu_id))
-                    .join("topology")
-                    .join("core_id");
-                if let Ok(id_str) = fs::read_to_string(&core_id_path) {
-                    core_ids.insert(id_str.trim().to_string());
+                let cpus = expand_cpu_list(&online);
+                let mut core_ids = HashSet::new();
+                for cpu_id in cpus {
+                    let core_id_path = cpu_root
+                        .join(format!("cpu{}", cpu_id))
+                        .join("topology")
+                        .join("core_id");
+                    if let Ok(id_str) = fs::read_to_string(&core_id_path) {
+                        core_ids.insert(id_str.trim().to_string());
+                    }
+                }
+                if !core_ids.is_empty() {
+                    topo.cores = core_ids.len() as u32;
                 }
             }
-            topo.cores = core_ids.len() as u32;
+        }
+
+        if topo.threads == 0 {
+            let cpuinfo = get_proc_cpuinfo_data();
+            let proc_count =
+                cpuinfo.iter().filter(|m| m.contains_key("processor")).count() as u32;
+            if proc_count > 0 {
+                topo.threads = proc_count;
+                topo.cores = proc_count;
+            } else if let Ok(n) = std::thread::available_parallelism() {
+                topo.threads = n.get() as u32;
+                topo.cores = n.get() as u32;
+            } else {
+                topo.threads = 1;
+                topo.cores = 1;
+            }
+        } else if topo.cores == 0 {
+            topo.cores = topo.threads;
         }
 
         topo
     }
 }
+
+// ----------------------------------------------------------------------------
+// Cache Detection
+// ----------------------------------------------------------------------------
 
 impl Cache {
     #[cfg(not(x86_cpu))]
@@ -360,7 +447,7 @@ impl Cache {
         Self::read_cpu_cache(0)
     }
 
-    /// Read the full cache hierarchy for a single CPU from sysfs.
+    /// Read the full cache hierarchy for a single CPU from sysfs if accessible.
     fn read_cpu_cache(cpu_num: u32) -> Option<Cache> {
         let root = Path::new("/sys/devices/system/cpu")
             .join(format!("cpu{}", cpu_num))
@@ -478,13 +565,7 @@ impl Cache {
         if found_cache { Some(cache) } else { None }
     }
 
-    /// Read cache info for each distinct CPU type (MIDR group).
-    ///
-    /// On heterogeneous ARM systems (big.LITTLE / DynamIQ), each core type may
-    /// have a different cache hierarchy. This method reads per-CPU cache info
-    /// from sysfs and returns a map keyed by MIDR value.
-    ///
-    /// Returns `None` if `midr_el1` is unavailable (non-ARM or older kernel).
+    /// Read cache info for each distinct CPU type (MIDR group) from sysfs.
     #[cfg(arm_cpu)]
     pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
         let cpu_root = Path::new("/sys/devices/system/cpu");
@@ -498,7 +579,6 @@ impl Cache {
             return None;
         }
 
-        // Read MIDRs for all online CPUs, group by value
         let mut midr_map: BTreeMap<usize, Vec<u32>> = BTreeMap::new();
         for &cpu_id in &cpus {
             let midr_path = cpu_root
@@ -510,12 +590,10 @@ impl Cache {
                     midr_map.entry(midr).or_default().push(cpu_id);
                 }
             } else {
-                // No midr_el1 → not an ARM system, can't do per-type
                 return None;
             }
         }
 
-        // Read cache config from first CPU of each MIDR group
         let mut cache_map: BTreeMap<usize, Cache> = BTreeMap::new();
         for (&midr, cpus_in_group) in &midr_map {
             if let Some(&first_cpu) = cpus_in_group.first() {
@@ -551,15 +629,12 @@ impl Cache {
         let mut found_cache = false;
 
         let lines: Vec<&str> = output_str.lines().collect();
-
-        // No output from lscpu -C
         if lines.len() < 2 {
             return None;
         }
 
         let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
 
-        // @TODO: Properly parse table to account for missing values
         for line in lines.into_iter().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() <= 3 {
@@ -570,7 +645,6 @@ impl Cache {
             let size_str = parts[table_keys.iter().position(|&x| x == "ONE-SIZE")?];
             let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
 
-            // Parse size (e.g., "32K", "256K", "4M")
             let size_bytes: u32 = if let Some(stripped) = size_str.strip_suffix('K') {
                 stripped.parse::<u32>().ok()? * 1024
             } else if let Some(stripped) = size_str.strip_suffix('M') {
@@ -612,12 +686,10 @@ impl Cache {
             }
         }
 
-        // Handle case where L1 is split but L1i wasn't in the output
         if let Level1Cache::Split { data, instruction } = &cache.l1
             && instruction.size == 0
             && data.size > 0
         {
-            // Copy data settings to instruction
             cache.l1 = Level1Cache::Split {
                 data: *data,
                 instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
@@ -628,130 +700,112 @@ impl Cache {
     }
 }
 
+// ----------------------------------------------------------------------------
+// Unit Tests
+// ----------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
-    use super::super::normalize_for_compare;
     use super::*;
 
+    const PIXEL_GETPROP: &str = r#"
+[ro.board.platform]: [zuma]
+[ro.boot.hardware]: [ripcurrent]
+[ro.build.version.release]: [14]
+[ro.build.version.sdk]: [34]
+[ro.hardware]: [ripcurrent]
+[ro.product.brand]: [google]
+[ro.product.device]: [husky]
+[ro.product.manufacturer]: [Google]
+[ro.product.marketname]: [Pixel 8 Pro]
+[ro.product.model]: [Pixel 8 Pro]
+[ro.product.name]: [husky]
+[ro.soc.manufacturer]: [Google]
+[ro.soc.model]: [Tensor G3]
+"#;
+
+    const GALAXY_GETPROP: &str = r#"
+[ro.board.platform]: [exynos2400]
+[ro.chipname]: [exynos2400]
+[ro.hardware]: [samsungexynos2400]
+[ro.hardware.chipname]: [exynos2400]
+[ro.product.brand]: [samsung]
+[ro.product.device]: [e3q]
+[ro.product.manufacturer]: [Samsung]
+[ro.product.model]: [SM-S928B]
+[ro.product.name]: [e3qxeea]
+"#;
+
+    const QUALCOMM_GETPROP: &str = r#"
+[ro.board.platform]: [taro]
+[ro.boot.hardware]: [qcom]
+[ro.hardware]: [qcom]
+[ro.hardware.chipname]: [SM8450]
+[ro.product.brand]: [Xiaomi]
+[ro.product.device]: [zeus]
+[ro.product.manufacturer]: [Xiaomi]
+[ro.product.marketname]: [Xiaomi 12 Pro]
+[ro.product.model]: [2201122G]
+[ro.soc.manufacturer]: [Qualcomm]
+[ro.soc.model]: [Snapdragon 8 Gen 1]
+"#;
+
     #[test]
-    fn test_parse_cpu_list_count_single() {
+    fn test_parse_getprop_output() {
+        let props = parse_getprop_output(PIXEL_GETPROP);
+        assert_eq!(props.get("ro.product.marketname").map(|s| s.as_str()), Some("Pixel 8 Pro"));
+        assert_eq!(props.get("ro.soc.model").map(|s| s.as_str()), Some("Tensor G3"));
+        assert_eq!(props.get("ro.soc.manufacturer").map(|s| s.as_str()), Some("Google"));
+        assert_eq!(props.get("ro.product.manufacturer").map(|s| s.as_str()), Some("Google"));
+    }
+
+    #[test]
+    fn test_extract_system_name_pixel() {
+        let props = parse_getprop_output(PIXEL_GETPROP);
+        assert_eq!(extract_system_name(&props), Some("Pixel 8 Pro".to_string()));
+    }
+
+    #[test]
+    fn test_extract_system_name_galaxy() {
+        let props = parse_getprop_output(GALAXY_GETPROP);
+        assert_eq!(extract_system_name(&props), Some("Samsung SM-S928B".to_string()));
+    }
+
+    #[test]
+    fn test_extract_system_name_xiaomi() {
+        let props = parse_getprop_output(QUALCOMM_GETPROP);
+        assert_eq!(extract_system_name(&props), Some("Xiaomi 12 Pro".to_string()));
+    }
+
+    #[test]
+    fn test_extract_soc_pixel() {
+        let props = parse_getprop_output(PIXEL_GETPROP);
+        assert_eq!(extract_soc(&props), Some("Google Tensor G3".to_string()));
+    }
+
+    #[test]
+    fn test_extract_soc_galaxy() {
+        let props = parse_getprop_output(GALAXY_GETPROP);
+        assert_eq!(extract_soc(&props), Some("Exynos2400".to_string()));
+    }
+
+    #[test]
+    fn test_extract_soc_qualcomm() {
+        let props = parse_getprop_output(QUALCOMM_GETPROP);
+        assert_eq!(extract_soc(&props), Some("Qualcomm Snapdragon 8 Gen 1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_cpu_list_count() {
+        assert_eq!(parse_cpu_list_count("0-7"), 8);
+        assert_eq!(parse_cpu_list_count("0-3,4-7"), 8);
         assert_eq!(parse_cpu_list_count("0"), 1);
-        assert_eq!(parse_cpu_list_count("5"), 1);
-    }
-
-    #[test]
-    fn test_parse_cpu_list_count_range() {
-        assert_eq!(parse_cpu_list_count("0-3"), 4);
-        assert_eq!(parse_cpu_list_count("4-7"), 4);
-        assert_eq!(parse_cpu_list_count("0-0"), 1);
-    }
-
-    #[test]
-    fn test_parse_cpu_list_count_mixed() {
-        assert_eq!(parse_cpu_list_count("0-3,8-11"), 8);
-        assert_eq!(parse_cpu_list_count("0,2,4"), 3);
-        assert_eq!(parse_cpu_list_count("0-1,4,8-9"), 5);
-    }
-
-    #[test]
-    fn test_parse_cpu_list_count_whitespace() {
-        assert_eq!(parse_cpu_list_count(" 0-3, 8-11 "), 8);
-    }
-
-    #[test]
-    fn test_parse_cpu_list_count_empty() {
         assert_eq!(parse_cpu_list_count(""), 0);
     }
 
     #[test]
-    fn test_expand_cpu_list_single() {
-        assert_eq!(expand_cpu_list("0"), vec![0]);
-        assert_eq!(expand_cpu_list("5"), vec![5]);
-    }
-
-    #[test]
-    fn test_expand_cpu_list_range() {
+    fn test_expand_cpu_list() {
         assert_eq!(expand_cpu_list("0-3"), vec![0, 1, 2, 3]);
-        assert_eq!(expand_cpu_list("4-7"), vec![4, 5, 6, 7]);
-    }
-
-    #[test]
-    fn test_expand_cpu_list_mixed() {
-        assert_eq!(expand_cpu_list("0-3,8-11"), vec![0, 1, 2, 3, 8, 9, 10, 11]);
-        assert_eq!(expand_cpu_list("0,2,4"), vec![0, 2, 4]);
-    }
-
-    #[test]
-    fn test_expand_cpu_list_empty() {
-        let empty: Vec<u32> = Vec::new();
-        assert_eq!(expand_cpu_list(""), empty);
-    }
-
-    #[test]
-    fn test_is_generic_value_placeholders() {
-        for value in [
-            "To Be Filled By O.E.M.",
-            "To Be Filled",
-            "System Product Name",
-            "System Name",
-            "Product Name",
-            "All Series",
-            "Default string",
-            "Not Specified",
-            "Not Applicable",
-            "Unknown",
-            "Generic",
-            "OEM",
-            "O.E.M.",
-        ] {
-            assert!(is_generic_value(value), "{value:?} should be generic");
-        }
-    }
-
-    #[test]
-    fn test_is_generic_value_whitespace_and_case() {
-        assert!(is_generic_value("  DEFAULT   STRING  "));
-        assert!(is_generic_value("to be filled by o.e.m."));
-        assert!(is_generic_value("\tSystem Product Name\n"));
-        assert!(is_generic_value(""));
-    }
-
-    #[test]
-    fn test_is_generic_value_real_names() {
-        for value in [
-            "ThinkPad X1 Carbon",
-            "HP Spectre x360",
-            "MacBookPro18,3",
-            "Dell XPS 13 9310",
-            "QEMU Standard PC (i440FX + PIIX, 1996)",
-            "Orange Pi 5",
-        ] {
-            assert!(!is_generic_value(value), "{value:?} should be real");
-        }
-    }
-
-    #[test]
-    fn test_is_known_hypervisor_vendor() {
-        for vendor in [
-            "QEMU",
-            "VMware, Inc.",
-            "innotek GmbH",
-            "Microsoft Corporation",
-        ] {
-            assert!(is_known_hypervisor_vendor(vendor));
-        }
-        for vendor in ["Dell Inc.", "ASUSTeK COMPUTER INC.", "LENOVO"] {
-            assert!(!is_known_hypervisor_vendor(vendor));
-        }
-    }
-
-    #[test]
-    fn test_normalize_for_compare() {
-        assert_eq!(
-            normalize_for_compare("  Default   String "),
-            "default string"
-        );
-        assert_eq!(normalize_for_compare("QEMU"), "qemu");
-        assert_eq!(normalize_for_compare(""), "");
+        assert_eq!(expand_cpu_list("0,4,7"), vec![0, 4, 7]);
     }
 }

@@ -10,7 +10,10 @@ pub mod efi;
 
 pub mod common;
 
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(target_os = "android")]
+pub mod android;
+
+#[cfg(target_os = "linux")]
 pub mod linux;
 
 #[cfg(target_os = "macos")]
@@ -29,7 +32,10 @@ pub mod windows;
 
 pub use common::*;
 
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(target_os = "android")]
+pub use android::*;
+
+#[cfg(target_os = "linux")]
 pub use linux::*;
 
 #[cfg(target_os = "macos")]

@@ -23,6 +23,10 @@ check:
 check-riscv:
 	cargo check --target riscv64gc-unknown-linux-gnu
 
+# Compile check for Windows ARM
+check-win-arm:
+	cargo check --target aarch64-pc-windows-msvc
+
 # More in-depth code style checking
 lint:
 	cargo clippy --all-targets --all-features
