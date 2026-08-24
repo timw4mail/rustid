@@ -46,6 +46,8 @@ pub enum MicroArch {
     Zen4C,
     Zen5,
     Zen5C,
+    Zen6,
+    Zen6C,
 
     // Centaur (IDT)
     Winchip,
@@ -217,6 +219,8 @@ impl MicroArch {
             MicroArch::Zen4C => "Zen 4C",
             MicroArch::Zen5 => "Zen 5",
             MicroArch::Zen5C => "Zen 5C",
+            MicroArch::Zen6 => "Zen 6",
+            MicroArch::Zen6C => "Zen 6C",
 
             // Centaur (IDT)
             MicroArch::Winchip => "Winchip",

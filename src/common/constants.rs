@@ -27,6 +27,7 @@ pub const N12: &str = "12nm";
 pub const N10: &str = "10nm";
 pub const N8: &str = "8nm";
 pub const N7: &str = "7nm";
+pub const N6: &str = "6nm";
 pub const N5: &str = "5nm";
 pub const N4: &str = "4nm";
 pub const N3: &str = "3nm";
