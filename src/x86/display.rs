@@ -94,7 +94,7 @@ impl Cpu {
         if !self.cores.is_empty() {
             println!(
                 "{}{} cores ({} threads) across {} core types",
-                disp.label("Cpu Topology"),
+                disp.label("Topology"),
                 self.topology.cores.count,
                 self.topology.threads.count,
                 self.cores.len()
@@ -156,16 +156,19 @@ impl Cpu {
                 "threads"
             };
 
-            println!(
-                "{}{} {}, {} {}, {} {}",
-                lbl,
-                self.topology.sockets.count,
-                socket_str,
-                self.topology.cores.count,
-                core_str,
-                self.topology.threads.count,
-                thread_str
-            );
+            if self.topology.sockets.count > 2 || flags.verbose {
+                println!(
+                    "{lbl}{} {socket_str}, {} {core_str}, {} {thread_str}",
+                    self.topology.sockets.count,
+                    self.topology.cores.count,
+                    self.topology.threads.count,
+                );
+            } else if self.topology.threads.count > 2 {
+                println!(
+                    "{lbl}{} cores ({} threads)",
+                    self.topology.cores.count, self.topology.threads.count
+                );
+            }
 
             disp.newline();
         }
