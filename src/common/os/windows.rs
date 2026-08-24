@@ -46,7 +46,7 @@ pub fn read_reg_string(hkey: HKEY, value_name: &str) -> Option<String> {
         return None;
     }
 
-    let wchar_count = (size as usize + 1) / 2;
+    let wchar_count = (size as usize).div_ceil(2);
     let mut buf = vec![0u16; wchar_count];
     let res = unsafe {
         RegQueryValueExW(
@@ -94,12 +94,10 @@ impl TOSData for OS {
             {
                 if let Some(mfr) = manufacturer
                     && !is_generic_value(&mfr)
+                    && (is_known_hypervisor_vendor(&mfr)
+                        || !prod.to_lowercase().contains(&mfr.to_lowercase()))
                 {
-                    if is_known_hypervisor_vendor(&mfr)
-                        || !prod.to_lowercase().contains(&mfr.to_lowercase())
-                    {
-                        return Some(format!("{mfr} {prod}"));
-                    }
+                    return Some(format!("{mfr} {prod}"));
                 }
                 return Some(prod);
             }

@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.9.5] — Intel microarchitecture expansion, collision disambiguation, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
+## [2.0.0] — Intel microarchitecture expansion, collision disambiguation, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
 
 ### Added
 - Comprehensive Intel microarchitecture expansion covering Intel Family 6, Family 18 (Nova Lake), and Family 19 (Diamond Rapids) CPUID signatures across desktop, mobile, server, and embedded lineups: Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Bartlett Lake, Twin Lake, Granite Rapids, Sierra Forest, Grand Ridge, Clearwater Forest, Sapphire Rapids, Emerald Rapids, Cooper Lake, Rocket Lake, Cannon Lake, Amber Lake, Whiskey Lake, Comet Lake, Knights Mill, Wildcat Lake, Nova Lake, and Diamond Rapids (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
