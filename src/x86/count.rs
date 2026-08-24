@@ -13,7 +13,7 @@ use super::{info_source, provider::CpuidInfoSource};
 
 pub fn get_platform_socket_count() -> TopologyTier {
     #[cfg(any(dos, dos32a))]
-    let mut sockets_detected = TopologyTier::new(
+    let sockets_detected = TopologyTier::new(
         crate::x86::dos::mp::MpTable::detect().socket_count(),
         DataSource::MpTable,
     );
@@ -92,7 +92,7 @@ pub fn get_platform_socket_count() -> TopologyTier {
     };
 
     #[cfg(not(nostd_os))]
-    let mut sockets_detected = if info_source() == CpuidInfoSource::Cpu {
+    let sockets_detected = if info_source() == CpuidInfoSource::Cpu {
         OS::get_socket_count()
     } else {
         TopologyTier::default()

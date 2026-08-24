@@ -1,8 +1,21 @@
 # Changelog
 
-## [1.9.5] — Android & Windows support, ARM overhaul, EFI SMBIOS detection, and DOS improvements
+## [1.9.5] — Intel microarchitecture expansion, collision disambiguation, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
 
 ### Added
+- Comprehensive Intel microarchitecture expansion covering Intel Family 6, Family 18 (Nova Lake), and Family 19 (Diamond Rapids) CPUID signatures across desktop, mobile, server, and embedded lineups: Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Bartlett Lake, Twin Lake, Granite Rapids, Sierra Forest, Grand Ridge, Clearwater Forest, Sapphire Rapids, Emerald Rapids, Cooper Lake, Rocket Lake, Cannon Lake, Amber Lake, Whiskey Lake, Comet Lake, Knights Mill, Wildcat Lake, Nova Lake, and Diamond Rapids (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
+- Stepping- and brand-string-aware CPUID signature collision disambiguation for overlapping Intel CPU models:
+  - `06_55H`: Skylake-SP/X vs. Cascade Lake-SP/X vs. Cooper Lake
+  - `06_8EH`: Amber Lake-Y vs. Kaby Lake-U/R vs. Coffee Lake-U vs. Whiskey Lake-U vs. Comet Lake-U
+  - `06_9EH`: Kaby Lake-S/H/X vs. Coffee Lake-S/H vs. Coffee Lake-S/H Refresh
+  - `06_0FH` & `06_17H`: Core 2 Duo / Quad / Mobile (Conroe, Kentsfield, Merom, Wolfdale, Yorkfield, Penryn) vs. Enterprise Xeon server equivalents (Woodcrest, Clovertown, Tigerton, Wolfdale-DP, Harpertown)
+  - `06_2DH`, `06_3EH`, `06_3FH`, `06_4FH`: HEDT Extreme (`-E`) vs. Multi-Socket Enterprise Xeon (`-EP`/`-EN`/`-EX`) for Sandy Bridge, Ivy Bridge, Haswell, and Broadwell
+  - `06_8FH`: Sapphire Rapids-SP vs. Sapphire Rapids-WS vs. Xeon Max (HBM)
+  - `06_B7H` / `06_BFH`: Raptor Lake 13th Gen vs. 14th Gen Refresh vs. Core Series 1 / Series 2
+  - `06_BEH`: Alder Lake-N vs. Twin Lake-N
+- Hybrid core type and server core resolution for Raptor Lake, Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Sapphire Rapids, Emerald Rapids, Granite Rapids, Sierra Forest, Grand Ridge, and Clearwater Forest (`src/x86/vendor/intel.rs`)
+- Manufacturing process node constants (`INTEL_7`, `INTEL_4`, `INTEL_3`, `INTEL_20A`, `INTEL_18A`, `N10SF`) (`src/common/constants.rs`)
+- Technical citations and source documentation referencing Intel SDM Vol 4 Table 2-1, Intel specification updates, Linux `intel-family.h`, `libcpuid`, and instlatx64 dumps (`src/x86/vendor/intel.rs`)
 - Android system information and ARM core detection via Android system properties (`__system_property_get` / `getprop`) and sysfs (`src/common/os/android.rs`, `src/arm/os/android.rs`)
 - Windows topology (sockets, cores, threads) and multi-level cache detection (L1, L2, L3) via `GetLogicalProcessorInformationEx` (`src/common/os/windows.rs`)
 - Windows ARM SoC and model detection for Qualcomm Snapdragon processors (Snapdragon X Elite, Snapdragon 8cx Gen 3) (`src/arm/os/windows.rs`)
@@ -16,6 +29,7 @@
 - `check-win-arm` target check command in `justfile`
 
 ### Changed
+- Refined EFI socket count and thread count calculation in `src/x86/count.rs` to compute physical package count accurately against logical processors from MP Services without overcounting individual cores in legacy SMBIOS tables or undercounting multi-socket servers
 - Overhauled ARM output formatting to eliminate redundant printing of shared vendor/SoC metadata across core types, grouped clusters cleanly, and labeled sub-cores with "Name" (`src/arm/display.rs`)
 - Moved raw Mac model identifier display (e.g. `[MacBookAir10,1]`) to verbose mode (`-v`/`--verbose`), keeping default output clean with friendly marketing names (`src/common/display.rs`)
 - Enabled verbose mode by default for EFI binaries (`src/efi_rustid.rs`)
@@ -29,6 +43,9 @@
 - Restored fallback CPU speed measurement for DOS environments lacking TSC support (`src/x86/dos/speed.rs`, `src/x86/topology.rs`)
 
 ### Fixed
+- Fixed Alder Lake E-core identification in `Intel::core_micro_arch` (previously reported as `Goldmont`, now correctly identified as `Gracemont`) (`src/x86/vendor/intel.rs`)
+- Fixed socket count detection on multi-socket Apple EFI / UEFI hardware (such as Xserve1,1 and MacPro1,1) where socket count was erroneously clamped to 1 or inflated by per-core SMBIOS entries (`src/x86/count.rs`, `src/x86/efi/mp.rs`)
+- Fixed legacy SMBIOS 2.4 processor table parsing where CPU status `0x01` (Enabled without bit 6 set) was treated as unpopulated (`src/x86/efi/smbios.rs`)
 - Corrected L2 cache count detection for VIA Eden / Nano X2 dual-core processors (`src/x86/cache.rs`)
 - Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
 - Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings (`src/common/cache.rs`, `src/x86/display.rs`)
