@@ -31,6 +31,13 @@ pub const N5: &str = "5nm";
 pub const N4: &str = "4nm";
 pub const N3: &str = "3nm";
 
+pub const INTEL_7: &str = "Intel 7";
+pub const INTEL_4: &str = "Intel 4";
+pub const INTEL_3: &str = "Intel 3";
+pub const INTEL_20A: &str = "Intel 20A";
+pub const INTEL_18A: &str = "Intel 18A";
+pub const N10SF: &str = "10nm SuperFin";
+
 // ----------------------------------------------------------------------------
 // ! ANSI FG colors
 // ----------------------------------------------------------------------------
