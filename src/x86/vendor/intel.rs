@@ -5,7 +5,15 @@ use crate::x86::constants::*;
 use crate::x86::micro_arch::{CpuArch, MicroArch};
 use crate::x86::vendor::TMicroArch;
 
-/// Intel-specific microarchitecture detection.
+/// Intel-specific microarchitecture detection and signature disambiguation.
+///
+/// Sources & References:
+/// - Intel SDM Vol 4: Model-Specific Registers (Order Number: 335592, Table 2-1 CPUID Signatures)
+/// - Intel SDM Vol 2A & Future Features Reference (Order Number: 319433)
+/// - Linux Kernel: `arch/x86/include/asm/intel-family.h`
+/// - Open-source library: `libcpuid/recog_intel.c`
+/// - Instlatx64 raw CPUID instruction register dumps (`instlatx64.atw.hu`)
+/// - Sandpile.org x86 processor architecture tables
 pub struct Intel;
 
 impl Intel {
