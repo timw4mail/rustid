@@ -27,7 +27,7 @@ Primary platforms, with the majority of testing effort.
 |--------------:|:------:|:------:|:-------:|:------:|:------:|:------:|
 | **x86_64**    | —      | ✅     | ✅ | ✅ | 🟢 | ✅     |
 | **x86_32**    | ✅[¹](#note-1) | ✅ | ✅ | — | 🟢 | ✅ |
-| **ARM 64**    | —      | —      | ⚠️[⁵](#note-5) | ✅ | 🟢 | ❌ |
+| **ARM 64**    | —      | —      | ✅[⁵](#note-5) | ✅ | 🟢 | ❌ |
 | **ARM 32**    | —      | —      | —       | —      | ✅     | —      |
 | **RISC-V 64** | —      | —      | —       | —      | ✅     | —      |
 | **PowerPC**   | —      | —      | —       | —      | ✅     | —      |
@@ -41,7 +41,7 @@ These are best-effort platforms: they should work, but information may be more l
 |--------------:|:-------:|:------:|:-------:|:-------:|
 | **x86_64**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
 | **x86_32**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
-| **ARM 64**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
+| **ARM 64**    | ✅      | ✅     | ✅      | ✅      |
 | **ARM 32**    | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[²](#note-2) |
 | **RISC-V 64** | ❌      | ❌     | ❌      | —       |
 | **PowerPC**   | ❌      | ❌     | ❌      | —       |
@@ -55,7 +55,7 @@ These are best-effort platforms: they should work, but information may be more l
 
 **Notes:**
 - <a id="note-1"></a>¹ DOS: requires 386 or newer CPU
-- <a id="note-2"></a>² Android: untested, uses Linux platform logic
+- <a id="note-2"></a>² Android: untested
 - <a id="note-3"></a>³ ARM 32 BSD: panics if MIDR cannot be read from sysctl
 - <a id="note-4"></a>⁴ PowerPC 64 Linux: untested
 - <a id="note-5"></a>⁵ Windows ARM 64: limited data

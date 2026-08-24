@@ -1,29 +1,40 @@
 # Changelog
 
-## [1.9.5] — EFI system detection, cache fallbacks, real-mode DOS overhaul, and improved topology
+## [1.9.5] — Android & Windows support, ARM overhaul, EFI SMBIOS detection, and DOS improvements
 
 ### Added
+- Android system information and ARM core detection via Android system properties (`__system_property_get` / `getprop`) and sysfs (`src/common/os/android.rs`, `src/arm/os/android.rs`)
+- Windows topology (sockets, cores, threads) and multi-level cache detection (L1, L2, L3) via `GetLogicalProcessorInformationEx` (`src/common/os/windows.rs`)
+- Windows ARM SoC and model detection for Qualcomm Snapdragon processors (Snapdragon X Elite, Snapdragon 8cx Gen 3) (`src/arm/os/windows.rs`)
+- Expanded ARM implementer and microarchitecture database covering Apple Silicon, Qualcomm Oryon/Kryo, Samsung Exynos, Fujitsu A64FX, ARM Neoverse/Cortex, Phytium, Ampere, Nvidia, and SiPearl (`src/arm/brand.rs`, `src/arm/micro_arch.rs`)
 - SMBIOS 2.x/3.x table parser for EFI, enabling system name and CPU speed detection on UEFI firmware (`src/x86/efi/smbios.rs`)
 - OS-level cache detection with share-count fallback merging for ARM, PPC, RISC-V, and x86 (`src/common/cache.rs`)
 - Asymmetric 3D V-Cache display support for dual-CCD AMD Ryzen processors with single-CCD 3D V-Cache (e.g. Ryzen 7950X3D) (`src/x86/cache.rs`, `src/x86/display.rs`)
-- Additional Mac model mappings and raw model identifier display in system output (eg. MacBookPro10,2)
-- Additional x86 integration tests and CPUID dump test fixtures (Intel Core i7-12700H, Intel Celeron Eee PC, VIA EdenX2)
+- Additional Mac model mappings across ARM, x86_64, and PowerPC (`src/common/display.rs`)
+- Automated changelog extraction script and crates.io publishing support in release workflow (`.github/scripts/extract_changelog.py`, `.github/workflows/release.yml`)
+- Additional x86 integration tests and CPUID dump test fixtures (Intel Core i7-12700H, Intel Celeron Eee PC, VIA EdenX2) (`tests/cpuid/dump/edenx2.txt`, `tests/cpuid_dump_test.rs`)
+- `check-win-arm` target check command in `justfile`
 
 ### Changed
-- Real-mode DOS binary (`rust86.exe`) refactored and merged with real-mode debug binary, eliminating the separate debug executable while significantly reducing binary footprint and adding simple CLI argument handling
-- Overhauled integration test suite with `make_tests!` macro, eliminating repetitive test boilerplate across CPUID fixtures
-- Topology display now consistently shows sockets, cores, and threads across EFI and non-EFI builds
-- EFI QEMU runner forces text mode so output is visible in `run-efi-32` and `run-efi-64`
-- Improved x86 cache count detection with additional fallback paths
-- Improved robustness of CPU topology counts on EFI via MP Services and SMBIOS data
+- Overhauled ARM output formatting to eliminate redundant printing of shared vendor/SoC metadata across core types, grouped clusters cleanly, and labeled sub-cores with "Name" (`src/arm/display.rs`)
+- Moved raw Mac model identifier display (e.g. `[MacBookAir10,1]`) to verbose mode (`-v`/`--verbose`), keeping default output clean with friendly marketing names (`src/common/display.rs`)
+- Enabled verbose mode by default for EFI binaries (`src/efi_rustid.rs`)
+- Real-mode DOS binary (`rust86.exe`) refactored and merged with real-mode debug binary, eliminating the separate debug executable while significantly reducing binary footprint and adding simple CLI argument handling (`src/rust86.rs`, `src/x86/dos/args.rs`)
+- Overhauled integration test suite with `make_tests!` macro, eliminating repetitive test boilerplate across CPUID fixtures (`tests/cpuid_dump_test.rs`)
+- Topology display now consistently shows sockets, cores, and threads across EFI, DOS, and standard OS builds, and restored core/thread count formatting for homogeneous x86 CPUs (`src/x86/display.rs`)
+- EFI QEMU runner forces text mode so output is visible in `run-efi-32` and `run-efi-64` (`src/x86/efi/display.rs`)
+- Improved x86 cache count detection with additional fallback paths (`src/common/cache.rs`, `src/x86/cache.rs`)
+- Improved robustness of CPU topology counts on EFI via MP Services and SMBIOS data (`src/x86/efi/mp.rs`, `src/x86/efi/smbios.rs`)
 - Simplified Centaur / VIA feature extraction and CPU identification logic (`src/x86/vendor/centaur.rs`)
 - Restored fallback CPU speed measurement for DOS environments lacking TSC support (`src/x86/dos/speed.rs`, `src/x86/topology.rs`)
 
 ### Fixed
 - Corrected L2 cache count detection for VIA Eden / Nano X2 dual-core processors (`src/x86/cache.rs`)
 - Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
-- Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings
-- Fixed and cleaned up Haiku OS test expectations and CPU topology parsing
+- Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings (`src/common/cache.rs`, `src/x86/display.rs`)
+- Fixed and cleaned up Haiku OS test expectations and CPU topology parsing (`src/x86/cpu.rs`, `src/x86/micro_arch.rs`)
+- Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
+- Fixed PowerPC build compile error (`src/common/cache.rs`)
 
 ## [1.9.0] — EFI/UEFI support, compact display, and VIA features
 
