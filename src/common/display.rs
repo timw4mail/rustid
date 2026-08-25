@@ -125,7 +125,8 @@ impl CpuDisplay {
         if let Some(cache) = cache {
             match cache.l1 {
                 Level1Cache::Unified(l1) => {
-                    println!("{}L1: Unified {:>4} KB", self.label("Cache"), l1.size);
+                    let (num, unit) = Self::cache_size(l1.size);
+                    println!("{}L1: Unified {} {}", self.label("Cache"), num, unit);
                 }
                 Level1Cache::Split { data, instruction } => {
                     let data_count: String = cache_count(data.share_count);
