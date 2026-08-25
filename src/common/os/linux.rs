@@ -32,7 +32,7 @@ fn parse_cpu_list_count(s: &str) -> u32 {
 }
 
 /// Expand a Linux CPU list string into a vector of individual CPU IDs.
-fn expand_cpu_list(s: &str) -> Vec<u32> {
+pub fn expand_cpu_list(s: &str) -> Vec<u32> {
     let mut cpus = Vec::new();
     for part in s.trim().split(',') {
         let part = part.trim();

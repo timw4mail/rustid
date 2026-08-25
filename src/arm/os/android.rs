@@ -50,9 +50,11 @@ pub fn detect() -> OsCpuInfo {
     }
 
     #[cfg(not(target_arch = "arm"))]
-    if midrs.len() == 1 || all_midrs.len() <= 1 {
+    {
         let fallback_midrs = detect_android_midrs();
-        if !fallback_midrs.is_empty() && fallback_midrs.len() > all_midrs.len() {
+        if !fallback_midrs.is_empty()
+            && (fallback_midrs.len() > all_midrs.len() || midrs.len() <= 1)
+        {
             all_midrs.clear();
             midrs.clear();
             for m_val in fallback_midrs {
@@ -85,34 +87,82 @@ pub fn detect() -> OsCpuInfo {
     }
 }
 
-/// Reads MIDR values from sysfs or /proc/cpuinfo as a fallback.
+/// Reads MIDR values from sysfs or /proc/cpuinfo across all CPU cores.
+/// Handles big.LITTLE / DynamIQ heterogeneous topologies and offline cores.
 fn detect_android_midrs() -> Vec<usize> {
-    let mut midrs = Vec::new();
+    // 1. Determine all expected CPUs from sysfs /possible or /present
+    let mut possible_cpus = Vec::new();
+    if let Ok(content) = std::fs::read_to_string("/sys/devices/system/cpu/possible") {
+        possible_cpus = crate::common::expand_cpu_list(&content);
+    }
+    if possible_cpus.is_empty()
+        && let Ok(content) = std::fs::read_to_string("/sys/devices/system/cpu/present")
+    {
+        possible_cpus = crate::common::expand_cpu_list(&content);
+    }
+    if possible_cpus.is_empty() {
+        let mut missing_streak = 0;
+        for i in 0..256 {
+            let cpu_dir = format!("/sys/devices/system/cpu/cpu{}", i);
+            if std::path::Path::new(&cpu_dir).exists() {
+                possible_cpus.push(i);
+                missing_streak = 0;
+            } else {
+                missing_streak += 1;
+                if missing_streak >= 8 && i > 8 {
+                    break;
+                }
+            }
+        }
+    }
 
-    // 1. Try sysfs if readable
-    let mut i = 0;
-    loop {
+    // 2. Read sysfs midr_el1 for each possible CPU
+    let mut sysfs_midrs: BTreeMap<u32, usize> = BTreeMap::new();
+    for &cpu_id in &possible_cpus {
         let path = format!(
             "/sys/devices/system/cpu/cpu{}/regs/identification/midr_el1",
-            i
+            cpu_id
         );
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            if let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16) {
-                midrs.push(midr);
-            }
-        } else {
-            break;
+        if let Ok(content) = std::fs::read_to_string(&path)
+            && let Ok(midr) = usize::from_str_radix(content.trim().trim_start_matches("0x"), 16)
+        {
+            sysfs_midrs.insert(cpu_id, midr);
         }
-        i += 1;
     }
 
-    if !midrs.is_empty() {
-        return midrs;
+    // 3. For any offline CPU missing sysfs midr_el1, infer from cluster siblings
+    for &cpu_id in &possible_cpus {
+        if !sysfs_midrs.contains_key(&cpu_id) {
+            let rel_path = format!("/sys/devices/system/cpu/cpu{}/cpufreq/related_cpus", cpu_id);
+            let sibling_cpus = std::fs::read_to_string(&rel_path)
+                .ok()
+                .map(|s| crate::common::expand_cpu_list(&s))
+                .or_else(|| {
+                    let sib_path = format!(
+                        "/sys/devices/system/cpu/cpu{}/topology/core_siblings_list",
+                        cpu_id
+                    );
+                    std::fs::read_to_string(&sib_path)
+                        .ok()
+                        .map(|s| crate::common::expand_cpu_list(&s))
+                });
+
+            if let Some(siblings) = sibling_cpus {
+                for sib in siblings {
+                    if let Some(&known_midr) = sysfs_midrs.get(&sib) {
+                        sysfs_midrs.insert(cpu_id, known_midr);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
-    // 2. Parse /proc/cpuinfo per-processor blocks
+    // 4. Parse /proc/cpuinfo per-processor blocks
+    let mut cpuinfo_midrs: BTreeMap<u32, usize> = BTreeMap::new();
+    let mut cpuinfo_list: Vec<usize> = Vec::new();
     let cpuinfo = get_proc_cpuinfo_data();
-    for map in &cpuinfo {
+    for (idx, map) in cpuinfo.iter().enumerate() {
         let impl_ = map.get("CPU implementer").and_then(|s| {
             usize::from_str_radix(
                 s.split_whitespace()
@@ -156,11 +206,40 @@ fn detect_android_midrs() -> Vec<usize> {
                 | (arch.unwrap_or(0) << ARCHITECTURE_OFFSET)
                 | (p << PART_OFFSET)
                 | rev.unwrap_or(0);
-            midrs.push(m);
+
+            let proc_id = map
+                .get("processor")
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(idx as u32);
+
+            cpuinfo_midrs.insert(proc_id, m);
+            cpuinfo_list.push(m);
         }
     }
 
-    midrs
+    // 5. Fill any remaining gaps in sysfs_midrs from cpuinfo_midrs
+    for &cpu_id in &possible_cpus {
+        if !sysfs_midrs.contains_key(&cpu_id)
+            && let Some(&m) = cpuinfo_midrs.get(&cpu_id)
+        {
+            sysfs_midrs.insert(cpu_id, m);
+        }
+    }
+
+    // 6. Return the most complete and accurate list of MIDRs
+    if sysfs_midrs.len() >= possible_cpus.len() && !sysfs_midrs.is_empty() {
+        return sysfs_midrs.into_values().collect();
+    }
+
+    if cpuinfo_list.len() >= sysfs_midrs.len() && !cpuinfo_list.is_empty() {
+        return cpuinfo_list;
+    }
+
+    if !sysfs_midrs.is_empty() {
+        return sysfs_midrs.into_values().collect();
+    }
+
+    cpuinfo_list
 }
 
 // ----------------------------------------------------------------------------
