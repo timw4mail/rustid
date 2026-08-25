@@ -118,23 +118,24 @@ impl CpuDisplay {
 
                 let vendor_str: &str = core.implementer.into();
                 if vendor_str != UNK {
-                    println!("{}{}", disp.label("Implementer"), vendor_str);
+                    disp.section_line("Implementer", vendor_str);
                 }
 
                 let name = Into::<&str>::into(core.kind);
-                println!("{}{}", disp.label("Type"), name);
+                disp.section_line("Type", name);
 
                 let ma_str: String = core.micro_arch.into();
                 if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
-                    println!("{}{}", disp.label("MicroArch"), ma_str);
+                    disp.section_line("MicroArch", &ma_str);
                 }
 
                 if Self::should_show_core_codename(core, flags.verbose)
-                    && let Some(codename) = &core.code_name {
-                        println!("{}{}", disp.label("Codename"), codename);
-                    }
+                    && let Some(codename) = &core.code_name
+                {
+                    disp.section_line("Codename", codename);
+                }
 
-                println!("{}{}", disp.label("Count"), core.count);
+                disp.section_line("Count", &core.count.to_string());
 
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 disp.display_cache(core.cache, &cc, 0);
@@ -150,20 +151,21 @@ impl CpuDisplay {
 
             let vendor_str: &str = core.implementer.into();
             if vendor_str != UNK {
-                println!("{}{}", disp.label("Implementer"), vendor_str);
+                disp.section_line("Implementer", vendor_str);
             }
 
             let ma_str: String = core.micro_arch.into();
             if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
-                println!("{}{}", disp.label("MicroArch"), ma_str);
+                disp.section_line("MicroArch", &ma_str);
             }
 
             if Self::should_show_core_codename(core, flags.verbose)
-                && let Some(codename) = &core.code_name {
-                    println!("{}{}", disp.label("Codename"), codename);
-                }
+                && let Some(codename) = &core.code_name
+            {
+                disp.section_line("Codename", codename);
+            }
 
-            println!("{}{}", disp.label("Count"), core.count);
+            disp.section_line("Count", &core.count.to_string());
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
             disp.display_cache(core.cache, &cc, 0);
