@@ -22,7 +22,7 @@ pub mod macos;
 #[cfg(any(bsd, target_os = "macos"))]
 pub mod sysctl;
 
-#[cfg(target_os = "haiku")]
+#[cfg(any(target_os = "haiku", test))]
 pub mod haiku;
 
 #[cfg(target_os = "windows")]
@@ -41,7 +41,7 @@ pub use linux::*;
 #[cfg(target_os = "macos")]
 pub use macos::*;
 
-#[cfg(target_os = "haiku")]
+#[cfg(any(target_os = "haiku", test))]
 pub use haiku::*;
 
 #[cfg(any(bsd, target_os = "macos"))]

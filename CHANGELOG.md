@@ -62,7 +62,7 @@
 - Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
 - Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings (`src/common/cache.rs`, `src/x86/display.rs`)
 - Fixed compiler warnings on macOS ARM target builds (`src/arm/os/macos.rs`, `src/arm/os/mod.rs`)
-- Fixed and cleaned up Haiku OS test expectations and CPU topology parsing (`src/x86/cpu.rs`, `src/x86/micro_arch.rs`)
+- Fixed socket count calculation on Haiku OS where total logical CPU count from `sysinfo` was erroneously treated as physical sockets, causing inflated core/thread counts on multi-core processors like VIA Nano X2 (`src/common/os/haiku.rs`, `src/x86/display.rs`)
 - Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
 - Fixed PowerPC build compile error (`src/common/cache.rs`)
 

@@ -156,18 +156,20 @@ impl Cpu {
                 "threads"
             };
 
-            if self.topology.sockets.count > 2 || flags.verbose {
+            if self.topology.sockets.count > 1 || flags.verbose {
                 println!(
                     "{lbl}{} {socket_str}, {} {core_str}, {} {thread_str}",
                     self.topology.sockets.count,
                     self.topology.cores.count,
                     self.topology.threads.count,
                 );
-            } else if self.topology.threads.count > 2 {
+            } else if self.topology.cores.count != self.topology.threads.count {
                 println!(
                     "{lbl}{} cores ({} threads)",
                     self.topology.cores.count, self.topology.threads.count
                 );
+            } else {
+                println!("{lbl}{} cores", self.topology.cores.count);
             }
 
             disp.newline();
