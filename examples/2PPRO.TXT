@@ -1,4 +1,4 @@
---------------- Rustid 1.8.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i686
         Vendor: GenuineIntel (Intel)
  Model (synth): Intel Pentium Pro
