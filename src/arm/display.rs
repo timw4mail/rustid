@@ -46,35 +46,101 @@ impl CpuDisplay {
         true
     }
 
-    pub fn should_show_codename(cpu_info: &Cpu, verbose: bool) -> bool {
-        let code_name = cpu_info.cpu_arch.code_name;
+    /// If all core types in `cpu_info` share the exact same distinct codename,
+    /// returns that shared codename. Returns `None` if core types have different codenames
+    /// or if only a subset of core types have a custom codename.
+    pub fn shared_core_codename(cpu_info: &Cpu) -> Option<&str> {
+        if cpu_info.cores.is_empty() {
+            if cpu_info.cpu_arch.code_name != UNK && !cpu_info.cpu_arch.code_name.is_empty() {
+                return Some(cpu_info.cpu_arch.code_name);
+            }
+            return None;
+        }
+
+        // Check if every core cluster in cpu_info has the same code_name
+        let mut common_cname: Option<&str> = None;
+        for (i, core) in cpu_info.cores.values().enumerate() {
+            let Some(cname) = &core.code_name else {
+                common_cname = None;
+                break;
+            };
+            if cname == UNK || cname.is_empty() {
+                common_cname = None;
+                break;
+            }
+            let ma_str: String = core.micro_arch.into();
+            if ma_str != UNK && is_duplicate(cname, &ma_str) {
+                common_cname = None;
+                break;
+            }
+            if i == 0 {
+                common_cname = Some(cname.as_str());
+            } else if common_cname != Some(cname.as_str()) {
+                common_cname = None;
+                break;
+            }
+        }
+
+        if common_cname.is_some() {
+            return common_cname;
+        }
+
+        // If no core has a distinct core codename, but top-level cpu_arch.code_name is set:
+        if cpu_info.cpu_arch.code_name != UNK && !cpu_info.cpu_arch.code_name.is_empty() {
+            return Some(cpu_info.cpu_arch.code_name);
+        }
+
+        None
+    }
+
+    pub fn should_show_codename(cpu_info: &Cpu, verbose: bool) -> Option<&str> {
+        let code_name = if let Some(shared) = Self::shared_core_codename(cpu_info) {
+            shared
+        } else if cpu_info.cpu_arch.code_name != UNK && !cpu_info.cpu_arch.code_name.is_empty() {
+            cpu_info.cpu_arch.code_name
+        } else {
+            return None;
+        };
+
         if code_name == UNK || code_name.is_empty() {
-            return false;
+            return None;
         }
+
         if verbose {
-            return true;
+            return Some(code_name);
         }
+
+        if is_duplicate(code_name, &cpu_info.cpu_arch.model) {
+            return None;
+        }
+
+        if let Some(soc) = &cpu_info.soc_model
+            && is_duplicate(code_name, soc)
+        {
+            return None;
+        }
+
+        // If this codename matches all core micro-architectures (e.g. Cortex-A53), suppress it
+        let mut all_match_ma = !cpu_info.cores.is_empty();
         for core in cpu_info.cores.values() {
             let ma_str: String = core.micro_arch.into();
-            if ma_str != UNK && is_duplicate(code_name, &ma_str) {
-                return false;
-            }
-            if let Some(cname) = &core.code_name
-                && cname != UNK
-                && !cname.is_empty()
-                && is_duplicate(code_name, cname)
-            {
-                return false;
+            if ma_str == UNK || !is_duplicate(code_name, &ma_str) {
+                all_match_ma = false;
+                break;
             }
         }
-        true
+        if all_match_ma {
+            return None;
+        }
+
+        Some(code_name)
     }
 
     pub fn should_show_core_micro_arch(micro_arch: MicroArch, _verbose: bool) -> bool {
         micro_arch != MicroArch::Unknown
     }
 
-    pub fn should_show_core_codename(core: &CpuCore, verbose: bool) -> bool {
+    pub fn should_show_core_codename(core: &CpuCore, cpu_info: &Cpu, verbose: bool) -> bool {
         let Some(code_name) = &core.code_name else {
             return false;
         };
@@ -86,6 +152,10 @@ impl CpuDisplay {
         }
         let ma_str: String = core.micro_arch.into();
         if ma_str != UNK && is_duplicate(code_name, &ma_str) {
+            return false;
+        }
+        // When all core types share the same codename, display it only in the CPU/SoC section, not with the cores
+        if Self::shared_core_codename(cpu_info).is_some() {
             return false;
         }
         true
@@ -108,8 +178,8 @@ impl CpuDisplay {
             disp.simple_line("Model", &cpu_info.cpu_arch.model);
         }
 
-        if Self::should_show_codename(cpu_info, flags.verbose) {
-            disp.simple_line("Codename", cpu_info.cpu_arch.code_name);
+        if let Some(codename) = Self::should_show_codename(cpu_info, flags.verbose) {
+            disp.simple_line("Codename", codename);
         }
 
         if let Some(tech) = cpu_info.cpu_arch.technology {
@@ -136,7 +206,7 @@ impl CpuDisplay {
                     disp.section_line("MicroArch", &ma_str);
                 }
 
-                if Self::should_show_core_codename(core, flags.verbose)
+                if Self::should_show_core_codename(core, cpu_info, flags.verbose)
                     && let Some(codename) = &core.code_name
                 {
                     disp.section_line("Codename", codename);
@@ -166,7 +236,7 @@ impl CpuDisplay {
                 disp.section_line("MicroArch", &ma_str);
             }
 
-            if Self::should_show_core_codename(core, flags.verbose)
+            if Self::should_show_core_codename(core, cpu_info, flags.verbose)
                 && let Some(codename) = &core.code_name
             {
                 disp.section_line("Codename", codename);
@@ -360,17 +430,26 @@ mod tests {
             "Cortex-A53",
             &[(Vendor::Arm, MicroArch::ArmCortexA53, Some("Cortex-A53"))],
         );
-        assert!(!CpuDisplay::should_show_codename(&cpu_a53, false));
-        assert!(CpuDisplay::should_show_codename(&cpu_a53, true));
+        assert_eq!(CpuDisplay::should_show_codename(&cpu_a53, false), None);
+        assert_eq!(
+            CpuDisplay::should_show_codename(&cpu_a53, true),
+            Some("Cortex-A53")
+        );
 
-        // Codename "Maya" differs from core MicroArch "Cortex-A72" -> displayed at SoC level if distinct
+        // Codename "Maya" differs from core MicroArch "Cortex-A72" -> displayed at SoC level
         let cpu_a72 = make_test_cpu(
             "ARM Cortex-A72",
             "Maya",
-            &[(Vendor::Arm, MicroArch::ArmCortexA72, None)],
+            &[(Vendor::Arm, MicroArch::ArmCortexA72, Some("Maya"))],
         );
-        assert!(CpuDisplay::should_show_codename(&cpu_a72, false));
-        assert!(CpuDisplay::should_show_codename(&cpu_a72, true));
+        assert_eq!(
+            CpuDisplay::should_show_codename(&cpu_a72, false),
+            Some("Maya")
+        );
+        assert_eq!(
+            CpuDisplay::should_show_codename(&cpu_a72, true),
+            Some("Maya")
+        );
 
         // Codename "Tahiti" differs from cores "Everest", "Sawtooth" -> displayed
         let cpu_a18 = make_test_cpu(
@@ -381,8 +460,14 @@ mod tests {
                 (Vendor::Apple, MicroArch::AppleSawtooth, None),
             ],
         );
-        assert!(CpuDisplay::should_show_codename(&cpu_a18, false));
-        assert!(CpuDisplay::should_show_codename(&cpu_a18, true));
+        assert_eq!(
+            CpuDisplay::should_show_codename(&cpu_a18, false),
+            Some("Tahiti")
+        );
+        assert_eq!(
+            CpuDisplay::should_show_codename(&cpu_a18, true),
+            Some("Tahiti")
+        );
 
         // Codename UNK -> always suppressed
         let cpu_unk = make_test_cpu(
@@ -390,59 +475,99 @@ mod tests {
             UNK,
             &[(Vendor::Arm, MicroArch::ArmCortexA53, Some("Cortex-A53"))],
         );
-        assert!(!CpuDisplay::should_show_codename(&cpu_unk, false));
-        assert!(!CpuDisplay::should_show_codename(&cpu_unk, true));
+        assert_eq!(CpuDisplay::should_show_codename(&cpu_unk, false), None);
+        assert_eq!(CpuDisplay::should_show_codename(&cpu_unk, true), None);
     }
 
     #[test]
     fn test_should_show_core_codename() {
-        // When codename is "Enyo" and micro_arch is Cortex-A76 -> distinct, should show
-        let core_a76 = CpuCore {
-            implementer: Vendor::Arm,
-            kind: CoreType::Performance,
-            micro_arch: MicroArch::ArmCortexA76,
-            code_name: Some("Enyo".to_string()),
-            cache: None,
-            count: 4,
-        };
-        assert!(CpuDisplay::should_show_core_codename(&core_a76, false));
-        assert!(CpuDisplay::should_show_core_codename(&core_a76, true));
+        // Multi-cluster with DIFFERENT codenames: Kryo 485 Gold and Kryo 485 Silver
+        let cpu_snapdragon = make_test_cpu(
+            "Snapdragon 855",
+            UNK,
+            &[
+                (
+                    Vendor::Qualcomm,
+                    MicroArch::ArmCortexA76,
+                    Some("Kryo 485 Gold"),
+                ),
+                (
+                    Vendor::Qualcomm,
+                    MicroArch::ArmCortexA55,
+                    Some("Kryo 485 Silver"),
+                ),
+            ],
+        );
+        let core_gold = cpu_snapdragon
+            .cores
+            .get(&(CoreType::Performance, Midr::new(0)))
+            .expect("gold core missing");
+        let core_silver = cpu_snapdragon
+            .cores
+            .get(&(CoreType::Efficiency, Midr::new(1)))
+            .expect("silver core missing");
 
-        // When codename is "Cortex-A53" and micro_arch is Cortex-A53 -> duplicate, should suppress unless verbose
-        let core_a53 = CpuCore {
-            implementer: Vendor::Arm,
-            kind: CoreType::Efficiency,
-            micro_arch: MicroArch::ArmCortexA53,
-            code_name: Some("Cortex-A53".to_string()),
-            cache: None,
-            count: 4,
-        };
-        assert!(!CpuDisplay::should_show_core_codename(&core_a53, false));
-        assert!(CpuDisplay::should_show_core_codename(&core_a53, true));
+        // Since core types have different codenames, each core should show its own codename
+        assert!(CpuDisplay::should_show_core_codename(
+            core_gold,
+            &cpu_snapdragon,
+            false
+        ));
+        assert!(CpuDisplay::should_show_core_codename(
+            core_silver,
+            &cpu_snapdragon,
+            false
+        ));
+
+        // Single cluster or all clusters sharing the same codename (e.g. Cortex-A72 "Maya")
+        let cpu_a72 = make_test_cpu(
+            "ARM Cortex-A72",
+            "Maya",
+            &[(Vendor::Arm, MicroArch::ArmCortexA72, Some("Maya"))],
+        );
+        let core_a72 = cpu_a72
+            .cores
+            .get(&(CoreType::Performance, Midr::new(0)))
+            .expect("a72 core missing");
+
+        // When all core types share the same codename, it's displayed only in the CPU/SoC section, NOT with the cores
+        assert!(!CpuDisplay::should_show_core_codename(
+            core_a72, &cpu_a72, false
+        ));
+        assert!(CpuDisplay::should_show_core_codename(
+            core_a72, &cpu_a72, true
+        ));
+
+        // When codename is duplicate of micro_arch (e.g. Cortex-A53)
+        let cpu_a53 = make_test_cpu(
+            "ARM Cortex-A53",
+            "Cortex-A53",
+            &[(Vendor::Arm, MicroArch::ArmCortexA53, Some("Cortex-A53"))],
+        );
+        let core_a53 = cpu_a53
+            .cores
+            .get(&(CoreType::Efficiency, Midr::new(0)))
+            .expect("a53 core missing");
+        assert!(!CpuDisplay::should_show_core_codename(
+            core_a53, &cpu_a53, false
+        ));
 
         // When codename is None -> suppressed
-        let core_none = CpuCore {
-            implementer: Vendor::Apple,
-            kind: CoreType::Performance,
-            micro_arch: MicroArch::AppleFirestorm,
-            code_name: None,
-            cache: None,
-            count: 4,
-        };
-        assert!(!CpuDisplay::should_show_core_codename(&core_none, false));
-        assert!(!CpuDisplay::should_show_core_codename(&core_none, true));
-
-        // Semi-custom Qualcomm core: Kryo 485 Gold on Cortex-A76 -> distinct, should show
-        let core_kryo = CpuCore {
-            implementer: Vendor::Qualcomm,
-            kind: CoreType::Performance,
-            micro_arch: MicroArch::ArmCortexA76,
-            code_name: Some("Kryo 485 Gold".to_string()),
-            cache: None,
-            count: 4,
-        };
-        assert!(CpuDisplay::should_show_core_codename(&core_kryo, false));
-        assert!(CpuDisplay::should_show_core_codename(&core_kryo, true));
+        let cpu_apple = make_test_cpu(
+            "Apple M1",
+            "Tonga",
+            &[(Vendor::Apple, MicroArch::AppleFirestorm, None)],
+        );
+        let core_apple = cpu_apple
+            .cores
+            .get(&(CoreType::Performance, Midr::new(0)))
+            .expect("apple core missing");
+        assert!(!CpuDisplay::should_show_core_codename(
+            core_apple, &cpu_apple, false
+        ));
+        assert!(!CpuDisplay::should_show_core_codename(
+            core_apple, &cpu_apple, true
+        ));
     }
 
     #[test]
@@ -470,27 +595,39 @@ mod tests {
         assert_ne!(denver.implementer, a57.implementer);
 
         // Snapdragon 855: Qualcomm Kryo 485 Gold (Cortex-A76) + ARM Cortex-A55
-        let gold = CpuCore {
-            implementer: Vendor::Qualcomm,
-            kind: CoreType::Performance,
-            micro_arch: MicroArch::ArmCortexA76,
-            code_name: Some("Kryo 485 Gold".to_string()),
-            cache: None,
-            count: 4,
-        };
-        let silver = CpuCore {
-            implementer: Vendor::Arm,
-            kind: CoreType::Efficiency,
-            micro_arch: MicroArch::ArmCortexA55,
-            code_name: Some("Cortex-A55".to_string()),
-            cache: None,
-            count: 4,
-        };
+        let cpu_snapdragon = make_test_cpu(
+            "Snapdragon 855",
+            UNK,
+            &[
+                (
+                    Vendor::Qualcomm,
+                    MicroArch::ArmCortexA76,
+                    Some("Kryo 485 Gold"),
+                ),
+                (Vendor::Arm, MicroArch::ArmCortexA55, Some("Cortex-A55")),
+            ],
+        );
+        let gold = cpu_snapdragon
+            .cores
+            .get(&(CoreType::Performance, Midr::new(0)))
+            .expect("gold core missing");
+        let silver = cpu_snapdragon
+            .cores
+            .get(&(CoreType::Efficiency, Midr::new(1)))
+            .expect("silver core missing");
 
         assert_eq!(gold.implementer, Vendor::Qualcomm);
         assert_eq!(silver.implementer, Vendor::Arm);
-        assert!(CpuDisplay::should_show_core_codename(&gold, false));
-        assert!(!CpuDisplay::should_show_core_codename(&silver, false));
+        assert!(CpuDisplay::should_show_core_codename(
+            gold,
+            &cpu_snapdragon,
+            false
+        ));
+        assert!(!CpuDisplay::should_show_core_codename(
+            silver,
+            &cpu_snapdragon,
+            false
+        ));
     }
 
     #[test]
