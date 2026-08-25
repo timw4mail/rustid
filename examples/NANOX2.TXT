@@ -1,10 +1,9 @@
---------------- Rustid 1.0.0 (x86_64-haiku) ---------------
+--------------- Rustid 2.0.0 (x86_64-haiku) ---------------
   Architecture: x86_64-v1
 
         Vendor: CentaurHauls (Via)
 
          Model: VIA Nano X2 U4200
-   Model (raw): VIA Eden X2 U4200 @ 1.0+ GHz
 
      MicroArch: Isaiah
 
@@ -12,16 +11,20 @@
 
   Process Node: 40nm
 
-      Topology: 2 sockets, 2 cores, 2 threads
+      Topology: 2 cores
 
          Cache: L1d: 2x 64 KB, 16-way
                 L1i: 2x 64 KB, 16-way
-                L2:  2x 1 MB, 8-way
+                L2:  2x 1 MB, 32-way
 
      Frequency: 1.00 GHz
 
      Signature: Family 6h, Model Fh, Stepping Dh
                 (0, 6, 0, 15, 13)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4.1 SSSE3 POPCNT 
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX HT APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4.1 SSSE3
+                Security: NX VT-x
+                Other: POPCNT
+                Centaur: RNG, RNG2, ACE, ACE2(disabled), PHE, PHE2, PMM, RSA
 
