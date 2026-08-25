@@ -46,15 +46,17 @@ impl Midr {
     }
 }
 
+pub type Implementer = Vendor;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuCore {
+    pub implementer: Implementer,
     pub kind: CoreType,
-    pub name: Option<String>,
+    pub micro_arch: MicroArch,
+    pub code_name: Option<String>,
     pub cache: Option<Cache>,
     pub count: u32,
 }
-
-type Implementer = Vendor;
 
 /// ARM Microarchitectures across vendors.
 ///

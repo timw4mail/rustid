@@ -290,30 +290,68 @@ fn cpufamily_to_midr(cpufamily: usize, brand_string: &str) -> usize {
     }
 }
 
-/// Maps an Apple MIDR part number and core type to a core codename.
+/// Maps an Apple MIDR part number and core type to a MicroArch.
 /// This is macOS-specific because sysctl provides perflevels (core types)
 /// while the synthesized MIDR only represents one part number per family.
-fn find_core_codename(midr: &Midr, kind: CoreType) -> Option<String> {
-    let str = match (midr.part, kind) {
+fn find_core_micro_arch(midr: &Midr, kind: CoreType) -> MicroArch {
+    match (midr.part, kind) {
         // M1
-        (0x022..=0x029, CoreType::Performance) => "FireStorm",
-        (0x022..=0x029, CoreType::Efficiency) => "IceStorm",
+        (0x022..=0x029, CoreType::Performance) => MicroArch::AppleFirestorm,
+        (0x022..=0x029, CoreType::Efficiency) => MicroArch::AppleIcestorm,
 
         // M2
-        (0x030..=0x039, CoreType::Performance) => "Avalanche",
-        (0x030..=0x039, CoreType::Efficiency) => "Blizzard",
+        (0x030..=0x039, CoreType::Performance) => MicroArch::AppleAvalanche,
+        (0x030..=0x039, CoreType::Efficiency) => MicroArch::AppleBlizzard,
 
-        // M3+, A18 Pro
-        (0x101 | 0x040..=0x059, CoreType::Performance) => "Everest",
-        (0x101 | 0x040..=0x059, CoreType::Efficiency) => "Sawtooth",
+        // M3
+        (0x040..=0x049, CoreType::Performance) => MicroArch::AppleEverest,
+        (0x040..=0x049, CoreType::Efficiency) => MicroArch::AppleSawtooth,
 
-        _ => UNK,
-    };
+        // M4
+        (0x050..=0x059, CoreType::Performance) => MicroArch::AppleEverest,
+        (0x050..=0x059, CoreType::Efficiency) => MicroArch::AppleSawtooth,
 
-    if str == UNK {
-        None
-    } else {
-        Some(String::from(str))
+        // A18 Pro
+        (0x101, CoreType::Performance) => MicroArch::AppleEverest,
+        (0x101, CoreType::Efficiency) => MicroArch::AppleSawtooth,
+
+        // A16
+        (0x036..=0x037, CoreType::Performance) => MicroArch::AppleEverest,
+        (0x036..=0x037, CoreType::Efficiency) => MicroArch::AppleSawtooth,
+
+        // A15
+        (0x030..=0x031, CoreType::Performance) => MicroArch::AppleAvalanche,
+        (0x030..=0x031, CoreType::Efficiency) => MicroArch::AppleBlizzard,
+
+        // A14
+        (0x020..=0x021, CoreType::Performance) => MicroArch::AppleFirestorm,
+        (0x020..=0x021, CoreType::Efficiency) => MicroArch::AppleIcestorm,
+
+        // A13
+        (0x012..=0x013, CoreType::Performance) => MicroArch::AppleLightning,
+        (0x012..=0x013, CoreType::Efficiency) => MicroArch::AppleThunder,
+
+        // A12
+        (0x00B..=0x00C, CoreType::Performance) => MicroArch::AppleVortex,
+        (0x00B..=0x00C, CoreType::Efficiency) => MicroArch::AppleTempest,
+
+        // A11
+        (0x008..=0x009, CoreType::Performance) => MicroArch::AppleMonsoon,
+        (0x008..=0x009, CoreType::Efficiency) => MicroArch::AppleMistral,
+
+        // A10
+        (0x006, _) => MicroArch::AppleHurricane,
+
+        // A9
+        (0x004, _) => MicroArch::AppleTwister,
+        // A8
+        (0x002, _) => MicroArch::AppleTyphoon,
+        // A7
+        (0x001, _) => MicroArch::AppleCyclone,
+        // A6
+        (0x000, _) => MicroArch::AppleSwift,
+
+        _ => MicroArch::Unknown,
     }
 }
 
@@ -374,13 +412,15 @@ pub fn detect() -> OsCpuInfo {
         cache.l1 = l1;
         cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, 0, cpus_per_l2));
 
-        let name = find_core_codename(&midr, kind);
+        let micro_arch = find_core_micro_arch(&midr, kind);
 
         cores.insert(
             (kind, midr),
             CpuCore {
+                implementer: Vendor::Apple,
                 kind,
-                name,
+                micro_arch,
+                code_name: None,
                 cache: Some(cache),
                 count,
             },

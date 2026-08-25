@@ -66,7 +66,7 @@ pub mod ppc;
 #[cfg(ppc_cpu)]
 pub use ppc::cpu::Cpu;
 
-#[cfg(arm_cpu)]
+#[cfg(any(arm_cpu, test))]
 pub mod arm;
 #[cfg(arm_cpu)]
 pub use arm::Cpu;

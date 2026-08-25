@@ -9,7 +9,7 @@ use std::path::Path;
 
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
-#[cfg(arm_cpu)]
+#[cfg(any(arm_cpu, test))]
 use std::collections::BTreeMap;
 
 /// Parse a Linux CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
@@ -485,7 +485,7 @@ impl Cache {
     /// from sysfs and returns a map keyed by MIDR value.
     ///
     /// Returns `None` if `midr_el1` is unavailable (non-ARM or older kernel).
-    #[cfg(arm_cpu)]
+    #[cfg(any(arm_cpu, test))]
     pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
         let cpu_root = Path::new("/sys/devices/system/cpu");
         if !cpu_root.exists() {
@@ -518,11 +518,10 @@ impl Cache {
         // Read cache config from first CPU of each MIDR group
         let mut cache_map: BTreeMap<usize, Cache> = BTreeMap::new();
         for (&midr, cpus_in_group) in &midr_map {
-            if let Some(&first_cpu) = cpus_in_group.first() {
-                if let Some(cache) = Self::read_cpu_cache(first_cpu) {
+            if let Some(&first_cpu) = cpus_in_group.first()
+                && let Some(cache) = Self::read_cpu_cache(first_cpu) {
                     cache_map.insert(midr, cache);
                 }
-            }
         }
 
         if cache_map.is_empty() {

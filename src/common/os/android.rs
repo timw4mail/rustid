@@ -10,7 +10,7 @@ use std::path::Path;
 
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
-#[cfg(arm_cpu)]
+#[cfg(any(arm_cpu, test))]
 use std::collections::BTreeMap;
 
 // ----------------------------------------------------------------------------
@@ -570,7 +570,7 @@ impl Cache {
     }
 
     /// Read cache info for each distinct CPU type (MIDR group) from sysfs.
-    #[cfg(arm_cpu)]
+    #[cfg(any(arm_cpu, test))]
     pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
         let cpu_root = Path::new("/sys/devices/system/cpu");
         if !cpu_root.exists() {

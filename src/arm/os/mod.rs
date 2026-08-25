@@ -37,7 +37,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
         let cache = sysfs_per_type
             .as_ref()
             .and_then(|m| m.get(&midr.to_bits()).copied())
-            .or_else(|| runtime_cache)
+            .or(runtime_cache)
             .or(None);
 
         #[cfg(not(any(target_os = "android", target_os = "linux")))]
@@ -49,10 +49,10 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
     for midr in midrs {
         let arch = CpuArch::find(midr.implementer, midr.part, midr.variant);
         let core_type = arch.micro_arch.core_type();
-        let core_name: String = arch.micro_arch.into();
-
-        let name = if core_name != UNK {
-            Some(core_name)
+        let implementer = arch.implementer;
+        let micro_arch = arch.micro_arch;
+        let code_name = if arch.code_name != UNK && !arch.code_name.is_empty() {
+            Some(arch.code_name.to_string())
         } else {
             None
         };
@@ -63,8 +63,10 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
             .entry((core_type, *midr))
             .and_modify(|c| c.count += 1)
             .or_insert(CpuCore {
+                implementer,
                 kind: core_type,
-                name,
+                micro_arch,
+                code_name,
                 cache,
                 count: 1,
             });
