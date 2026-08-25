@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0] — Intel microarchitecture expansion, collision disambiguation, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
+## [2.0.0] — Microarchitecture expansion (Intel & AMD), collision disambiguation, power-gated ARM core detection, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
 
 ### Added
 - Comprehensive Intel microarchitecture expansion covering Intel Family 6, Family 18 (Nova Lake), and Family 19 (Diamond Rapids) CPUID signatures across desktop, mobile, server, and embedded lineups: Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Bartlett Lake, Twin Lake, Granite Rapids, Sierra Forest, Grand Ridge, Clearwater Forest, Sapphire Rapids, Emerald Rapids, Cooper Lake, Rocket Lake, Cannon Lake, Amber Lake, Whiskey Lake, Comet Lake, Knights Mill, Wildcat Lake, Nova Lake, and Diamond Rapids (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
@@ -13,9 +13,19 @@
   - `06_8FH`: Sapphire Rapids-SP vs. Sapphire Rapids-WS vs. Xeon Max (HBM)
   - `06_B7H` / `06_BFH`: Raptor Lake 13th Gen vs. 14th Gen Refresh vs. Core Series 1 / Series 2
   - `06_BEH`: Alder Lake-N vs. Twin Lake-N
+- Comprehensive AMD microarchitecture expansion covering AMD Family 15h, 17h, 19h, and 1Ah generations across desktop, mobile, server (EPYC), and workstation (Threadripper) lineups: K5, K6, K7, K8, K10/K10.5, Bobcat, Jaguar, Puma, Bulldozer, Piledriver, Steamroller, Excavator, Zen 1, Zen+, Zen 2, Zen 3, Zen 3+, Zen 4, Zen 4c, Zen 5, and Zen 5c (`src/x86/vendor/amd.rs`, `src/x86/micro_arch.rs`)
+- Stepping-, model-number-, and brand-string-aware CPUID signature collision disambiguation for overlapping AMD CPU models (`src/x86/vendor/amd.rs`):
+  - Summit Ridge vs. Pinnacle Ridge vs. Whitehaven vs. Colfax vs. Naples vs. Raven Ridge vs. Picasso vs. Banded Kestrel vs. Dali vs. Pollock
+  - Matisse vs. Rome vs. Castle Peak vs. Renoir vs. Lucienne vs. Van Gogh vs. Mendocino
+  - Vermeer vs. Vermeer-X (3D V-Cache) vs. Milan vs. Milan-X vs. Chagall vs. Cezanne vs. Barcelo / Barcelo-R vs. Rembrandt / Rembrandt-R
+  - Raphael vs. Raphael-X (3D V-Cache) vs. Dragon Range vs. Genoa vs. Genoa-X vs. Bergamo vs. Siena vs. Storm Peak vs. Phoenix vs. Phoenix 2 vs. Hawk Point
+  - Granite Ridge vs. Turin vs. Turin Dense vs. Strix Point vs. Strix Halo vs. Krackan Point
+  - Legacy AMD CPU model disambiguation across K5, K6, K7 Athlon/Duron, K8 Opteron/Athlon 64/X2, K10/K10.5 Phenom/Athlon II/Opteron, and Bulldozer/Piledriver/Steamroller/Excavator families
+- New `MicroArch` enum variants: `MicroArch::Zen3Plus`, `MicroArch::Zen4C`, and `MicroArch::Zen5C` (`src/x86/micro_arch.rs`)
 - Hybrid core type and server core resolution for Raptor Lake, Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Sapphire Rapids, Emerald Rapids, Granite Rapids, Sierra Forest, Grand Ridge, and Clearwater Forest (`src/x86/vendor/intel.rs`)
-- Manufacturing process node constants (`INTEL_7`, `INTEL_4`, `INTEL_3`, `INTEL_20A`, `INTEL_18A`, `N10SF`) (`src/common/constants.rs`)
+- Manufacturing process node constants for Intel and AMD fabrication nodes (`INTEL_7`, `INTEL_4`, `INTEL_3`, `INTEL_20A`, `INTEL_18A`, `N10SF`, `TSMC_3`, `TSMC_4`, `TSMC_5`, `TSMC_6`, `TSMC_7`, `GF_12`, `GF_14`, `GF_28_SHP`, `TSMC_28_SHP`, `GF_32_SOI`, `GF_45_SOI`, `TSMC_40`, `TSMC_65`, `IBM_65_SOI`, `IBM_90_SOI`, `IBM_130_SOI`) (`src/common/constants.rs`, `src/x86/vendor/amd.rs`, `src/x86/vendor/intel.rs`)
 - Technical citations and source documentation referencing Intel SDM Vol 4 Table 2-1, Intel specification updates, Linux `intel-family.h`, `libcpuid`, and instlatx64 dumps (`src/x86/vendor/intel.rs`)
+- Power-gated ARM core discovery via sysfs topology (`/sys/devices/system/cpu/possible`, `/sys/devices/system/cpu/present`, `/sys/devices/system/cpu/cpu*/topology`) on Linux and Android, allowing accurate detection of offline/gated big and little cores (`src/arm/os/mod.rs`, `src/arm/os/linux.rs`, `src/arm/os/android.rs`)
 - Android system information and ARM core detection via Android system properties (`__system_property_get` / `getprop`) and sysfs (`src/common/os/android.rs`, `src/arm/os/android.rs`)
 - Windows topology (sockets, cores, threads) and multi-level cache detection (L1, L2, L3) via `GetLogicalProcessorInformationEx` (`src/common/os/windows.rs`)
 - Windows ARM SoC and model detection for Qualcomm Snapdragon processors (Snapdragon X Elite, Snapdragon 8cx Gen 3) (`src/arm/os/windows.rs`)
@@ -24,13 +34,15 @@
 - OS-level cache detection with share-count fallback merging for ARM, PPC, RISC-V, and x86 (`src/common/cache.rs`)
 - Asymmetric 3D V-Cache display support for dual-CCD AMD Ryzen processors with single-CCD 3D V-Cache (e.g. Ryzen 7950X3D) (`src/x86/cache.rs`, `src/x86/display.rs`)
 - Additional Mac model mappings across ARM, x86_64, and PowerPC (`src/common/display.rs`)
+- Example output fixture for Apple MacBook Neo (`examples/macbook-neo.txt`)
 - Automated changelog extraction script and crates.io publishing support in release workflow (`.github/scripts/extract_changelog.py`, `.github/workflows/release.yml`)
 - Additional x86 integration tests and CPUID dump test fixtures (Intel Core i7-12700H, Intel Celeron Eee PC, VIA EdenX2) (`tests/cpuid/dump/edenx2.txt`, `tests/cpuid_dump_test.rs`)
 - `check-win-arm` target check command in `justfile`
 
 ### Changed
 - Refined EFI socket count and thread count calculation in `src/x86/count.rs` to compute physical package count accurately against logical processors from MP Services without overcounting individual cores in legacy SMBIOS tables or undercounting multi-socket servers
-- Overhauled ARM output formatting to eliminate redundant printing of shared vendor/SoC metadata across core types, grouped clusters cleanly, and labeled sub-cores with "Name" (`src/arm/display.rs`)
+- Overhauled ARM output formatting and structure to mirror x86 output styling, eliminate redundant printing of shared vendor/SoC metadata across core types, group clusters cleanly, and label sub-cores with "Name" (`src/arm/display.rs`)
+- Hoisted shared ARM CPU codenames to the top-level CPU header section when all core clusters belong to the same SoC/chip, avoiding repetitive per-core-type codename lines (`src/arm/display.rs`)
 - Moved raw Mac model identifier display (e.g. `[MacBookAir10,1]`) to verbose mode (`-v`/`--verbose`), keeping default output clean with friendly marketing names (`src/common/display.rs`)
 - Enabled verbose mode by default for EFI binaries (`src/efi_rustid.rs`)
 - Real-mode DOS binary (`rust86.exe`) refactored and merged with real-mode debug binary, eliminating the separate debug executable while significantly reducing binary footprint and adding simple CLI argument handling (`src/rust86.rs`, `src/x86/dos/args.rs`)
@@ -49,6 +61,7 @@
 - Corrected L2 cache count detection for VIA Eden / Nano X2 dual-core processors (`src/x86/cache.rs`)
 - Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
 - Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings (`src/common/cache.rs`, `src/x86/display.rs`)
+- Fixed compiler warnings on macOS ARM target builds (`src/arm/os/macos.rs`, `src/arm/os/mod.rs`)
 - Fixed and cleaned up Haiku OS test expectations and CPU topology parsing (`src/x86/cpu.rs`, `src/x86/micro_arch.rs`)
 - Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
 - Fixed PowerPC build compile error (`src/common/cache.rs`)
