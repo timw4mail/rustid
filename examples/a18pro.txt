@@ -1,24 +1,35 @@
---------------- Rustid 1.0.0 (aarch64-macos) ---------------
+--------------- Rustid 2.0.0 (aarch64-macos) ---------------
 
-Brand/Implementor: Apple
+        System: MacBook Neo (13-inch, 2026)
 
-            Model: Apple A18 Pro
+         Model: Apple A18 Pro
 
-        Code Name: Tahiti
+      Codename: Tahiti
 
-          Process: 3nm
+       Process: 3nm
 
-Performance Cores: 
-             Name: Everest
-            Count: 2
-            Cache: L1d: 2x 128 KB
-                   L1i: 2x 192 KB
-                   L2:  16 MB
+       Core #1: 
+   Implementer: Apple
+          Type: Performance
+     MicroArch: Everest
+         Count: 2
+         Cache: L1d: 2x 128 KB
+                L1i: 2x 192 KB
+                L2:  16 MB
 
- Efficiency Cores: 
-             Name: Sawtooth
-            Count: 4
-            Cache: L1d: 4x 64 KB
-                   L1i: 4x 128 KB
-                   L2:  4 MB
+       Core #2: 
+   Implementer: Apple
+          Type: Efficiency
+     MicroArch: Sawtooth
+         Count: 4
+         Cache: L1d: 4x 64 KB
+                L1i: 4x 128 KB
+                L2:  4 MB
+
+      Features: Base: fp asimd
+                SIMD: neon asimdfhm asimdrdm
+                Security: aes pmull sha1 sha2 sha3 sha512
+                Atomics: atomics lse lse2
+                Fp: fphp fp16 fcma jscvt
+                Misc: crc32 flagm flagm2 dit bti pauth pauth2 fpac csv2 csv3 ecv sb frintts dpb dpb2 dotprod bf16 i8mm sme
 
