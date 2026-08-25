@@ -3,7 +3,7 @@ use crate::arm::TArmFeatures;
 use crate::arm::brand::*;
 use crate::arm::micro_arch::*;
 use crate::common::get_full_raw_sysctl_map;
-use crate::common::{Cache, CacheLevel, CacheType, CoreType, DataSource, Level1Cache, UNK};
+use crate::common::{Cache, CacheLevel, CacheType, CoreType, DataSource, Level1Cache};
 use std::collections::{BTreeMap, HashSet};
 
 // ----------------------------------------------------------------------------
@@ -300,8 +300,8 @@ fn find_core_micro_arch(midr: &Midr, kind: CoreType) -> MicroArch {
         (0x022..=0x029, CoreType::Efficiency) => MicroArch::AppleIcestorm,
 
         // M2
-        (0x030..=0x039, CoreType::Performance) => MicroArch::AppleAvalanche,
-        (0x030..=0x039, CoreType::Efficiency) => MicroArch::AppleBlizzard,
+        (0x032..=0x035 | 0x038..=0x039, CoreType::Performance) => MicroArch::AppleAvalanche,
+        (0x032..=0x035 | 0x038..=0x039, CoreType::Efficiency) => MicroArch::AppleBlizzard,
 
         // M3
         (0x040..=0x049, CoreType::Performance) => MicroArch::AppleEverest,

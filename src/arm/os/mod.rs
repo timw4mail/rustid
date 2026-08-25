@@ -17,7 +17,7 @@ pub struct OsCpuInfo {
 /// Shared helper used by Linux and Windows detection.
 /// Iterates over MIDRs, assigning core types/names via `CpuArch::find()`
 /// and merging cache data from the runtime or sysfs.
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(not(target_os = "macos"), test))]
 pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore> {
     let mut cores: BTreeMap<(CoreType, Midr), CpuCore> = BTreeMap::new();
 
