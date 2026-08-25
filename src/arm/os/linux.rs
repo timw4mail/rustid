@@ -178,11 +178,12 @@ pub fn get_features_from_cpuinfo() -> BTreeMap<String, bool> {
 
     let cpuinfo = get_proc_cpuinfo_data();
     if let Some(first) = cpuinfo.first()
-        && let Some(features_str) = first.get("Features") {
-            for feat in features_str.split_whitespace() {
-                features.insert(feat.to_lowercase(), true);
-            }
+        && let Some(features_str) = first.get("Features")
+    {
+        for feat in features_str.split_whitespace() {
+            features.insert(feat.to_lowercase(), true);
         }
+    }
 
     features
 }

@@ -22,9 +22,10 @@ impl CpuDisplay {
             return true;
         }
         if let Some(soc) = &cpu_info.soc_model
-            && is_duplicate(model, soc) {
-                return false;
-            }
+            && is_duplicate(model, soc)
+        {
+            return false;
+        }
         let code_name = cpu_info.cpu_arch.code_name;
         if code_name != UNK && !code_name.is_empty() && is_duplicate(model, code_name) {
             return false;
@@ -35,9 +36,12 @@ impl CpuDisplay {
                 return false;
             }
             if let Some(cname) = &core.code_name
-                && cname != UNK && !cname.is_empty() && is_duplicate(model, cname) {
-                    return false;
-                }
+                && cname != UNK
+                && !cname.is_empty()
+                && is_duplicate(model, cname)
+            {
+                return false;
+            }
         }
         true
     }
@@ -56,9 +60,12 @@ impl CpuDisplay {
                 return false;
             }
             if let Some(cname) = &core.code_name
-                && cname != UNK && !cname.is_empty() && is_duplicate(code_name, cname) {
-                    return false;
-                }
+                && cname != UNK
+                && !cname.is_empty()
+                && is_duplicate(code_name, cname)
+            {
+                return false;
+            }
         }
         true
     }

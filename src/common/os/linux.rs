@@ -519,9 +519,10 @@ impl Cache {
         let mut cache_map: BTreeMap<usize, Cache> = BTreeMap::new();
         for (&midr, cpus_in_group) in &midr_map {
             if let Some(&first_cpu) = cpus_in_group.first()
-                && let Some(cache) = Self::read_cpu_cache(first_cpu) {
-                    cache_map.insert(midr, cache);
-                }
+                && let Some(cache) = Self::read_cpu_cache(first_cpu)
+            {
+                cache_map.insert(midr, cache);
+            }
         }
 
         if cache_map.is_empty() {
