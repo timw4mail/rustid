@@ -1,4 +1,4 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i686
         Vendor: CyrixInstead (Cyrix/IBM/ST)
  Model (synth): Cyrix 6x86MX/MII
@@ -6,7 +6,7 @@
      Frequency: 300.00 MHz
      Signature: Family 6h, Model 0h, Stepping 1h
                 (0, 6, 0, 0, 1)
-      Features: FPU TSC CMPXCHG8B CMOV MMX 
+      Features: FPU TSC CX8 CMOV MMX
          Cyrix: Model number: 53h
                 Revision: 5h
                 Stepping: 3h
