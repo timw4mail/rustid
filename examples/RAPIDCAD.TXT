@@ -1,9 +1,9 @@
---------------- Rust86 1.9.5 (x86-DOS) ---------------
+--------------- Rust86 2.0.0 (x86-DOS) ---------------
   Architecture: i386
         Vendor: GenuineIntel (Intel)
  Model (synth): Intel RapidCAD
      MicroArch: RapidCad
          CPUID: No
-     Frequency: 25.00 MHz
+     Frequency: 33.00 MHz
  Synthetic Sig: Family 3h, Model 4h, Stepping 0h
                 (0, 3, 0, 4, 0)

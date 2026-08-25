@@ -1,4 +1,4 @@
---------------- Rustid 1.9.5 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i486
         Vendor: UMC UMC UMC  (UMC)
  Model (synth): UMC Green U5S (486 SX)
