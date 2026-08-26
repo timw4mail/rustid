@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0] — Microarchitecture expansion (Intel & AMD), collision disambiguation, power-gated ARM core detection, multi-socket EFI fixes, Android & Windows support, and ARM overhaul
+## [2.0.0] — Add missing Intel and AMD cpu mappings, fix edge cases, and more
 
 ### Added
 - Comprehensive Intel microarchitecture expansion covering Intel Family 6, Family 18 (Nova Lake), and Family 19 (Diamond Rapids) CPUID signatures across desktop, mobile, server, and embedded lineups: Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Bartlett Lake, Twin Lake, Granite Rapids, Sierra Forest, Grand Ridge, Clearwater Forest, Sapphire Rapids, Emerald Rapids, Cooper Lake, Rocket Lake, Cannon Lake, Amber Lake, Whiskey Lake, Comet Lake, Knights Mill, Wildcat Lake, Nova Lake, and Diamond Rapids (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
@@ -65,7 +65,9 @@
 - Fixed socket count calculation on Haiku OS where total logical CPU count from `sysinfo` was erroneously treated as physical sockets, causing inflated core/thread counts on multi-core processors like VIA Nano X2 (`src/common/os/haiku.rs`, `src/x86/display.rs`)
 - Fixed unified L1 cache size formatting in `src/common/display.rs` where raw byte sizes (e.g. 16384 bytes) were displayed as KB without unit conversion
 - Fixed cache descriptor fallback and error handling in `src/x86/cache.rs` where invalid CPUID Leaf 2 register flags stopped descriptor scanning, empty cache objects failed `Cache::default()` inequality checks resulting in spurious unified 0 KB L1 cache output on VIA Nano processors, and chained fallback detection across deterministic parameters and extended leaves
+- Fixed false-positive Centaur / VIA PadLock security feature detection on IDT WinChip processors where CPUID leaf `0xC0000001` mirrors standard extended features rather than PadLock flags (`src/x86/vendor/centaur.rs`)
 - Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
+- Fixed test suite failures on Haiku OS targets (`src/x86/cpu.rs`, `src/x86/micro_arch.rs`)
 - Fixed PowerPC build compile error (`src/common/cache.rs`)
 
 ## [1.9.0] — EFI/UEFI support, compact display, and VIA features
