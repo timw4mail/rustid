@@ -1,28 +1,21 @@
---------------- Rustid 1.0.0 (x86_64-linux) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: x86_64-v2
-
         Vendor: AuthenticAMD (AMD)
-
-         Model: AMD GX-209JA SOC with Radeon(tm) HD Graphics
-
+         Model: AMD Athlon(tm) 5350 APU with Radeon(tm) R3
      MicroArch: Jaguar
-
       Codename: Kabini
-
   Process Node: 28nm
-
     Easter Egg: HELLO KITTY! ^-^
-
-      Topology: 2 cores
-
-         Cache: L1d: 2x 32 KB, 8-way
-                L1i: 2x 32 KB, 2-way
-                L2:  1 MB, 16-way
-
-     Frequency: 1.00 GHz
-
+      Topology: 4 cores
+         Cache: L1d: 4x 32 KB, 8-way
+                L1i: 4x 32 KB, 2-way
+                L2:  2 MB, 16-way
+     Frequency: 2.05 GHz
      Signature: Family 16h, Model 0h, Stepping 1h
                 (7, 15, 0, 0, 1)
-
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES AVX BMI1 POPCNT F16C 
-
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX MMX+ 3DNow!-Prefetch HT APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3
+                AVX: AVX
+                Security: NX AES AMD-V
+                Math: BMI1 F16C
+                Other: POPCNT

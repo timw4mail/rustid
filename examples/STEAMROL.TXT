@@ -1,0 +1,20 @@
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
+  Architecture: x86_64-v2
+        Vendor: AuthenticAMD (AMD)
+         Model: AMD A10-7890K Radeon R7, 12 Compute Cores 4C+8G
+     MicroArch: Steamroller
+      Codename: Godavari
+  Process Node: 28nm
+      Topology: 2 cores (4 threads)
+         Cache: L1d: 2x 16 KB, 4-way
+                L1i: 2x 96 KB, 3-way
+                L2:  2x 2 MB, 16-way
+     Frequency: 4.09 GHz
+     Signature: Family 15h, Model 38h, Stepping 1h
+                (6, 15, 3, 8, 1)
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX MMX+ 3DNow!-Prefetch HT APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3
+                AVX: AVX
+                Security: NX AES AMD-V
+                Math: FMA BMI1 F16C
+                Other: POPCNT

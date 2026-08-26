@@ -1,8 +1,8 @@
---------------- Rustid 1.7.0 (riscv64-linux) ---------------
+--------------- Rustid 2.0.0 (riscv64-linux) ---------------
 
-        System: Pine64 Star64
+        System: DeepComputing FML13V01
 
-  Architecture: rv64imafdc_zicntr_zicsr_zifencei_zihpm_zaamo_zalrsc_zca_zcd_zba_zbb
+  Architecture: rv64imafdc_zicntr_zicsr_zifencei_zihpm_zba_zbb
 
            SoC: StarFive JH7110
 
