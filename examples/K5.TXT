@@ -1,4 +1,4 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i586
         Vendor: AuthenticAMD (AMD)
          Model: AMD-K5(tm) Processor
@@ -10,4 +10,4 @@
      Frequency: 117.00 MHz
      Signature: Family 5h, Model 2h, Stepping 4h
                 (0, 5, 0, 2, 4)
-      Features: FPU TSC CMPXCHG8B 
+      Features: FPU TSC CX8

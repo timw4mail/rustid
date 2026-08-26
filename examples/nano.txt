@@ -1,10 +1,9 @@
---------------- Rustid 1.0.0 (x86_64-haiku) ---------------
+--------------- Rustid 2.0.0 (x86_64-haiku) ---------------
   Architecture: x86_64-v1
 
         Vendor: CentaurHauls (Via)
 
          Model: VIA Nano U3300
-   Model (raw): VIA Nano U3300@1200MHz
 
      MicroArch: Isaiah
 
@@ -19,5 +18,9 @@
      Signature: Family 6h, Model Fh, Stepping Ah
                 (0, 6, 0, 15, 10)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX AMD64 SSE SSE2 SSE3 SSE4.1 SSSE3 POPCNT 
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4.1 SSSE3
+                Security: NX VT-x
+                Other: POPCNT
+                Centaur: RNG, RNG2, ACE, ACE2(disabled), PHE, PHE2, PMM, RSA
 

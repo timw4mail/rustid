@@ -1,11 +1,15 @@
+This CPU has CPUID support, but it is disabled by default.
+Some BIOSes have an option to enable CPUID for Cyrix chips.
+For DOS, you can download a utility from 
+  https://www.deinmeister.de/e_cy6x86cr.htm
+If run before rustid, CPUID should be enabled
 --------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i586
         Vendor: CyrixInstead (Cyrix/IBM/ST)
  Model (synth): Cyrix 6x86
      MicroArch: M1
-     Signature: Family 5h, Model 2h, Stepping 0h
+ Synthetic Sig: Family 5h, Model 2h, Stepping 0h
                 (0, 5, 0, 2, 0)
-      Features: FPU
          Cyrix: Model number: 31h
                 Revision: 7h
                 Stepping: 1h

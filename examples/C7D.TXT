@@ -1,0 +1,17 @@
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
+  Architecture: i686-SSE3
+        Vendor: CentaurHauls (Via)
+         Model: VIA C7
+     MicroArch: Esther
+      Codename: C5J Model A
+  Process Node: 90nm
+         Cache: L1d: 64 KB, 4-way
+                L1i: 64 KB, 4-way
+                L2:  128 KB, 10-way
+     Frequency: 1.50 GHz
+     Signature: Family 6h, Model Ah, Stepping 9h
+                (0, 6, 0, 10, 9)
+      Features: Base: FPU TSC CX8 CMOV MMX APIC
+                SSE: SSE SSE2 SSE3
+                Security: NX
+                Centaur: RNG, ACE, ACE2, PHE, PMM
