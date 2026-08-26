@@ -3,7 +3,7 @@
 ## Prerequisites (development)
 - **Rust Toolchain**: `rustup` and `cargo`. Nightly toolchain with `rust-src` component is required for DOS builds (`-Z build-std`).
 - **`just` or `make`**: Task runner to execute build scripts. Install with `cargo install just` or use `make`.
-- **DOSBox-X**: **Required** for building `rustid.exe` (invokes `dos32a.exe` inside DOSBox-X to bind the Linear Executable `.le` payload) and running/testing DOS binaries (`just run-dos` / `just test-dos`).
+- **DOSBox-X**: **Required** for building `rustid.exe` and running/testing DOS binaries.
 - **QEMU & OVMF** (optional): Used for running and testing UEFI binaries (`just run-efi-64` / `just run-efi-32`).
 
 ## Building
@@ -19,9 +19,9 @@ just build-release
 just build-efi
 # or: make build-efi
 ```
-This produces EFI binaries using standard `x86_64-unknown-uefi` and `i686-unknown-uefi` targets with zero external dependencies:
-- `target/x86_64-unknown-uefi/release/efi_rustid.efi` (64-bit EFI)
-- `target/i686-unknown-uefi/release/efi_rustid.efi` (32-bit EFI)
+This produces EFI binaries:
+- `target/efi-disk/EFI/BOOT/BOOTX64.EFI` (64-bit EFI)
+- `target/efi-disk/EFI/BOOT/BOOTIA32.EFI` (32-bit EFI)
 
 Individual EFI Builds:
 - `just build-efi-64` — 64-bit x86_64 EFI binary

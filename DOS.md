@@ -15,7 +15,7 @@ Binaries produced:
 | `rustid.exe` | `dos_rustid` | 32-bit DOS32A | Main CPU identification (formatted table output) |
 | `rust86.exe` | `rust86` | 16-bit Real Mode | Real-mode fallback CPU identification & debug diagnostics (`/D`) |
 
-**Note**: In most cases, you will only need to directly run `rustid.exe`, as `rust86.exe` will be executed automatically if running on a pre-CPUID CPU.
+**Note**: You will only need to directly run `rustid.exe`, as `rust86.exe` will be executed automatically if running on a pre-CPUID CPU.
 
 ## Prerequisites
 
@@ -38,9 +38,9 @@ just build-dos
 ```
 
 This will:
-1. Build 32-bit protected mode binary (`dos_rustid` using `build-config/i486-dos32a.json`), converting via `tools/elf2le` and invoking `dos32a.exe` inside DOSBox-X to generate `rustid.exe`
-2. Build 16-bit real-mode binary (`rust86` using `build-config/i486-dos.json`) and convert via `tools/make_exe` into `rust86.exe`
-3. Run the binary size and integration tests
+1. Build 32-bit protected mode binary, converting via `tools/elf2le` and invoking `dos32a.exe` inside DOSBox-X to generate `rustid.exe`
+2. Build 16-bit real-mode binary and convert via `tools/make_exe` into `rust86.exe`
+3. Run the binary size test
 
 The resulting executables (`rustid.exe`, `rust86.exe`) appear in the project root.
 
@@ -48,42 +48,9 @@ The resulting executables (`rustid.exe`, `rust86.exe`) appear in the project roo
 
 - **In DOSBox-X**: `just run-dos` or `make run-dos` (launches `rustid.exe` using `tools/dosbox-x.conf`)
 - **Automated test run**: `just test-dos` or `make test-dos` (runs in DOSBox-X with console logging)
-- **On real hardware**: Copy `.exe` files to a DOS system and execute `rustid.exe` or `rust86.exe`.
+- **On real hardware**: Copy `.exe` files to a DOS system and execute `rustid.exe`.
 
 ## How It Works
-
-### Target Specifications (`build-config/i486-dos.json` & `build-config/i486-dos32a.json`)
-
-The target specifications target a 386-class CPU in 16-bit real mode (`i486-dos.json`) or 32-bit protected mode (`i486-dos32a.json`):
-
-- `arch = "x86"`, `cpu = "i386"` (broadest compatibility)
-- `os = "none"` (no OS, bare metal)
-- `relocation-model = "static"`
-- `panic-strategy = "abort"`
-- `max-atomic-width = 32`
-
-The `cfg(dos)` / `cfg(dos32a)` conditionals are activated via `build.rs`:
-```rust
-cfg_aliases! {
-    dos: { all(target_os = "none", target_arch = "x86") },
-}
-```
-
-### Entry Point
-
-The 16-bit real-mode binaries use the following entry sequence in `.code16` real-mode assembly:
-
-```asm
-mov ax, cs
-mov ds, ax
-mov es, ax
-mov ss, ax
-.byte 0x66, 0x0F, 0xB7, 0xE4    ; movzx esp, sp (32-bit prefix)
-.byte 0xE9
-.word rust_main - 1f             ; manual 16-bit near jump
-```
-
-The linker script (`build-config/link-exe.x`) places this in the `.startup` section at offset `0x10`, right after a 6-byte metadata header (data seg offset, stack seg offset, stack size).
 
 ### EXE Conversion (`tools/make_exe` & `tools/elf2le`)
 
@@ -95,7 +62,7 @@ The linker script (`build-config/link-exe.x`) places this in the `.startup` sect
 A simple bump allocator is used (`src/x86/dos/allocator.rs`):
 - Initialized to memory segment after the binary
 - Non-atomic operations for 386 compatibility (no `CMPXCHG`)
-- No deallocation (sufficient for rustid's few long-lived allocations)
+- No deallocation (sufficient for rustid's few allocations)
 - `DosAllocator` marked `unsafe impl Sync` — DOS is single-threaded
 
 ### Console I/O & Exit
@@ -114,7 +81,7 @@ All output goes through DOS software interrupts:
 
 ### Frequency Measurement
 
-CPU frequency is measured using `RDTSC` + PIT Channel 0 + BIOS timer tick (`0040:006C`) for about 110ms. For pre-TSC CPUs (386/486), a calibrated instruction loop runs over 8 BIOS ticks (~440ms) with different cycle counts per loop iteration depending on the CPU type (386: 29, 486: 10, Cyrix: 14, UMC: 10, RapidCAD: 20). Frequency is derived from the ratio of TSC delta or instruction count to elapsed PIT pulses.
+CPU frequency is measured using `RDTSC` + PIT Channel 0 + BIOS timer tick (`0040:006C`) for about 110ms. For pre-TSC CPUs (386/486), a calibrated instruction loop runs over 8 BIOS ticks (~440ms) with different cycle counts per loop iteration depending on the CPU type. Frequency is derived from the ratio of TSC delta or instruction count to elapsed PIT pulses.
 
 ### MP Table Scanning
 
@@ -123,27 +90,15 @@ For multi-socket detection (`src/x86/mp.rs`), the DOS version scans BIOS memory 
 ## Quirks & Limitations
 
 ### Binary Size
-- The real-mode dos binaries must stay under ~62KB (64KB segment minus header). A test verifies this.
+- The real-mode dos binary (`rust86.exe`) must stay under ~62KB (64KB segment minus header). A test verifies this.
 - The new rustid.exe overcomes this limit with the dos32a extender
 
 ### Pre-CPUID CPUs (386/486)
 - Detection relies on performing an actual CPU reset via CMOS/port 0x92. This is:
   - **Extremely disruptive** — the CPU actually resets
   - **Only works in real mode** — will crash in protected/V8086 mode
-  - **Only works on certain chipsets** — port 0x92 and CMOS shutdown must be supported
   - Used only as a last resort when CPUID is not available
 - Without the reset method, pre-CPUID chips show limited info
-
-### Cyrix CPUs
-- Some Cyrix 6x86 processors have CPUID support **disabled by default** in the chip
-- If detected, rustid prints a message directing users to a third-party utility to enable it
-- This must be done before running rustid
-
-### No OS-Specific Features
-- No `/proc/cpuinfo` parsing
-- No system calls or sysctl
-- No thread/core pinning (DOS is single-tasking)
-- Socket count uses MP Table scanning only (limited to Intel/Vortex/Centaur per spec)
 
 ### Frequency Accuracy
 - Uses PIT + BIOS timer ticks (~54.9ms each) — less precise than OS-level methods
@@ -202,7 +157,3 @@ For multi-socket detection (`src/x86/mp.rs`), the DOS version scans BIOS memory 
                 (0, 6, 0, 1, 1)
       Features: FPU TSC CMPXCHG8B CMOV MMX SSE
 ```
-
-### `debug86.exe`
-
-Outputs Rust `Debug`-formatted representation of the `Cpu` struct and Cyrix vendor info (if applicable), plus quirk diagnostic information.
