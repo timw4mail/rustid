@@ -1,4 +1,6 @@
---------------- Rustid 0.9.4 ---------------
+--------------- Rustid 2.0.0 (x86_64-linux) ---------------
+        System: ASRock 990FX Extreme9
+
   Architecture: x86_64-v2
 
         Vendor: AuthenticAMD (AMD)
@@ -11,9 +13,9 @@
 
   Process Node: 32nm
 
-         Cores: 8 cores
+      Topology: 4 cores (8 threads)
 
-         Cache: L1d: 8x 16 KB, 4-way
+         Cache: L1d: 4x 16 KB, 4-way
                 L1i: 4x 64 KB, 2-way
                 L2:  4x 2 MB, 16-way
                 L3:  8 MB, 64-way
@@ -23,5 +25,10 @@
      Signature: Family 15h, Model 2h, Stepping 0h
                 (6, 15, 0, 2, 0)
 
-      Features: FPU TSC CMPXCHG8B CMPXCHG16B CMOV MMX HT AMD64 SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3 AES AVX FMA BMI1 POPCNT F16C 
+      Features: Base: FPU TSC CX8 CX16 CMOV MMX MMX+ 3DNow!-Prefetch HT APIC AMD64
+                SSE: SSE SSE2 SSE3 SSE4A SSE4.1 SSE4.2 SSSE3
+                AVX: AVX
+                Security: NX AES AMD-V
+                Math: FMA BMI1 F16C
+                Other: POPCNT
 
