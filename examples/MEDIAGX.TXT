@@ -1,17 +1,16 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i686
         Vendor: CyrixInstead (Cyrix/IBM/ST/TI)
          Model: Cyrix MediaGX GXm
-   Model (raw): Cyrix MediaGXtm MMXtm Enhanced
      MicroArch: MediaGX
       Codename: Gx86/Gxm
   Process Node: 350nm
          Cache: L1: Unified 16 KB
-     Frequency: 334.00 MHz
+     Frequency: 200.00 MHz
      Signature: Family 5h, Model 4h, Stepping 0h
                 (0, 5, 0, 4, 0)
-      Features: FPU TSC CMPXCHG8B CMOV MMX
-         Cyrix: Model number: 41h
+      Features: FPU TSC CX8 CMOV MMX MMX+
+         Cyrix: Model number: 43h
                 Revision: 4h
                 Stepping: 6h
                 Bus Multiplier: 6x
