@@ -39,42 +39,62 @@ impl Cache {
             return None;
         }
 
-        match &*vendor_str() {
+        let mut cache = match &*vendor_str() {
             VENDOR_AMD => {
-                if is_valid_leaf(EXT_LEAF_1D) {
+                let c = if is_valid_leaf(EXT_LEAF_1D) {
                     Cache::detect_general(EXT_LEAF_1D)
                 } else {
-                    Cache::detect_ext_5_6()
-                }
+                    None
+                };
+                c.or_else(Cache::detect_ext_5_6)
             }
             VENDOR_CENTAUR => {
-                if is_valid_leaf(LEAF_4) {
+                let c = if is_valid_leaf(LEAF_4) {
                     Cache::detect_general(LEAF_4)
-                } else if is_valid_leaf(EXT_LEAF_5) {
-                    Cache::detect_ext_5_6()
                 } else {
-                    Cache::detect_fallback()
-                }
+                    None
+                };
+                c.or_else(|| {
+                    if is_valid_leaf(EXT_LEAF_5) {
+                        Cache::detect_ext_5_6()
+                    } else {
+                        None
+                    }
+                })
+                .or_else(Cache::detect_fallback)
             }
             VENDOR_TRANSMETA => {
-                if is_valid_leaf(EXT_LEAF_5) {
+                let c = if is_valid_leaf(EXT_LEAF_5) {
                     Cache::detect_ext_5_6()
                 } else {
-                    Cache::detect_fallback()
-                }
+                    None
+                };
+                c.or_else(Cache::detect_fallback)
             }
             _ => {
                 // The 1-bit cache descriptors are on LEAF 0x2, but
                 // the extended cache topology is on LEAF 0x4.
                 // We want to use the extended cache topology if
                 // it exists.
-                match max_leaf() {
-                    LEAF_2..LEAF_4 => Cache::detect_fallback(),
-                    LEAF_4.. => Cache::detect_general(LEAF_4),
-                    _ => None,
-                }
+                let c = if is_valid_leaf(LEAF_4) {
+                    Cache::detect_general(LEAF_4)
+                } else {
+                    None
+                };
+                c.or_else(Cache::detect_fallback)
             }
+        };
+
+        if let Some(c) = &mut cache
+            && c.l1.size() == 0
+            && is_valid_leaf(EXT_LEAF_5)
+            && let Some(ext) = Cache::detect_ext_5_6()
+            && ext.l1.size() > 0
+        {
+            c.l1 = ext.l1;
         }
+
+        cache
     }
 
     /// Detect cache via extended leaves 5 and 6.
@@ -99,7 +119,7 @@ impl Cache {
         // Make sure to check for Extended Leaf 6 separately
         // Some CPUs only support EXT_LEAF_5
         if !is_valid_leaf(EXT_LEAF_6) {
-            return Some(c);
+            return if c.is_empty() { None } else { Some(c) };
         }
 
         let res6 = x86_cpuid(EXT_LEAF_6);
@@ -122,7 +142,7 @@ impl Cache {
             c.l3 = Some(CacheLevel::new_unified(l3size, l3assoc));
         }
 
-        Some(c)
+        if c.is_empty() { None } else { Some(c) }
     }
 
     fn assoc(reg: u32) -> u32 {
@@ -165,53 +185,50 @@ impl Cache {
         };
 
         let res = x86_cpuid(LEAF_2);
-        let iteration_count = res.eax & 0xFF;
+        let iteration_count = (res.eax & 0xFF).max(1);
         let mut desc_list: Vec<u32> = Vec::new();
 
-        for i in 0..=iteration_count {
+        for i in 0..iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);
-            let valid_eax = (res.eax >> 31) == 0;
-            if !valid_eax {
-                break;
-            }
 
-            for offset in [8u32, 16, 24] {
-                let desc = (res.eax >> offset) & 0xFF;
-                if desc != 0 {
-                    desc_list.push(desc);
+            // EAX
+            if (res.eax & 0x8000_0000) == 0 {
+                let start_offset = if i == 0 { 8u32 } else { 0u32 };
+                for offset in (start_offset..32).step_by(8) {
+                    let desc = (res.eax >> offset) & 0xFF;
+                    if desc != 0 && desc != 0xFF {
+                        desc_list.push(desc);
+                    }
                 }
             }
 
-            let valid_ebx = (res.ebx >> 31) == 0;
-            if !valid_ebx {
-                break;
-            }
-            for offset in [0u32, 8, 16, 24] {
-                let desc = (res.ebx >> offset) & 0xFF;
-                if desc != 0 {
-                    desc_list.push(desc);
+            // EBX
+            if (res.ebx & 0x8000_0000) == 0 {
+                for offset in (0u32..32).step_by(8) {
+                    let desc = (res.ebx >> offset) & 0xFF;
+                    if desc != 0 && desc != 0xFF {
+                        desc_list.push(desc);
+                    }
                 }
             }
 
-            let valid_ecx = (res.ecx >> 31) == 0;
-            if !valid_ecx {
-                break;
-            }
-            for offset in [0u32, 8, 16, 24] {
-                let desc = (res.ecx >> offset) & 0xFF;
-                if desc != 0 {
-                    desc_list.push(desc);
+            // ECX
+            if (res.ecx & 0x8000_0000) == 0 {
+                for offset in (0u32..32).step_by(8) {
+                    let desc = (res.ecx >> offset) & 0xFF;
+                    if desc != 0 && desc != 0xFF {
+                        desc_list.push(desc);
+                    }
                 }
             }
 
-            let valid_edx = (res.edx >> 31) == 0;
-            if !valid_edx {
-                break;
-            }
-            for offset in [0u32, 8, 16, 24] {
-                let desc = (res.edx >> offset) & 0xFF;
-                if desc != 0 {
-                    desc_list.push(desc);
+            // EDX
+            if (res.edx & 0x8000_0000) == 0 {
+                for offset in (0u32..32).step_by(8) {
+                    let desc = (res.edx >> offset) & 0xFF;
+                    if desc != 0 && desc != 0xFF {
+                        desc_list.push(desc);
+                    }
                 }
             }
         }
@@ -220,7 +237,7 @@ impl Cache {
             Self::apply_descriptor(*desc, &mut c);
         }
 
-        if c == Cache::default() { None } else { Some(c) }
+        if c.is_empty() { None } else { Some(c) }
     }
 
     const fn get_cache_desc_info(desc: u32) -> Option<CacheDescTarget> {
@@ -460,7 +477,7 @@ impl Cache {
             }
         }
 
-        if c == Cache::default() { None } else { Some(c) }
+        if c.is_empty() { None } else { Some(c) }
     }
 }
 
@@ -563,5 +580,38 @@ mod tests {
         assert_eq!(Cache::amd_assoc((0x00040000 >> 16) & 0xF), 4);
         assert_eq!(Cache::amd_assoc((0x00060000 >> 16) & 0xF), 8);
         assert_eq!(Cache::amd_assoc((0x000F0000 >> 16) & 0xF), 1);
+    }
+
+    #[test]
+    fn test_cache_is_empty() {
+        let empty = Cache::default();
+        assert!(empty.is_empty());
+
+        let with_l1 = Cache {
+            l1: Level1Cache::new_unified(16384, 4),
+            ..Default::default()
+        };
+        assert!(!with_l1.is_empty());
+
+        let with_l2 = Cache {
+            l2: Some(CacheLevel::new_unified(512 * 1024, 8)),
+            ..Default::default()
+        };
+        assert!(!with_l2.is_empty());
+    }
+
+    #[test]
+    fn test_apply_descriptor() {
+        let mut c = Cache::default();
+        // 0x06 = L1 Instruction 8KB 4-way
+        Cache::apply_descriptor(0x06, &mut c);
+        // 0x0A = L1 Data 8KB 2-way
+        Cache::apply_descriptor(0x0A, &mut c);
+        // 0x7D = L2 2048KB 8-way
+        Cache::apply_descriptor(0x7D, &mut c);
+
+        assert_eq!(c.l1.size(), 16 * 1024);
+        assert!(c.l1.is_split());
+        assert_eq!(c.l2.expect("L2 expected").size, 2048 * 1024);
     }
 }

@@ -125,45 +125,51 @@ impl CpuDisplay {
         if let Some(cache) = cache {
             match cache.l1 {
                 Level1Cache::Unified(l1) => {
-                    let (num, unit) = Self::cache_size(l1.size);
-                    println!("{}L1: Unified {} {}", self.label("Cache"), num, unit);
+                    if l1.size > 0 {
+                        let (num, unit) = Self::cache_size(l1.size);
+                        println!("{}L1: Unified {} {}", self.label("Cache"), num, unit);
+                    }
                 }
                 Level1Cache::Split { data, instruction } => {
                     let data_count: String = cache_count(data.share_count);
                     let instruction_count: String = cache_count(instruction.share_count);
 
-                    if data.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            self.inline_sublabel("Cache", "L1d"),
-                            data_count,
-                            data.size / 1024,
-                            data.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            self.inline_sublabel("Cache", "L1d"),
-                            data_count,
-                            data.size / 1024
-                        );
+                    if data.size > 0 {
+                        if data.assoc > 0 {
+                            println!(
+                                "{}{}{} KB, {}-way",
+                                self.inline_sublabel("Cache", "L1d"),
+                                data_count,
+                                data.size / 1024,
+                                data.assoc
+                            );
+                        } else {
+                            println!(
+                                "{}{}{} KB",
+                                self.inline_sublabel("Cache", "L1d"),
+                                data_count,
+                                data.size / 1024
+                            );
+                        }
                     }
 
-                    if instruction.assoc > 0 {
-                        println!(
-                            "{}{}{} KB, {}-way",
-                            self.sublabel("L1i"),
-                            instruction_count,
-                            instruction.size / 1024,
-                            instruction.assoc
-                        );
-                    } else {
-                        println!(
-                            "{}{}{} KB",
-                            self.sublabel("L1i"),
-                            instruction_count,
-                            instruction.size / 1024,
-                        );
+                    if instruction.size > 0 {
+                        let lbl = if data.size > 0 {
+                            self.sublabel("L1i")
+                        } else {
+                            self.inline_sublabel("Cache", "L1i")
+                        };
+                        if instruction.assoc > 0 {
+                            println!(
+                                "{}{}{} KB, {}-way",
+                                lbl,
+                                instruction_count,
+                                instruction.size / 1024,
+                                instruction.assoc
+                            );
+                        } else {
+                            println!("{}{}{} KB", lbl, instruction_count, instruction.size / 1024,);
+                        }
                     }
                 }
             }

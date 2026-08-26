@@ -64,6 +64,7 @@
 - Fixed compiler warnings on macOS ARM target builds (`src/arm/os/macos.rs`, `src/arm/os/mod.rs`)
 - Fixed socket count calculation on Haiku OS where total logical CPU count from `sysinfo` was erroneously treated as physical sockets, causing inflated core/thread counts on multi-core processors like VIA Nano X2 (`src/common/os/haiku.rs`, `src/x86/display.rs`)
 - Fixed unified L1 cache size formatting in `src/common/display.rs` where raw byte sizes (e.g. 16384 bytes) were displayed as KB without unit conversion
+- Fixed cache descriptor fallback and error handling in `src/x86/cache.rs` where invalid CPUID Leaf 2 register flags stopped descriptor scanning, empty cache objects failed `Cache::default()` inequality checks resulting in spurious unified 0 KB L1 cache output on VIA Nano processors, and chained fallback detection across deterministic parameters and extended leaves
 - Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
 - Fixed PowerPC build compile error (`src/common/cache.rs`)
 

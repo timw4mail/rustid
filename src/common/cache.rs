@@ -165,6 +165,12 @@ pub struct Cache {
 }
 
 impl Cache {
+    /// Returns true if all cache levels have 0 size and no higher levels exist.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.l1.size() == 0 && self.l2.is_none() && self.l3.is_none()
+    }
+
     /// Detects cache using platform/OS specific information sources.
     #[must_use]
     pub fn detect_os() -> Option<Cache> {
