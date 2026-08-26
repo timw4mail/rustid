@@ -90,7 +90,7 @@ impl TMicroArch for Centaur {
 use crate::x86::{CENTAUR_LEAF_1, EXT_LEAF_1, Reg, has_feature};
 
 fn has_centaur_feature(bit: u32) -> bool {
-    if !is_valid_leaf(CENTAUR_LEAF_1) {
+    if centaur_cpu_brand() == CpuBrand::IDT || !is_valid_leaf(CENTAUR_LEAF_1) {
         return false;
     }
 
