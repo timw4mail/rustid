@@ -1,8 +1,7 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i486
         Vendor: CentaurHauls (IDT)
          Model: IDT Winchip 2B
-   Model (raw): IDT WinChip 2-3D
      MicroArch: Winchip 2B
       Codename: W2B
   Process Node: 250nm
@@ -11,4 +10,4 @@
      Frequency: 200.00 MHz
      Signature: Family 5h, Model 8h, Stepping Ah
                 (0, 5, 0, 8, 10)
-      Features: FPU TSC MMX 3DNow! 
+      Features: FPU TSC MMX 3DNow!

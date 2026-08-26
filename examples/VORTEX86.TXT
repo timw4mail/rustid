@@ -1,4 +1,4 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i686-SSE
         Vendor: Vortex86 SoC (DM&P)
          Model: Vortex86DX3
@@ -11,4 +11,5 @@
      Frequency: 1.00 GHz
      Signature: Family 6h, Model 1h, Stepping 1h
                 (0, 6, 0, 1, 1)
-      Features: FPU TSC CMPXCHG8B CMOV MMX SSE 
+      Features: Base: FPU TSC CX8 CMOV MMX APIC
+                SSE: SSE

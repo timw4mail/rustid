@@ -1,4 +1,4 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i486
         Vendor: RiseRiseRise (Rise)
  Model (synth): Rise mP6
@@ -9,4 +9,4 @@
      Frequency: 200.00 MHz
      Signature: Family 5h, Model 0h, Stepping 4h
                 (0, 5, 0, 0, 4)
-      Features: FPU TSC MMX 
+      Features: FPU TSC MMX

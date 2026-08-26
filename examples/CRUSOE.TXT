@@ -1,4 +1,4 @@
---------------- Rustid 1.0.0 (x86-DOS) ---------------
+--------------- Rustid 2.0.0 (x86-DOS) ---------------
   Architecture: i686
         Vendor: GenuineTMx86 (Transmeta)
          Model: Transmeta(tm) Crusoe(tm) Processor TM5700
@@ -10,4 +10,4 @@
      Frequency: 800.00 MHz
      Signature: Family 5h, Model 4h, Stepping 3h
                 (0, 5, 0, 4, 3)
-      Features: FPU TSC CMPXCHG8B CMOV MMX 
+      Features: FPU TSC CX8 CMOV MMX
