@@ -1,0 +1,32 @@
+--------------- Rustid 2.0.0 (x86_64-linux) ---------------
+        System: ASUSTeK Computer INC. A8N32-SLI-Deluxe
+
+  Architecture: x86_64-v1
+
+        Vendor: AuthenticAMD (AMD)
+
+         Model: AMD Athlon(tm) 64 X2 Dual Core Processor 4800+
+
+     MicroArch: K8
+
+      Codename: Toledo
+
+  Process Node: 90nm
+
+    Easter Egg: IT'S HAMMER TIME
+
+      Topology: 2 cores
+
+         Cache: L1d: 2x 64 KB, 2-way
+                L1i: 2x 64 KB, 2-way
+                L2:  2x 1 MB, 16-way
+
+     Frequency: 2.41 GHz
+
+     Signature: Family Fh, Model 23h, Stepping 2h
+                (0, 15, 2, 3, 2)
+
+      Features: Base: FPU TSC CX8 CMOV MMX MMX+ 3DNow! 3DNow!+ HT APIC AMD64
+                SSE: SSE SSE2 SSE3
+                Security: NX
+
