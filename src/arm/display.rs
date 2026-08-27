@@ -192,9 +192,10 @@ impl CpuDisplay {
                 println!("{}", disp.label(&core_num));
 
                 if let Some(ref vendor_str) = core.implementer
-                    && vendor_str != UNK {
-                        disp.section_line("Implementer", vendor_str);
-                    }
+                    && vendor_str != UNK
+                {
+                    disp.section_line("Implementer", vendor_str);
+                }
 
                 let name = Into::<&str>::into(core.kind);
                 disp.section_line("Type", name);
@@ -231,9 +232,10 @@ impl CpuDisplay {
             println!("{}", disp.label("Cores"));
 
             if let Some(ref vendor_str) = core.implementer
-                && vendor_str != UNK {
-                    disp.section_line("Implementer", vendor_str);
-                }
+                && vendor_str != UNK
+            {
+                disp.section_line("Implementer", vendor_str);
+            }
 
             let ma_str: String = core.micro_arch.into();
             if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {

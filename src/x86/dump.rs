@@ -109,7 +109,7 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     let vendor = vendor_str();
 
     if Cpu::easter_egg().is_some() {
-        match &*vendor {
+        match vendor.as_str() {
             VENDOR_AMD => dump_leaf(f, AMD_EASTER_EGG_ADDR, 0, 4),
             VENDOR_RISE | VENDOR_SIS | VENDOR_DMP | VENDOR_RDC => {
                 dump_leaf(f, RISE_EASTER_EGG_ADDR, 0, 4);

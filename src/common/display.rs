@@ -102,25 +102,26 @@ impl CpuDisplay {
     /// Displays frequency lines (Base/Boost inline sublabels or single section line).
     pub fn display_frequency(&self, speed: Option<Speed>, flags: CliFlags) {
         if let Some(speed) = speed
-            && speed.base > 0 {
-                if speed.boost > speed.base {
-                    println!(
-                        "{}{}",
-                        self.inline_sublabel("Frequency", "Base"),
-                        Self::format_frequency(speed.base)
-                    );
-                    println!(
-                        "{}{}",
-                        self.sublabel("Boost"),
-                        Self::format_frequency(speed.boost)
-                    );
-                } else {
-                    self.section_line("Frequency", &Self::format_frequency(speed.base));
-                }
-                if !flags.compact {
-                    self.newline();
-                }
+            && speed.base > 0
+        {
+            if speed.boost > speed.base {
+                println!(
+                    "{}{}",
+                    self.inline_sublabel("Frequency", "Base"),
+                    Self::format_frequency(speed.base)
+                );
+                println!(
+                    "{}{}",
+                    self.sublabel("Boost"),
+                    Self::format_frequency(speed.boost)
+                );
+            } else {
+                self.section_line("Frequency", &Self::format_frequency(speed.base));
             }
+            if !flags.compact {
+                self.newline();
+            }
+        }
     }
 
     /// Displays the Topology line for homogeneous or hybrid configurations.

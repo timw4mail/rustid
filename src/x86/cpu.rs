@@ -631,36 +631,17 @@ impl Cpu {
 
         let mut cores: Vec<CpuCore> = Vec::new();
 
-        fn find_or_push(
-            cores: &mut Vec<CpuCore>,
-            core_type: CoreType,
-            name: Option<String>,
-            micro_arch: MicroArch,
-            speed: Option<Speed>,
-            cache: Option<Cache>,
-            count: u32,
-            threads: u32,
-        ) {
-            if let Some(c) = cores
-                .iter_mut()
-                .find(|c| c.kind == core_type && c.micro_arch == micro_arch && c.name == name)
-            {
-                c.count += count;
-                c.threads += threads;
-                if c.speed.is_none() && speed.is_some() {
-                    c.speed = speed;
+        fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
+            if let Some(c) = cores.iter_mut().find(|c| {
+                c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name
+            }) {
+                c.count += core.count;
+                c.threads += core.threads;
+                if c.speed.is_none() && core.speed.is_some() {
+                    c.speed = core.speed;
                 }
             } else {
-                cores.push(CpuCore {
-                    kind: core_type,
-                    micro_arch,
-                    name,
-                    implementer: None,
-                    cache,
-                    speed,
-                    count,
-                    threads,
-                });
+                cores.push(core);
             }
         }
 
@@ -696,7 +677,17 @@ impl Cpu {
                 let speed_opt = if speed.base > 0 { Some(speed) } else { None };
 
                 find_or_push(
-                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                    &mut cores,
+                    CpuCore {
+                        kind: core_type,
+                        micro_arch,
+                        name,
+                        implementer: None,
+                        cache,
+                        speed: speed_opt,
+                        count: 1,
+                        threads: 1,
+                    },
                 );
             }
         }
@@ -734,7 +725,17 @@ impl Cpu {
                 let speed_opt = if speed.base > 0 { Some(speed) } else { None };
 
                 find_or_push(
-                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                    &mut cores,
+                    CpuCore {
+                        kind: core_type,
+                        micro_arch,
+                        name,
+                        implementer: None,
+                        cache,
+                        speed: speed_opt,
+                        count: 1,
+                        threads: 1,
+                    },
                 );
             }
         }
@@ -780,7 +781,17 @@ impl Cpu {
                 let speed_opt = if speed.base > 0 { Some(speed) } else { None };
 
                 find_or_push(
-                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                    &mut cores,
+                    CpuCore {
+                        kind: core_type,
+                        micro_arch,
+                        name,
+                        implementer: None,
+                        cache,
+                        speed: speed_opt,
+                        count: 1,
+                        threads: 1,
+                    },
                 );
             }
         }
