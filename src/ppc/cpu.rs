@@ -5,43 +5,23 @@ use crate::common::cache::Cache;
 use crate::common::get_proc_cpuinfo_data;
 use crate::common::os::TOSData;
 use crate::common::{CoreType, DataSource, Speed, TDetect, UNK};
-use crate::ppc::micro_arch::{CpuArch, CpuCore};
+use crate::ppc::micro_arch::{CpuArch, CpuCore, MicroArch};
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, PartialEq)]
-pub struct Cpu {
-    pub system: Option<String>,
+/// PowerPC architecture-specific data.
+#[derive(Debug, Default, PartialEq)]
+pub struct PpcData {
     pub pvr: u32,
     pub version: u16,
     pub revision: u16,
     pub cpu_arch: CpuArch,
-    pub cores: Vec<CpuCore>,
     pub clock_speed_source: DataSource,
 }
 
-impl Default for Cpu {
-    fn default() -> Self {
-        Self::detect()
-    }
-}
+pub type Cpu = crate::common::Cpu<PpcData, MicroArch>;
 
 impl Cpu {
-    /// Returns true if this CPU has multiple core types (hybrid architecture).
-    pub fn is_hybrid(&self) -> bool {
-        self.cores.len() > 1
-    }
-
-    /// Total physical cores across all clusters
-    pub fn total_cores(&self) -> u32 {
-        self.cores.iter().map(|c| c.count).sum()
-    }
-
-    /// Total logical threads across all clusters
-    pub fn total_threads(&self) -> u32 {
-        self.cores.iter().map(|c| c.threads).sum()
-    }
-
     fn detect_topology() -> (u32, u32) {
         #[cfg(target_os = "linux")]
         {
@@ -103,14 +83,16 @@ impl Cpu {
         }
 
         if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency"))
-            && let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
-                return Some(freq_hz / 1_000_000);
-            }
+            && let Ok(freq_hz) = freq_str.trim().parse::<u64>()
+        {
+            return Some(freq_hz / 1_000_000);
+        }
 
         if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency"))
-            && let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
-                return Some(freq_hz / 1_000_000);
-            }
+            && let Ok(freq_hz) = freq_str.trim().parse::<u64>()
+        {
+            return Some(freq_hz / 1_000_000);
+        }
 
         None
     }
@@ -129,9 +111,10 @@ impl Cpu {
         for line in output_str.lines() {
             if (line.starts_with("CPU max MHz") || line.starts_with("CPU MHz"))
                 && let Some(value) = line.split(':').nth(1)
-                    && let Some(freq) = Self::parse_mhz_value(value) {
-                        return Some(freq);
-                    }
+                && let Some(freq) = Self::parse_mhz_value(value)
+            {
+                return Some(freq);
+            }
         }
 
         None
@@ -141,9 +124,10 @@ impl Cpu {
         let cpuinfo = get_proc_cpuinfo_data();
         for map in &cpuinfo {
             if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock"))
-                && let Some(freq) = Self::parse_mhz_value(val) {
-                    return Some(freq);
-                }
+                && let Some(freq) = Self::parse_mhz_value(val)
+            {
+                return Some(freq);
+            }
         }
 
         None
@@ -195,20 +179,34 @@ impl TDetect for Cpu {
             } else {
                 None
             },
+            implementer: None,
             cache,
             speed,
             count: core_count,
             threads: thread_count,
         }];
 
-        Self {
-            system,
+        let extra = PpcData {
             pvr,
             version,
             revision,
             cpu_arch,
-            cores,
             clock_speed_source,
+        };
+
+        let vendor = String::from(if extra.cpu_arch.marketing_name != UNK {
+            "IBM"
+        } else {
+            UNK
+        });
+
+        Self {
+            system,
+            vendor,
+            model: extra.cpu_arch.marketing_name.to_string(),
+            cores,
+            features: std::collections::BTreeMap::new(),
+            extra,
         }
     }
 }

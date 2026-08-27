@@ -38,13 +38,11 @@ impl CpuDisplay {
 
         // Display topology & per-core details
         if cpu_info.is_hybrid() {
-            disp.simple_line(
-                "Topology",
-                &format!(
-                    "{} cores across {} core types",
-                    cpu_info.total_cores(),
-                    cpu_info.cores.len()
-                ),
+            disp.display_topology_line(
+                cpu_info.total_cores(),
+                cpu_info.total_threads(),
+                true,
+                cpu_info.cores.len(),
             );
 
             for (i, core) in cpu_info.cores.iter().enumerate() {
@@ -60,24 +58,13 @@ impl CpuDisplay {
 
                 disp.section_line("Count", &core.count.to_string());
 
-                if let Some(speed) = &core.speed
-                    && speed.base > 0
-                {
-                    if speed.boost > speed.base {
-                        println!(
-                            "{}{}",
-                            disp.inline_sublabel("Frequency", "Base"),
-                            CpuDisplay::format_frequency(speed.base)
-                        );
-                        println!(
-                            "{}{}",
-                            disp.sublabel("Boost"),
-                            CpuDisplay::format_frequency(speed.boost)
-                        );
-                    } else {
-                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                    }
-                }
+                disp.display_frequency(
+                    core.speed,
+                    CliFlags {
+                        compact: true,
+                        ..flags
+                    },
+                );
 
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 disp.display_cache(core.cache, &cc, 0);
@@ -87,36 +74,19 @@ impl CpuDisplay {
                 }
             }
         } else if let Some(core) = cpu_info.cores.first() {
-            disp.simple_line("Topology", &format!("{} cores", core.count));
+            disp.display_topology_line(core.count, core.threads, false, 1);
 
             let cc =
                 |share_count: u32| -> String { CpuDisplay::cache_count(share_count, core.count) };
             disp.display_cache(core.cache, &cc, 0);
 
-            if let Some(speed) = &core.speed
-                && speed.base > 0
-            {
-                if speed.boost > speed.base {
-                    println!(
-                        "{}{}",
-                        disp.inline_sublabel("Frequency", "Base"),
-                        CpuDisplay::format_frequency(speed.base)
-                    );
-                    println!(
-                        "{}{}",
-                        disp.sublabel("Boost"),
-                        CpuDisplay::format_frequency(speed.boost)
-                    );
-                    disp.newline();
-                } else {
-                    disp.simple_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                }
-            }
+            disp.display_frequency(core.speed, flags);
         }
 
         // Display features
-        if !cpu_info.features.is_empty() {
-            let keys = [
+        disp.display_features(
+            &cpu_info.features,
+            &[
                 "Mul",
                 "Atomic",
                 "Float",
@@ -127,19 +97,7 @@ impl CpuDisplay {
                 "Priv",
                 "Cache",
                 "Misc",
-            ];
-            let mut first = true;
-            for key in keys {
-                if let Some(feat_str) = cpu_info.features.get(key) {
-                    if first {
-                        println!("{}{}", disp.inline_sublabel("Features", key), feat_str);
-                        first = false;
-                    } else {
-                        println!("{}{}", disp.sublabel(key), feat_str);
-                    }
-                }
-            }
-            println!();
-        }
+            ],
+        );
     }
 }

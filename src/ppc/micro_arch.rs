@@ -1,23 +1,6 @@
 use crate::common::constants::*;
-use crate::common::{Cache, CoreType, Speed};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct CpuCore {
-    /// Classification of this core (Performance, Efficiency, Super)
-    pub kind: CoreType,
-    /// Microarchitecture variant of this core
-    pub micro_arch: MicroArch,
-    /// Human-readable marketing / core codename (e.g. "PowerPC 750 (G3)")
-    pub name: Option<String>,
-    /// Cache hierarchy for this core cluster
-    pub cache: Option<Cache>,
-    /// Clock speed (base and boost frequencies in MHz)
-    pub speed: Option<Speed>,
-    /// Physical core count
-    pub count: u32,
-    /// Logical thread count (e.g., taking SMT into account)
-    pub threads: u32,
-}
+pub type CpuCore = crate::common::CpuCore<MicroArch>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MicroArch {
@@ -328,13 +311,14 @@ mod tests {
 
     #[test]
     fn test_ppc_core_and_topology() {
-        use super::super::cpu::Cpu;
+        use super::super::cpu::{Cpu, PpcData};
         use crate::common::{CoreType, DataSource, Speed};
 
         let core = CpuCore {
             kind: CoreType::Performance,
             micro_arch: MicroArch::Ppc970,
             name: Some("PowerPC 970".to_string()),
+            implementer: None,
             cache: None,
             speed: Some(Speed {
                 base: 2000,
@@ -347,12 +331,17 @@ mod tests {
 
         let cpu = Cpu {
             system: None,
-            pvr: 0x0039_0202,
-            version: 0x0039,
-            revision: 0x0202,
-            cpu_arch: CpuArch::find(0x0039_0202),
+            vendor: String::from("IBM"),
+            model: String::from("PowerPC 970"),
             cores: vec![core],
-            clock_speed_source: DataSource::DefaultValue,
+            features: std::collections::BTreeMap::new(),
+            extra: PpcData {
+                pvr: 0x0039_0202,
+                version: 0x0039,
+                revision: 0x0202,
+                cpu_arch: CpuArch::find(0x0039_0202),
+                clock_speed_source: DataSource::DefaultValue,
+            },
         };
 
         assert!(!cpu.is_hybrid());

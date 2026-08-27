@@ -6,7 +6,6 @@ use super::topology::Topology;
 use super::vendor::Cyrix;
 use super::*;
 use crate::common::{Cache, CoreType, DataSource, Speed, TDetect, UNK};
-use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -228,31 +227,9 @@ impl CpuSignature {
     }
 }
 
-/// Information about a specific core type/cluster in the CPU.
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct CpuCore {
-    /// Classification of this core (Performance, Efficiency, Super)
-    pub kind: CoreType,
-    /// Microarchitecture variant of this core type
-    pub micro_arch: MicroArch,
-    /// Human-readable name for this microarchitecture (e.g., "Golden Cove")
-    pub name: Option<&'static str>,
-    /// Cache hierarchy specific to this core type
-    pub cache: Option<Cache>,
-    /// Clock speed for this specific core type (base and boost frequencies)
-    pub speed: Option<Speed>,
-    /// Number of physical cores of this type
-    pub count: u32,
-    /// Number of logical threads of this type
-    pub threads: u32,
-}
-
-/// Represents a complete x86/x86_64 CPU with all detected information.
+/// x86 architecture-specific data.
 #[derive(Debug, Default, PartialEq)]
-pub struct Cpu {
-    /// The system name, if applicable
-    #[cfg(not(dos_os))]
-    pub system: Option<String>,
+pub struct X86Data {
     /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,
     /// CPU architecture and microarchitecture details
@@ -265,13 +242,12 @@ pub struct Cpu {
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
-    /// Detected CPU features
-    pub features: BTreeMap<&'static str, String>,
     /// Speed, threads, cores, sockets
     pub topology: Topology,
-    /// Per-core-type breakdown of CPU cores
-    pub cores: Vec<CpuCore>,
 }
+
+pub type CpuCore = crate::common::CpuCore<MicroArch>;
+pub type Cpu = crate::common::Cpu<X86Data, MicroArch>;
 
 impl Cpu {
     /// Gets the CPU model string.
@@ -507,7 +483,7 @@ impl Cpu {
         String::from(s)
     }
 
-    fn easter_egg() -> Option<String> {
+    pub(crate) fn easter_egg() -> Option<String> {
         let mut out: String = String::new();
         let brand = CpuBrand::detect();
 
@@ -587,9 +563,7 @@ impl TDetect for Cpu {
         #[cfg(dos_os)]
         let cores = Self::fallback_homogeneous(&arch, &topology);
 
-        Self {
-            #[cfg(not(dos_os))]
-            system,
+        let extra = X86Data {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
             hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
@@ -600,9 +574,19 @@ impl TDetect for Cpu {
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
-            features: get_feature_list(),
             topology,
+        };
+
+        Self {
+            #[cfg(not(dos_os))]
+            system,
+            #[cfg(dos_os)]
+            system: None,
+            vendor: String::from(extra.arch.brand_name),
+            model: extra.arch.model.clone(),
             cores,
+            features: get_feature_list(),
+            extra,
         }
     }
 }
@@ -617,7 +601,7 @@ impl Cpu {
         let cores_per_socket = (topology.cores.count / sockets).max(1);
         let threads_per_socket = (topology.threads.count / sockets).max(1);
         let name = if arch.code_name != UNK {
-            Some(arch.code_name)
+            Some(String::from(arch.code_name))
         } else {
             None
         };
@@ -625,16 +609,12 @@ impl Cpu {
             kind: CoreType::Performance,
             micro_arch: arch.micro_arch,
             name,
+            implementer: None,
             cache,
             speed: speed_opt,
             count: cores_per_socket,
             threads: threads_per_socket,
         }]
-    }
-
-    /// Returns true if this CPU has multiple core types (hybrid architecture).
-    pub fn is_hybrid(&self) -> bool {
-        self.cores.len() > 1
     }
 }
 
@@ -654,7 +634,7 @@ impl Cpu {
         fn find_or_push(
             cores: &mut Vec<CpuCore>,
             core_type: CoreType,
-            name: Option<&'static str>,
+            name: Option<String>,
             micro_arch: MicroArch,
             speed: Option<Speed>,
             cache: Option<Cache>,
@@ -675,6 +655,7 @@ impl Cpu {
                     kind: core_type,
                     micro_arch,
                     name,
+                    implementer: None,
                     cache,
                     speed,
                     count,
@@ -705,7 +686,7 @@ impl Cpu {
 
                 let name_str = micro_arch.as_str();
                 let name = if name_str != UNK {
-                    Some(name_str)
+                    Some(String::from(name_str))
                 } else {
                     None
                 };
@@ -743,7 +724,7 @@ impl Cpu {
 
                 let name_str = micro_arch.as_str();
                 let name = if name_str != UNK {
-                    Some(name_str)
+                    Some(String::from(name_str))
                 } else {
                     None
                 };
@@ -790,7 +771,7 @@ impl Cpu {
 
                 let name_str = micro_arch.as_str();
                 let name = if name_str != UNK {
-                    Some(name_str)
+                    Some(String::from(name_str))
                 } else {
                     None
                 };
@@ -839,24 +820,30 @@ mod tests {
         };
 
         let cpu_am486_dx2 = Cpu {
-            arch: arch_am486.clone(),
-            brand_id: 0,
-            easter_egg: None,
-            signature: dummy_sig,
+            extra: X86Data {
+                arch: arch_am486.clone(),
+                brand_id: 0,
+                easter_egg: None,
+                signature: dummy_sig,
+                topology: Topology::default(),
+                ..Default::default()
+            },
             features: get_feature_list(),
-            topology: Topology::default(),
             ..Default::default()
         };
         assert_eq!(cpu_am486_dx2.display_model_string(), "AMD 486 DX2");
 
         arch_am486.code_name = "Am486X2WB";
         let cpu_am486_x2wb = Cpu {
-            arch: arch_am486.clone(),
-            brand_id: 0,
-            easter_egg: None,
-            signature: dummy_sig,
+            extra: X86Data {
+                arch: arch_am486.clone(),
+                brand_id: 0,
+                easter_egg: None,
+                signature: dummy_sig,
+                topology: Topology::default(),
+                ..Default::default()
+            },
             features: get_feature_list(),
-            topology: Topology::default(),
             ..Default::default()
         };
         assert_eq!(
@@ -866,33 +853,39 @@ mod tests {
 
         // Test case for MicroArch::I486
         let cpu_i486_dx = Cpu {
-            arch: CpuArch {
-                micro_arch: MicroArch::I486,
-                code_name: "i80486DX",
-                brand_name: "Intel",
-                vendor_string: String::from(VENDOR_INTEL),
+            extra: X86Data {
+                arch: CpuArch {
+                    micro_arch: MicroArch::I486,
+                    code_name: "i80486DX",
+                    brand_name: "Intel",
+                    vendor_string: String::from(VENDOR_INTEL),
+                    ..Default::default()
+                },
+                brand_id: 0,
+                easter_egg: None,
+                signature: dummy_sig,
+                topology: Topology::default(),
                 ..Default::default()
             },
-            brand_id: 0,
-            easter_egg: None,
-            signature: dummy_sig,
             features: get_feature_list(),
-            topology: Topology::default(),
             ..Default::default()
         };
         assert_eq!(cpu_i486_dx.display_model_string(), "Intel 486 DX");
 
         // Test case for "No CPUID"
         let cpu_no_cpuid = Cpu {
-            arch: CpuArch {
-                vendor_string: String::from("UnknownVendor"),
-                ..CpuArch::default()
+            extra: X86Data {
+                arch: CpuArch {
+                    vendor_string: String::from("UnknownVendor"),
+                    ..CpuArch::default()
+                },
+                brand_id: 0,
+                easter_egg: None,
+                signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
+                topology: Topology::default(),
+                ..Default::default()
             },
-            brand_id: 0,
-            easter_egg: None,
-            signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
             features: get_feature_list(),
-            topology: Topology::default(),
             ..Default::default()
         };
         assert_eq!(cpu_no_cpuid.display_model_string(), UNK);
@@ -902,16 +895,19 @@ mod tests {
     fn test_display_model_string() {
         // Test case for "Unknown"
         let cpu_unknown = Cpu {
-            arch: CpuArch {
-                model: String::from("Unknown"),
-                vendor_string: String::from("UnknownVendor"),
-                ..CpuArch::default()
+            extra: X86Data {
+                arch: CpuArch {
+                    model: String::from("Unknown"),
+                    vendor_string: String::from("UnknownVendor"),
+                    ..CpuArch::default()
+                },
+                brand_id: 0,
+                easter_egg: None,
+                signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
+                topology: Topology::default(),
+                ..Default::default()
             },
-            brand_id: 0,
-            easter_egg: None,
-            signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
             features: get_feature_list(),
-            topology: Topology::default(),
             ..Default::default()
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");

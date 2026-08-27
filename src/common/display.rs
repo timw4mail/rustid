@@ -1,3 +1,4 @@
+use super::Speed;
 use super::cache::{Cache, Level1Cache};
 use super::constants::*;
 
@@ -95,6 +96,91 @@ impl CpuDisplay {
             format!("{}.{:02} GHz", whole, fract)
         } else {
             format!("{}.00 MHz", mhz)
+        }
+    }
+
+    /// Displays frequency lines (Base/Boost inline sublabels or single section line).
+    pub fn display_frequency(&self, speed: Option<Speed>, flags: CliFlags) {
+        if let Some(speed) = speed
+            && speed.base > 0 {
+                if speed.boost > speed.base {
+                    println!(
+                        "{}{}",
+                        self.inline_sublabel("Frequency", "Base"),
+                        Self::format_frequency(speed.base)
+                    );
+                    println!(
+                        "{}{}",
+                        self.sublabel("Boost"),
+                        Self::format_frequency(speed.boost)
+                    );
+                } else {
+                    self.section_line("Frequency", &Self::format_frequency(speed.base));
+                }
+                if !flags.compact {
+                    self.newline();
+                }
+            }
+    }
+
+    /// Displays the Topology line for homogeneous or hybrid configurations.
+    pub fn display_topology_line(
+        &self,
+        total_cores: u32,
+        total_threads: u32,
+        is_hybrid: bool,
+        cluster_count: usize,
+    ) {
+        if is_hybrid {
+            if total_threads != total_cores {
+                self.simple_line(
+                    "Topology",
+                    &alloc::format!(
+                        "{} cores ({} threads) across {} core types",
+                        total_cores,
+                        total_threads,
+                        cluster_count
+                    ),
+                );
+            } else {
+                self.simple_line(
+                    "Topology",
+                    &alloc::format!("{} cores across {} core types", total_cores, cluster_count),
+                );
+            }
+        } else if total_cores > 0 {
+            if total_threads != total_cores {
+                self.simple_line(
+                    "Topology",
+                    &alloc::format!("{} cores ({} threads)", total_cores, total_threads),
+                );
+            } else {
+                self.simple_line("Topology", &alloc::format!("{} cores", total_cores));
+            }
+        }
+    }
+
+    /// Displays detected features using the standard ordered key list.
+    pub fn display_features<K>(
+        &self,
+        features: &alloc::collections::BTreeMap<K, String>,
+        keys: &[&str],
+    ) where
+        K: core::borrow::Borrow<str> + Ord,
+    {
+        if !features.is_empty() {
+            let mut first = true;
+            for key in keys {
+                if let Some(feat_str) = features.get(*key) {
+                    if first {
+                        println!("{}{}", self.inline_sublabel("Features", key), feat_str);
+                        first = false;
+                    } else {
+                        println!("{}{}", self.sublabel(key), feat_str);
+                    }
+                }
+            }
+            println!();
         }
     }
 

@@ -121,24 +121,13 @@ impl Cpu {
                     disp.section_line("Topology", &format!("{} cores", core.count));
                 }
 
-                if let Some(speed) = &core.speed
-                    && speed.base > 0
-                {
-                    if speed.boost > speed.base {
-                        println!(
-                            "{}{}",
-                            disp.inline_sublabel("Frequency", "Base"),
-                            CpuDisplay::format_frequency(speed.base)
-                        );
-                        println!(
-                            "{}{}",
-                            disp.sublabel("Boost"),
-                            CpuDisplay::format_frequency(speed.boost)
-                        );
-                    } else {
-                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                    }
-                }
+                disp.display_frequency(
+                    core.speed,
+                    CliFlags {
+                        compact: true,
+                        ..flags
+                    },
+                );
 
                 let smt = cpuid_threads_per_core()
                     .max(core.threads / core.count.max(1))
@@ -193,34 +182,14 @@ impl Cpu {
         }
     }
 
-    fn print_speed(&self, disp: &CpuDisplay) {
+    fn print_speed(&self, flags: CliFlags, disp: &CpuDisplay) {
         let speed = self
             .cores
             .first()
-            .and_then(|c| c.speed.as_ref())
-            .unwrap_or(&self.topology.speed);
+            .and_then(|c| c.speed)
+            .unwrap_or(self.topology.speed);
 
-        if speed.base > 0 {
-            let base = speed.base;
-            let boost = speed.boost;
-
-            if boost > base {
-                println!(
-                    "{}{}",
-                    disp.inline_sublabel("Frequency", "Base"),
-                    CpuDisplay::format_frequency(base)
-                );
-                println!(
-                    "{}{}",
-                    disp.sublabel("Boost"),
-                    CpuDisplay::format_frequency(boost)
-                );
-            } else {
-                disp.section_line("Frequency", &CpuDisplay::format_frequency(base));
-            }
-
-            disp.newline();
-        }
+        disp.display_frequency(Some(speed), flags);
     }
 
     fn print_signature(&self, flags: CliFlags, disp: &CpuDisplay) {
@@ -549,7 +518,7 @@ impl TCpuDisplay for Cpu {
 
         // Clock Speed (Base/Boost)
         if !self.is_hybrid() {
-            self.print_speed(&disp);
+            self.print_speed(flags, &disp);
         }
 
         // CPU Signature

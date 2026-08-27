@@ -142,6 +142,7 @@ pub fn detect() -> OsCpuInfo {
             kind: core_type,
             micro_arch: cpu_arch.micro_arch,
             name: Some(String::from(cpu_arch.micro_arch)),
+            implementer: None,
             cache,
             speed,
             count: core_count,

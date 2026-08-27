@@ -1,6 +1,5 @@
 use super::*;
 use super::{CENTAUR_LEAF_0, EXT_LEAF_0, TRANSMETA_LEAF_0, VENDOR_AMD};
-use crate::common::TDetect;
 use crate::x86;
 use core::fmt::Write;
 
@@ -109,8 +108,7 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
 
     let vendor = vendor_str();
 
-    let easter_egg = Cpu::detect().easter_egg;
-    if easter_egg.is_some() {
+    if Cpu::easter_egg().is_some() {
         match &*vendor {
             VENDOR_AMD => dump_leaf(f, AMD_EASTER_EGG_ADDR, 0, 4),
             VENDOR_RISE | VENDOR_SIS | VENDOR_DMP | VENDOR_RDC => {

@@ -1,3 +1,4 @@
+use super::micro_arch::CpuCore;
 use super::micro_arch::*;
 use crate::common::*;
 use std::collections::BTreeMap;

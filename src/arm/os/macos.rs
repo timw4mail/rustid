@@ -417,10 +417,10 @@ pub fn detect() -> OsCpuInfo {
         cores.insert(
             (kind, midr),
             CpuCore {
-                implementer: Vendor::Apple,
                 kind,
                 micro_arch,
-                code_name: None,
+                name: None,
+                implementer: Some(Into::<&str>::into(Vendor::Apple).to_string()),
                 cache: Some(cache),
                 speed: None,
                 count,

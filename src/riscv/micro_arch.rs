@@ -4,20 +4,11 @@
 //! vendor/architecture IDs to known CPU cores.
 
 use crate::common::CoreType;
+use crate::common::UNK;
 use crate::common::constants::*;
-use crate::common::{Cache, Speed, UNK};
 use crate::riscv::brand::*;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct CpuCore {
-    pub kind: CoreType,
-    pub micro_arch: MicroArch,
-    pub name: Option<String>,
-    pub cache: Option<Cache>,
-    pub speed: Option<Speed>,
-    pub count: u32,
-    pub threads: u32,
-}
+pub type CpuCore = crate::common::CpuCore<MicroArch>;
 
 /// RISC-V `misa` register layout.
 ///

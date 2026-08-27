@@ -2,6 +2,7 @@
 
 use rustid::common::TDetect;
 use rustid::common::*;
+use rustid::x86::Cpu;
 use rustid::x86::provider::*;
 use rustid::x86::*;
 use std::path::PathBuf;
@@ -1007,10 +1008,10 @@ cpuid_testsuite!(
             assert_eq!(cpu.cores.len(), 2);
             assert_eq!(cpu.cores[0].kind, CoreType::Performance);
             assert_eq!(cpu.cores[0].micro_arch, MicroArch::GoldenCove);
-            assert_eq!(cpu.cores[0].name, Some("Golden Cove"));
+            assert_eq!(cpu.cores[0].name.as_deref(), Some("Golden Cove"));
             assert_eq!(cpu.cores[1].kind, CoreType::Efficiency);
             assert_eq!(cpu.cores[1].micro_arch, MicroArch::Gracemont);
-            assert_eq!(cpu.cores[1].name, Some("Gracemont"));
+            assert_eq!(cpu.cores[1].name.as_deref(), Some("Gracemont"));
         }
     }
 );

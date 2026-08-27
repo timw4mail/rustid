@@ -25,36 +25,15 @@ impl TCpuDisplay for Cpu {
 
         let total_cores = self.total_cores();
         let total_threads = self.total_threads();
-        if total_cores > 0 {
-            if total_threads != total_cores {
-                disp.simple_line(
-                    "Topology",
-                    &alloc::format!("{} cores ({} threads)", total_cores, total_threads),
-                );
-            } else {
-                disp.simple_line("Topology", &alloc::format!("{} cores", total_cores));
-            }
-        }
+        disp.display_topology_line(
+            total_cores,
+            total_threads,
+            self.is_hybrid(),
+            self.cores.len(),
+        );
 
         if let Some(core) = self.cores.first() {
-            if let Some(speed) = &core.speed
-                && speed.base > 0 {
-                    if speed.boost > speed.base {
-                        println!(
-                            "{}{}",
-                            disp.inline_sublabel("Frequency", "Base"),
-                            CpuDisplay::format_frequency(speed.base)
-                        );
-                        println!(
-                            "{}{}",
-                            disp.sublabel("Boost"),
-                            CpuDisplay::format_frequency(speed.boost)
-                        );
-                        disp.newline();
-                    } else {
-                        disp.simple_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                    }
-                }
+            disp.display_frequency(core.speed, flags);
 
             let cc = |s| CpuDisplay::cache_count(s, total_cores);
             disp.display_cache(core.cache, &cc, 0);

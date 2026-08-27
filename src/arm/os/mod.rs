@@ -1,4 +1,6 @@
+use super::micro_arch::CpuCore;
 use super::micro_arch::*;
+use crate::arm::brand::Vendor;
 use crate::common::*;
 use std::collections::{BTreeMap, HashSet};
 
@@ -59,6 +61,12 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
 
         let cache = core_cache_map.get(&midr.to_bits()).cloned().flatten();
 
+        let impl_str = if implementer != Vendor::Unknown {
+            Some(Into::<&str>::into(implementer).to_string())
+        } else {
+            None
+        };
+
         cores
             .entry((core_type, *midr))
             .and_modify(|c| {
@@ -66,10 +74,10 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
                 c.threads += 1;
             })
             .or_insert(CpuCore {
-                implementer,
                 kind: core_type,
                 micro_arch,
-                code_name,
+                name: code_name,
+                implementer: impl_str,
                 cache,
                 speed: None,
                 count: 1,
@@ -134,7 +142,7 @@ pub use bsd::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arm::brand::{IMPL_ARM, IMPL_QUALCOMM, Vendor};
+    use crate::arm::brand::{IMPL_ARM, IMPL_QUALCOMM};
 
     #[test]
     fn test_snapdragon_750g_detect_cores() {
@@ -177,7 +185,7 @@ mod tests {
             .expect("silver core missing");
         assert_eq!(silver_core.count, 6);
         assert_eq!(silver_core.kind, CoreType::Efficiency);
-        assert_eq!(silver_core.implementer, Vendor::Arm);
+        assert_eq!(silver_core.implementer.as_deref(), Some("ARM"));
         assert_eq!(silver_core.micro_arch, MicroArch::ArmCortexA55);
 
         let gold_core = cores
@@ -186,7 +194,7 @@ mod tests {
             .expect("gold core missing");
         assert_eq!(gold_core.count, 2);
         assert_eq!(gold_core.kind, CoreType::Performance);
-        assert_eq!(gold_core.implementer, Vendor::Arm);
+        assert_eq!(gold_core.implementer.as_deref(), Some("ARM"));
         assert_eq!(gold_core.micro_arch, MicroArch::ArmCortexA77);
     }
 
@@ -229,13 +237,13 @@ mod tests {
             .find(|c| c.kind == CoreType::Efficiency)
             .expect("silver core missing");
         assert_eq!(silver.count, 4);
-        assert_eq!(silver.implementer, Vendor::Qualcomm);
+        assert_eq!(silver.implementer.as_deref(), Some("Qualcomm"));
 
         let gold = cores
             .iter()
             .find(|c| c.kind == CoreType::Performance)
             .expect("gold core missing");
         assert_eq!(gold.count, 4);
-        assert_eq!(gold.implementer, Vendor::Qualcomm);
+        assert_eq!(gold.implementer.as_deref(), Some("Qualcomm"));
     }
 }

@@ -1,7 +1,6 @@
 use crate::arm::brand::*;
-use crate::common::CoreType;
+use crate::common::UNK;
 use crate::common::constants::*;
-use crate::common::{Cache, Speed, UNK};
 
 pub const IMPLEMENTER_MASK: usize = 0xFF000000;
 pub const VARIANT_MASK: usize = 0x00F00000;
@@ -48,17 +47,7 @@ impl Midr {
 
 pub type Implementer = Vendor;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct CpuCore {
-    pub implementer: Implementer,
-    pub kind: CoreType,
-    pub micro_arch: MicroArch,
-    pub code_name: Option<String>,
-    pub cache: Option<Cache>,
-    pub speed: Option<Speed>,
-    pub count: u32,
-    pub threads: u32,
-}
+pub type CpuCore = crate::common::CpuCore<MicroArch>;
 
 /// ARM Microarchitectures across vendors.
 ///

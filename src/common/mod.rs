@@ -115,6 +115,74 @@ pub struct Speed {
     pub measured: bool,
 }
 
+/// Information about a specific core type/cluster in the CPU.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct CpuCore<M = &'static str> {
+    /// Classification of this core (Performance, Efficiency, Super)
+    pub kind: CoreType,
+    /// Microarchitecture variant of this core type
+    pub micro_arch: M,
+    /// Marketing or core codename (e.g., "Golden Cove", "Cortex-A78", "U74")
+    pub name: Option<String>,
+    /// Core implementer / designer (e.g., "ARM", "Nvidia", "Apple")
+    pub implementer: Option<String>,
+    /// Cache hierarchy specific to this core cluster
+    pub cache: Option<Cache>,
+    /// Clock speed for this specific core cluster (base and boost frequencies in MHz)
+    pub speed: Option<Speed>,
+    /// Number of physical cores in this cluster
+    pub count: u32,
+    /// Number of logical threads in this cluster
+    pub threads: u32,
+}
+
+/// Unified CPU representation across all hardware architectures.
+#[derive(Debug, Default, PartialEq)]
+pub struct Cpu<E = (), M = &'static str> {
+    /// The system name, if applicable
+    pub system: Option<String>,
+    /// CPU vendor name
+    pub vendor: String,
+    /// CPU model name
+    pub model: String,
+    /// Per-core-cluster breakdown of CPU cores
+    pub cores: alloc::vec::Vec<CpuCore<M>>,
+    /// Detected CPU features
+    pub features: alloc::collections::BTreeMap<&'static str, String>,
+    /// Architecture-specific extension data
+    pub extra: E,
+}
+
+impl<E, M> Cpu<E, M> {
+    /// Returns true if this CPU has multiple core types (hybrid architecture).
+    pub fn is_hybrid(&self) -> bool {
+        self.cores.len() > 1
+    }
+
+    /// Total physical cores across all clusters
+    pub fn total_cores(&self) -> u32 {
+        self.cores.iter().map(|c| c.count).sum()
+    }
+
+    /// Total logical threads across all clusters
+    pub fn total_threads(&self) -> u32 {
+        self.cores.iter().map(|c| c.threads).sum()
+    }
+}
+
+impl<E, M> core::ops::Deref for Cpu<E, M> {
+    type Target = E;
+    fn deref(&self) -> &Self::Target {
+        &self.extra
+    }
+}
+
+impl<E, M> core::ops::DerefMut for Cpu<E, M> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.extra
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TopologyTier {
     pub count: u32,

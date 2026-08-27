@@ -35,7 +35,7 @@ impl CpuDisplay {
             if ma_str != UNK && is_duplicate(model, &ma_str) {
                 return false;
             }
-            if let Some(cname) = &core.code_name
+            if let Some(cname) = &core.name
                 && cname != UNK
                 && !cname.is_empty()
                 && is_duplicate(model, cname)
@@ -60,7 +60,7 @@ impl CpuDisplay {
         // Check if every core cluster in cpu_info has the same code_name
         let mut common_cname: Option<&str> = None;
         for (i, core) in cpu_info.cores.iter().enumerate() {
-            let Some(cname) = &core.code_name else {
+            let Some(cname) = &core.name else {
                 common_cname = None;
                 break;
             };
@@ -141,7 +141,7 @@ impl CpuDisplay {
     }
 
     pub fn should_show_core_codename(core: &CpuCore, cpu_info: &Cpu, verbose: bool) -> bool {
-        let Some(code_name) = &core.code_name else {
+        let Some(code_name) = &core.name else {
             return false;
         };
         if code_name == UNK || code_name.is_empty() {
@@ -191,10 +191,10 @@ impl CpuDisplay {
                 let core_num = format!("Core #{}", i + 1);
                 println!("{}", disp.label(&core_num));
 
-                let vendor_str: &str = core.implementer.into();
-                if vendor_str != UNK {
-                    disp.section_line("Implementer", vendor_str);
-                }
+                if let Some(ref vendor_str) = core.implementer
+                    && vendor_str != UNK {
+                        disp.section_line("Implementer", vendor_str);
+                    }
 
                 let name = Into::<&str>::into(core.kind);
                 disp.section_line("Type", name);
@@ -205,31 +205,20 @@ impl CpuDisplay {
                 }
 
                 if Self::should_show_core_codename(core, cpu_info, flags.verbose)
-                    && let Some(codename) = &core.code_name
+                    && let Some(codename) = &core.name
                 {
                     disp.section_line("Codename", codename);
                 }
 
                 disp.section_line("Count", &core.count.to_string());
 
-                if let Some(speed) = &core.speed
-                    && speed.base > 0
-                {
-                    if speed.boost > speed.base {
-                        println!(
-                            "{}{}",
-                            disp.inline_sublabel("Frequency", "Base"),
-                            CpuDisplay::format_frequency(speed.base)
-                        );
-                        println!(
-                            "{}{}",
-                            disp.sublabel("Boost"),
-                            CpuDisplay::format_frequency(speed.boost)
-                        );
-                    } else {
-                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                    }
-                }
+                disp.display_frequency(
+                    core.speed,
+                    CliFlags {
+                        compact: true,
+                        ..flags
+                    },
+                );
 
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 disp.display_cache(core.cache, &cc, 0);
@@ -241,10 +230,10 @@ impl CpuDisplay {
         } else if let Some(core) = cpu_info.cores.first() {
             println!("{}", disp.label("Cores"));
 
-            let vendor_str: &str = core.implementer.into();
-            if vendor_str != UNK {
-                disp.section_line("Implementer", vendor_str);
-            }
+            if let Some(ref vendor_str) = core.implementer
+                && vendor_str != UNK {
+                    disp.section_line("Implementer", vendor_str);
+                }
 
             let ma_str: String = core.micro_arch.into();
             if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
@@ -252,50 +241,24 @@ impl CpuDisplay {
             }
 
             if Self::should_show_core_codename(core, cpu_info, flags.verbose)
-                && let Some(codename) = &core.code_name
+                && let Some(codename) = &core.name
             {
                 disp.section_line("Codename", codename);
             }
 
             disp.section_line("Count", &core.count.to_string());
 
-            if let Some(speed) = &core.speed
-                && speed.base > 0
-            {
-                if speed.boost > speed.base {
-                    println!(
-                        "{}{}",
-                        disp.inline_sublabel("Frequency", "Base"),
-                        CpuDisplay::format_frequency(speed.base)
-                    );
-                    println!(
-                        "{}{}",
-                        disp.sublabel("Boost"),
-                        CpuDisplay::format_frequency(speed.boost)
-                    );
-                } else {
-                    disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
-                }
-            }
+            disp.display_frequency(core.speed, flags);
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
             disp.display_cache(core.cache, &cc, 0);
         }
 
         // Display features
-        if !cpu_info.features.is_empty() {
-            let keys = ["Base", "SIMD", "Security", "Atomics", "Fp", "Misc"];
-            for key in keys {
-                if let Some(feat_str) = cpu_info.features.get(key) {
-                    if key == "Base" {
-                        println!("{}{}", disp.inline_sublabel("Features", "Base"), feat_str);
-                    } else {
-                        println!("{}{}", disp.sublabel(key), feat_str);
-                    }
-                }
-            }
-            println!();
-        }
+        disp.display_features(
+            &cpu_info.features,
+            &["Base", "SIMD", "Security", "Atomics", "Fp", "Misc"],
+        );
     }
 }
 
@@ -345,11 +308,16 @@ mod tests {
         let mut cores = Vec::new();
         for &(implementer, ma, cname) in core_info {
             let kind = ma.core_type();
+            let impl_str = if implementer != Vendor::Unknown {
+                Some(Into::<&str>::into(implementer).to_string())
+            } else {
+                None
+            };
             cores.push(CpuCore {
-                implementer,
                 kind,
                 micro_arch: ma,
-                code_name: cname.map(String::from),
+                name: cname.map(String::from),
+                implementer: impl_str,
                 cache: None,
                 speed: None,
                 count: 4,
@@ -358,9 +326,12 @@ mod tests {
         }
 
         Cpu {
-            cpu_arch: CpuArch {
-                model: model.to_string(),
-                code_name,
+            extra: ArmData {
+                cpu_arch: CpuArch {
+                    model: model.to_string(),
+                    code_name,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             cores,
@@ -590,28 +561,28 @@ mod tests {
     fn test_multi_implementer_cores() {
         // Tegra X2: Nvidia Denver 2 + ARM Cortex-A57
         let denver = CpuCore {
-            implementer: Vendor::Nvidia,
             kind: CoreType::Performance,
             micro_arch: MicroArch::NvidiaDenver2,
-            code_name: Some("Denver 2".to_string()),
+            name: Some("Denver 2".to_string()),
+            implementer: Some("Nvidia".to_string()),
             cache: None,
             speed: None,
             count: 2,
             threads: 2,
         };
         let a57 = CpuCore {
-            implementer: Vendor::Arm,
             kind: CoreType::Performance,
             micro_arch: MicroArch::ArmCortexA57,
-            code_name: Some("Cortex-A57".to_string()),
+            name: Some("Cortex-A57".to_string()),
+            implementer: Some("ARM".to_string()),
             cache: None,
             speed: None,
             count: 4,
             threads: 4,
         };
 
-        assert_eq!(denver.implementer, Vendor::Nvidia);
-        assert_eq!(a57.implementer, Vendor::Arm);
+        assert_eq!(denver.implementer.as_deref(), Some("Nvidia"));
+        assert_eq!(a57.implementer.as_deref(), Some("ARM"));
         assert_ne!(denver.implementer, a57.implementer);
 
         // Snapdragon 855: Qualcomm Kryo 485 Gold (Cortex-A76) + ARM Cortex-A55
@@ -630,8 +601,8 @@ mod tests {
         let gold = &cpu_snapdragon.cores[0];
         let silver = &cpu_snapdragon.cores[1];
 
-        assert_eq!(gold.implementer, Vendor::Qualcomm);
-        assert_eq!(silver.implementer, Vendor::Arm);
+        assert_eq!(gold.implementer.as_deref(), Some("Qualcomm"));
+        assert_eq!(silver.implementer.as_deref(), Some("ARM"));
         assert!(CpuDisplay::should_show_core_codename(
             gold,
             &cpu_snapdragon,
@@ -684,7 +655,10 @@ mod tests {
         midrs.insert(Midr::new(0x410FD070)); // ARM Cortex-A57
 
         let cpu = Cpu {
-            midrs,
+            extra: ArmData {
+                midrs,
+                ..Default::default()
+            },
             ..Default::default()
         };
         cpu.debug();
