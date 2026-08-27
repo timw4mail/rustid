@@ -74,6 +74,7 @@ jobs:
             echo "Creating release $TAG..."
             gh release create "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' --title "$RELEASE_TITLE" --notes-file release_notes.md
           fi
+          rm -f release_notes.md release_title.txt
 
       - name: Publish to crates.io
         env:
