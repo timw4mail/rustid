@@ -422,7 +422,9 @@ pub fn detect() -> OsCpuInfo {
                 micro_arch,
                 code_name: None,
                 cache: Some(cache),
+                speed: None,
                 count,
+                threads: count,
             },
         );
     }
@@ -436,7 +438,7 @@ pub fn detect() -> OsCpuInfo {
         midrs,
         vendor,
         cpu_arch,
-        cores,
+        cores: cores.into_values().collect(),
         model,
         raw: values,
         midr_source: DataSource::Sysctrl("hw.cpufamily"),

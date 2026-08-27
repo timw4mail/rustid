@@ -7,7 +7,7 @@ pub struct OsCpuInfo {
     pub midrs: HashSet<Midr>,
     pub vendor: String,
     pub cpu_arch: CpuArch,
-    pub cores: BTreeMap<(CoreType, Midr), CpuCore>,
+    pub cores: Vec<CpuCore>,
     pub model: String,
     pub raw: BTreeMap<String, String>,
     pub midr_source: DataSource,
@@ -18,7 +18,7 @@ pub struct OsCpuInfo {
 /// Iterates over MIDRs, assigning core types/names via `CpuArch::find()`
 /// and merging cache data from the runtime or sysfs.
 #[cfg(any(not(target_os = "macos"), test))]
-pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore> {
+pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
     let mut cores: BTreeMap<(CoreType, Midr), CpuCore> = BTreeMap::new();
 
     let runtime_cache = Cache::detect();
@@ -61,14 +61,19 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
 
         cores
             .entry((core_type, *midr))
-            .and_modify(|c| c.count += 1)
+            .and_modify(|c| {
+                c.count += 1;
+                c.threads += 1;
+            })
             .or_insert(CpuCore {
                 implementer,
                 kind: core_type,
                 micro_arch,
                 code_name,
                 cache,
+                speed: None,
                 count: 1,
+                threads: 1,
             });
     }
 
@@ -78,7 +83,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> BTreeMap<(CoreType, Midr), CpuCore
         }
     }
 
-    cores
+    cores.into_values().collect()
 }
 
 // ----------------------------------------------------------------------------
@@ -167,7 +172,8 @@ mod tests {
         assert_eq!(cores.len(), 2);
 
         let silver_core = cores
-            .get(&(CoreType::Efficiency, silver_midr))
+            .iter()
+            .find(|c| c.kind == CoreType::Efficiency)
             .expect("silver core missing");
         assert_eq!(silver_core.count, 6);
         assert_eq!(silver_core.kind, CoreType::Efficiency);
@@ -175,7 +181,8 @@ mod tests {
         assert_eq!(silver_core.micro_arch, MicroArch::ArmCortexA55);
 
         let gold_core = cores
-            .get(&(CoreType::Performance, gold_midr))
+            .iter()
+            .find(|c| c.kind == CoreType::Performance)
             .expect("gold core missing");
         assert_eq!(gold_core.count, 2);
         assert_eq!(gold_core.kind, CoreType::Performance);
@@ -218,13 +225,15 @@ mod tests {
         assert_eq!(cores.len(), 2);
 
         let silver = cores
-            .get(&(CoreType::Efficiency, silver_midr))
+            .iter()
+            .find(|c| c.kind == CoreType::Efficiency)
             .expect("silver core missing");
         assert_eq!(silver.count, 4);
         assert_eq!(silver.implementer, Vendor::Qualcomm);
 
         let gold = cores
-            .get(&(CoreType::Performance, gold_midr))
+            .iter()
+            .find(|c| c.kind == CoreType::Performance)
             .expect("gold core missing");
         assert_eq!(gold.count, 4);
         assert_eq!(gold.implementer, Vendor::Qualcomm);

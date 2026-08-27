@@ -8,7 +8,7 @@ pub struct OsCpuInfo {
     pub cpu_arch: CpuArch,
     pub model: String,
     pub isa_string: String,
-    pub cores: BTreeMap<CoreType, CpuCore>,
+    pub cores: Vec<CpuCore>,
     pub raw: BTreeMap<String, String>,
     pub midr_source: DataSource,
     pub features_source: DataSource,

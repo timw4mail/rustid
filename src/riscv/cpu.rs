@@ -10,11 +10,28 @@ pub struct Cpu {
     pub model: String,
     pub system: Option<String>,
     pub isa_string: String,
-    pub cores: BTreeMap<CoreType, CpuCore>,
+    pub cores: Vec<CpuCore>,
     pub raw: BTreeMap<String, String>,
     pub features: BTreeMap<&'static str, String>,
     pub midr_source: DataSource,
     pub features_source: DataSource,
+}
+
+impl Cpu {
+    /// Returns true if this CPU has multiple core types (hybrid architecture).
+    pub fn is_hybrid(&self) -> bool {
+        self.cores.len() > 1
+    }
+
+    /// Total physical cores across all clusters
+    pub fn total_cores(&self) -> u32 {
+        self.cores.iter().map(|c| c.count).sum()
+    }
+
+    /// Total logical threads across all clusters
+    pub fn total_threads(&self) -> u32 {
+        self.cores.iter().map(|c| c.threads).sum()
+    }
 }
 
 impl TDetect for Cpu {
@@ -46,6 +63,6 @@ impl TCpuDisplay for Cpu {
     }
 
     fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display(self, flags);
+        CpuDisplay::display_riscv(self, flags);
     }
 }

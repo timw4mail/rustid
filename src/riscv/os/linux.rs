@@ -4,7 +4,7 @@
 
 use super::OsCpuInfo;
 use crate::common::{
-    Cache, CoreType, DataSource, UNK, get_devicetree_compatible, get_proc_cpuinfo_data,
+    Cache, CoreType, DataSource, Speed, UNK, get_devicetree_compatible, get_proc_cpuinfo_data,
 };
 use crate::riscv::brand::{Vendor, format_uarch};
 use crate::riscv::micro_arch::*;
@@ -76,7 +76,7 @@ pub fn detect() -> OsCpuInfo {
         let v: String = Vendor::from(mvendorid).into();
         v
     } else {
-        let v: String = Vendor::from(mvendorid).into();
+        let v: String = Vendor::Unknown.into();
         v
     };
 
@@ -115,12 +115,11 @@ pub fn detect() -> OsCpuInfo {
     }
 
     // Fallback: if CSR-based identification yielded Unknown, try device tree compatible
-    if cpu_arch.model == UNK {
-        if let Some(ref compat) = dt_compat {
-            if let Some(dt_arch) = CpuArch::find_by_compatible(compat) {
-                cpu_arch = dt_arch;
-            }
-        }
+    if cpu_arch.model == UNK
+        && let Some(ref compat) = dt_compat
+        && let Some(dt_arch) = CpuArch::find_by_compatible(compat)
+    {
+        cpu_arch = dt_arch;
     }
 
     // Fallback: if ISA string is missing from /proc/cpuinfo, try device tree
@@ -137,20 +136,19 @@ pub fn detect() -> OsCpuInfo {
     if let Some(c) = &mut cache {
         c.resolve_share_counts(core_count, core_count, 1);
     }
+    let speed = detect_speed();
     let cores = if core_count > 0 {
-        let mut map = BTreeMap::new();
-        map.insert(
-            core_type,
-            CpuCore {
-                kind: core_type,
-                name: Some(String::from(cpu_arch.micro_arch)),
-                cache,
-                count: core_count,
-            },
-        );
-        map
+        vec![CpuCore {
+            kind: core_type,
+            micro_arch: cpu_arch.micro_arch,
+            name: Some(String::from(cpu_arch.micro_arch)),
+            cache,
+            speed,
+            count: core_count,
+            threads: core_count,
+        }]
     } else {
-        BTreeMap::new()
+        vec![]
     };
 
     OsCpuInfo {
@@ -217,6 +215,46 @@ fn read_dt_cpu_freq() -> Option<String> {
     } else {
         Some(format!("{} Hz", freq))
     }
+}
+
+/// Read clock frequency from the device tree CPU node as a Speed struct.
+fn read_dt_cpu_speed() -> Option<Speed> {
+    let path = "/sys/firmware/devicetree/base/cpus/cpu@0/clock-frequency";
+    let bytes = std::fs::read(path).ok()?;
+    if bytes.len() < 4 {
+        return None;
+    }
+    let freq_hz = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    if freq_hz == 0 {
+        return None;
+    }
+    let freq_mhz = freq_hz / 1_000_000;
+    Some(Speed {
+        base: freq_mhz,
+        boost: freq_mhz,
+        measured: false,
+    })
+}
+
+/// Detect CPU speed via device tree or sysfs cpufreq.
+fn detect_speed() -> Option<Speed> {
+    if let Some(speed) = read_dt_cpu_speed() {
+        return Some(speed);
+    }
+    let path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq";
+    if let Ok(content) = std::fs::read_to_string(path)
+        && let Ok(khz) = content.trim().parse::<u32>()
+    {
+        let mhz = khz / 1000;
+        if mhz > 0 {
+            return Some(Speed {
+                base: mhz,
+                boost: mhz,
+                measured: false,
+            });
+        }
+    }
+    None
 }
 
 // ----------------------------------------------------------------------------

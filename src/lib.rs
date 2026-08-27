@@ -71,7 +71,7 @@ pub mod arm;
 #[cfg(arm_cpu)]
 pub use arm::Cpu;
 
-#[cfg(target_arch = "riscv64")]
+#[cfg(any(target_arch = "riscv64", test))]
 pub mod riscv;
 #[cfg(target_arch = "riscv64")]
 pub use riscv::Cpu;

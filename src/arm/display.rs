@@ -30,7 +30,7 @@ impl CpuDisplay {
         if code_name != UNK && !code_name.is_empty() && is_duplicate(model, code_name) {
             return false;
         }
-        for core in cpu_info.cores.values() {
+        for core in &cpu_info.cores {
             let ma_str: String = core.micro_arch.into();
             if ma_str != UNK && is_duplicate(model, &ma_str) {
                 return false;
@@ -59,7 +59,7 @@ impl CpuDisplay {
 
         // Check if every core cluster in cpu_info has the same code_name
         let mut common_cname: Option<&str> = None;
-        for (i, core) in cpu_info.cores.values().enumerate() {
+        for (i, core) in cpu_info.cores.iter().enumerate() {
             let Some(cname) = &core.code_name else {
                 common_cname = None;
                 break;
@@ -67,7 +67,7 @@ impl CpuDisplay {
             if cname == UNK || cname.is_empty() {
                 common_cname = None;
                 break;
-            }
+            };
             let ma_str: String = core.micro_arch.into();
             if ma_str != UNK && is_duplicate(cname, &ma_str) {
                 common_cname = None;
@@ -122,7 +122,7 @@ impl CpuDisplay {
 
         // If this codename matches all core micro-architectures (e.g. Cortex-A53), suppress it
         let mut all_match_ma = !cpu_info.cores.is_empty();
-        for core in cpu_info.cores.values() {
+        for core in &cpu_info.cores {
             let ma_str: String = core.micro_arch.into();
             if ma_str == UNK || !is_duplicate(code_name, &ma_str) {
                 all_match_ma = false;
@@ -161,7 +161,7 @@ impl CpuDisplay {
         true
     }
 
-    pub fn display(cpu_info: &Cpu, flags: CliFlags) {
+    pub fn display_arm(cpu_info: &Cpu, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
         disp.newline();
@@ -186,11 +186,9 @@ impl CpuDisplay {
             disp.simple_line("Process", tech);
         }
 
-        #[allow(clippy::explicit_counter_loop)]
-        if cpu_info.cores.len() > 1 {
-            let mut i = 1;
-            for core in cpu_info.cores.values() {
-                let core_num = format!("Core #{i}");
+        if cpu_info.is_hybrid() {
+            for (i, core) in cpu_info.cores.iter().enumerate() {
+                let core_num = format!("Core #{}", i + 1);
                 println!("{}", disp.label(&core_num));
 
                 let vendor_str: &str = core.implementer.into();
@@ -214,16 +212,33 @@ impl CpuDisplay {
 
                 disp.section_line("Count", &core.count.to_string());
 
+                if let Some(speed) = &core.speed
+                    && speed.base > 0
+                {
+                    if speed.boost > speed.base {
+                        println!(
+                            "{}{}",
+                            disp.inline_sublabel("Frequency", "Base"),
+                            CpuDisplay::format_frequency(speed.base)
+                        );
+                        println!(
+                            "{}{}",
+                            disp.sublabel("Boost"),
+                            CpuDisplay::format_frequency(speed.boost)
+                        );
+                    } else {
+                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
+                    }
+                }
+
                 let cc = |s| CpuDisplay::cache_count(s, core.count);
                 disp.display_cache(core.cache, &cc, 0);
 
                 if core.cache.is_none() {
                     disp.newline();
                 }
-
-                i += 1;
             }
-        } else if let Some(core) = cpu_info.cores.values().next() {
+        } else if let Some(core) = cpu_info.cores.first() {
             println!("{}", disp.label("Cores"));
 
             let vendor_str: &str = core.implementer.into();
@@ -243,6 +258,25 @@ impl CpuDisplay {
             }
 
             disp.section_line("Count", &core.count.to_string());
+
+            if let Some(speed) = &core.speed
+                && speed.base > 0
+            {
+                if speed.boost > speed.base {
+                    println!(
+                        "{}{}",
+                        disp.inline_sublabel("Frequency", "Base"),
+                        CpuDisplay::format_frequency(speed.base)
+                    );
+                    println!(
+                        "{}{}",
+                        disp.sublabel("Boost"),
+                        CpuDisplay::format_frequency(speed.boost)
+                    );
+                } else {
+                    disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
+                }
+            }
 
             let cc = |s| CpuDisplay::cache_count(s, core.count);
             disp.display_cache(core.cache, &cc, 0);
@@ -292,7 +326,7 @@ impl TCpuDisplay for Cpu {
     }
 
     fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display(self, flags);
+        CpuDisplay::display_arm(self, flags);
     }
 }
 
@@ -302,28 +336,25 @@ mod tests {
     use crate::arm::brand::Vendor;
     use crate::arm::micro_arch::CpuArch;
     use crate::common::CoreType;
-    use std::collections::{BTreeMap, HashSet};
-
+    use std::collections::HashSet;
     fn make_test_cpu(
         model: &str,
         code_name: &'static str,
         core_info: &[(Vendor, MicroArch, Option<&str>)],
     ) -> Cpu {
-        let mut cores = BTreeMap::new();
-        for (i, &(implementer, ma, cname)) in core_info.iter().enumerate() {
-            let midr = Midr::new(i);
+        let mut cores = Vec::new();
+        for &(implementer, ma, cname) in core_info {
             let kind = ma.core_type();
-            cores.insert(
-                (kind, midr),
-                CpuCore {
-                    implementer,
-                    kind,
-                    micro_arch: ma,
-                    code_name: cname.map(String::from),
-                    cache: None,
-                    count: 4,
-                },
-            );
+            cores.push(CpuCore {
+                implementer,
+                kind,
+                micro_arch: ma,
+                code_name: cname.map(String::from),
+                cache: None,
+                speed: None,
+                count: 4,
+                threads: 4,
+            });
         }
 
         Cpu {
@@ -498,14 +529,8 @@ mod tests {
                 ),
             ],
         );
-        let core_gold = cpu_snapdragon
-            .cores
-            .get(&(CoreType::Performance, Midr::new(0)))
-            .expect("gold core missing");
-        let core_silver = cpu_snapdragon
-            .cores
-            .get(&(CoreType::Efficiency, Midr::new(1)))
-            .expect("silver core missing");
+        let core_gold = &cpu_snapdragon.cores[0];
+        let core_silver = &cpu_snapdragon.cores[1];
 
         // Since core types have different codenames, each core should show its own codename
         assert!(CpuDisplay::should_show_core_codename(
@@ -525,10 +550,7 @@ mod tests {
             "Maya",
             &[(Vendor::Arm, MicroArch::ArmCortexA72, Some("Maya"))],
         );
-        let core_a72 = cpu_a72
-            .cores
-            .get(&(CoreType::Performance, Midr::new(0)))
-            .expect("a72 core missing");
+        let core_a72 = &cpu_a72.cores[0];
 
         // When all core types share the same codename, it's displayed only in the CPU/SoC section, NOT with the cores
         assert!(!CpuDisplay::should_show_core_codename(
@@ -544,10 +566,7 @@ mod tests {
             "Cortex-A53",
             &[(Vendor::Arm, MicroArch::ArmCortexA53, Some("Cortex-A53"))],
         );
-        let core_a53 = cpu_a53
-            .cores
-            .get(&(CoreType::Efficiency, Midr::new(0)))
-            .expect("a53 core missing");
+        let core_a53 = &cpu_a53.cores[0];
         assert!(!CpuDisplay::should_show_core_codename(
             core_a53, &cpu_a53, false
         ));
@@ -558,10 +577,7 @@ mod tests {
             "Tonga",
             &[(Vendor::Apple, MicroArch::AppleFirestorm, None)],
         );
-        let core_apple = cpu_apple
-            .cores
-            .get(&(CoreType::Performance, Midr::new(0)))
-            .expect("apple core missing");
+        let core_apple = &cpu_apple.cores[0];
         assert!(!CpuDisplay::should_show_core_codename(
             core_apple, &cpu_apple, false
         ));
@@ -579,7 +595,9 @@ mod tests {
             micro_arch: MicroArch::NvidiaDenver2,
             code_name: Some("Denver 2".to_string()),
             cache: None,
+            speed: None,
             count: 2,
+            threads: 2,
         };
         let a57 = CpuCore {
             implementer: Vendor::Arm,
@@ -587,7 +605,9 @@ mod tests {
             micro_arch: MicroArch::ArmCortexA57,
             code_name: Some("Cortex-A57".to_string()),
             cache: None,
+            speed: None,
             count: 4,
+            threads: 4,
         };
 
         assert_eq!(denver.implementer, Vendor::Nvidia);
@@ -607,14 +627,8 @@ mod tests {
                 (Vendor::Arm, MicroArch::ArmCortexA55, Some("Cortex-A55")),
             ],
         );
-        let gold = cpu_snapdragon
-            .cores
-            .get(&(CoreType::Performance, Midr::new(0)))
-            .expect("gold core missing");
-        let silver = cpu_snapdragon
-            .cores
-            .get(&(CoreType::Efficiency, Midr::new(1)))
-            .expect("silver core missing");
+        let gold = &cpu_snapdragon.cores[0];
+        let silver = &cpu_snapdragon.cores[1];
 
         assert_eq!(gold.implementer, Vendor::Qualcomm);
         assert_eq!(silver.implementer, Vendor::Arm);
@@ -642,7 +656,7 @@ mod tests {
             compact: false,
             verbose: false,
         };
-        CpuDisplay::display(&cpu, flags);
+        CpuDisplay::display_arm(&cpu, flags);
     }
 
     #[test]
@@ -660,7 +674,7 @@ mod tests {
             compact: false,
             verbose: false,
         };
-        CpuDisplay::display(&cpu, flags);
+        CpuDisplay::display_arm(&cpu, flags);
     }
 
     #[test]

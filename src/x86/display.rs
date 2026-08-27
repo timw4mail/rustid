@@ -122,25 +122,23 @@ impl Cpu {
                 }
 
                 if let Some(speed) = &core.speed
-                    && speed.base > 0 {
-                        if speed.boost > speed.base {
-                            println!(
-                                "{}{}",
-                                disp.inline_sublabel("Frequency", "Base"),
-                                CpuDisplay::format_frequency(speed.base)
-                            );
-                            println!(
-                                "{}{}",
-                                disp.sublabel("Boost"),
-                                CpuDisplay::format_frequency(speed.boost)
-                            );
-                        } else {
-                            disp.section_line(
-                                "Frequency",
-                                &CpuDisplay::format_frequency(speed.base),
-                            );
-                        }
+                    && speed.base > 0
+                {
+                    if speed.boost > speed.base {
+                        println!(
+                            "{}{}",
+                            disp.inline_sublabel("Frequency", "Base"),
+                            CpuDisplay::format_frequency(speed.base)
+                        );
+                        println!(
+                            "{}{}",
+                            disp.sublabel("Boost"),
+                            CpuDisplay::format_frequency(speed.boost)
+                        );
+                    } else {
+                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
                     }
+                }
 
                 let smt = cpuid_threads_per_core()
                     .max(core.threads / core.count.max(1))

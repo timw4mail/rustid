@@ -5,15 +5,18 @@
 
 use crate::common::CoreType;
 use crate::common::constants::*;
-use crate::common::{Cache, UNK};
+use crate::common::{Cache, Speed, UNK};
 use crate::riscv::brand::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CpuCore {
     pub kind: CoreType,
+    pub micro_arch: MicroArch,
     pub name: Option<String>,
     pub cache: Option<Cache>,
+    pub speed: Option<Speed>,
     pub count: u32,
+    pub threads: u32,
 }
 
 /// RISC-V `misa` register layout.
@@ -43,7 +46,7 @@ impl Misa {
     /// Returns true if the given single-letter extension is present.
     pub fn has_ext(&self, ch: char) -> bool {
         let c = ch.to_ascii_uppercase();
-        if c < 'A' || c > 'Z' {
+        if !c.is_ascii_uppercase() {
             return false;
         }
         let bit = (c as u64) - ('A' as u64);
@@ -509,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_sifive_u74_find() {
-        let cpu = CpuArch::find(VENDOR_SIFIVE, 0x0000_0001);
+        let cpu = CpuArch::find(VENDOR_SIFIVE, 0x0000_0007);
         assert_eq!(cpu.model.as_str(), "SiFive U74");
         assert_eq!(cpu.micro_arch, MicroArch::SiFiveU74);
     }

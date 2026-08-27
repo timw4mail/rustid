@@ -3,7 +3,7 @@ use crate::common::{CliFlags, CpuDisplay, UNK};
 use crate::riscv::brand::format_uarch;
 
 impl CpuDisplay {
-    pub fn display(cpu_info: &Cpu, flags: CliFlags) {
+    pub fn display_riscv(cpu_info: &Cpu, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
         disp.newline();
@@ -36,20 +36,82 @@ impl CpuDisplay {
             disp.simple_line("Process Node", tech);
         }
 
-        // Display topology
-        if !cpu_info.cores.is_empty() {
-            let total_cores: u32 = cpu_info.cores.values().map(|c| c.count).sum();
-            println!("{}{} cores", disp.label("Topology"), total_cores);
-            disp.newline();
-        }
+        // Display topology & per-core details
+        if cpu_info.is_hybrid() {
+            disp.simple_line(
+                "Topology",
+                &format!(
+                    "{} cores across {} core types",
+                    cpu_info.total_cores(),
+                    cpu_info.cores.len()
+                ),
+            );
 
-        // Display cache at top level
-        if !cpu_info.cores.is_empty() {
-            let total_cores: u32 = cpu_info.cores.values().map(|c| c.count).sum();
-            let first_core = cpu_info.cores.values().next().unwrap();
+            for (i, core) in cpu_info.cores.iter().enumerate() {
+                let core_label = format!("Core #{}", i + 1);
+                println!("{}", disp.label(&core_label));
+
+                let type_str: &str = core.kind.into();
+                disp.section_line("Type", type_str);
+
+                if let Some(name) = &core.name {
+                    disp.section_line("MicroArch", name);
+                }
+
+                disp.section_line("Count", &core.count.to_string());
+
+                if let Some(speed) = &core.speed
+                    && speed.base > 0
+                {
+                    if speed.boost > speed.base {
+                        println!(
+                            "{}{}",
+                            disp.inline_sublabel("Frequency", "Base"),
+                            CpuDisplay::format_frequency(speed.base)
+                        );
+                        println!(
+                            "{}{}",
+                            disp.sublabel("Boost"),
+                            CpuDisplay::format_frequency(speed.boost)
+                        );
+                    } else {
+                        disp.section_line("Frequency", &CpuDisplay::format_frequency(speed.base));
+                    }
+                }
+
+                let cc = |s| CpuDisplay::cache_count(s, core.count);
+                disp.display_cache(core.cache, &cc, 0);
+
+                if core.cache.is_none() {
+                    disp.newline();
+                }
+            }
+        } else if let Some(core) = cpu_info.cores.first() {
+            disp.simple_line("Topology", &format!("{} cores", core.count));
+
             let cc =
-                |share_count: u32| -> String { CpuDisplay::cache_count(share_count, total_cores) };
-            disp.display_cache(first_core.cache, &cc, 0);
+                |share_count: u32| -> String { CpuDisplay::cache_count(share_count, core.count) };
+            disp.display_cache(core.cache, &cc, 0);
+
+            if let Some(speed) = &core.speed
+                && speed.base > 0
+            {
+                if speed.boost > speed.base {
+                    println!(
+                        "{}{}",
+                        disp.inline_sublabel("Frequency", "Base"),
+                        CpuDisplay::format_frequency(speed.base)
+                    );
+                    println!(
+                        "{}{}",
+                        disp.sublabel("Boost"),
+                        CpuDisplay::format_frequency(speed.boost)
+                    );
+                    disp.newline();
+                } else {
+                    disp.simple_line("Frequency", &CpuDisplay::format_frequency(speed.base));
+                }
+            }
         }
 
         // Display features
