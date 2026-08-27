@@ -91,7 +91,7 @@ impl Cpu {
     }
 
     fn print_topology(&self, flags: CliFlags, disp: &CpuDisplay) {
-        if !self.cores.is_empty() {
+        if self.is_hybrid() {
             println!(
                 "{}{} cores ({} threads) across {} core types",
                 disp.label("Topology"),
@@ -106,22 +106,41 @@ impl Cpu {
                 println!("{}", disp.label(&core_label));
 
                 let type_str: &str = core.kind.into();
-                println!("{}{}", disp.label("Type"), type_str);
+                disp.section_line("Type", type_str);
 
                 if let Some(name) = &core.name {
-                    println!("{}{}", disp.label("Codename"), name);
+                    disp.section_line("Codename", name);
                 }
 
                 if core.count != core.threads {
-                    println!(
-                        "{}{} cores ({} threads)",
-                        disp.label("Topology"),
-                        core.count,
-                        core.threads
+                    disp.section_line(
+                        "Topology",
+                        &format!("{} cores ({} threads)", core.count, core.threads),
                     );
                 } else {
-                    println!("{}{} cores", disp.label("Topology"), core.count);
+                    disp.section_line("Topology", &format!("{} cores", core.count));
                 }
+
+                if let Some(speed) = &core.speed
+                    && speed.base > 0 {
+                        if speed.boost > speed.base {
+                            println!(
+                                "{}{}",
+                                disp.inline_sublabel("Frequency", "Base"),
+                                CpuDisplay::format_frequency(speed.base)
+                            );
+                            println!(
+                                "{}{}",
+                                disp.sublabel("Boost"),
+                                CpuDisplay::format_frequency(speed.boost)
+                            );
+                        } else {
+                            disp.section_line(
+                                "Frequency",
+                                &CpuDisplay::format_frequency(speed.base),
+                            );
+                        }
+                    }
 
                 let smt = cpuid_threads_per_core()
                     .max(core.threads / core.count.max(1))
@@ -177,9 +196,15 @@ impl Cpu {
     }
 
     fn print_speed(&self, disp: &CpuDisplay) {
-        if self.topology.speed.base > 0 {
-            let base = self.topology.speed.base;
-            let boost = self.topology.speed.boost;
+        let speed = self
+            .cores
+            .first()
+            .and_then(|c| c.speed.as_ref())
+            .unwrap_or(&self.topology.speed);
+
+        if speed.base > 0 {
+            let base = speed.base;
+            let boost = speed.boost;
 
             if boost > base {
                 println!(
@@ -193,11 +218,7 @@ impl Cpu {
                     CpuDisplay::format_frequency(boost)
                 );
             } else {
-                println!(
-                    "{}{}",
-                    disp.label("Frequency"),
-                    CpuDisplay::format_frequency(base)
-                );
+                disp.section_line("Frequency", &CpuDisplay::format_frequency(base));
             }
 
             disp.newline();
@@ -485,7 +506,7 @@ impl TCpuDisplay for Cpu {
 
         // Cache
         #[cfg(not(dos))]
-        if self.cores.is_empty() {
+        if !self.is_hybrid() {
             let cache_count = |share_count: u32| -> String {
                 CpuDisplay::x86_cache_count(
                     share_count,
@@ -495,8 +516,14 @@ impl TCpuDisplay for Cpu {
                 )
             };
 
+            let cache_opt = self
+                .cores
+                .first()
+                .and_then(|c| c.cache)
+                .or(self.topology.cache);
+
             if is_asymmetric_dual_ccd_x3d(&self.display_model_string(), self.topology.dies.count)
-                && let Some(cache) = self.topology.cache
+                && let Some(cache) = cache_opt
                 && let Some(l3) = cache.l3
             {
                 let x3d_mb = l3.size / (1024 * 1024);
@@ -512,22 +539,20 @@ impl TCpuDisplay for Cpu {
                 };
 
                 disp.display_cache_ext(
-                    self.topology.cache,
+                    cache_opt,
                     &cache_count,
                     self.topology.sockets.count,
                     Some(&override_str),
                 );
             } else {
-                disp.display_cache(
-                    self.topology.cache,
-                    &cache_count,
-                    self.topology.sockets.count,
-                );
+                disp.display_cache(cache_opt, &cache_count, self.topology.sockets.count);
             }
         }
 
         // Clock Speed (Base/Boost)
-        self.print_speed(&disp);
+        if !self.is_hybrid() {
+            self.print_speed(&disp);
+        }
 
         // CPU Signature
         self.print_signature(flags, &disp);

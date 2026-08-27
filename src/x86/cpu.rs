@@ -5,8 +5,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::vendor::Cyrix;
 use super::*;
-use super::{EXT_LEAF_2, EXT_LEAF_4, LEAF_1, read_multi_leaf_str, x86_cpuid};
-use crate::common::{Cache, CoreType, DataSource, TDetect, UNK};
+use crate::common::{Cache, CoreType, DataSource, Speed, TDetect, UNK};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -230,7 +229,7 @@ impl CpuSignature {
 }
 
 /// Information about a specific core type/cluster in the CPU.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct CpuCore {
     /// Classification of this core (Performance, Efficiency, Super)
     pub kind: CoreType,
@@ -240,6 +239,8 @@ pub struct CpuCore {
     pub name: Option<&'static str>,
     /// Cache hierarchy specific to this core type
     pub cache: Option<Cache>,
+    /// Clock speed for this specific core type (base and boost frequencies)
+    pub speed: Option<Speed>,
     /// Number of physical cores of this type
     pub count: u32,
     /// Number of logical threads of this type
@@ -250,7 +251,7 @@ pub struct CpuCore {
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     /// The system name, if applicable
-    #[cfg(any(not(nostd_os), target_os = "uefi"))]
+    #[cfg(not(dos_os))]
     pub system: Option<String>,
     /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,
@@ -552,9 +553,9 @@ impl TDetect for Cpu {
     /// Performs full CPU detection including architecture, microarchitecture,
     /// brand string, signature, features, and topology.
     fn detect() -> Self {
-        #[cfg(any(not(nostd_os), target_os = "uefi"))]
+        #[cfg(not(dos_os))]
         let system = {
-            #[cfg(not(nostd_os))]
+            #[cfg(not(target_os = "uefi"))]
             if provider::info_source() == provider::CpuidInfoSource::DumpFile {
                 None
             } else {
@@ -571,18 +572,23 @@ impl TDetect for Cpu {
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect();
 
-        #[cfg(any(not(nostd_os), target_os = "uefi"))]
+        #[cfg(not(dos_os))]
         let cores = if is_intel() {
-            Self::detect_core_types()
+            let detected = Self::detect_core_types();
+            if detected.len() > 1 {
+                detected
+            } else {
+                Self::fallback_homogeneous(&arch, &topology)
+            }
         } else {
-            Vec::new()
+            Self::fallback_homogeneous(&arch, &topology)
         };
 
-        #[cfg(all(nostd_os, not(target_os = "uefi")))]
-        let cores = Vec::new();
+        #[cfg(dos_os)]
+        let cores = Self::fallback_homogeneous(&arch, &topology);
 
         Self {
-            #[cfg(any(not(nostd_os), target_os = "uefi"))]
+            #[cfg(not(dos_os))]
             system,
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
@@ -601,7 +607,38 @@ impl TDetect for Cpu {
     }
 }
 
-#[cfg(any(not(nostd_os), target_os = "uefi"))]
+impl Cpu {
+    /// Creates a single homogeneous CpuCore cluster fallback based on the package topology and architecture.
+    pub fn fallback_homogeneous(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
+        let speed = Speed::detect();
+        let speed_opt = if speed.base > 0 { Some(speed) } else { None };
+        let cache = topology.cache;
+        let sockets = topology.sockets.count.max(1);
+        let cores_per_socket = (topology.cores.count / sockets).max(1);
+        let threads_per_socket = (topology.threads.count / sockets).max(1);
+        let name = if arch.code_name != UNK {
+            Some(arch.code_name)
+        } else {
+            None
+        };
+        alloc::vec![CpuCore {
+            kind: CoreType::Performance,
+            micro_arch: arch.micro_arch,
+            name,
+            cache,
+            speed: speed_opt,
+            count: cores_per_socket,
+            threads: threads_per_socket,
+        }]
+    }
+
+    /// Returns true if this CPU has multiple core types (hybrid architecture).
+    pub fn is_hybrid(&self) -> bool {
+        self.cores.len() > 1
+    }
+}
+
+#[cfg(not(dos_os))]
 impl Cpu {
     /// Enumerates all logical processors to discover unique core types.
     ///
@@ -619,22 +656,27 @@ impl Cpu {
             core_type: CoreType,
             name: Option<&'static str>,
             micro_arch: MicroArch,
+            speed: Option<Speed>,
             cache: Option<Cache>,
             count: u32,
             threads: u32,
         ) {
             if let Some(c) = cores
                 .iter_mut()
-                .find(|c| c.kind == core_type && c.name == name)
+                .find(|c| c.kind == core_type && c.micro_arch == micro_arch && c.name == name)
             {
                 c.count += count;
                 c.threads += threads;
+                if c.speed.is_none() && speed.is_some() {
+                    c.speed = speed;
+                }
             } else {
                 cores.push(CpuCore {
                     kind: core_type,
                     micro_arch,
                     name,
                     cache,
+                    speed,
                     count,
                     threads,
                 });
@@ -644,7 +686,6 @@ impl Cpu {
         #[cfg(not(nostd_os))]
         if provider::info_source() == provider::CpuidInfoSource::DumpFile {
             let dump_count = provider::dump_cpu_count();
-            let cache = Cache::detect();
             for cpu_idx in 0..dump_count {
                 provider::set_dump_cpu(cpu_idx);
 
@@ -669,16 +710,20 @@ impl Cpu {
                     None
                 };
 
-                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
-            }
+                let cache = Cache::detect();
+                let speed = Speed::detect();
+                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
 
-            return cores;
+                find_or_push(
+                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                );
+            }
         }
 
         #[cfg(not(nostd_os))]
-        if let Some(core_ids) = core_affinity::get_core_ids() {
-            let cache = Cache::detect();
-
+        if provider::info_source() != provider::CpuidInfoSource::DumpFile
+            && let Some(core_ids) = core_affinity::get_core_ids()
+        {
             for core_id in core_ids {
                 core_affinity::set_for_current(core_id);
 
@@ -703,26 +748,33 @@ impl Cpu {
                     None
                 };
 
-                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
+                let cache = Cache::detect();
+                let speed = Speed::detect();
+                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
+
+                find_or_push(
+                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                );
             }
         }
 
         #[cfg(target_os = "uefi")]
         if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
             let proc_count = mp.processor_count();
-            let cache = Cache::detect();
 
             for cpu_idx in 0..proc_count {
                 let mut core_type = CoreType::default();
                 let mut sig = CpuSignature::default();
                 let mut raw_model = alloc::string::String::new();
                 let mut vendor = alloc::string::String::new();
+                let mut speed = Speed::default();
 
                 mp.run_on_processor(cpu_idx, || {
                     core_type = core_type_from_cpuid();
                     sig = CpuSignature::detect();
                     raw_model = Cpu::raw_model_string();
                     vendor = vendor_str();
+                    speed = Speed::detect();
                 });
 
                 let arch = CpuArch::find(&raw_model, sig, &vendor);
@@ -743,11 +795,22 @@ impl Cpu {
                     None
                 };
 
-                find_or_push(&mut cores, core_type, name, micro_arch, cache, 1, 1);
+                let cache = Cache::detect();
+                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
+
+                find_or_push(
+                    &mut cores, core_type, name, micro_arch, speed_opt, cache, 1, 1,
+                );
             }
         }
 
         for c in &mut cores {
+            let smt = if c.kind == CoreType::Efficiency {
+                1
+            } else {
+                cpuid_threads_per_core().max(1)
+            };
+            c.count = (c.threads / smt).max(1);
             if let Some(ref mut cache) = c.cache {
                 cache.resolve_share_counts(c.count, c.threads, 1);
             }

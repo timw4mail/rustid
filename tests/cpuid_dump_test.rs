@@ -462,6 +462,14 @@ cpuid_testsuite!(
             let cpu = Cpu::detect();
             assert_cache_counts(&cpu, (4, "4x "), (4, "4x "), Some((4, "4x ")), Some((1, "")));
         }
+
+        test single_cluster_core {
+            let cpu = Cpu::detect();
+            assert!(!cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 1);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::SandyBridge);
+        }
     }
 );
 
@@ -590,6 +598,14 @@ cpuid_testsuite!(
             assert!(has_x2apic());
             assert!(!has_3dnow());
             assert!(!has_3dnow_plus());
+        }
+
+        test single_cluster_core {
+            let cpu = Cpu::detect();
+            assert!(!cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 1);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::Zen3);
         }
     }
 );
@@ -983,6 +999,18 @@ cpuid_testsuite!(
             assert!(has_avx2());
             assert!(has_fma());
             assert!(has_aes());
+        }
+
+        test hybrid_cores {
+            let cpu = Cpu::detect();
+            assert!(cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 2);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::GoldenCove);
+            assert_eq!(cpu.cores[0].name, Some("Golden Cove"));
+            assert_eq!(cpu.cores[1].kind, CoreType::Efficiency);
+            assert_eq!(cpu.cores[1].micro_arch, MicroArch::Gracemont);
+            assert_eq!(cpu.cores[1].name, Some("Gracemont"));
         }
     }
 );

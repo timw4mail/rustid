@@ -45,5 +45,6 @@ pub use count::*;
 pub use cpu::*;
 pub use features::*;
 pub use fns::*;
+pub use micro_arch::*;
 
 pub use quirks::*;
