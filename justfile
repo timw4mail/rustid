@@ -71,8 +71,12 @@ _build-dos32a-tools:
 _build-dos32a-rustid: _build-dos32a-tools
 	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
 	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos_rustid rustid.le
-	@if command -v dosbox-x >/dev/null 2>&1; then dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; fi
-	@if [ -f RUSTID.EXE ]; then cp RUSTID.EXE rustid.exe; rm RUSTID.EXE; fi
+	@if command -v dosbox-x >/dev/null 2>&1; then \
+		dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; \
+	elif [ -f "C:/DOSBox-X/dosbox-x.exe" ]; then \
+		"C:/DOSBox-X/dosbox-x.exe" -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; \
+	fi
+	@if [ -f RUSTID.EXE ]; then mv RUSTID.EXE rustid.exe; fi
 
 # Build for DOS/32A (LE format bound executable)
 build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
