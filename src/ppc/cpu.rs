@@ -4,8 +4,8 @@ use crate::common::cache::Cache;
 #[cfg(target_os = "linux")]
 use crate::common::get_proc_cpuinfo_data;
 use crate::common::os::TOSData;
-use crate::common::{DataSource, TDetect};
-use crate::ppc::micro_arch::CpuArch;
+use crate::common::{CoreType, DataSource, Speed, TDetect, UNK};
+use crate::ppc::micro_arch::{CpuArch, CpuCore};
 use std::fs;
 use std::path::Path;
 
@@ -16,8 +16,7 @@ pub struct Cpu {
     pub version: u16,
     pub revision: u16,
     pub cpu_arch: CpuArch,
-    pub cache: Option<Cache>,
-    pub clock_speed: Option<u64>,
+    pub cores: Vec<CpuCore>,
     pub clock_speed_source: DataSource,
 }
 
@@ -28,6 +27,43 @@ impl Default for Cpu {
 }
 
 impl Cpu {
+    /// Returns true if this CPU has multiple core types (hybrid architecture).
+    pub fn is_hybrid(&self) -> bool {
+        self.cores.len() > 1
+    }
+
+    /// Total physical cores across all clusters
+    pub fn total_cores(&self) -> u32 {
+        self.cores.iter().map(|c| c.count).sum()
+    }
+
+    /// Total logical threads across all clusters
+    pub fn total_threads(&self) -> u32 {
+        self.cores.iter().map(|c| c.threads).sum()
+    }
+
+    fn detect_topology() -> (u32, u32) {
+        #[cfg(target_os = "linux")]
+        {
+            let cpuinfo = get_proc_cpuinfo_data();
+            let thread_count = cpuinfo.len().max(1) as u32;
+
+            // Check sysfs for SMT thread siblings per core
+            let path = "/sys/devices/system/cpu/cpu0/topology/thread_siblings_list";
+            if let Ok(content) = fs::read_to_string(path) {
+                let threads_per_core = crate::common::expand_cpu_list(&content).len().max(1) as u32;
+                let core_count = (thread_count / threads_per_core).max(1);
+                return (core_count, thread_count);
+            }
+
+            (thread_count, thread_count)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            (1, 1)
+        }
+    }
+
     fn detect_cache() -> Option<Cache> {
         #[cfg(any(target_os = "linux", target_family = "unix"))]
         if let Some(cache) = Cache::detect() {
@@ -66,17 +102,15 @@ impl Cpu {
             return None;
         }
 
-        if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency")) {
-            if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
+        if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency"))
+            && let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
                 return Some(freq_hz / 1_000_000);
             }
-        }
 
-        if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency")) {
-            if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
+        if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency"))
+            && let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
                 return Some(freq_hz / 1_000_000);
             }
-        }
 
         None
     }
@@ -93,13 +127,11 @@ impl Cpu {
         };
 
         for line in output_str.lines() {
-            if line.starts_with("CPU max MHz") || line.starts_with("CPU MHz") {
-                if let Some(value) = line.split(':').nth(1) {
-                    if let Some(freq) = Self::parse_mhz_value(value) {
+            if (line.starts_with("CPU max MHz") || line.starts_with("CPU MHz"))
+                && let Some(value) = line.split(':').nth(1)
+                    && let Some(freq) = Self::parse_mhz_value(value) {
                         return Some(freq);
                     }
-                }
-            }
         }
 
         None
@@ -108,11 +140,10 @@ impl Cpu {
     fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
         let cpuinfo = get_proc_cpuinfo_data();
         for map in &cpuinfo {
-            if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock")) {
-                if let Some(freq) = Self::parse_mhz_value(val) {
+            if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock"))
+                && let Some(freq) = Self::parse_mhz_value(val) {
                     return Some(freq);
                 }
-            }
         }
 
         None
@@ -144,11 +175,31 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
+        let (core_count, thread_count) = Self::detect_topology();
         let mut cache = Self::detect_cache();
         if let Some(c) = &mut cache {
-            c.resolve_share_counts(1, 1, 1);
+            c.resolve_share_counts(core_count, thread_count, 1);
         }
         let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
+        let speed = clock_speed.map(|mhz| Speed {
+            base: mhz as u32,
+            boost: mhz as u32,
+            measured: false,
+        });
+
+        let cores = vec![CpuCore {
+            kind: CoreType::Performance,
+            micro_arch: cpu_arch.micro_arch,
+            name: if cpu_arch.marketing_name != UNK {
+                Some(cpu_arch.marketing_name.to_string())
+            } else {
+                None
+            },
+            cache,
+            speed,
+            count: core_count,
+            threads: thread_count,
+        }];
 
         Self {
             system,
@@ -156,8 +207,7 @@ impl TDetect for Cpu {
             version,
             revision,
             cpu_arch,
-            cache,
-            clock_speed,
+            cores,
             clock_speed_source,
         }
     }

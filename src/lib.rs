@@ -61,7 +61,7 @@ pub mod x86;
 #[cfg(x86_cpu)]
 pub use x86::Cpu;
 
-#[cfg(ppc_cpu)]
+#[cfg(any(ppc_cpu, test))]
 pub mod ppc;
 #[cfg(ppc_cpu)]
 pub use ppc::cpu::Cpu;

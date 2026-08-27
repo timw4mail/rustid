@@ -23,18 +23,42 @@ impl TCpuDisplay for Cpu {
             disp.simple_line("Process", tech);
         }
 
-        if let Some(clock_mhz) = self.clock_speed {
-            println!(
-                "{}{}",
-                disp.label("Frequency"),
-                CpuDisplay::format_frequency(clock_mhz)
-            );
-            disp.newline();
+        let total_cores = self.total_cores();
+        let total_threads = self.total_threads();
+        if total_cores > 0 {
+            if total_threads != total_cores {
+                disp.simple_line(
+                    "Topology",
+                    &alloc::format!("{} cores ({} threads)", total_cores, total_threads),
+                );
+            } else {
+                disp.simple_line("Topology", &alloc::format!("{} cores", total_cores));
+            }
         }
 
-        // TODO handle multiple cores/sockets
-        let cc = |s| CpuDisplay::cache_count(s, 1);
-        disp.display_cache(self.cache, &cc, 0);
+        if let Some(core) = self.cores.first() {
+            if let Some(speed) = &core.speed
+                && speed.base > 0 {
+                    if speed.boost > speed.base {
+                        println!(
+                            "{}{}",
+                            disp.inline_sublabel("Frequency", "Base"),
+                            CpuDisplay::format_frequency(speed.base)
+                        );
+                        println!(
+                            "{}{}",
+                            disp.sublabel("Boost"),
+                            CpuDisplay::format_frequency(speed.boost)
+                        );
+                        disp.newline();
+                    } else {
+                        disp.simple_line("Frequency", &CpuDisplay::format_frequency(speed.base));
+                    }
+                }
+
+            let cc = |s| CpuDisplay::cache_count(s, total_cores);
+            disp.display_cache(core.cache, &cc, 0);
+        }
 
         println!();
     }
