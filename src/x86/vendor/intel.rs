@@ -406,7 +406,16 @@ impl Intel {
             // NetBurst (P4 / Xeon)
             (0, 15, 0, 0, _) => brand_arch(MicroArch::Willamette, "Willamette", Some(N180)),
             (0, 15, 0, 1, _) => brand_arch(MicroArch::Willamette, "Willamette/Foster", Some(N180)),
-            (0, 15, 0, 2, _) => brand_arch(MicroArch::Northwood, "Northwood/Gallatin", Some(N130)),
+            (0, 15, 0, 2, _) => brand_arch(
+                MicroArch::Northwood,
+                if model.contains("Xeon") {
+                    "Gallatin"
+                } else {
+                    "Northwood"
+                },
+                Some(N130),
+            ),
+
             (0, 15, 0, 3, _) => brand_arch(MicroArch::Prescott, "Prescott", Some(N90)),
             (0, 15, 0, 4, _) => brand_arch(MicroArch::Prescott, "Prescott/Potomac", Some(N90)),
             (0, 15, 0, 6, _) => brand_arch(MicroArch::CedarMill, "Cedar Mill/Tulsa", Some(N64)),
