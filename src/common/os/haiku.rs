@@ -32,14 +32,14 @@ impl TOSData for OS {
     fn get_socket_count() -> TopologyTier {
         let (total_cpus, source) = cpu_count_from_sysinfo("sysinfo");
 
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(x86_cpu)]
         {
             let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
             let sockets = (total_cpus / threads_per_pkg).max(1);
             TopologyTier::new(sockets, source)
         }
 
-        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        #[cfg(not(x86_cpu))]
         {
             TopologyTier::new(1, source)
         }

@@ -82,7 +82,7 @@ impl CpuDisplay {
     }
 
     pub fn newline(&self) {
-        #[cfg(not(any(dos, dos32a)))]
+        #[cfg(not(dos_os))]
         if !self.flags.compact {
             println!();
         }

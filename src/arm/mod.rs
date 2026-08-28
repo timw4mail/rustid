@@ -28,16 +28,13 @@ pub trait TArmCpu {
 ///
 /// The MIDR contains information about the CPU implementer, part number, and revision.
 pub fn get_midr() -> usize {
-    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    #[cfg(any(windows_os, target_os = "macos"))]
     return get_synth_midr();
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(not(any(windows_os, target_os = "macos")))]
     {
         // ARMv7 and ARMv8 (AArch64) have MIDR at c0, so `mrs r0, MIDR` or `mrs x0, MIDR_EL1`
-        #[cfg(all(
-            target_arch = "arm",
-            not(any(target_os = "android", target_os = "linux"))
-        ))]
+        #[cfg(all(target_arch = "arm", not(linux_os)))]
         {
             let mut midr: usize = 0;
             // For ARMv7-A and earlier, MIDR is c0, c0, 0
@@ -56,10 +53,7 @@ pub fn get_midr() -> usize {
             midr
         }
         #[cfg(not(any(
-            all(
-                target_arch = "arm",
-                not(any(target_os = "android", target_os = "linux"))
-            ),
+            all(target_arch = "arm", not(linux_os)),
             target_arch = "aarch64",
             target_arch = "arm64ec"
         )))]

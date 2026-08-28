@@ -19,12 +19,12 @@ pub struct OsCpuInfo {
 // Linux
 // ----------------------------------------------------------------------------
 
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(linux_os)]
 pub mod linux;
-#[cfg(any(target_os = "android", target_os = "linux"))]
+#[cfg(linux_os)]
 pub use linux::*;
 
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
+#[cfg(not(linux_os))]
 pub mod fallback {
     use super::*;
     pub fn detect() -> OsCpuInfo {
@@ -43,5 +43,5 @@ pub mod fallback {
         BTreeMap::new()
     }
 }
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
+#[cfg(not(linux_os))]
 pub use fallback::*;

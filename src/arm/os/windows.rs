@@ -242,7 +242,7 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
     crate::arm::features::build_feature_map(&detected)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(windows_os)]
 pub fn get_windows_midrs() -> Vec<usize> {
     use std::mem::size_of;
     use windows::Win32::System::Registry::*;

@@ -25,7 +25,7 @@ pub mod sysctl;
 #[cfg(any(target_os = "haiku", test))]
 pub mod haiku;
 
-#[cfg(target_os = "windows")]
+#[cfg(windows_os)]
 pub mod windows;
 
 // ----------------------------------------------------------------------------

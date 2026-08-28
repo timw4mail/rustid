@@ -25,7 +25,7 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
 
     let runtime_cache = Cache::detect();
 
-    #[cfg(any(target_os = "android", target_os = "linux"))]
+    #[cfg(linux_os)]
     let sysfs_per_type = Cache::from_sys_fs_per_type();
 
     let mut core_cache_map: BTreeMap<usize, Option<Cache>> = BTreeMap::new();
@@ -35,14 +35,14 @@ pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
     unique_midrs.dedup();
 
     for midr in &unique_midrs {
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(linux_os)]
         let cache = sysfs_per_type
             .as_ref()
             .and_then(|m| m.get(&midr.to_bits()).copied())
             .or(runtime_cache)
             .or(None);
 
-        #[cfg(not(any(target_os = "android", target_os = "linux")))]
+        #[cfg(not(linux_os))]
         let cache = runtime_cache.or(None);
 
         core_cache_map.insert(midr.to_bits(), cache);
@@ -125,9 +125,9 @@ pub use linux::*;
 // ! Windows
 // ----------------------------------------------------------------------------
 
-#[cfg(target_os = "windows")]
+#[cfg(windows_os)]
 pub mod windows;
-#[cfg(target_os = "windows")]
+#[cfg(windows_os)]
 pub use windows::*;
 
 // ----------------------------------------------------------------------------

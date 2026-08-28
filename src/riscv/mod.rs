@@ -1,4 +1,4 @@
-#![cfg(any(target_arch = "riscv64", test))]
+#![cfg(any(riscv_cpu, test))]
 //! RISC-V CPU detection.
 
 pub mod brand;
