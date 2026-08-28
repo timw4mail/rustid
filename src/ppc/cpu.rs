@@ -120,6 +120,7 @@ impl Cpu {
         None
     }
 
+    #[cfg(target_os = "linux")]
     fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
         let cpuinfo = get_proc_cpuinfo_data();
         for map in &cpuinfo {
@@ -130,6 +131,11 @@ impl Cpu {
             }
         }
 
+        None
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
         None
     }
 

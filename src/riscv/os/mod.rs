@@ -23,3 +23,25 @@ pub struct OsCpuInfo {
 pub mod linux;
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use linux::*;
+
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+pub mod fallback {
+    use super::*;
+    pub fn detect() -> OsCpuInfo {
+        OsCpuInfo {
+            vendor: String::new(),
+            cpu_arch: CpuArch::default(),
+            model: String::new(),
+            isa_string: String::new(),
+            cores: Vec::new(),
+            raw: BTreeMap::new(),
+            midr_source: DataSource::default(),
+            features_source: DataSource::default(),
+        }
+    }
+    pub fn get_all_features(_isa: &str) -> BTreeMap<&'static str, String> {
+        BTreeMap::new()
+    }
+}
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+pub use fallback::*;
