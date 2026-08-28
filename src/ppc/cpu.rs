@@ -26,7 +26,17 @@ impl Cpu {
         #[cfg(target_os = "linux")]
         {
             let cpuinfo = get_proc_cpuinfo_data();
-            let thread_count = cpuinfo.len().max(1) as u32;
+            let proc_count = cpuinfo
+                .iter()
+                .filter(|m| m.contains_key("processor"))
+                .count() as u32;
+
+            let thread_count = if proc_count > 0 {
+                proc_count
+            } else {
+                let topo = crate::common::detect_sysfs_topology();
+                if topo.threads > 0 { topo.threads } else { 1 }
+            };
 
             // Check sysfs for SMT thread siblings per core
             let path = "/sys/devices/system/cpu/cpu0/topology/thread_siblings_list";
@@ -56,40 +66,68 @@ impl Cpu {
     }
 
     fn detect_clock_speed() -> (Option<u64>, DataSource) {
-        // Try to get clock speed from device tree first
+        // 1. Try /proc/cpuinfo first ("clock" or "cpu MHz")
+        if let Some(speed) = Self::detect_clock_speed_from_cpuinfo() {
+            return (Some(speed), DataSource::LinuxProcCpuinfo);
+        }
+
+        // 2. Try sysfs cpufreq
+        if let Some(speed) = Self::detect_clock_speed_from_cpufreq() {
+            return (Some(speed), DataSource::LinuxSysFs);
+        }
+
+        // 3. Try device tree CPU nodes (/proc/device-tree/cpus/*/clock-frequency)
         if let Some(speed) = Self::detect_clock_speed_from_device_tree() {
             return (Some(speed), DataSource::DeviceTree);
         }
 
-        // Try lscpu for clock speed
+        // 4. Try lscpu for clock speed
         if let Some(speed) = Self::detect_clock_speed_from_lscpu() {
             return (Some(speed), DataSource::Lscpu);
         }
 
-        // Fallback to /proc/cpuinfo
-        let speed = Self::detect_clock_speed_from_cpuinfo();
-        let source = if speed.is_some() {
-            DataSource::LinuxProcCpuinfo
-        } else {
-            DataSource::DefaultValue
-        };
-        (speed, source)
+        (None, DataSource::DefaultValue)
+    }
+
+    fn detect_clock_speed_from_cpufreq() -> Option<u64> {
+        let paths = [
+            "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+            "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+            "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
+        ];
+
+        for path in paths {
+            if let Ok(content) = fs::read_to_string(path)
+                && let Ok(khz) = content.trim().parse::<u64>()
+            {
+                let mhz = khz / 1000;
+                if mhz > 0 {
+                    return Some(mhz);
+                }
+            }
+        }
+
+        None
     }
 
     fn detect_clock_speed_from_device_tree() -> Option<u64> {
-        let dt_root = Path::new("/proc/device-tree");
-        if !dt_root.exists() {
-            return None;
-        }
+        let cpus_roots = [
+            Path::new("/proc/device-tree/cpus"),
+            Path::new("/sys/firmware/devicetree/base/cpus"),
+        ];
 
-        if let Some(freq_hz) = crate::common::read_devicetree_u64(dt_root.join("clock-frequency")) {
-            return Some(freq_hz / 1_000_000);
-        }
-
-        if let Some(freq_hz) =
-            crate::common::read_devicetree_u64(dt_root.join("timebase-frequency"))
-        {
-            return Some(freq_hz / 1_000_000);
+        for cpus_dir in cpus_roots {
+            if let Ok(entries) = fs::read_dir(cpus_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let clock_path = path.join("clock-frequency");
+                    if let Some(freq_hz) = crate::common::read_devicetree_u64(&clock_path)
+                        && freq_hz > 0
+                    {
+                        return Some(freq_hz / 1_000_000);
+                    }
+                }
+            }
         }
 
         None
@@ -122,7 +160,7 @@ impl Cpu {
     fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
         let cpuinfo = get_proc_cpuinfo_data();
         for map in &cpuinfo {
-            if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock"))
+            if let Some(val) = map.get("clock").or_else(|| map.get("cpu MHz"))
                 && let Some(freq) = crate::common::parse_frequency_mhz(val)
             {
                 return Some(freq);
@@ -194,5 +232,60 @@ impl TDetect for Cpu {
             features: std::collections::BTreeMap::new(),
             extra,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_parse_ppc_clock_speed() {
+        assert_eq!(
+            crate::common::parse_frequency_mhz("1250.000000MHz"),
+            Some(1250)
+        );
+        assert_eq!(
+            crate::common::parse_frequency_mhz("166.666666MHz"),
+            Some(166)
+        );
+        assert_eq!(crate::common::parse_frequency_mhz("1.25GHz"), Some(1250));
+        assert_eq!(crate::common::parse_frequency_mhz("1.25 GHz"), Some(1250));
+        assert_eq!(crate::common::parse_frequency_mhz("1.42 GHz"), Some(1420));
+        assert_eq!(crate::common::parse_frequency_mhz("800 MHz"), Some(800));
+        assert_eq!(crate::common::parse_frequency_mhz("1600.00"), Some(1600));
+    }
+
+    #[test]
+    fn test_ppc_cpuinfo_processor_filter() {
+        let cpuinfo_sample = "processor\t: 0\ncpu\t\t: 7447/7457\nclock\t\t: 1250.000000MHz\nrevision\t: 1.1 (pvr 8002 0101)\n\nplatform\t: PowerBook\nmodel\t\t: PowerBook5,2\nmachine\t\t: PowerBook5,2\n";
+        let sections: Vec<std::collections::HashMap<String, String>> = cpuinfo_sample
+            .split("\n\n")
+            .filter(|s| !s.trim().is_empty())
+            .map(|section| {
+                let mut map = std::collections::HashMap::new();
+                for line in section.lines() {
+                    if let Some((key, val)) = line.split_once(':') {
+                        map.insert(key.trim().to_string(), val.trim().to_string());
+                    }
+                }
+                map
+            })
+            .collect();
+
+        // 2 sections total: 1 processor section, 1 platform/system section
+        assert_eq!(sections.len(), 2);
+
+        // Processor section count should be exactly 1
+        let proc_count = sections
+            .iter()
+            .filter(|m| m.contains_key("processor"))
+            .count();
+        assert_eq!(proc_count, 1);
+
+        // Clock speed from processor section
+        let clock = sections[0]
+            .get("clock")
+            .and_then(|v| crate::common::parse_frequency_mhz(v));
+        assert_eq!(clock, Some(1250));
     }
 }
