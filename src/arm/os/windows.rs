@@ -18,20 +18,12 @@ pub fn detect() -> OsCpuInfo {
     let mut all_midrs: Vec<Midr> = Vec::new();
     let mut midr_source = DataSource::CpuLookupTable;
 
-    if let Some(core_ids) = core_affinity::get_core_ids() {
-        for core_id in core_ids {
-            core_affinity::set_for_current(core_id);
-            let midr_val = crate::arm::get_midr();
-            let midr = Midr::new(midr_val);
-            midrs.insert(midr);
-            all_midrs.push(midr);
-        }
-    } else {
+    crate::common::for_each_logical_core(|| {
         let midr_val = crate::arm::get_midr();
         let midr = Midr::new(midr_val);
         midrs.insert(midr);
         all_midrs.push(midr);
-    }
+    });
 
     // On Windows, MRS is emulated. Try the registry for more accurate MIDRs.
     let windows_midrs = get_windows_midrs();

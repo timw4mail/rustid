@@ -202,8 +202,7 @@ impl CpuDisplay {
                     },
                 );
 
-                let cc = |s| CpuDisplay::cache_count(s, core.count);
-                disp.display_cache(core.cache, &cc, 0);
+                disp.display_core_cache(core.cache, core.count, 0);
 
                 if core.cache.is_none() {
                     disp.newline();
@@ -227,8 +226,7 @@ impl CpuDisplay {
 
             disp.display_frequency(core.speed, flags);
 
-            let cc = |s| CpuDisplay::cache_count(s, core.count);
-            disp.display_cache(core.cache, &cc, 0);
+            disp.display_core_cache(core.cache, core.count, 0);
         }
 
         // Display features

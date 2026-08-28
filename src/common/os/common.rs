@@ -176,6 +176,97 @@ pub fn get_proc_cpuinfo_data() -> std::vec::Vec<std::collections::HashMap<String
         .collect()
 }
 
+/// Parse a frequency string (e.g. "3.2 GHz", "800 MHz", "2400.00", "1.5GHz") into MHz as u64.
+pub fn parse_frequency_mhz(value: &str) -> Option<u64> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+
+    let is_ghz = value.ends_with("GHz") || value.ends_with("ghz") || value.ends_with("Ghz");
+    let clean = value
+        .trim_end_matches("MHz")
+        .trim_end_matches("mhz")
+        .trim_end_matches("Mhz")
+        .trim_end_matches("GHz")
+        .trim_end_matches("ghz")
+        .trim_end_matches("Ghz")
+        .trim();
+
+    if let Some((whole, frac)) = clean.split_once('.') {
+        let whole_val: u64 = whole.trim().parse().ok()?;
+        if is_ghz {
+            let frac = frac.trim();
+            let mut frac_mhz = 0u64;
+            if !frac.is_empty() {
+                let frac_digits = &frac[..frac.len().min(3)];
+                let frac_num: u64 = frac_digits.parse().ok()?;
+                let mult = match frac_digits.len() {
+                    1 => 100,
+                    2 => 10,
+                    _ => 1,
+                };
+                frac_mhz = frac_num * mult;
+            }
+            Some(whole_val * 1000 + frac_mhz)
+        } else {
+            Some(whole_val)
+        }
+    } else if let Ok(val) = clean.parse::<u64>() {
+        if is_ghz { Some(val * 1000) } else { Some(val) }
+    } else {
+        None
+    }
+}
+
+/// Reads a NUL-terminated or trimmed string property from device-tree (e.g. /proc/device-tree/model).
+#[cfg(std_os)]
+pub fn read_devicetree_string(path: impl AsRef<std::path::Path>) -> Option<String> {
+    if let Ok(raw) = std::fs::read_to_string(path) {
+        let first = raw.split('\0').next()?.trim();
+        if !first.is_empty() && !is_generic_value(first) {
+            return Some(first.to_string());
+        }
+    }
+    None
+}
+
+/// Reads a big-endian 32-bit or 64-bit integer (or fallback ASCII text) from device-tree.
+#[cfg(std_os)]
+pub fn read_devicetree_u64(path: impl AsRef<std::path::Path>) -> Option<u64> {
+    let p = path.as_ref();
+    if let Ok(raw_bytes) = std::fs::read(p) {
+        if raw_bytes.len() == 4 {
+            let mut arr = [0u8; 4];
+            arr.copy_from_slice(&raw_bytes);
+            return Some(u32::from_be_bytes(arr) as u64);
+        } else if raw_bytes.len() == 8 {
+            let mut arr = [0u8; 8];
+            arr.copy_from_slice(&raw_bytes);
+            return Some(u64::from_be_bytes(arr));
+        }
+    }
+    if let Ok(s) = std::fs::read_to_string(p)
+        && let Ok(val) = s.trim().parse::<u64>()
+    {
+        return Some(val);
+    }
+    None
+}
+
+/// Executes a closure on each available logical processor using `core_affinity`.
+#[cfg(all(std_os, not(target_arch = "arm")))]
+pub fn for_each_logical_core<F: FnMut()>(mut f: F) {
+    if let Some(core_ids) = core_affinity::get_core_ids() {
+        for core_id in core_ids {
+            core_affinity::set_for_current(core_id);
+            f();
+        }
+    } else {
+        f();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +293,17 @@ mod tests {
 
         let single = alloc::vec!["Apple".to_string()];
         assert_eq!(format_compatible_pair(single), "Apple");
+    }
+
+    #[test]
+    fn test_parse_frequency_mhz() {
+        assert_eq!(parse_frequency_mhz("800 MHz"), Some(800));
+        assert_eq!(parse_frequency_mhz("800MHz"), Some(800));
+        assert_eq!(parse_frequency_mhz("3.2 GHz"), Some(3200));
+        assert_eq!(parse_frequency_mhz("3.20 GHz"), Some(3200));
+        assert_eq!(parse_frequency_mhz("2.49 GHz"), Some(2490));
+        assert_eq!(parse_frequency_mhz("2400.00"), Some(2400));
+        assert_eq!(parse_frequency_mhz("1500"), Some(1500));
+        assert_eq!(parse_frequency_mhz(""), None);
     }
 }

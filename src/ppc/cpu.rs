@@ -82,14 +82,12 @@ impl Cpu {
             return None;
         }
 
-        if let Ok(freq_str) = fs::read_to_string(dt_root.join("clock-frequency"))
-            && let Ok(freq_hz) = freq_str.trim().parse::<u64>()
-        {
+        if let Some(freq_hz) = crate::common::read_devicetree_u64(dt_root.join("clock-frequency")) {
             return Some(freq_hz / 1_000_000);
         }
 
-        if let Ok(freq_str) = fs::read_to_string(dt_root.join("timebase-frequency"))
-            && let Ok(freq_hz) = freq_str.trim().parse::<u64>()
+        if let Some(freq_hz) =
+            crate::common::read_devicetree_u64(dt_root.join("timebase-frequency"))
         {
             return Some(freq_hz / 1_000_000);
         }
@@ -111,7 +109,7 @@ impl Cpu {
         for line in output_str.lines() {
             if (line.starts_with("CPU max MHz") || line.starts_with("CPU MHz"))
                 && let Some(value) = line.split(':').nth(1)
-                && let Some(freq) = Self::parse_mhz_value(value)
+                && let Some(freq) = crate::common::parse_frequency_mhz(value)
             {
                 return Some(freq);
             }
@@ -125,7 +123,7 @@ impl Cpu {
         let cpuinfo = get_proc_cpuinfo_data();
         for map in &cpuinfo {
             if let Some(val) = map.get("cpu MHz").or_else(|| map.get("clock"))
-                && let Some(freq) = Self::parse_mhz_value(val)
+                && let Some(freq) = crate::common::parse_frequency_mhz(val)
             {
                 return Some(freq);
             }
@@ -137,24 +135,6 @@ impl Cpu {
     #[cfg(not(target_os = "linux"))]
     fn detect_clock_speed_from_cpuinfo() -> Option<u64> {
         None
-    }
-
-    fn parse_mhz_value(value: &str) -> Option<u64> {
-        let value = value.trim();
-        let value = value.trim_end_matches("MHz").trim().trim_end_matches("MHz");
-        let value = value.trim_end_matches("GHz");
-
-        if value.contains('.') {
-            let parts: Vec<&str> = value.split('.').collect();
-            if let Ok(mhz) = parts[0].parse::<u64>() {
-                if value.ends_with("GHz") {
-                    return Some(mhz * 1000);
-                }
-                return Some(mhz);
-            }
-        }
-
-        value.parse::<u64>().ok()
     }
 }
 

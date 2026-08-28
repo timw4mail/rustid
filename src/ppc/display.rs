@@ -33,8 +33,7 @@ impl TCpuDisplay for Cpu {
         if let Some(core) = self.cores.first() {
             disp.display_frequency(core.speed, flags);
 
-            let cc = |s| CpuDisplay::cache_count(s, total_cores);
-            disp.display_cache(core.cache, &cc, 0);
+            disp.display_core_cache(core.cache, total_cores, 0);
         }
 
         println!();

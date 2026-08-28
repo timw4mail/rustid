@@ -1,8 +1,10 @@
-#![cfg(target_os = "linux")]
+#![cfg(linux_os)]
 
-//! Linux-specific ARM CPU feature detection.
+//! Linux and Android ARM CPU feature detection.
 //!
-//! Uses text-based parsing of `/proc/cpuinfo` "Features" line.
+//! Uses text-based parsing of `/proc/cpuinfo` "Features" line,
+//! core affinity pinning + MRS (`MIDR_EL1` via `HWCAP_CPUID` kernel trap),
+//! and sysfs `/sys/devices/system/cpu/` topology and MIDR parsing.
 
 use super::OsCpuInfo;
 use crate::arm::brand::Vendor;
@@ -11,27 +13,19 @@ use crate::common::DataSource;
 use crate::common::get_proc_cpuinfo_data;
 use std::collections::{BTreeMap, HashSet};
 
-/// Linux-specific CPU detection via /sys, /proc/cpuinfo, and inline asm fallback.
+/// Linux and Android CPU detection via /sys, /proc/cpuinfo, and inline asm / MRS fallback.
 pub fn detect() -> OsCpuInfo {
     let mut midrs: HashSet<Midr> = HashSet::new();
     let mut all_midrs: Vec<Midr> = Vec::new();
     let mut midr_source = DataSource::CpuLookupTable;
 
     #[cfg(not(target_arch = "arm"))]
-    if let Some(core_ids) = core_affinity::get_core_ids() {
-        for core_id in core_ids {
-            core_affinity::set_for_current(core_id);
-            let midr_val = crate::arm::get_midr();
-            let midr = Midr::new(midr_val);
-            midrs.insert(midr);
-            all_midrs.push(midr);
-        }
-    } else {
+    crate::common::for_each_logical_core(|| {
         let midr_val = crate::arm::get_midr();
         let midr = Midr::new(midr_val);
         midrs.insert(midr);
         all_midrs.push(midr);
-    }
+    });
 
     // Prefer sysfs for reading the MIDR on 32-bit ARM to avoid
     // inline asm (`mrc p15, ...`) which may cause SIGILL on
@@ -92,7 +86,7 @@ pub fn detect() -> OsCpuInfo {
 
 /// Reads MIDR values from sysfs or /proc/cpuinfo across all CPU cores.
 /// Handles big.LITTLE / DynamIQ heterogeneous topologies and offline cores.
-fn detect_linux_midrs() -> Vec<usize> {
+pub fn detect_linux_midrs() -> Vec<usize> {
     // 1. Determine all expected CPUs from sysfs /possible or /present
     let mut possible_cpus = Vec::new();
     if let Ok(content) = std::fs::read_to_string("/sys/devices/system/cpu/possible") {

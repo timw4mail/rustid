@@ -28,9 +28,15 @@ pub mod haiku;
 #[cfg(windows_os)]
 pub mod windows;
 
+#[cfg(linux_os)]
+pub mod linux_sysfs;
+
 // ----------------------------------------------------------------------------
 
 pub use common::*;
+
+#[cfg(linux_os)]
+pub use linux_sysfs::*;
 
 #[cfg(target_os = "android")]
 pub use android::*;

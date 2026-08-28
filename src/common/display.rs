@@ -291,6 +291,11 @@ impl CpuDisplay {
         self.display_cache_ext(cache, cache_count, l3_socket_count, None);
     }
 
+    pub fn display_core_cache(&self, cache: Option<Cache>, core_count: u32, l3_socket_count: u32) {
+        let cc = |s: u32| Self::cache_count(s, core_count);
+        self.display_cache(cache, &cc, l3_socket_count);
+    }
+
     pub fn display_cache_ext(
         &self,
         cache: Option<Cache>,

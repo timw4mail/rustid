@@ -61,8 +61,7 @@ impl CpuDisplay {
                     },
                 );
 
-                let cc = |s| CpuDisplay::cache_count(s, core.count);
-                disp.display_cache(core.cache, &cc, 0);
+                disp.display_core_cache(core.cache, core.count, 0);
 
                 if core.cache.is_none() {
                     disp.newline();
@@ -71,9 +70,7 @@ impl CpuDisplay {
         } else if let Some(core) = cpu_info.cores.first() {
             disp.display_topology_line(core.count, core.threads, false, 1);
 
-            let cc =
-                |share_count: u32| -> String { CpuDisplay::cache_count(share_count, core.count) };
-            disp.display_cache(core.cache, &cc, 0);
+            disp.display_core_cache(core.cache, core.count, 0);
 
             disp.display_frequency(core.speed, flags);
         }
