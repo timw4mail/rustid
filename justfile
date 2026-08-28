@@ -45,10 +45,12 @@ check-dos: check-dos32a check-dos-real
 
 # Compile check for Risc V
 check-riscv:
+	@if ! rustup target list --installed | grep -q riscv64gc-unknown-linux-gnu; then rustup target add riscv64gc-unknown-linux-gnu; fi
 	cargo check --target riscv64gc-unknown-linux-gnu
 
 # Compile check for Windows ARM
 check-win-arm:
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
 	cargo check --target aarch64-pc-windows-msvc
 
 # Compile check for 32-bit Linux 486
@@ -88,7 +90,7 @@ build-release:
 
 _build-dos-tools:
 	# Fetch required tools (if they aren't already installed)
-	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 
 # Build for DOS (EXE format)
 build-dos-real: _build-dos-tools
@@ -98,7 +100,7 @@ build-dos-real: _build-dos-tools
 
 _build-dos32a-tools:
 	# Fetch required tools (if they aren't already installed)
-	@if ! rustup component list --installed --toolchain nightly-x86_64-unknown-linux-gnu | grep -q rust-src; then rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; fi
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 
 _build-dos32a-rustid: _build-dos32a-tools
 	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
