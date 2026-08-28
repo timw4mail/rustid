@@ -12,7 +12,7 @@ use alloc::vec::Vec;
 #[cfg(not(nostd_os))]
 use super::provider;
 
-#[cfg(any(not(nostd_os), target_os = "uefi"))]
+#[cfg(not(dos_os))]
 use crate::common::TOSData;
 
 /// CPU feature class/level enumeration.
