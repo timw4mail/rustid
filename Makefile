@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -40,6 +40,30 @@ endif
 check:
 	$(BASE_CHECK)
 
+# Compile check for 64-bit x86 EFI application
+check-efi-64:
+	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
+	cargo check --target x86_64-unknown-uefi --features efi-build --bin efi_rustid
+
+# Compile check for 32-bit x86 EFI application
+check-efi-32:
+	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
+	cargo check --target i686-unknown-uefi --features efi-build --bin efi_rustid
+
+# Compile check for both 32-bit and 64-bit EFI
+check-efi: check-efi-64 check-efi-32
+
+# Compile check for DOS (real-mode EXE)
+check-dos-real: _build-dos-tools
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin rust86
+
+# Compile check for DOS/32A (protected-mode LE)
+check-dos32a: _build-dos32a-tools
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
+
+# Compile check for all DOS targets
+check-dos: check-dos32a check-dos-real
+
 # Compile check for Risc V
 check-riscv:
 	cargo check --target riscv64gc-unknown-linux-gnu
@@ -47,6 +71,14 @@ check-riscv:
 # Compile check for Windows ARM
 check-win-arm:
 	cargo check --target aarch64-pc-windows-msvc
+
+# Compile check for 32-bit Linux 486
+check-486:
+	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
+	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
+
+# Compile check for all supported targets and platforms
+check-all: check check-efi check-dos check-riscv check-win-arm check-486
 
 # More in-depth code style checking
 lint:
