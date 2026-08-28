@@ -7,21 +7,28 @@
 /// MultiProcessor (MP) table information for multi-socket systems.
 #[derive(Debug)]
 pub struct MpTable {
-    /// Number of processor sockets
-    pub sockets: u32,
+    /// Number of enabled processors (logical cores/threads)
+    pub processors: u32,
 }
 
 impl Default for MpTable {
     fn default() -> MpTable {
-        MpTable { sockets: 1 }
+        MpTable { processors: 1 }
     }
 }
 
 impl MpTable {
+    /// Returns the number of enabled processors.
+    #[must_use]
+    pub fn processor_count(&self) -> u32 {
+        self.processors
+    }
+
     /// Returns the number of processor sockets.
     #[must_use]
     pub fn socket_count(&self) -> u32 {
-        self.sockets
+        let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
+        (self.processors / threads_per_pkg).max(1)
     }
 }
 
@@ -83,7 +90,7 @@ fn peek_u16_so(seg: u16, off: u16) -> u16 {
 impl MpTable {
     /// Detects the number of sockets using the Intel MP Specification.
     pub fn detect() -> MpTable {
-        let mut table = MpTable { sockets: 1 };
+        let mut table = MpTable { processors: 1 };
 
         // MP Table lookup is only applicable to certain CPUs
         if !(crate::x86::is_intel() || crate::x86::is_vortex() || crate::x86::is_centaur()) {
@@ -95,10 +102,10 @@ impl MpTable {
             if mpfp.config_table_ptr != 0
                 && let Some(count) = Self::parse_config_table(mpfp.config_table_ptr)
             {
-                table.sockets = count;
+                table.processors = count;
             } else if mpfp.mp_feature1 != 0 {
                 // Default configurations (1-7) all have 2 CPUs
-                table.sockets = 2;
+                table.processors = 2;
             }
         }
 
@@ -126,19 +133,39 @@ impl MpTable {
             return None;
         }
 
-        let entry_count = peek_u16_so(seg, off + 34);
-        let mut sockets = 0;
-        let mut current_off = off + 44;
-
-        for _ in 0..entry_count {
-            if current_off > 0xFFF0 {
+        let mut buf = [0u8; 512];
+        for (i, b) in buf.iter_mut().enumerate() {
+            if (off as usize + i) > 0xFFFF {
                 break;
             }
-            let entry_type = peek_u8_so(seg, current_off);
+            *b = peek_u8_so(seg, off + i as u16);
+        }
+
+        Self::parse_pcmp_slice(&buf)
+    }
+
+    /// Parses a PCMP configuration table buffer and returns the number of enabled processors.
+    pub fn parse_pcmp_slice(bytes: &[u8]) -> Option<u32> {
+        if bytes.len() < 44 || &bytes[0..4] != b"PCMP" {
+            return None;
+        }
+
+        let entry_count = u16::from_le_bytes([bytes[34], bytes[35]]);
+        let mut processors = 0;
+        let mut current_off = 44;
+
+        for _ in 0..entry_count {
+            if current_off >= bytes.len() {
+                break;
+            }
+            let entry_type = bytes[current_off];
             if entry_type == 0 {
-                let flags = peek_u8_so(seg, current_off + 3);
+                if current_off + 3 >= bytes.len() {
+                    break;
+                }
+                let flags = bytes[current_off + 3];
                 if (flags & 0x01) != 0 {
-                    sockets += 1;
+                    processors += 1;
                 }
                 current_off += 20;
             } else {
@@ -146,7 +173,7 @@ impl MpTable {
             }
         }
 
-        if sockets > 0 { Some(sockets) } else { None }
+        if processors > 0 { Some(processors) } else { None }
     }
 
     #[inline(never)]
@@ -236,5 +263,77 @@ impl MpTable {
 
         let seg = peek_u16_so(0x0040, 0x000E);
         if seg != 0 { Some(seg) } else { None }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mp_table_default() {
+        let mp = MpTable::default();
+        assert_eq!(mp.processor_count(), 1);
+    }
+
+    #[test]
+    fn test_parse_pcmp_slice_quad_core() {
+        let mut data = [0u8; 124];
+        // Signature "PCMP"
+        data[0..4].copy_from_slice(b"PCMP");
+        // Entry count: 4
+        data[34..36].copy_from_slice(&4u16.to_le_bytes());
+
+        // 4 processor entries starting at offset 44 (20 bytes each)
+        for i in 0..4 {
+            let off = 44 + i * 20;
+            data[off] = 0; // Entry type 0: Processor
+            data[off + 1] = i as u8; // APIC ID
+            data[off + 3] = 0x01; // Flags: Enabled (bit 0 = 1)
+        }
+
+        assert_eq!(MpTable::parse_pcmp_slice(&data), Some(4));
+    }
+
+    #[test]
+    fn test_parse_pcmp_slice_with_disabled_core() {
+        let mut data = [0u8; 124];
+        data[0..4].copy_from_slice(b"PCMP");
+        data[34..36].copy_from_slice(&4u16.to_le_bytes());
+
+        for i in 0..4 {
+            let off = 44 + i * 20;
+            data[off] = 0; // Processor entry
+            data[off + 3] = if i == 3 { 0x00 } else { 0x01 }; // 4th processor is disabled
+        }
+
+        assert_eq!(MpTable::parse_pcmp_slice(&data), Some(3));
+    }
+
+    #[test]
+    fn test_parse_pcmp_slice_mixed_entries() {
+        let mut data = [0u8; 92];
+        data[0..4].copy_from_slice(b"PCMP");
+        data[34..36].copy_from_slice(&3u16.to_le_bytes());
+
+        // Entry 0: Processor (20 bytes)
+        data[44] = 0;
+        data[47] = 0x01;
+
+        // Entry 1: Processor (20 bytes)
+        data[64] = 0;
+        data[67] = 0x01;
+
+        // Entry 2: Bus entry (Type 1, 8 bytes)
+        data[84] = 1;
+
+        assert_eq!(MpTable::parse_pcmp_slice(&data), Some(2));
+    }
+
+    #[test]
+    fn test_parse_pcmp_slice_invalid_signature() {
+        let mut data = [0u8; 64];
+        data[0..4].copy_from_slice(b"INVALID");
+        assert_eq!(MpTable::parse_pcmp_slice(&data), None);
     }
 }

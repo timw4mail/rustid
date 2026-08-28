@@ -127,6 +127,14 @@ pub fn get_thread_count() -> TopologyTier {
 }
 
 fn get_platform_thread_count() -> TopologyTier {
+    #[cfg(any(dos, dos32a))]
+    {
+        let count = crate::x86::dos::mp::MpTable::detect().processor_count();
+        if count > 0 {
+            return TopologyTier::new(count, DataSource::MpTable);
+        }
+    }
+
     #[cfg(target_os = "uefi")]
     if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
         let count = mp.processor_count() as u32;
