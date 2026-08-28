@@ -1,9 +1,34 @@
 # Changelog
 
-## [2.1.0]
+## [2.1.0] — Unified topology model, multi-socket display, PowerPC fixes, and common deduplication
+
+### Added
+- **Unified CPU Topology on Common Struct**: Extracted the `Topology` struct (`sockets`, `dies`, `cores`, `threads`, `speed`, `cache`) into `src/common/topology.rs` and placed `topology: Topology` directly on the shared `Cpu<E, M>` object across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`)
+- **Multi-Socket Display Support**: Added physical socket count formatting across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`); outputs `Topology: <N> sockets, <C> cores, <T> threads` whenever physical socket count is greater than 1 or in verbose mode (`src/common/display.rs`)
+- **Sysfs Socket Detection**: Added physical package ID parsing from `/sys/devices/system/cpu/cpu*/topology/physical_package_id` and `/proc/cpuinfo` `physical id` to automatically detect multi-socket systems on Linux/Android (`src/common/os/linux_sysfs.rs`)
+- **Single-Core SMT Display**: `display_topology_line` now explicitly displays thread count for single-core hyperthreaded CPUs (e.g. `1 core (2 threads)`) (`src/common/display.rs`)
+- **Centralized Linux Sysfs Module**: Extracted sysfs cache tree traversal (`read_sysfs_cpu_cache`, `read_sysfs_cache_per_type`) and topology reader (`detect_sysfs_topology`) into a shared `linux_sysfs` module compiled under `#[cfg(linux_os)]` (`src/common/os/linux_sysfs.rs`)
+- **Cross-Compilation CI & Target Checks**: Added `check-all` recipe to `justfile` and `Makefile` and integrated target compilation checks in GitHub Actions CI covering `x86_64-unknown-uefi`, `powerpc-unknown-linux-gnu`, `riscv64gc-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `aarch64-pc-windows-msvc` (`.github/workflows/ci.yml`, `justfile`, `Makefile`)
+- **Common Device-Tree and Integer Frequency Helpers**: Added pure `core`/`no_std` safe integer frequency parser `parse_frequency_mhz`, devicetree helpers (`read_devicetree_string`, `read_devicetree_u64`), and thread affinity iterator `for_each_logical_core` (`src/common/os/common.rs`)
+- **Xeon Dual-Socket Example**: Added dual-socket Pentium Pro / Xeon test fixture output (`examples/2PPRO.TXT`)
+
+### Changed
+- **Modularized Common Module**: Split `src/common/mod.rs` into single-responsibility submodules:
+  - `src/common/cpu.rs`: Abstract CPU definitions (`CoreType`, `CpuCore<M>`, `Cpu<E, M>`, `TDetect`)
+  - `src/common/topology.rs`: Topology and clock frequency (`Topology`, `TopologyTier`, `TopologyCount`, `Speed`, `DataSource`)
+  - `src/common/util.rs`: String and vendor normalization helpers (`ucfirst`, `cleanup_soc_vendor`)
+  - `src/common/display.rs`: Display formatter, CLI flags (`CliFlags`), and display traits (`TCpuDisplay`)
+  - Retained clean `pub use` re-exports in `src/common/mod.rs` for full backward compatibility
+- **x86 Data Model Alignment**: Replaced `X86Data.topology` with `pub topology_domains: DomainList` (discovering raw CPUID leaf domains from Leaf 0B, 1F, and 80000026H), unifying outer `cpu.topology` access across all architectures (`src/x86/cpu.rs`, `src/x86/topology.rs`)
+- **Deduplicated ARM Linux & Android OS Detection**: Replaced separate `src/arm/os/android.rs` (345 lines) with unified `src/arm/os/linux.rs` guarded by `#[cfg(linux_os)]`
+- **Separated CPUID Discovery from OS Enrichment**: Clarified separation between pure CPUID detection and live OS hardware enrichment (`enrich_cpu`) across DOS, EFI, and OS targets (`src/x86/cpu.rs`, `src/x86/os/mod.rs`, `src/x86/efi/mod.rs`, `src/x86/dos/mod.rs`)
+- **Architecture Module Alignment**: Refactored ARM, RISC-V, and PowerPC modules to follow consistent structure and display patterns (`src/arm/cpu.rs`, `src/riscv/cpu.rs`, `src/ppc/cpu.rs`)
 
 ### Fixed
-- DOS Topology detection using Intel MPTables was assuming one APIC id = 1 socket, rather than one APIC id = 1 logical cpu. (This caused a Core 2 Quad to show 4 sockets, 16 cores, 16 threads)
+- **PowerPC Clock Speed Detection**: Fixed clock speed reporting on Linux PowerPC (e.g. PowerBook G4 / PowerBook5,2) by prioritizing `/proc/cpuinfo` `clock: <N>MHz`, sysfs `cpufreq`, and CPU node devicetree clock (`/proc/device-tree/cpus/*/clock-frequency`) over root bus frequency (`/proc/device-tree/clock-frequency`, which reports the 166.66 MHz FSB bus clock) (`src/ppc/cpu.rs`)
+- **PowerPC Core & Thread Count**: Fixed spurious 2 cores / 2 threads detection on single-core PowerPC Macs by filtering `/proc/cpuinfo` blocks by `processor` key, ignoring trailing non-processor sections (`platform: PowerBook`) (`src/ppc/cpu.rs`)
+- **DOS Multi-Socket MP Table Detection**: Corrected DOS Intel MP Table topology calculation: MP Table entries represent logical processors (APIC IDs) rather than physical sockets, resolving false multi-socket reports on multi-core processors (e.g. Core 2 Quad previously reporting 4 sockets, 16 cores, 16 threads) (`src/x86/dos/mod.rs`, `src/x86/dos/mp.rs`)
+- **Cross-Platform Thread Affinity**: Unified logical core affinity switching loop in ARM Linux, Windows, and BSD to use `for_each_logical_core`
 
 ## [2.0.0] — Add missing Intel and AMD cpu mappings, fix edge cases, and more
 
