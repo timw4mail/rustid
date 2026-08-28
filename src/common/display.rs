@@ -98,16 +98,14 @@ impl CpuDisplay {
         a_lower == b_lower || a_lower.contains(&b_lower) || b_lower.contains(&a_lower)
     }
 
-    /// Formats physical core and logical thread counts (e.g. "4 cores (8 threads)" or "4 cores").
+    /// Formats physical core and logical thread counts with proper pluralization (e.g. "4 cores (8 threads)", "2 cores (2 threads)", "1 core (2 threads)").
     pub fn format_core_threads(cores: u32, threads: u32) -> String {
-        if cores == 0 {
+        if cores == 0 && threads == 0 {
             return String::new();
         }
-        if threads != cores && threads > 0 {
-            format!("{} cores ({} threads)", cores, threads)
-        } else {
-            format!("{} cores", cores)
-        }
+        let core_str = Self::plural(cores, "core", "cores");
+        let thread_str = Self::plural(threads, "thread", "threads");
+        format!("{cores} {core_str} ({threads} {thread_str})")
     }
 
     /// Outputs a simple line if the value is not UNK and not empty.
@@ -229,21 +227,14 @@ impl CpuDisplay {
         cluster_count: usize,
     ) {
         if is_hybrid {
-            if total_threads != total_cores {
-                self.simple_line(
-                    "Topology",
-                    &alloc::format!(
-                        "{} across {} core types",
-                        Self::format_core_threads(total_cores, total_threads),
-                        cluster_count
-                    ),
-                );
-            } else {
-                self.simple_line(
-                    "Topology",
-                    &alloc::format!("{} cores across {} core types", total_cores, cluster_count),
-                );
-            }
+            self.simple_line(
+                "Topology",
+                &alloc::format!(
+                    "{} across {} core types",
+                    Self::format_core_threads(total_cores, total_threads),
+                    cluster_count
+                ),
+            );
         } else if total_cores > 0 {
             self.simple_line(
                 "Topology",
@@ -902,9 +893,11 @@ mod tests {
     #[test]
     fn test_format_core_threads() {
         assert_eq!(CpuDisplay::format_core_threads(0, 0), "");
-        assert_eq!(CpuDisplay::format_core_threads(4, 4), "4 cores");
+        assert_eq!(CpuDisplay::format_core_threads(4, 4), "4 cores (4 threads)");
         assert_eq!(CpuDisplay::format_core_threads(4, 8), "4 cores (8 threads)");
-        assert_eq!(CpuDisplay::format_core_threads(1, 2), "1 cores (2 threads)");
+        assert_eq!(CpuDisplay::format_core_threads(1, 2), "1 core (2 threads)");
+        assert_eq!(CpuDisplay::format_core_threads(1, 1), "1 core (1 thread)");
+        assert_eq!(CpuDisplay::format_core_threads(2, 2), "2 cores (2 threads)");
     }
 
     #[test]

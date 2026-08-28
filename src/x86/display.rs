@@ -126,7 +126,9 @@ impl Cpu {
             return;
         }
 
-        let multi_core = self.topology.cores.count > 1 || self.topology.sockets.count > 1;
+        let multi_core = self.topology.cores.count > 1
+            || self.topology.threads.count > 1
+            || self.topology.sockets.count > 1;
 
         if multi_core || flags.verbose {
             let socket_str = CpuDisplay::plural(self.topology.sockets.count, "socket", "sockets");
