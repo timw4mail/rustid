@@ -19,10 +19,10 @@ impl CpuDisplay {
         let ma = cpu_info.cpu_arch.micro_arch.as_str();
         if ma != UNK {
             disp.simple_line("CPU Core", ma);
-        } else if let Some(uarch) = cpu_info.raw.get("uarch") {
-            if !uarch.is_empty() {
-                disp.simple_line("CPU Core", &format_uarch(uarch));
-            }
+        } else if let Some(uarch) = cpu_info.raw.get("uarch")
+            && !uarch.is_empty()
+        {
+            disp.simple_line("CPU Core", &format_uarch(uarch));
         } else {
             let cpu_vendor_str: &str = cpu_info.cpu_arch.vendor.into();
             disp.simple_line("CPU Vendor", cpu_vendor_str);
@@ -32,9 +32,7 @@ impl CpuDisplay {
             disp.simple_line("Codename", cpu_info.cpu_arch.code_name);
         }
 
-        if let Some(tech) = cpu_info.cpu_arch.technology {
-            disp.simple_line("Process Node", tech);
-        }
+        disp.simple_line_opt("Process Node", cpu_info.cpu_arch.technology);
 
         // Display topology & per-core details
         if cpu_info.is_hybrid() {
@@ -46,15 +44,12 @@ impl CpuDisplay {
             );
 
             for (i, core) in cpu_info.cores.iter().enumerate() {
-                let core_label = format!("Core #{}", i + 1);
-                println!("{}", disp.label(&core_label));
+                disp.core_heading(i);
 
                 let type_str: &str = core.kind.into();
                 disp.section_line("Type", type_str);
 
-                if let Some(name) = &core.name {
-                    disp.section_line("MicroArch", name);
-                }
+                disp.section_line_opt("MicroArch", core.name.as_deref());
 
                 disp.section_line("Count", &core.count.to_string());
 

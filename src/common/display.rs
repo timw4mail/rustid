@@ -68,6 +68,102 @@ impl CpuDisplay {
         format!("{}{s}{ANSI_RESET}", Self::ansi(code))
     }
 
+    /// Outputs just the label without a value followed by a newline.
+    pub fn print_label(&self, s: &str) {
+        println!("{}", self.label(s));
+    }
+
+    /// Outputs a core cluster heading (e.g. "Core #1", "Core #2").
+    pub fn core_heading(&self, index: usize) {
+        self.print_label(&format!("Core #{}", index + 1));
+    }
+
+    /// Formats a boolean as "Yes" or "No".
+    pub fn yes_no(b: bool) -> &'static str {
+        if b { "Yes" } else { "No" }
+    }
+
+    /// Returns `singular` if `count == 1`, else `plural_form`.
+    pub fn plural(count: u32, singular: &'static str, plural_form: &'static str) -> &'static str {
+        if count == 1 { singular } else { plural_form }
+    }
+
+    /// Case-insensitively checks if either string is contained in the other or if they are equal.
+    pub fn is_duplicate(a: &str, b: &str) -> bool {
+        if a.is_empty() || b.is_empty() {
+            return false;
+        }
+        let a_lower = a.to_ascii_lowercase();
+        let b_lower = b.to_ascii_lowercase();
+        a_lower == b_lower || a_lower.contains(&b_lower) || b_lower.contains(&a_lower)
+    }
+
+    /// Formats physical core and logical thread counts (e.g. "4 cores (8 threads)" or "4 cores").
+    pub fn format_core_threads(cores: u32, threads: u32) -> String {
+        if cores == 0 {
+            return String::new();
+        }
+        if threads != cores && threads > 0 {
+            format!("{} cores ({} threads)", cores, threads)
+        } else {
+            format!("{} cores", cores)
+        }
+    }
+
+    /// Outputs a simple line if the value is not UNK and not empty.
+    pub fn simple_line_if_known(&self, l: &str, v: &str) {
+        if v != UNK && !v.is_empty() {
+            self.simple_line(l, v);
+        }
+    }
+
+    /// Outputs a section line if the value is not UNK and not empty.
+    pub fn section_line_if_known(&self, l: &str, v: &str) {
+        if v != UNK && !v.is_empty() {
+            self.section_line(l, v);
+        }
+    }
+
+    /// Outputs a simple line if the optional value is present, not UNK, and not empty.
+    pub fn simple_line_opt<T: AsRef<str>>(&self, l: &str, v: Option<T>) {
+        if let Some(val) = v {
+            self.simple_line_if_known(l, val.as_ref());
+        }
+    }
+
+    /// Outputs a section line if the optional value is present, not UNK, and not empty.
+    pub fn section_line_opt<T: AsRef<str>>(&self, l: &str, v: Option<T>) {
+        if let Some(val) = v {
+            self.section_line_if_known(l, val.as_ref());
+        }
+    }
+
+    /// Outputs a simple line with a main value and parenthesized detail, e.g. "GenuineIntel (Intel)".
+    pub fn simple_line_with_detail(&self, l: &str, v: &str, detail: &str) {
+        self.simple_line(l, &format!("{v} ({detail})"));
+    }
+
+    /// Outputs a section line with a main value and parenthesized detail, e.g. "GenuineIntel (Intel)".
+    pub fn section_line_with_detail(&self, l: &str, v: &str, detail: &str) {
+        self.section_line(l, &format!("{v} ({detail})"));
+    }
+
+    /// Displays a formatted value, and additionally outputs the raw value if `verbose` is true and raw differs.
+    pub fn display_with_raw(&self, label: &str, formatted: &str, raw: Option<&str>, verbose: bool) {
+        if let Some(raw_val) = raw
+            && verbose
+            && raw_val != UNK
+            && !raw_val.is_empty()
+            && raw_val.trim() != formatted.trim()
+        {
+            self.section_line(label, formatted);
+            self.section_line(&format!("{label} (raw)"), raw_val);
+            self.newline();
+        } else {
+            self.simple_line(label, formatted);
+        }
+    }
+
     /// Outputs a formatted label and value with an additional newline if flags.compact is false
     pub fn simple_line(&self, l: &str, v: &str) {
         self.section_line(l, v);
@@ -137,9 +233,8 @@ impl CpuDisplay {
                 self.simple_line(
                     "Topology",
                     &alloc::format!(
-                        "{} cores ({} threads) across {} core types",
-                        total_cores,
-                        total_threads,
+                        "{} across {} core types",
+                        Self::format_core_threads(total_cores, total_threads),
                         cluster_count
                     ),
                 );
@@ -150,14 +245,10 @@ impl CpuDisplay {
                 );
             }
         } else if total_cores > 0 {
-            if total_threads != total_cores {
-                self.simple_line(
-                    "Topology",
-                    &alloc::format!("{} cores ({} threads)", total_cores, total_threads),
-                );
-            } else {
-                self.simple_line("Topology", &alloc::format!("{} cores", total_cores));
-            }
+            self.simple_line(
+                "Topology",
+                &Self::format_core_threads(total_cores, total_threads),
+            );
         }
     }
 
@@ -170,6 +261,13 @@ impl CpuDisplay {
         K: core::borrow::Borrow<str> + Ord,
     {
         if !features.is_empty() {
+            if features.len() == 1
+                && let Some(base_str) = features.get("Base")
+            {
+                self.simple_line("Features", base_str);
+                return;
+            }
+
             let mut first = true;
             for key in keys {
                 if let Some(feat_str) = features.get(*key) {
@@ -311,15 +409,8 @@ impl CpuDisplay {
 
     #[cfg(not(dos_os))]
     pub fn display_system(&self, system: &str, flags: CliFlags) {
-        let formatted = &self.format_system_name(system);
-
-        if flags.verbose && system != formatted {
-            self.section_line("System", formatted);
-            self.section_line("System (raw)", system);
-            self.newline();
-        } else {
-            self.simple_line("System", formatted);
-        }
+        let formatted = self.format_system_name(system);
+        self.display_with_raw("System", &formatted, Some(system), flags.verbose);
     }
 
     /// Format the system name if it is a Mac, or other known string
@@ -779,5 +870,60 @@ mod tests {
             disp.format_system_name("PowerMac11,2"),
             "Power Mac G5 (Late 2005)"
         );
+    }
+
+    #[test]
+    fn test_yes_no() {
+        assert_eq!(CpuDisplay::yes_no(true), "Yes");
+        assert_eq!(CpuDisplay::yes_no(false), "No");
+    }
+
+    #[test]
+    fn test_plural() {
+        assert_eq!(CpuDisplay::plural(1, "core", "cores"), "core");
+        assert_eq!(CpuDisplay::plural(0, "core", "cores"), "cores");
+        assert_eq!(CpuDisplay::plural(4, "core", "cores"), "cores");
+    }
+
+    #[test]
+    fn test_is_duplicate() {
+        assert!(CpuDisplay::is_duplicate("ARM Cortex-A53", "Cortex-A53"));
+        assert!(CpuDisplay::is_duplicate("Cortex-A53", "ARM Cortex-A53"));
+        assert!(CpuDisplay::is_duplicate("Apple Swift", "Swift"));
+        assert!(CpuDisplay::is_duplicate("AmpereOne", "AmpereOne"));
+        assert!(CpuDisplay::is_duplicate("cortex-a53", "CORTEX-A53"));
+
+        assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
+        assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
+        assert!(!CpuDisplay::is_duplicate("", "Maya"));
+        assert!(!CpuDisplay::is_duplicate("Maya", ""));
+    }
+
+    #[test]
+    fn test_format_core_threads() {
+        assert_eq!(CpuDisplay::format_core_threads(0, 0), "");
+        assert_eq!(CpuDisplay::format_core_threads(4, 4), "4 cores");
+        assert_eq!(CpuDisplay::format_core_threads(4, 8), "4 cores (8 threads)");
+        assert_eq!(CpuDisplay::format_core_threads(1, 2), "1 cores (2 threads)");
+    }
+
+    #[test]
+    fn test_display_helpers_no_panic() {
+        let disp = CpuDisplay {
+            flags: CliFlags {
+                color: false,
+                compact: false,
+                verbose: false,
+            },
+        };
+        disp.print_label("Cores");
+        disp.core_heading(0);
+        disp.simple_line_if_known("MicroArch", "Zen 4");
+        disp.simple_line_if_known("MicroArch", UNK);
+        disp.simple_line_opt("Process", Some("4nm"));
+        disp.simple_line_opt("Process", None::<&str>);
+        disp.simple_line_with_detail("Vendor", "AuthenticAMD", "AMD");
+        disp.display_with_raw("System", "MacBook Pro", Some("MacBookPro18,1"), false);
+        disp.display_with_raw("System", "MacBook Pro", Some("MacBookPro18,1"), true);
     }
 }

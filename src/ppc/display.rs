@@ -19,9 +19,7 @@ impl TCpuDisplay for Cpu {
         disp.simple_line("Model", self.cpu_arch.marketing_name);
         disp.simple_line("MicroArch", self.cpu_arch.micro_arch.into());
         disp.simple_line("Codename", self.cpu_arch.code_name);
-        if let Some(tech) = self.cpu_arch.technology {
-            disp.simple_line("Process", tech);
-        }
+        disp.simple_line_opt("Process", self.cpu_arch.technology);
 
         let total_cores = self.total_cores();
         let total_threads = self.total_threads();

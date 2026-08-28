@@ -10,10 +10,6 @@ use alloc::format;
 #[cfg(not(dos_real))]
 use alloc::string::String;
 
-fn yes_no(b: bool) -> &'static str {
-    if b { "Yes" } else { "No" }
-}
-
 #[cfg(not(dos_real))]
 impl CpuDisplay {
     /// Computes the number of cache instances on x86 taking SMT / APIC ID allocation into account.
@@ -58,8 +54,8 @@ impl Cpu {
         let cpuid = self.has_cpuid;
 
         if flags.verbose {
-            disp.simple_line("CPUID", yes_no(cpuid));
-            disp.simple_line("Overdrive", yes_no(overdrive));
+            disp.simple_line("CPUID", CpuDisplay::yes_no(cpuid));
+            disp.simple_line("Overdrive", CpuDisplay::yes_no(overdrive));
         } else {
             if !cpuid {
                 disp.simple_line("CPUID", "No");
@@ -76,50 +72,38 @@ impl Cpu {
         if disp_model != UNK {
             if raw_model.eq(UNK) {
                 disp.simple_line("Model (synth)", &disp_model);
-            } else if raw_model.trim().eq(&disp_model) {
-                disp.simple_line("Model", &disp_model);
             } else {
-                println!("{}{}", disp.label("Model"), disp_model);
-
-                if flags.verbose {
-                    println!("{}{}", disp.label("Model (raw)"), raw_model);
-                }
-
-                disp.newline();
+                disp.display_with_raw("Model", &disp_model, Some(&raw_model), flags.verbose);
             }
         }
     }
 
     fn print_topology(&self, flags: CliFlags, disp: &CpuDisplay) {
         if self.is_hybrid() {
-            println!(
-                "{}{} cores ({} threads) across {} core types",
-                disp.label("Topology"),
-                self.topology.cores.count,
-                self.topology.threads.count,
-                self.cores.len()
+            disp.simple_line(
+                "Topology",
+                &format!(
+                    "{} across {} core types",
+                    CpuDisplay::format_core_threads(
+                        self.topology.cores.count,
+                        self.topology.threads.count
+                    ),
+                    self.cores.len()
+                ),
             );
-            disp.newline();
 
             for (i, core) in self.cores.iter().enumerate() {
-                let core_label = format!("Core #{}", i + 1);
-                println!("{}", disp.label(&core_label));
+                disp.core_heading(i);
 
                 let type_str: &str = core.kind.into();
                 disp.section_line("Type", type_str);
 
-                if let Some(name) = &core.name {
-                    disp.section_line("Codename", name);
-                }
+                disp.section_line_opt("Codename", core.name.as_deref());
 
-                if core.count != core.threads {
-                    disp.section_line(
-                        "Topology",
-                        &format!("{} cores ({} threads)", core.count, core.threads),
-                    );
-                } else {
-                    disp.section_line("Topology", &format!("{} cores", core.count));
-                }
+                disp.section_line(
+                    "Topology",
+                    &CpuDisplay::format_core_threads(core.count, core.threads),
+                );
 
                 disp.display_frequency(
                     core.speed,
@@ -145,40 +129,29 @@ impl Cpu {
         let multi_core = self.topology.cores.count > 1 || self.topology.sockets.count > 1;
 
         if multi_core || flags.verbose {
-            let lbl = disp.label("Topology");
-            let socket_str = if self.topology.sockets.count == 1 {
-                "socket"
-            } else {
-                "sockets"
-            };
-            let core_str = if self.topology.cores.count == 1 {
-                "core"
-            } else {
-                "cores"
-            };
-            let thread_str = if self.topology.threads.count == 1 {
-                "thread"
-            } else {
-                "threads"
-            };
+            let socket_str = CpuDisplay::plural(self.topology.sockets.count, "socket", "sockets");
+            let core_str = CpuDisplay::plural(self.topology.cores.count, "core", "cores");
+            let thread_str = CpuDisplay::plural(self.topology.threads.count, "thread", "threads");
 
             if self.topology.sockets.count > 1 || flags.verbose {
-                println!(
-                    "{lbl}{} {socket_str}, {} {core_str}, {} {thread_str}",
-                    self.topology.sockets.count,
-                    self.topology.cores.count,
-                    self.topology.threads.count,
-                );
-            } else if self.topology.cores.count != self.topology.threads.count {
-                println!(
-                    "{lbl}{} cores ({} threads)",
-                    self.topology.cores.count, self.topology.threads.count
+                disp.simple_line(
+                    "Topology",
+                    &format!(
+                        "{} {socket_str}, {} {core_str}, {} {thread_str}",
+                        self.topology.sockets.count,
+                        self.topology.cores.count,
+                        self.topology.threads.count,
+                    ),
                 );
             } else {
-                println!("{lbl}{} cores", self.topology.cores.count);
+                disp.simple_line(
+                    "Topology",
+                    &CpuDisplay::format_core_threads(
+                        self.topology.cores.count,
+                        self.topology.threads.count,
+                    ),
+                );
             }
-
-            disp.newline();
         }
     }
 
@@ -243,43 +216,6 @@ impl Cpu {
             disp.newline();
         }
     }
-}
-
-// Cpu features display
-impl Cpu {
-    fn print_simple_features_list(&self, disp: &CpuDisplay) {
-        disp.simple_line(
-            "Features",
-            self.features
-                .get("Base")
-                .expect("There should be at least one key in the features BTreeMap."),
-        );
-    }
-
-    fn print_full_features_list(&self, disp: &CpuDisplay) {
-        let keys = [
-            "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
-        ];
-        for key in keys {
-            if self.features.contains_key(key) {
-                if key == "Base" {
-                    println!(
-                        "{}{}",
-                        disp.inline_sublabel("Features", "Base"),
-                        self.features.get(key).expect("Missing Base key?")
-                    )
-                } else {
-                    println!(
-                        "{}{}",
-                        disp.sublabel(key),
-                        self.features
-                            .get(key)
-                            .expect("Somehow the key in the features BTreeMap disappeared!")
-                    );
-                }
-            }
-        }
-    }
 
     #[cfg(not(dos_real))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
@@ -309,20 +245,16 @@ impl Cpu {
     #[allow(unused_variables)]
     fn print_features(&self, flags: CliFlags, disp: &CpuDisplay) {
         if !self.features.is_empty() {
-            // Simple features list
-            if self.features.len() == 1 {
-                self.print_simple_features_list(disp);
-            } else {
-                self.print_full_features_list(disp);
-            }
+            let keys = [
+                "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
+            ];
+            disp.display_features(&self.features, &keys);
 
             // Centaur features list
             #[cfg(not(dos_real))]
             if is_centaur() {
                 self.print_centaur_features(flags, disp);
             }
-
-            disp.newline();
         }
     }
 }
@@ -422,31 +354,20 @@ impl TCpuDisplay for Cpu {
 
         // Vendor_string (brand_name)
         if self.arch.brand_name != UNK {
-            println!(
-                "{}{} ({})",
-                disp.label("Vendor"),
-                self.arch.vendor_string,
-                self.arch.brand_name
-            );
-
-            disp.newline();
+            disp.simple_line_with_detail("Vendor", &self.arch.vendor_string, self.arch.brand_name);
         }
 
         // Hypervisor vendor_string (brand_name)
         #[cfg(not(dos_real))]
         if let Some(hyp_str) = &self.hyp_vendor_str {
             let hyp = HypervisorBrand::from(hyp_str.as_str());
-            println!("{}{} ({})", disp.label("Hypervisor"), hyp_str, hyp.to_str());
-
-            disp.newline();
+            disp.simple_line_with_detail("Hypervisor", hyp_str, hyp.to_str());
         }
 
         // Cpu model string
         self.print_model(flags, &disp);
 
-        if ma != UNK {
-            disp.simple_line("MicroArch", ma);
-        }
+        disp.simple_line_if_known("MicroArch", ma);
 
         if !(self.arch.code_name == "Unknown"
             || self.arch.code_name == ma
@@ -456,14 +377,10 @@ impl TCpuDisplay for Cpu {
         }
 
         // Process node
-        if let Some(tech) = &self.arch.technology {
-            disp.simple_line("Process Node", tech);
-        }
+        disp.simple_line_opt("Process Node", self.arch.technology);
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
-        if let Some(easter_egg) = &self.easter_egg {
-            disp.simple_line("Easter Egg", easter_egg);
-        }
+        disp.simple_line_opt("Easter Egg", self.easter_egg.as_deref());
 
         // Overdrive, CPUID support, etc
         self.print_misc_flags(flags, &disp);

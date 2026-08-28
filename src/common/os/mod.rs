@@ -35,9 +35,6 @@ pub use common::*;
 #[cfg(target_os = "android")]
 pub use android::*;
 
-#[cfg(target_os = "linux")]
-pub use linux::*;
-
 #[cfg(target_os = "macos")]
 pub use macos::*;
 

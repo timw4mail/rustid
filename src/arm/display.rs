@@ -3,15 +3,6 @@ use super::micro_arch::MicroArch;
 use super::*;
 use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, UNK};
 
-fn is_duplicate(a: &str, b: &str) -> bool {
-    if a.is_empty() || b.is_empty() {
-        return false;
-    }
-    let a_lower = a.to_ascii_lowercase();
-    let b_lower = b.to_ascii_lowercase();
-    a_lower == b_lower || a_lower.contains(&b_lower) || b_lower.contains(&a_lower)
-}
-
 impl CpuDisplay {
     pub fn should_show_model(cpu_info: &Cpu, verbose: bool) -> bool {
         let model = &cpu_info.cpu_arch.model;
@@ -22,23 +13,23 @@ impl CpuDisplay {
             return true;
         }
         if let Some(soc) = &cpu_info.soc_model
-            && is_duplicate(model, soc)
+            && Self::is_duplicate(model, soc)
         {
             return false;
         }
         let code_name = cpu_info.cpu_arch.code_name;
-        if code_name != UNK && !code_name.is_empty() && is_duplicate(model, code_name) {
+        if code_name != UNK && !code_name.is_empty() && Self::is_duplicate(model, code_name) {
             return false;
         }
         for core in &cpu_info.cores {
             let ma_str: String = core.micro_arch.into();
-            if ma_str != UNK && is_duplicate(model, &ma_str) {
+            if ma_str != UNK && Self::is_duplicate(model, &ma_str) {
                 return false;
             }
             if let Some(cname) = &core.name
                 && cname != UNK
                 && !cname.is_empty()
-                && is_duplicate(model, cname)
+                && Self::is_duplicate(model, cname)
             {
                 return false;
             }
@@ -69,7 +60,7 @@ impl CpuDisplay {
                 break;
             };
             let ma_str: String = core.micro_arch.into();
-            if ma_str != UNK && is_duplicate(cname, &ma_str) {
+            if ma_str != UNK && Self::is_duplicate(cname, &ma_str) {
                 common_cname = None;
                 break;
             }
@@ -110,12 +101,12 @@ impl CpuDisplay {
             return Some(code_name);
         }
 
-        if is_duplicate(code_name, &cpu_info.cpu_arch.model) {
+        if Self::is_duplicate(code_name, &cpu_info.cpu_arch.model) {
             return None;
         }
 
         if let Some(soc) = &cpu_info.soc_model
-            && is_duplicate(code_name, soc)
+            && Self::is_duplicate(code_name, soc)
         {
             return None;
         }
@@ -124,7 +115,7 @@ impl CpuDisplay {
         let mut all_match_ma = !cpu_info.cores.is_empty();
         for core in &cpu_info.cores {
             let ma_str: String = core.micro_arch.into();
-            if ma_str == UNK || !is_duplicate(code_name, &ma_str) {
+            if ma_str == UNK || !Self::is_duplicate(code_name, &ma_str) {
                 all_match_ma = false;
                 break;
             }
@@ -151,7 +142,7 @@ impl CpuDisplay {
             return true;
         }
         let ma_str: String = core.micro_arch.into();
-        if ma_str != UNK && is_duplicate(code_name, &ma_str) {
+        if ma_str != UNK && Self::is_duplicate(code_name, &ma_str) {
             return false;
         }
         // When all core types share the same codename, display it only in the CPU/SoC section, not with the cores
@@ -170,32 +161,24 @@ impl CpuDisplay {
             disp.display_system(system, flags);
         }
 
-        if let Some(soc_model) = &cpu_info.soc_model {
-            disp.simple_line("SoC", soc_model);
-        }
+        disp.simple_line_opt("SoC", cpu_info.soc_model.as_deref());
 
         if Self::should_show_model(cpu_info, flags.verbose) {
             disp.simple_line("Model", &cpu_info.cpu_arch.model);
         }
 
-        if let Some(codename) = Self::should_show_codename(cpu_info, flags.verbose) {
-            disp.simple_line("Codename", codename);
-        }
+        disp.simple_line_opt(
+            "Codename",
+            Self::should_show_codename(cpu_info, flags.verbose),
+        );
 
-        if let Some(tech) = cpu_info.cpu_arch.technology {
-            disp.simple_line("Process", tech);
-        }
+        disp.simple_line_opt("Process", cpu_info.cpu_arch.technology);
 
         if cpu_info.is_hybrid() {
             for (i, core) in cpu_info.cores.iter().enumerate() {
-                let core_num = format!("Core #{}", i + 1);
-                println!("{}", disp.label(&core_num));
+                disp.core_heading(i);
 
-                if let Some(ref vendor_str) = core.implementer
-                    && vendor_str != UNK
-                {
-                    disp.section_line("Implementer", vendor_str);
-                }
+                disp.section_line_opt("Implementer", core.implementer.as_deref());
 
                 let name = Into::<&str>::into(core.kind);
                 disp.section_line("Type", name);
@@ -205,10 +188,8 @@ impl CpuDisplay {
                     disp.section_line("MicroArch", &ma_str);
                 }
 
-                if Self::should_show_core_codename(core, cpu_info, flags.verbose)
-                    && let Some(codename) = &core.name
-                {
-                    disp.section_line("Codename", codename);
+                if Self::should_show_core_codename(core, cpu_info, flags.verbose) {
+                    disp.section_line_opt("Codename", core.name.as_deref());
                 }
 
                 disp.section_line("Count", &core.count.to_string());
@@ -229,23 +210,17 @@ impl CpuDisplay {
                 }
             }
         } else if let Some(core) = cpu_info.cores.first() {
-            println!("{}", disp.label("Cores"));
+            disp.print_label("Cores");
 
-            if let Some(ref vendor_str) = core.implementer
-                && vendor_str != UNK
-            {
-                disp.section_line("Implementer", vendor_str);
-            }
+            disp.section_line_opt("Implementer", core.implementer.as_deref());
 
             let ma_str: String = core.micro_arch.into();
             if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
                 disp.section_line("MicroArch", &ma_str);
             }
 
-            if Self::should_show_core_codename(core, cpu_info, flags.verbose)
-                && let Some(codename) = &core.name
-            {
-                disp.section_line("Codename", codename);
+            if Self::should_show_core_codename(core, cpu_info, flags.verbose) {
+                disp.section_line_opt("Codename", core.name.as_deref());
             }
 
             disp.section_line("Count", &core.count.to_string());
@@ -343,21 +318,21 @@ mod tests {
 
     #[test]
     fn test_is_duplicate() {
-        assert!(is_duplicate("ARM Cortex-A53", "Cortex-A53"));
-        assert!(is_duplicate("Cortex-A53", "ARM Cortex-A53"));
-        assert!(is_duplicate("Apple Swift", "Swift"));
-        assert!(is_duplicate("AmpereOne", "AmpereOne"));
-        assert!(is_duplicate("cortex-a53", "CORTEX-A53"));
+        assert!(CpuDisplay::is_duplicate("ARM Cortex-A53", "Cortex-A53"));
+        assert!(CpuDisplay::is_duplicate("Cortex-A53", "ARM Cortex-A53"));
+        assert!(CpuDisplay::is_duplicate("Apple Swift", "Swift"));
+        assert!(CpuDisplay::is_duplicate("AmpereOne", "AmpereOne"));
+        assert!(CpuDisplay::is_duplicate("cortex-a53", "CORTEX-A53"));
 
-        assert!(!is_duplicate("ARM Cortex-A72", "Maya"));
-        assert!(!is_duplicate("Maya", "Cortex-A72"));
-        assert!(!is_duplicate("Apple A18 Pro", "Tahiti"));
-        assert!(!is_duplicate("Everest", "Tahiti"));
-        assert!(!is_duplicate("Sawtooth", "Tahiti"));
-        assert!(!is_duplicate("Apple M1", "Tonga"));
-        assert!(!is_duplicate("FireStorm", "Tonga"));
-        assert!(!is_duplicate("", "Maya"));
-        assert!(!is_duplicate("Maya", ""));
+        assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
+        assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
+        assert!(!CpuDisplay::is_duplicate("Apple A18 Pro", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Everest", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Sawtooth", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Apple M1", "Tonga"));
+        assert!(!CpuDisplay::is_duplicate("FireStorm", "Tonga"));
+        assert!(!CpuDisplay::is_duplicate("", "Maya"));
+        assert!(!CpuDisplay::is_duplicate("Maya", ""));
     }
 
     #[test]
