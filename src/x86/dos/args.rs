@@ -1,4 +1,4 @@
-#![cfg(any(dos, dos32a))]
+#![cfg(dos_os)]
 // ============================================================================
 // Command-line arguments parsing (DOS Real Mode & Protected Mode)
 // ============================================================================
@@ -21,7 +21,7 @@ impl Args {
 
 static mut TAIL_BUF: [u8; 128] = [0; 128];
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 pub fn selector_base(selector: u16) -> Option<u32> {
     let mut base_high: u16 = 0;
     let mut base_low: u16 = 0;
@@ -45,7 +45,7 @@ pub fn selector_base(selector: u16) -> Option<u32> {
     }
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 pub fn psp_base() -> Option<u32> {
     let mut psp_val: u32 = 0;
     unsafe {
@@ -67,7 +67,7 @@ pub fn psp_base() -> Option<u32> {
     }
 }
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 pub fn get_args() -> Args {
     let mut tokens = [""; MAX_ARGS];
     let mut count = 0;
@@ -113,7 +113,7 @@ pub fn get_args() -> Args {
     Args { tokens, count }
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 pub fn get_args() -> Args {
     let mut tokens = [""; MAX_ARGS];
     let mut count = 0;

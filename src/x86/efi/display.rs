@@ -1,4 +1,4 @@
-#![cfg(target_os = "uefi")]
+#![cfg(uefi)]
 //! EFI display driver and graphics framebuffer rendering for rustid.
 
 use core::ffi::c_void;

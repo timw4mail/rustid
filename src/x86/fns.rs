@@ -68,11 +68,11 @@ pub fn x86_cpuid_count(leaf: u32, sub_leaf: u32) -> Cpuid {
     #[cfg(nostd_os)]
     return real_x86_cpuid_count(leaf, sub_leaf);
 
-    #[cfg(not(nostd_os))]
+    #[cfg(std_os)]
     super::provider::cpuid_count(leaf, sub_leaf)
 }
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 #[must_use]
 pub fn info_source() -> super::provider::CpuidInfoSource {
     super::provider::info_source()
@@ -85,7 +85,7 @@ pub fn cpuid_data_source() -> DataSource {
     #[cfg(nostd_os)]
     return DataSource::Cpuid;
 
-    #[cfg(not(nostd_os))]
+    #[cfg(std_os)]
     match info_source() {
         super::provider::CpuidInfoSource::Cpu => DataSource::Cpuid,
         super::provider::CpuidInfoSource::DumpFile => DataSource::CpuidDump,
@@ -347,17 +347,17 @@ pub fn amd_logical_cores() -> u32 {
 }
 
 /// Returns the number of physical cores per package for Intel CPUs.
-#[cfg(dos)]
+#[cfg(dos_real)]
 pub use super::dos::{
     dos_cores_per_package as cpuid_cores_per_package,
     dos_threads_per_core as cpuid_threads_per_core,
     dos_threads_per_package as cpuid_threads_per_package,
 };
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 pub use cpuid_counts::*;
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 mod cpuid_counts {
     use super::*;
 

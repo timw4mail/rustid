@@ -1,4 +1,4 @@
-#![cfg(target_os = "uefi")]
+#![cfg(uefi)]
 //! Core EFI operating system bindings and services for rustid.
 
 use core::alloc::{GlobalAlloc, Layout};
@@ -488,7 +488,7 @@ unsafe impl GlobalAlloc for EfiAllocator {
     }
 }
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 #[global_allocator]
 static ALLOCATOR: EfiAllocator = EfiAllocator;
 

@@ -1,7 +1,7 @@
-#![cfg_attr(all(not(test), dos), no_std)]
-#![cfg_attr(all(not(test), dos), no_main)]
+#![cfg_attr(all(not(test), dos_real), no_std)]
+#![cfg_attr(all(not(test), dos_real), no_main)]
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 #[unsafe(naked)]
@@ -24,7 +24,7 @@ pub unsafe extern "C" fn _start() -> ! {
     );
 }
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 fn help() {
     use rustid::println;
     println!("Usage: RUST86 [/FLAGS]");
@@ -35,7 +35,7 @@ fn help() {
     println!("  /?, /H, /HELP Show this help message");
 }
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{CliFlags, TCpuDisplay, TDetect};
@@ -98,5 +98,5 @@ pub extern "C" fn rust_main() -> ! {
     exit(0);
 }
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 pub fn main() {}

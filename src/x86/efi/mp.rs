@@ -1,4 +1,4 @@
-#![cfg(target_os = "uefi")]
+#![cfg(uefi)]
 //! EFI MP (MultiProcessor) Services Protocol implementation for core enumeration and targeted execution.
 
 use core::ffi::c_void;

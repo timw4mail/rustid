@@ -1,4 +1,4 @@
-#[cfg(any(not(nostd_os), target_os = "uefi"))]
+#[cfg(not(dos_real))]
 use crate::common::CoreType;
 use crate::x86::CpuSignature;
 use crate::x86::constants::*;
@@ -45,7 +45,7 @@ impl Intel {
         Some(arch)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_hedt_server(
         model: &str,
         ma: MicroArch,
@@ -61,7 +61,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_55h(
         model: &str,
         stepping: u32,
@@ -103,7 +103,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_8eh(
         model: &str,
         stepping: u32,
@@ -154,7 +154,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_9eh(
         model: &str,
         stepping: u32,
@@ -206,7 +206,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_8fh(
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
@@ -237,7 +237,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_b7h(
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
@@ -284,7 +284,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_0fh(
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
@@ -313,7 +313,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_17h(
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
@@ -345,7 +345,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_06_beh(
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
@@ -362,7 +362,7 @@ impl Intel {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn modern_micro_arch(
         model: &str,
         s: CpuSignature,
@@ -602,7 +602,7 @@ impl TMicroArch for Intel {
             return arch;
         }
 
-        #[cfg(not(dos))]
+        #[cfg(not(dos_real))]
         if let Some(arch) = Self::modern_micro_arch(model, s, &brand_arch) {
             return arch;
         }
@@ -611,7 +611,7 @@ impl TMicroArch for Intel {
     }
 }
 
-#[cfg(any(not(nostd_os), target_os = "uefi"))]
+#[cfg(not(dos_real))]
 impl Intel {
     pub fn core_micro_arch(parent: MicroArch, core_type: CoreType) -> MicroArch {
         match (parent, core_type) {

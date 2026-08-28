@@ -5,7 +5,7 @@ use alloc::string::String;
 #[cfg(bsd)]
 pub mod bsd;
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 pub mod efi;
 
 pub mod common;

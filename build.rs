@@ -210,13 +210,24 @@ macro_rules! cfg_aliases {
 fn main() {
     // Setup cfg aliases
     cfg_aliases! {
-        dos: { all(target_os = "none", target_arch= "x86", not(feature = "dos32a-build")) },
-        dos32a: { all(target_os = "none", target_arch= "x86", feature = "dos32a-build") },
-        dos_os: { all(target_os = "none", target_arch="x86") },
+        // Runtime / Environment Model
+        uefi: { target_os = "uefi" },
+        dos_real: { all(target_os = "none", target_arch = "x86", not(feature = "dos32a-build")) },
+        dos_ext: { all(target_os = "none", target_arch = "x86", feature = "dos32a-build") },
+        dos_os: { all(target_os = "none", target_arch = "x86") },
         nostd_os: { any(target_os = "none", target_os = "uefi") },
+        std_os: { not(any(target_os = "none", target_os = "uefi")) },
+
+        // Operating System Families
         bsd: { any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
-        arm_cpu: { any(target_arch = "arm", target_arch="aarch64", target_arch="arm64ec") },
+        linux_os: { any(target_os = "android", target_os = "linux") },
+        unix_os: { any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
+        windows_os: { target_os = "windows" },
+
+        // CPU Architectures
+        x86_cpu: { any(target_arch = "x86", target_arch = "x86_64") },
+        arm_cpu: { any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec") },
         ppc_cpu: { any(target_arch = "powerpc", target_arch = "powerpc64") },
-        x86_cpu: { any(target_arch = "x86", target_arch = "x86_64") }
+        riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") }
     }
 }

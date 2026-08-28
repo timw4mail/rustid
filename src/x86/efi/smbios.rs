@@ -1,4 +1,4 @@
-#![cfg(target_os = "uefi")]
+#![cfg(uefi)]
 //! Zero-dependency SMBIOS 2.x and 3.x parser for UEFI environment.
 
 use alloc::string::{String, ToString};
@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 
 use crate::common::os::{is_generic_value, is_known_hypervisor_vendor};
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 use super::os::{EfiConfigurationTable, get_system_table};
 
 /// SMBIOS 2.x 32-bit Table GUID: `{eb9d2d31-2d88-11d3-9a16-0090273fc14d}`
@@ -495,7 +495,7 @@ impl SmbiosData {
 }
 
 /// Locates and parses the SMBIOS table in a live UEFI environment.
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 pub fn detect_smbios() -> Option<SmbiosData> {
     let st = get_system_table();
     if st.is_null() {
@@ -550,7 +550,7 @@ pub fn detect_smbios() -> Option<SmbiosData> {
 
 /// Discovers the system name from SMBIOS in UEFI.
 pub fn detect_smbios_system_name() -> Option<String> {
-    #[cfg(target_os = "uefi")]
+    #[cfg(uefi)]
     if let Some(smbios) = detect_smbios() {
         return smbios.get_system_name();
     }

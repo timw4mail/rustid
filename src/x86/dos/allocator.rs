@@ -83,10 +83,10 @@ unsafe extern "C" {
 pub unsafe fn init_heap() {
     let heap_start = &raw mut _heap as usize;
 
-    #[cfg(dos32a)]
+    #[cfg(dos_ext)]
     let heap_size = 0x100000; // 1MB heap for DOS/32A
 
-    #[cfg(dos)]
+    #[cfg(dos_real)]
     let heap_size = 0x10000usize.saturating_sub(heap_start & 0xFFFF);
 
     unsafe { ALLOCATOR.init(heap_start, heap_size) };

@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
+#[cfg(any(not(x86_cpu), test))]
 use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
 
 #[cfg(any(arm_cpu, test))]
@@ -342,6 +343,7 @@ impl TDetect for TopologyCount {
     }
 }
 
+#[cfg(any(not(x86_cpu), test))]
 impl Cache {
     #[cfg(not(x86_cpu))]
     pub fn detect() -> Option<Cache> {
@@ -356,6 +358,7 @@ impl Cache {
         None
     }
 
+    #[cfg(not(x86_cpu))]
     pub(crate) fn from_sys_fs() -> Option<Cache> {
         Self::read_cpu_cache(0)
     }

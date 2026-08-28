@@ -433,6 +433,7 @@ impl TDetect for TopologyCount {
 // Cache Detection
 // ----------------------------------------------------------------------------
 
+#[cfg(any(not(x86_cpu), test))]
 impl Cache {
     #[cfg(not(x86_cpu))]
     pub fn detect() -> Option<Cache> {

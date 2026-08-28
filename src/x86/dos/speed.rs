@@ -6,7 +6,7 @@ use super::*;
 
 use crate::x86::{constants, cpu::CpuSignature, has_tsc, is_386, vendor_str};
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 impl Speed {
     #[inline(never)]
     fn measure_frequency_tsc(t1: u16) -> u32 {
@@ -192,7 +192,7 @@ impl Speed {
     }
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 impl Speed {
     #[inline(never)]
     fn measure_frequency_tsc(t1: u16) -> u32 {

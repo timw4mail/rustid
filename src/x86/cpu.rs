@@ -5,15 +5,14 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::Topology;
 use super::vendor::Cyrix;
 use super::*;
-use crate::common::{Cache, CoreType, DataSource, Speed, TDetect, UNK};
+#[cfg(std_os)]
+use crate::common::{Cache, Speed};
+use crate::common::{CoreType, DataSource, TDetect, UNK};
 use alloc::string::String;
 use alloc::vec::Vec;
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 use super::provider;
-
-#[cfg(not(dos_os))]
-use crate::common::TOSData;
 
 /// CPU feature class/level enumeration.
 ///
@@ -170,9 +169,9 @@ impl CpuSignature {
         let is_overdrive = super::is_overdrive();
 
         Self {
-            extended_model,
             extended_family,
             family,
+            extended_model,
             model,
             stepping,
             display_family,
@@ -188,7 +187,7 @@ impl CpuSignature {
 
     /// Detects the CPU signature from CPUID leaf 1.
     pub fn detect() -> Self {
-        #[cfg(any(dos, dos32a))]
+        #[cfg(dos_os)]
         if !has_cpuid() {
             use super::vendor::cyrix::Cyrix;
 
@@ -202,7 +201,7 @@ impl CpuSignature {
                 }
             }
 
-            #[cfg(dos)]
+            #[cfg(dos_real)]
             if let Some(mut reset_sig) = super::get_reset_signature() {
                 reset_sig.source = DataSource::CpuReset;
                 return reset_sig;
@@ -255,7 +254,7 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn intel_brand_index(&self) -> Option<&'static str> {
         let brand_id = get_brand_id();
 
@@ -306,7 +305,7 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
 
@@ -360,7 +359,7 @@ impl Cpu {
             }
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
-                #[cfg(not(dos))]
+                #[cfg(not(dos_real))]
                 if let Some(model_name) = self.intel_brand_index() {
                     return String::from(model_name);
                 }
@@ -476,10 +475,10 @@ impl Cpu {
             }
         };
 
-        #[cfg(not(dos))]
+        #[cfg(not(dos_real))]
         return Self::cleanup_model_string(s);
 
-        #[cfg(dos)]
+        #[cfg(dos_real)]
         String::from(s)
     }
 
@@ -527,41 +526,37 @@ impl TDetect for Cpu {
     /// Detects and returns comprehensive CPU information.
     ///
     /// Performs full CPU detection including architecture, microarchitecture,
-    /// brand string, signature, features, and topology.
+    /// brand string, signature, features, and topology, enriching with OS
+    /// information on live hardware.
     fn detect() -> Self {
-        #[cfg(not(dos_os))]
-        let system = {
-            #[cfg(not(target_os = "uefi"))]
-            if provider::info_source() == provider::CpuidInfoSource::DumpFile {
-                None
-            } else {
-                crate::common::OS::get_system_name()
-            }
+        let mut cpu = Self::detect_cpuid();
 
-            #[cfg(target_os = "uefi")]
-            {
-                crate::common::OS::get_system_name()
-            }
-        };
+        #[cfg(std_os)]
+        if provider::info_source() == provider::CpuidInfoSource::Cpu {
+            super::os::enrich_cpu(&mut cpu);
+        }
 
-        let sig = CpuSignature::detect();
-        let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
-        let topology = Topology::detect();
-
-        #[cfg(not(dos_os))]
-        let cores = if is_intel() {
-            let detected = Self::detect_core_types();
-            if detected.len() > 1 {
-                detected
-            } else {
-                Self::fallback_homogeneous(&arch, &topology)
-            }
-        } else {
-            Self::fallback_homogeneous(&arch, &topology)
-        };
+        #[cfg(uefi)]
+        super::efi::enrich_cpu(&mut cpu);
 
         #[cfg(dos_os)]
-        let cores = Self::fallback_homogeneous(&arch, &topology);
+        super::dos::enrich_cpu(&mut cpu);
+
+        cpu
+    }
+}
+
+impl Cpu {
+    /// Detects and returns comprehensive CPU information purely from CPUID leaves.
+    ///
+    /// This method guarantees that no operating system information (system name,
+    /// OS socket counts, core pinning, or dynamic timer measurement) is queried.
+    #[must_use]
+    pub fn detect_cpuid() -> Self {
+        let sig = CpuSignature::detect();
+        let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
+        let topology = Topology::detect_cpuid();
+        let cores = Self::detect_cpuid_core_types(&arch, &topology);
 
         let extra = X86Data {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
@@ -578,9 +573,6 @@ impl TDetect for Cpu {
         };
 
         Self {
-            #[cfg(not(dos_os))]
-            system,
-            #[cfg(dos_os)]
             system: None,
             vendor: String::from(extra.arch.brand_name),
             model: extra.arch.model.clone(),
@@ -589,64 +581,31 @@ impl TDetect for Cpu {
             extra,
         }
     }
-}
 
-impl Cpu {
-    /// Creates a single homogeneous CpuCore cluster fallback based on the package topology and architecture.
-    pub fn fallback_homogeneous(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
-        let speed = Speed::detect();
-        let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-        let cache = topology.cache;
-        let sockets = topology.sockets.count.max(1);
-        let cores_per_socket = (topology.cores.count / sockets).max(1);
-        let threads_per_socket = (topology.threads.count / sockets).max(1);
-        let name = if arch.code_name != UNK {
-            Some(String::from(arch.code_name))
-        } else {
-            None
-        };
-        alloc::vec![CpuCore {
-            kind: CoreType::Performance,
-            micro_arch: arch.micro_arch,
-            name,
-            implementer: None,
-            cache,
-            speed: speed_opt,
-            count: cores_per_socket,
-            threads: threads_per_socket,
-        }]
-    }
-}
+    /// Detects core types purely from CPUID contexts (if multiple dump contexts exist),
+    /// or returns the single homogeneous cluster fallback.
+    #[must_use]
+    pub fn detect_cpuid_core_types(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
+        #[cfg(std_os)]
+        if provider::dump_cpu_count() > 1 {
+            use super::vendor::Intel;
 
-#[cfg(not(dos_os))]
-impl Cpu {
-    /// Enumerates all logical processors to discover unique core types.
-    ///
-    /// On non-DOS systems and UEFI, targets each logical processor and reads CPUID
-    /// leaf 0x1A to detect core type, aggregating separate entries for
-    /// hybrid architectures (e.g., Intel P-cores and E-cores).
-    /// Falls back to a single entry for DOS or if enumeration fails.
-    pub fn detect_core_types() -> Vec<CpuCore> {
-        use super::vendor::Intel;
+            let mut cores: Vec<CpuCore> = Vec::new();
 
-        let mut cores: Vec<CpuCore> = Vec::new();
-
-        fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
-            if let Some(c) = cores.iter_mut().find(|c| {
-                c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name
-            }) {
-                c.count += core.count;
-                c.threads += core.threads;
-                if c.speed.is_none() && core.speed.is_some() {
-                    c.speed = core.speed;
+            fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
+                if let Some(c) = cores.iter_mut().find(|c| {
+                    c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name
+                }) {
+                    c.count += core.count;
+                    c.threads += core.threads;
+                    if c.speed.is_none() && core.speed.is_some() {
+                        c.speed = core.speed;
+                    }
+                } else {
+                    cores.push(core);
                 }
-            } else {
-                cores.push(core);
             }
-        }
 
-        #[cfg(not(nostd_os))]
-        if provider::info_source() == provider::CpuidInfoSource::DumpFile {
             let dump_count = provider::dump_cpu_count();
             for cpu_idx in 0..dump_count {
                 provider::set_dump_cpu(cpu_idx);
@@ -673,7 +632,7 @@ impl Cpu {
                 };
 
                 let cache = Cache::detect();
-                let speed = Speed::detect();
+                let speed = Speed::detect_cpuid();
                 let speed_opt = if speed.base > 0 { Some(speed) } else { None };
 
                 find_or_push(
@@ -690,125 +649,97 @@ impl Cpu {
                     },
                 );
             }
+
+            for c in &mut cores {
+                let smt = if c.kind == CoreType::Efficiency {
+                    1
+                } else {
+                    cpuid_threads_per_core().max(1)
+                };
+                c.count = (c.threads / smt).max(1);
+                if let Some(ref mut cache) = c.cache {
+                    cache.resolve_share_counts(c.count, c.threads, 1);
+                }
+            }
+
+            if cores.len() > 1 {
+                return cores;
+            }
         }
 
-        #[cfg(not(nostd_os))]
-        if provider::info_source() != provider::CpuidInfoSource::DumpFile
-            && let Some(core_ids) = core_affinity::get_core_ids()
+        Self::fallback_homogeneous(arch, topology)
+    }
+
+    /// Creates a single homogeneous CpuCore cluster fallback based on the package topology and architecture.
+    pub fn fallback_homogeneous(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
+        let speed = topology.speed;
+        let speed_opt = if speed.base > 0 { Some(speed) } else { None };
+        let cache = topology.cache;
+        let sockets = topology.sockets.count.max(1);
+        let cores_per_socket = (topology.cores.count / sockets).max(1);
+        let threads_per_socket = (topology.threads.count / sockets).max(1);
+        let name = if arch.code_name != UNK {
+            Some(String::from(arch.code_name))
+        } else {
+            None
+        };
+        alloc::vec![CpuCore {
+            kind: CoreType::Performance,
+            micro_arch: arch.micro_arch,
+            name,
+            implementer: None,
+            cache,
+            speed: speed_opt,
+            count: cores_per_socket,
+            threads: threads_per_socket,
+        }]
+    }
+}
+
+#[cfg(std_os)]
+impl Cpu {
+    /// Detects CPU information from a `CpuDump` instance without touching any OS information.
+    pub fn from_dump(dump: &provider::CpuDump) -> Self {
+        provider::set_cpuid_provider(dump.clone());
+        let cpu = Self::detect_cpuid();
+        provider::reset_cpuid_provider();
+        cpu
+    }
+
+    /// Detects CPU information from a CPUID dump file without touching any OS information.
+    pub fn from_dump_file<P: AsRef<std::path::Path>>(path: P) -> Self {
+        let dump = provider::CpuDump::parse_file(path);
+        Self::from_dump(&dump)
+    }
+
+    /// Detects CPU information from a CPUID dump string without touching any OS information.
+    pub fn from_dump_str(s: &str) -> Self {
+        let dump = provider::CpuDump::parse_str(s);
+        Self::from_dump(&dump)
+    }
+}
+
+#[cfg(not(dos_os))]
+impl Cpu {
+    /// Enumerates all logical processors to discover unique core types.
+    pub fn detect_core_types() -> Vec<CpuCore> {
+        #[cfg(std_os)]
+        if provider::info_source() == provider::CpuidInfoSource::DumpFile {
+            let sig = CpuSignature::detect();
+            let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
+            let topo = Topology::detect_cpuid();
+            return Self::detect_cpuid_core_types(&arch, &topo);
+        }
+
+        #[cfg(std_os)]
         {
-            for core_id in core_ids {
-                core_affinity::set_for_current(core_id);
-
-                let core_type = core_type_from_cpuid();
-                let sig = CpuSignature::detect();
-                let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
-                let micro_arch = if is_intel() {
-                    Intel::core_micro_arch(arch.micro_arch, core_type)
-                } else {
-                    arch.micro_arch
-                };
-
-                // Make sure we know the MicroArch before pushing to core types
-                if micro_arch == MicroArch::Unknown {
-                    continue;
-                }
-
-                let name_str = micro_arch.as_str();
-                let name = if name_str != UNK {
-                    Some(String::from(name_str))
-                } else {
-                    None
-                };
-
-                let cache = Cache::detect();
-                let speed = Speed::detect();
-                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-
-                find_or_push(
-                    &mut cores,
-                    CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        implementer: None,
-                        cache,
-                        speed: speed_opt,
-                        count: 1,
-                        threads: 1,
-                    },
-                );
-            }
+            super::os::detect_live_core_types()
         }
 
-        #[cfg(target_os = "uefi")]
-        if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
-            let proc_count = mp.processor_count();
-
-            for cpu_idx in 0..proc_count {
-                let mut core_type = CoreType::default();
-                let mut sig = CpuSignature::default();
-                let mut raw_model = alloc::string::String::new();
-                let mut vendor = alloc::string::String::new();
-                let mut speed = Speed::default();
-
-                mp.run_on_processor(cpu_idx, || {
-                    core_type = core_type_from_cpuid();
-                    sig = CpuSignature::detect();
-                    raw_model = Cpu::raw_model_string();
-                    vendor = vendor_str();
-                    speed = Speed::detect();
-                });
-
-                let arch = CpuArch::find(&raw_model, sig, &vendor);
-                let micro_arch = if is_intel() {
-                    Intel::core_micro_arch(arch.micro_arch, core_type)
-                } else {
-                    arch.micro_arch
-                };
-
-                if micro_arch == MicroArch::Unknown {
-                    continue;
-                }
-
-                let name_str = micro_arch.as_str();
-                let name = if name_str != UNK {
-                    Some(String::from(name_str))
-                } else {
-                    None
-                };
-
-                let cache = Cache::detect();
-                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-
-                find_or_push(
-                    &mut cores,
-                    CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        implementer: None,
-                        cache,
-                        speed: speed_opt,
-                        count: 1,
-                        threads: 1,
-                    },
-                );
-            }
+        #[cfg(uefi)]
+        {
+            super::efi::detect_live_core_types()
         }
-
-        for c in &mut cores {
-            let smt = if c.kind == CoreType::Efficiency {
-                1
-            } else {
-                cpuid_threads_per_core().max(1)
-            };
-            c.count = (c.threads / smt).max(1);
-            if let Some(ref mut cache) = c.cache {
-                cache.resolve_share_counts(c.count, c.threads, 1);
-            }
-        }
-
-        cores
     }
 }
 

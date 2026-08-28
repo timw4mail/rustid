@@ -1,10 +1,10 @@
-#![cfg_attr(all(not(test), target_os = "uefi"), no_std)]
-#![cfg_attr(all(not(test), target_os = "uefi"), no_main)]
+#![cfg_attr(all(not(test), uefi), no_std)]
+#![cfg_attr(all(not(test), uefi), no_main)]
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 extern crate alloc;
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 #[unsafe(no_mangle)]
 pub unsafe extern "efiapi" fn efi_main(
     image_handle: *mut core::ffi::c_void,
@@ -33,5 +33,5 @@ pub unsafe extern "efiapi" fn efi_main(
     0
 }
 
-#[cfg(not(target_os = "uefi"))]
+#[cfg(not(uefi))]
 pub fn main() {}

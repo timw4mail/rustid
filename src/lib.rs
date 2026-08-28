@@ -25,33 +25,33 @@
 
 extern crate alloc;
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 const APP: &str = "Rustid";
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 const APP: &str = "Rust86";
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 const ARCH: &str = std::env::consts::ARCH;
-#[cfg(any(dos, dos32a))]
+#[cfg(dos_os)]
 const ARCH: &str = "x86";
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 const ARCH: &str = if cfg!(target_arch = "x86_64") {
     "x86_64"
 } else {
     "x86"
 };
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 const OS: &str = std::env::consts::OS;
-#[cfg(any(dos, dos32a))]
+#[cfg(dos_os)]
 const OS: &str = "DOS";
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 const OS: &str = "UEFI";
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 extern crate std;
 
 pub mod common;
@@ -71,18 +71,18 @@ pub mod arm;
 #[cfg(arm_cpu)]
 pub use arm::Cpu;
 
-#[cfg(any(target_arch = "riscv64", test))]
+#[cfg(any(riscv_cpu, test))]
 pub mod riscv;
-#[cfg(target_arch = "riscv64")]
+#[cfg(riscv_cpu)]
 pub use riscv::Cpu;
 
-#[cfg(any(dos, dos32a))]
+#[cfg(dos_os)]
 pub use x86::dos::*;
 
-#[cfg(target_os = "uefi")]
+#[cfg(uefi)]
 pub use x86::efi::*;
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 pub use std::{print, println};
 
 pub fn version() {
@@ -92,13 +92,13 @@ pub fn version() {
     );
 }
 
-#[cfg(not(nostd_os))]
+#[cfg(std_os)]
 #[cfg(x86_cpu)]
 pub fn file_version() {
     println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");
 }
 
-#[cfg(any(target_arch = "x86", dos, dos32a))]
+#[cfg(any(x86_cpu, dos_os))]
 pub fn cyrix_cpuid_check() {
     use crate::println;
 

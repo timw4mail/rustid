@@ -80,7 +80,7 @@ fn dump_leaf_maybe_subleaves(f: &mut impl Write, leaf: u32, indent: usize) {
 pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     // Make sure to query each thread/cpu individually, to capture the full dump
     // This is especially important for hybrid cpus
-    #[cfg(not(nostd_os))]
+    #[cfg(std_os)]
     if let Some(core_ids) = core_affinity::get_core_ids()
         && let Some(core_id) = core_ids.get(cpu_idx)
     {

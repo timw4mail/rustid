@@ -1,10 +1,10 @@
-#![cfg_attr(all(not(test), dos32a), no_std)]
-#![cfg_attr(all(not(test), dos32a), no_main)]
+#![cfg_attr(all(not(test), dos_ext), no_std)]
+#![cfg_attr(all(not(test), dos_ext), no_main)]
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 extern crate alloc;
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".startup")]
 #[unsafe(naked)]
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn _start() -> ! {
     );
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 fn help() {
     use rustid::println;
     println!("Usage: RUSTID [/FLAGS] [COMMAND]");
@@ -41,7 +41,7 @@ fn help() {
     println!("Examples:  RUSTID /E   RUSTID /VERBOSE");
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{CliFlags, TCpuDisplay, TDetect};
@@ -209,5 +209,5 @@ pub extern "C" fn rust_main() -> ! {
     exit(0);
 }
 
-#[cfg(not(dos32a))]
+#[cfg(not(dos_ext))]
 pub fn main() {}

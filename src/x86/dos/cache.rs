@@ -1,4 +1,4 @@
-#![cfg(dos)]
+#![cfg(dos_real)]
 
 use crate::common::cache::Cache;
 

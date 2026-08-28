@@ -1,4 +1,4 @@
-#![cfg(not(any(dos, dos32a)))]
+#![cfg(not(dos_os))]
 
 use rustid::common::{TCpuDisplay, TDetect};
 use rustid::{Cpu, version};

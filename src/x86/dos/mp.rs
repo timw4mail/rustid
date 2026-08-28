@@ -1,4 +1,4 @@
-#![cfg(any(dos, dos32a))]
+#![cfg(dos_os)]
 //! MultiProcessor (MP) table detection for x86 systems.
 //!
 //! This module implements scanning and parsing of the Intel MP specification
@@ -61,26 +61,26 @@ struct MpFloatingPointer {
     mp_feature5: u8,
 }
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 #[inline(always)]
 fn peek_u8_so(seg: u16, off: u16) -> u8 {
     crate::x86::dos::peek_u8(seg, off)
 }
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 #[inline(always)]
 fn peek_u16_so(seg: u16, off: u16) -> u16 {
     crate::x86::dos::peek_u16(seg, off)
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 #[inline(always)]
 fn peek_u8_so(seg: u16, off: u16) -> u8 {
     let addr = ((seg as u32) << 4) + (off as u32);
     crate::x86::dos::peek_u8(addr)
 }
 
-#[cfg(dos32a)]
+#[cfg(dos_ext)]
 #[inline(always)]
 fn peek_u16_so(seg: u16, off: u16) -> u16 {
     let addr = ((seg as u32) << 4) + (off as u32);
@@ -173,7 +173,11 @@ impl MpTable {
             }
         }
 
-        if processors > 0 { Some(processors) } else { None }
+        if processors > 0 {
+            Some(processors)
+        } else {
+            None
+        }
     }
 
     #[inline(never)]
@@ -230,7 +234,7 @@ impl MpTable {
 
     #[inline(never)]
     fn get_ebda_seg() -> Option<u16> {
-        #[cfg(dos)]
+        #[cfg(dos_real)]
         {
             let mut es_val: u16 = 0;
             let mut flags: u16 = 1; // Set carry flag to force fallback

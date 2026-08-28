@@ -1,11 +1,11 @@
 use super::CpuBrand;
 use super::constants::{EXT_LEAF_1, LEAF_1, LEAF_7};
 use super::fns::{is_amd, is_cyrix, is_valid_leaf, x86_cpuid};
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use alloc::collections::BTreeMap;
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use alloc::string::String;
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use alloc::vec::Vec;
 
 /// CPUID register selector for feature bit checking.
@@ -379,14 +379,14 @@ pub fn has_3dnow() -> bool {
 
 pub type FeatureFn = fn() -> bool;
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 type FeatureMap<'a> = &'a [(&'static str, FeatureFn)];
 
-#[cfg(dos)]
+#[cfg(dos_real)]
 pub use super::dos::dos_feature_list as get_feature_list;
 
 /// Get the full list of detected features.
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 #[must_use]
 pub fn get_feature_list() -> BTreeMap<&'static str, String> {
     const BASIC_FEATURES: FeatureMap = &[

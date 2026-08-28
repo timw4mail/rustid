@@ -174,18 +174,11 @@ impl Cache {
     /// Detects cache using platform/OS specific information sources.
     #[must_use]
     pub fn detect_os() -> Option<Cache> {
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(all(linux_os, not(x86_cpu)))]
         {
-            #[cfg(x86_cpu)]
-            if crate::x86::provider::info_source()
-                == crate::x86::provider::CpuidInfoSource::DumpFile
-            {
-                return None;
-            }
-
             Cache::from_sys_fs()
         }
-        #[cfg(not(any(target_os = "android", target_os = "linux")))]
+        #[cfg(not(all(linux_os, not(x86_cpu))))]
         {
             None
         }

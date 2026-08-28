@@ -11,7 +11,7 @@ pub fn get_vendor_by_quirk() -> &'static str {
         return VENDOR_CYRIX;
     }
 
-    #[cfg(dos)]
+    #[cfg(dos_real)]
     return match get_reset_signature() {
         Some(signature) => match (signature.family, signature.model, signature.stepping) {
             // Intel RapidCAD
@@ -28,7 +28,7 @@ pub fn get_vendor_by_quirk() -> &'static str {
         None => UNK,
     };
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     UNK
 }
 
@@ -120,7 +120,7 @@ pub fn has_cyrix_5_2_quirk() -> bool {
 /// subsequent return to the code.
 ///
 /// Verified on some real 386/486 systems.
-#[cfg(dos)]
+#[cfg(dos_real)]
 #[allow(static_mut_refs)]
 pub fn get_reset_signature() -> Option<CpuSignature> {
     if has_cpuid() {
@@ -243,7 +243,7 @@ pub fn get_reset_signature() -> Option<CpuSignature> {
     ))
 }
 
-#[cfg(any(feature = "debug", dos))]
+#[cfg(any(feature = "debug", dos_real))]
 pub fn debug_quirks() {
     use crate::println;
 

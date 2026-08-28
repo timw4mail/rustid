@@ -2,19 +2,19 @@ use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
 use super::*;
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
 use alloc::format;
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use alloc::string::String;
 
 fn yes_no(b: bool) -> &'static str {
     if b { "Yes" } else { "No" }
 }
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 impl CpuDisplay {
     /// Computes the number of cache instances on x86 taking SMT / APIC ID allocation into account.
     pub fn x86_cache_instances(
@@ -281,7 +281,7 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
         use alloc::vec::Vec;
 
@@ -317,7 +317,7 @@ impl Cpu {
             }
 
             // Centaur features list
-            #[cfg(not(dos))]
+            #[cfg(not(dos_real))]
             if is_centaur() {
                 self.print_centaur_features(flags, disp);
             }
@@ -329,10 +329,10 @@ impl Cpu {
 
 impl TCpuDisplay for Cpu {
     fn debug(&self) {
-        #[cfg(not(any(dos, dos32a)))]
+        #[cfg(not(dos_os))]
         println!("{:#?}", self);
 
-        #[cfg(dos32a)]
+        #[cfg(dos_ext)]
         {
             use super::is_cyrix;
 
@@ -342,7 +342,7 @@ impl TCpuDisplay for Cpu {
             }
         }
 
-        #[cfg(dos)]
+        #[cfg(dos_real)]
         {
             use super::is_cyrix;
 
@@ -394,7 +394,7 @@ impl TCpuDisplay for Cpu {
     fn display_table(&self, flags: CliFlags) {
         let disp = CpuDisplay { flags };
 
-        #[cfg(target_os = "uefi")]
+        #[cfg(uefi)]
         {
             let fw = crate::x86::efi::os::detect_firmware();
             let mut vendor = alloc::string::String::new();
@@ -433,7 +433,7 @@ impl TCpuDisplay for Cpu {
         }
 
         // Hypervisor vendor_string (brand_name)
-        #[cfg(not(dos))]
+        #[cfg(not(dos_real))]
         if let Some(hyp_str) = &self.hyp_vendor_str {
             let hyp = HypervisorBrand::from(hyp_str.as_str());
             println!("{}{} ({})", disp.label("Hypervisor"), hyp_str, hyp.to_str());
@@ -472,7 +472,7 @@ impl TCpuDisplay for Cpu {
         self.print_topology(flags, &disp);
 
         // Cache
-        #[cfg(not(dos))]
+        #[cfg(not(dos_real))]
         if !self.is_hybrid() {
             let cache_count = |share_count: u32| -> String {
                 CpuDisplay::x86_cache_count(
@@ -538,7 +538,7 @@ impl TCpuDisplay for Cpu {
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
                     println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
-                #[cfg(not(any(dos, dos32a)))]
+                #[cfg(not(dos_os))]
                 println!();
             }
         }

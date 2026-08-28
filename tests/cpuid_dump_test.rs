@@ -90,17 +90,27 @@ fn assert_brand_eq(expected: &str) {
 
 fn assert_topology(sockets: u32, cores: u32, threads: u32) {
     let cpu = Cpu::detect();
+    assert_eq!(cpu.system, None, "Expected no OS system name in dump mode");
     assert_eq!(cpu.topology.sockets.count, sockets, "Sockets mismatch");
     assert_eq!(cpu.topology.cores.count, cores, "Cores mismatch");
     assert_eq!(cpu.topology.threads.count, threads, "Threads mismatch");
+    assert!(
+        !cpu.topology.speed.measured,
+        "Speed should not be measured via OS timer in dump mode"
+    );
 }
 
 fn assert_topology_full(sockets: u32, dies: u32, cores: u32, threads: u32) {
     let cpu = Cpu::detect();
+    assert_eq!(cpu.system, None, "Expected no OS system name in dump mode");
     assert_eq!(cpu.topology.sockets.count, sockets, "Sockets mismatch");
     assert_eq!(cpu.topology.dies.count, dies, "Dies mismatch");
     assert_eq!(cpu.topology.cores.count, cores, "Cores mismatch");
     assert_eq!(cpu.topology.threads.count, threads, "Threads mismatch");
+    assert!(
+        !cpu.topology.speed.measured,
+        "Speed should not be measured via OS timer in dump mode"
+    );
 }
 
 fn assert_cache_counts(
@@ -1096,4 +1106,62 @@ fn test_all_vendor_strings() {
     for (vendor_str, expected_brand) in vendors {
         assert_eq!(CpuBrand::from(vendor_str), expected_brand);
     }
+}
+
+#[test]
+fn test_cpu_from_dump_file_helper() {
+    let path = raw_path("dump/eeepc.txt");
+    let cpu = Cpu::from_dump_file(path);
+    assert_eq!(cpu.system, None);
+    assert!(cpu.display_model_string().contains("Celeron"));
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 1);
+    assert_eq!(cpu.topology.threads.count, 1);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
+fn test_cpu_from_dump_str_helper() {
+    let raw = include_str!("cpuid/dump/eeepc.txt");
+    let cpu = Cpu::from_dump_str(raw);
+    assert_eq!(cpu.system, None);
+    assert!(cpu.display_model_string().contains("Celeron"));
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 1);
+    assert_eq!(cpu.topology.threads.count, 1);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
+fn test_cpu_from_dump_hybrid_12700h() {
+    let path = raw_path("dump/12700H.txt");
+    let cpu = Cpu::from_dump_file(path);
+    assert_eq!(cpu.system, None);
+    assert!(cpu.is_hybrid());
+    assert_eq!(cpu.cores.len(), 2);
+    assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+    assert_eq!(cpu.cores[0].micro_arch, MicroArch::GoldenCove);
+    assert_eq!(cpu.cores[1].kind, CoreType::Efficiency);
+    assert_eq!(cpu.cores[1].micro_arch, MicroArch::Gracemont);
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 10);
+    assert_eq!(cpu.topology.threads.count, 20);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
+fn test_pure_cpuid_detect_never_populates_os_data() {
+    let path = raw_path("dump/7950x3d.txt");
+    let cpu = Cpu::from_dump_file(path);
+    assert_eq!(cpu.system, None);
+    assert_eq!(cpu.vendor, "AMD");
+    assert_eq!(
+        cpu.display_model_string(),
+        "AMD Ryzen 9 7950X3D 16-Core Processor"
+    );
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.dies.count, 2);
+    assert_eq!(cpu.topology.cores.count, 16);
+    assert_eq!(cpu.topology.threads.count, 32);
+    assert!(!cpu.topology.speed.measured);
 }

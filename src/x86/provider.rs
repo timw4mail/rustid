@@ -132,6 +132,10 @@ impl Default for CpuDump {
 impl CpuDump {
     pub fn parse_file<P: AsRef<Path>>(path: P) -> Self {
         let contents = fs::read_to_string(path).expect("Failed to read dump file");
+        Self::parse_str(&contents)
+    }
+
+    pub fn parse_str(contents: &str) -> Self {
         let mut cpus: Vec<HashMap<(u32, u32), Cpuid>> = Vec::new();
         let mut current: Option<HashMap<(u32, u32), Cpuid>> = None;
 

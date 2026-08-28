@@ -4,7 +4,7 @@ use crate::x86::micro_arch::{CpuArch, MicroArch};
 use crate::x86::vendor::TMicroArch;
 use crate::x86::{CpuSignature, is_valid_leaf, is_zhaoxin, x86_cpuid};
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use alloc::vec::Vec;
 
 pub struct Centaur;
@@ -23,7 +23,7 @@ fn centaur_cpu_brand() -> CpuBrand {
 }
 
 impl TMicroArch for Centaur {
-    #[cfg(dos)]
+    #[cfg(dos_real)]
     fn micro_arch(model: &str, _s: CpuSignature) -> CpuArch {
         let brand = centaur_cpu_brand();
         let brand_arch = CpuArch::brand_arch(model, brand.to_brand_name(), VENDOR_CENTAUR);
@@ -31,7 +31,7 @@ impl TMicroArch for Centaur {
         brand_arch(MicroArch::Unknown, UNK, None)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn micro_arch(model: &str, s: CpuSignature) -> CpuArch {
         let brand = centaur_cpu_brand();
         let brand_arch = CpuArch::brand_arch(model, brand.to_brand_name(), VENDOR_CENTAUR);
@@ -214,7 +214,7 @@ pub type CentaurFeatureMap<'a> = &'a [(
     crate::x86::features::FeatureFn,
 )];
 
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 impl Centaur {
     pub fn get_feature_list() -> Vec<(&'static str, bool)> {
         const CENTAUR_FEATURES: CentaurFeatureMap = &[

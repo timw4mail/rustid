@@ -348,7 +348,7 @@ impl Cache {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn apply_descriptor(desc: u32, c: &mut Cache) {
         match desc {
             0x49 => {

@@ -27,7 +27,7 @@
 //! - InstLatx64 CPUID dumps & WikiChip AMD CPUID tables.
 
 use crate::x86::CpuSignature;
-#[cfg(not(dos))]
+#[cfg(not(dos_real))]
 use crate::x86::amd_logical_cores;
 use crate::x86::constants::*;
 use crate::x86::micro_arch::{CpuArch, MicroArch};
@@ -64,7 +64,7 @@ impl Amd {
         Some(arch)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn modern_micro_arch(
         model: &str,
         s: CpuSignature,
@@ -182,7 +182,7 @@ impl Amd {
         Some(arch)
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_k8(
         m_lower: &str,
         s: CpuSignature,
@@ -281,7 +281,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_k10(
         m_lower: &str,
         s: CpuSignature,
@@ -359,7 +359,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_fam15h(
         m_lower: &str,
         s: CpuSignature,
@@ -404,7 +404,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_fam16h(
         m_lower: &str,
         s: CpuSignature,
@@ -440,7 +440,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_fam17h(
         m_lower: &str,
         s: CpuSignature,
@@ -532,7 +532,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_fam19h(
         m_lower: &str,
         s: CpuSignature,
@@ -686,7 +686,7 @@ impl Amd {
         }
     }
 
-    #[cfg(not(dos))]
+    #[cfg(not(dos_real))]
     fn disambiguate_fam1ah(
         m_lower: &str,
         s: CpuSignature,
@@ -730,7 +730,7 @@ impl TMicroArch for Amd {
             return arch;
         }
 
-        #[cfg(not(dos))]
+        #[cfg(not(dos_real))]
         if let Some(arch) = Self::modern_micro_arch(model, s, &brand_arch) {
             return arch;
         }

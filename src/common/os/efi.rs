@@ -1,4 +1,4 @@
-#![cfg(target_os = "uefi")]
+#![cfg(uefi)]
 
 use crate::common::{OS, TOSData, TopologyTier};
 use alloc::string::String;
