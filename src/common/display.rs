@@ -5,8 +5,22 @@ use super::constants::*;
 use alloc::format;
 use alloc::string::String;
 
-use crate::common::CliFlags;
 use crate::println;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct CliFlags {
+    pub compact: bool,
+    pub color: bool,
+    pub verbose: bool,
+}
+
+pub trait TCpuDisplay: super::cpu::TDetect {
+    /// Display the Rust debug output of the CPU object
+    fn debug(&self);
+
+    /// Display the CPU information in a table format
+    fn display_table(&self, flags: CliFlags);
+}
 
 pub struct CpuDisplay {
     pub flags: CliFlags,
@@ -221,25 +235,45 @@ impl CpuDisplay {
     /// Displays the Topology line for homogeneous or hybrid configurations.
     pub fn display_topology_line(
         &self,
+        sockets: u32,
         total_cores: u32,
         total_threads: u32,
         is_hybrid: bool,
         cluster_count: usize,
     ) {
+        let sockets = sockets.max(1);
         if is_hybrid {
+            let socket_prefix = if sockets > 1 {
+                let socket_str = Self::plural(sockets, "socket", "sockets");
+                alloc::format!("{sockets} {socket_str}, ")
+            } else {
+                alloc::string::String::new()
+            };
             self.simple_line(
                 "Topology",
                 &alloc::format!(
-                    "{} across {} core types",
+                    "{}{} across {} core types",
+                    socket_prefix,
                     Self::format_core_threads(total_cores, total_threads),
                     cluster_count
                 ),
             );
         } else if total_cores > 0 {
-            self.simple_line(
-                "Topology",
-                &Self::format_core_threads(total_cores, total_threads),
-            );
+            if sockets > 1 || self.flags.verbose {
+                let socket_str = Self::plural(sockets, "socket", "sockets");
+                let core_str = Self::plural(total_cores, "core", "cores");
+                let thread_str = Self::plural(total_threads, "thread", "threads");
+
+                self.simple_line(
+                    "Topology",
+                    &alloc::format!("{sockets} {socket_str}, {total_cores} {core_str}, {total_threads} {thread_str}"),
+                );
+            } else {
+                self.simple_line(
+                    "Topology",
+                    &Self::format_core_threads(total_cores, total_threads),
+                );
+            }
         }
     }
 
@@ -923,5 +957,24 @@ mod tests {
         disp.simple_line_with_detail("Vendor", "AuthenticAMD", "AMD");
         disp.display_with_raw("System", "MacBook Pro", Some("MacBookPro18,1"), false);
         disp.display_with_raw("System", "MacBook Pro", Some("MacBookPro18,1"), true);
+    }
+
+    #[test]
+    fn test_cli_flags_default() {
+        let f = CliFlags::default();
+        assert!(!f.color);
+        assert!(!f.verbose);
+    }
+
+    #[test]
+    fn test_cli_flags_explicit() {
+        let f = CliFlags {
+            compact: true,
+            color: true,
+            verbose: true,
+        };
+        assert!(f.compact);
+        assert!(f.color);
+        assert!(f.verbose);
     }
 }

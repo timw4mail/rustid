@@ -34,9 +34,12 @@ impl CpuDisplay {
 
         disp.simple_line_opt("Process Node", cpu_info.cpu_arch.technology);
 
+        let sockets = cpu_info.total_sockets();
+
         // Display topology & per-core details
         if cpu_info.is_hybrid() {
             disp.display_topology_line(
+                sockets,
                 cpu_info.total_cores(),
                 cpu_info.total_threads(),
                 true,
@@ -61,16 +64,16 @@ impl CpuDisplay {
                     },
                 );
 
-                disp.display_core_cache(core.cache, core.count, 0);
+                disp.display_core_cache(core.cache, core.count, sockets);
 
                 if core.cache.is_none() {
                     disp.newline();
                 }
             }
         } else if let Some(core) = cpu_info.cores.first() {
-            disp.display_topology_line(core.count, core.threads, false, 1);
+            disp.display_topology_line(sockets, core.count, core.threads, false, 1);
 
-            disp.display_core_cache(core.cache, core.count, 0);
+            disp.display_core_cache(core.cache, core.count, sockets);
 
             disp.display_frequency(core.speed, flags);
         }

@@ -2,7 +2,7 @@
 
 use super::brand::CpuBrand;
 use super::micro_arch::{CpuArch, MicroArch};
-use super::topology::Topology;
+use super::topology::{DomainList, Topology};
 use super::vendor::Cyrix;
 use super::*;
 #[cfg(std_os)]
@@ -241,8 +241,8 @@ pub struct X86Data {
     pub brand_id: u32,
     /// CPU signature (family, model, stepping)
     pub signature: CpuSignature,
-    /// Speed, threads, cores, sockets
-    pub topology: Topology,
+    /// Topology domains discovered from CPUID leaves
+    pub topology_domains: DomainList,
 }
 
 pub type CpuCore = crate::common::CpuCore<MicroArch>;
@@ -556,6 +556,7 @@ impl Cpu {
         let sig = CpuSignature::detect();
         let arch = CpuArch::find(&Self::raw_model_string(), sig, &vendor_str());
         let topology = Topology::detect_cpuid();
+        let topology_domains = Topology::detect_domains();
         let cores = Self::detect_cpuid_core_types(&arch, &topology);
 
         let extra = X86Data {
@@ -569,13 +570,14 @@ impl Cpu {
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
-            topology,
+            topology_domains,
         };
 
         Self {
             system: None,
             vendor: String::from(extra.arch.brand_name),
             model: extra.arch.model.clone(),
+            topology,
             cores,
             features: get_feature_list(),
             extra,
@@ -767,7 +769,6 @@ mod tests {
                 brand_id: 0,
                 easter_egg: None,
                 signature: dummy_sig,
-                topology: Topology::default(),
                 ..Default::default()
             },
             features: get_feature_list(),
@@ -782,7 +783,6 @@ mod tests {
                 brand_id: 0,
                 easter_egg: None,
                 signature: dummy_sig,
-                topology: Topology::default(),
                 ..Default::default()
             },
             features: get_feature_list(),
@@ -806,7 +806,6 @@ mod tests {
                 brand_id: 0,
                 easter_egg: None,
                 signature: dummy_sig,
-                topology: Topology::default(),
                 ..Default::default()
             },
             features: get_feature_list(),
@@ -824,7 +823,6 @@ mod tests {
                 brand_id: 0,
                 easter_egg: None,
                 signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
-                topology: Topology::default(),
                 ..Default::default()
             },
             features: get_feature_list(),
@@ -846,7 +844,6 @@ mod tests {
                 brand_id: 0,
                 easter_egg: None,
                 signature: CpuSignature::new(0, 6, 0, 0, 0, DataSource::DefaultValue),
-                topology: Topology::default(),
                 ..Default::default()
             },
             features: get_feature_list(),

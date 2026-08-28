@@ -174,6 +174,20 @@ impl CpuDisplay {
 
         disp.simple_line_opt("Process", cpu_info.cpu_arch.technology);
 
+        let total_cores = cpu_info.total_cores();
+        let total_threads = cpu_info.total_threads();
+        let sockets = cpu_info.total_sockets();
+
+        if sockets > 1 || flags.verbose {
+            disp.display_topology_line(
+                sockets,
+                total_cores,
+                total_threads,
+                cpu_info.is_hybrid(),
+                cpu_info.cores.len(),
+            );
+        }
+
         if cpu_info.is_hybrid() {
             for (i, core) in cpu_info.cores.iter().enumerate() {
                 disp.core_heading(i);
@@ -202,7 +216,7 @@ impl CpuDisplay {
                     },
                 );
 
-                disp.display_core_cache(core.cache, core.count, 0);
+                disp.display_core_cache(core.cache, core.count, sockets);
 
                 if core.cache.is_none() {
                     disp.newline();
@@ -226,7 +240,7 @@ impl CpuDisplay {
 
             disp.display_frequency(core.speed, flags);
 
-            disp.display_core_cache(core.cache, core.count, 0);
+            disp.display_core_cache(core.cache, core.count, sockets);
         }
 
         // Display features

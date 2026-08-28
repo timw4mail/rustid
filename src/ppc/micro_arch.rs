@@ -217,7 +217,9 @@ impl CpuArch {
 
 #[cfg(test)]
 mod tests {
+    use super::CpuCore;
     use super::*;
+    use crate::common::Topology;
 
     #[test]
     fn test_ppc_find_classic() {
@@ -333,6 +335,7 @@ mod tests {
             system: None,
             vendor: String::from("IBM"),
             model: String::from("PowerPC 970"),
+            topology: Topology::new(1, 2, 2),
             cores: vec![core],
             features: std::collections::BTreeMap::new(),
             extra: PpcData {

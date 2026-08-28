@@ -1,5 +1,6 @@
 use super::constants::*;
 use super::{cpuid_data_source, is_valid_leaf, vendor_str, x86_cpuid_count};
+pub use crate::common::Topology;
 use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::x86::{cpuid_cores_per_package, cpuid_threads_per_package};
 use alloc::vec::Vec;
@@ -161,9 +162,9 @@ impl Speed {
 /// Represents a topology domain (thread, core, die, socket, etc.).
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct TopologyDomain {
-    level: u32,
-    kind: TopologyType,
-    count: u32,
+    pub level: u32,
+    pub kind: TopologyType,
+    pub count: u32,
 }
 
 /// CPU topology domain type.
@@ -189,26 +190,6 @@ pub enum TopologyType {
 }
 
 pub type DomainList = Vec<TopologyDomain>;
-
-/// Complete CPU topology information including sockets, cores, threads, and cache.
-#[derive(Debug, Default, PartialEq)]
-pub struct Topology {
-    /// Number of processor sockets
-    pub sockets: TopologyTier,
-    /// Number of dies per socket
-    pub dies: TopologyTier,
-    /// Number of physical cores
-    pub cores: TopologyTier,
-    /// Number of logical threads (includes SMT)
-    pub threads: TopologyTier,
-    /// CPU speed information
-    pub speed: Speed,
-    /// Cache hierarchy information
-    pub cache: Option<Cache>,
-
-    #[allow(unused)]
-    domains: DomainList,
-}
 
 impl Topology {
     /// Detects CPU topology purely from CPUID leaves without touching OS information.
@@ -251,7 +232,6 @@ impl Topology {
             threads,
             speed,
             cache,
-            domains,
         }
     }
 
@@ -400,7 +380,7 @@ impl Topology {
         )
     }
 
-    fn detect_domains() -> DomainList {
+    pub(crate) fn detect_domains() -> DomainList {
         let d: DomainList = Vec::new();
 
         if !is_valid_leaf(LEAF_0B) {

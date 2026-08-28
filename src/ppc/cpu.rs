@@ -4,7 +4,7 @@ use crate::common::cache::Cache;
 #[cfg(target_os = "linux")]
 use crate::common::get_proc_cpuinfo_data;
 use crate::common::os::TOSData;
-use crate::common::{CoreType, DataSource, Speed, TDetect, UNK};
+use crate::common::{CoreType, DataSource, Speed, TDetect, Topology, TopologyTier, UNK};
 use crate::ppc::micro_arch::{CpuArch, CpuCore, MicroArch};
 use std::fs;
 use std::path::Path;
@@ -22,9 +22,10 @@ pub struct PpcData {
 pub type Cpu = crate::common::Cpu<PpcData, MicroArch>;
 
 impl Cpu {
-    fn detect_topology() -> (u32, u32) {
+    fn detect_topology() -> (u32, u32, u32) {
         #[cfg(target_os = "linux")]
         {
+            let sysfs_topo = crate::common::detect_sysfs_topology();
             let cpuinfo = get_proc_cpuinfo_data();
             let proc_count = cpuinfo
                 .iter()
@@ -33,9 +34,16 @@ impl Cpu {
 
             let thread_count = if proc_count > 0 {
                 proc_count
+            } else if sysfs_topo.threads > 0 {
+                sysfs_topo.threads
             } else {
-                let topo = crate::common::detect_sysfs_topology();
-                if topo.threads > 0 { topo.threads } else { 1 }
+                1
+            };
+
+            let sockets = if sysfs_topo.sockets.count > 0 {
+                sysfs_topo.sockets.count
+            } else {
+                1
             };
 
             // Check sysfs for SMT thread siblings per core
@@ -43,14 +51,14 @@ impl Cpu {
             if let Ok(content) = fs::read_to_string(path) {
                 let threads_per_core = crate::common::expand_cpu_list(&content).len().max(1) as u32;
                 let core_count = (thread_count / threads_per_core).max(1);
-                return (core_count, thread_count);
+                return (sockets, core_count, thread_count);
             }
 
-            (thread_count, thread_count)
+            (sockets, thread_count, thread_count)
         }
         #[cfg(not(target_os = "linux"))]
         {
-            (1, 1)
+            (1, 1, 1)
         }
     }
 
@@ -183,10 +191,10 @@ impl TDetect for Cpu {
         let version = (pvr >> 16) as u16;
         let revision = (pvr & 0xFFFF) as u16;
         let cpu_arch = CpuArch::find(pvr);
-        let (core_count, thread_count) = Self::detect_topology();
+        let (socket_count, core_count, thread_count) = Self::detect_topology();
         let mut cache = Self::detect_cache();
         if let Some(c) = &mut cache {
-            c.resolve_share_counts(core_count, thread_count, 1);
+            c.resolve_share_counts(core_count, thread_count, socket_count);
         }
         let (clock_speed, clock_speed_source) = Self::detect_clock_speed();
         let speed = clock_speed.map(|mhz| Speed {
@@ -224,10 +232,20 @@ impl TDetect for Cpu {
             UNK
         });
 
+        let topology = Topology {
+            sockets: TopologyTier::new(socket_count, DataSource::LinuxProcCpuinfo),
+            cores: TopologyTier::new(core_count, DataSource::LinuxProcCpuinfo),
+            threads: TopologyTier::new(thread_count, DataSource::LinuxProcCpuinfo),
+            speed: speed.unwrap_or_default(),
+            cache,
+            ..Default::default()
+        };
+
         Self {
             system,
             vendor,
             model: extra.cpu_arch.marketing_name.to_string(),
+            topology,
             cores,
             features: std::collections::BTreeMap::new(),
             extra,

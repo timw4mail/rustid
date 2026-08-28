@@ -31,10 +31,21 @@ impl TDetect for Cpu {
             features_source: info.features_source,
         };
 
+        let sockets = OS::get_socket_count();
+        let total_cores = info.cores.iter().map(|c| c.count).sum();
+        let total_threads = info.cores.iter().map(|c| c.threads).sum();
+        let topology = Topology {
+            sockets,
+            cores: TopologyTier::new(total_cores, sockets.source),
+            threads: TopologyTier::new(total_threads, sockets.source),
+            ..Default::default()
+        };
+
         Self {
             system: OS::get_system_name(),
             vendor: info.vendor,
             model: info.model,
+            topology,
             cores: info.cores,
             features,
             extra,

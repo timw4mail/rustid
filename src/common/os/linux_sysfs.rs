@@ -1,14 +1,14 @@
 #![cfg(linux_os)]
 
 use crate::common::{
-    Cache, CacheLevel, CacheType, DataSource, Level1Cache, TopologyCount, expand_cpu_list,
-    get_proc_cpuinfo_data, parse_cpu_list_count,
+    Cache, CacheLevel, CacheType, DataSource, Level1Cache, TopologyCount, TopologyTier,
+    expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
 };
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-/// Detects topology counts (threads and cores) from `/sys/devices/system/cpu`.
+/// Detects topology counts (sockets, threads and cores) from `/sys/devices/system/cpu`.
 pub fn detect_sysfs_topology() -> TopologyCount {
     let mut topo = TopologyCount::default();
 
@@ -20,17 +20,23 @@ pub fn detect_sysfs_topology() -> TopologyCount {
 
         let cpus = expand_cpu_list(&online);
         let mut core_ids = HashSet::new();
+        let mut package_ids = HashSet::new();
         for cpu_id in cpus {
-            let core_id_path = cpu_root
-                .join(format!("cpu{}", cpu_id))
-                .join("topology")
-                .join("core_id");
+            let topo_dir = cpu_root.join(format!("cpu{}", cpu_id)).join("topology");
+            let core_id_path = topo_dir.join("core_id");
             if let Ok(id_str) = fs::read_to_string(&core_id_path) {
                 core_ids.insert(id_str.trim().to_string());
+            }
+            let pkg_path = topo_dir.join("physical_package_id");
+            if let Ok(id_str) = fs::read_to_string(&pkg_path) {
+                package_ids.insert(id_str.trim().to_string());
             }
         }
         if !core_ids.is_empty() {
             topo.cores = core_ids.len() as u32;
+        }
+        if !package_ids.is_empty() {
+            topo.sockets = TopologyTier::new(package_ids.len() as u32, DataSource::LinuxSysFs);
         }
     }
 
@@ -52,6 +58,22 @@ pub fn detect_sysfs_topology() -> TopologyCount {
         }
     } else if topo.cores == 0 {
         topo.cores = topo.threads;
+    }
+
+    if topo.sockets.count == 0 {
+        let cpuinfo = get_proc_cpuinfo_data();
+        let mut physical_ids = HashSet::new();
+        for cpu_map in &cpuinfo {
+            if let Some(id) = cpu_map.get("physical id") {
+                physical_ids.insert(id.trim().to_string());
+            }
+        }
+        if !physical_ids.is_empty() {
+            topo.sockets =
+                TopologyTier::new(physical_ids.len() as u32, DataSource::LinuxProcCpuinfo);
+        } else {
+            topo.sockets = TopologyTier::new(1, DataSource::DefaultValue);
+        }
     }
 
     topo

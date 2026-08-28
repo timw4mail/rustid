@@ -80,16 +80,12 @@ impl Cpu {
 
     fn print_topology(&self, flags: CliFlags, disp: &CpuDisplay) {
         if self.is_hybrid() {
-            disp.simple_line(
-                "Topology",
-                &format!(
-                    "{} across {} core types",
-                    CpuDisplay::format_core_threads(
-                        self.topology.cores.count,
-                        self.topology.threads.count
-                    ),
-                    self.cores.len()
-                ),
+            disp.display_topology_line(
+                self.topology.sockets.count,
+                self.topology.cores.count,
+                self.topology.threads.count,
+                true,
+                self.cores.len(),
             );
 
             for (i, core) in self.cores.iter().enumerate() {
@@ -131,29 +127,13 @@ impl Cpu {
             || self.topology.sockets.count > 1;
 
         if multi_core || flags.verbose {
-            let socket_str = CpuDisplay::plural(self.topology.sockets.count, "socket", "sockets");
-            let core_str = CpuDisplay::plural(self.topology.cores.count, "core", "cores");
-            let thread_str = CpuDisplay::plural(self.topology.threads.count, "thread", "threads");
-
-            if self.topology.sockets.count > 1 || flags.verbose {
-                disp.simple_line(
-                    "Topology",
-                    &format!(
-                        "{} {socket_str}, {} {core_str}, {} {thread_str}",
-                        self.topology.sockets.count,
-                        self.topology.cores.count,
-                        self.topology.threads.count,
-                    ),
-                );
-            } else {
-                disp.simple_line(
-                    "Topology",
-                    &CpuDisplay::format_core_threads(
-                        self.topology.cores.count,
-                        self.topology.threads.count,
-                    ),
-                );
-            }
+            disp.display_topology_line(
+                self.topology.sockets.count,
+                self.topology.cores.count,
+                self.topology.threads.count,
+                false,
+                1,
+            );
         }
     }
 

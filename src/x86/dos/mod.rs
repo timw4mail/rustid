@@ -32,27 +32,27 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
     let total_cores = mp_table.total_cores();
     let total_threads = mp_table.total_threads();
 
-    if mp_sockets > 1 || total_threads > cpu.extra.topology.threads.count {
+    if mp_sockets > 1 || total_threads > cpu.topology.threads.count {
         let sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
-        cpu.extra.topology.sockets = sockets;
-        let cores = cpu.extra.topology.cores.count.max(total_cores);
-        let threads = cpu.extra.topology.threads.count.max(total_threads);
-        cpu.extra.topology.cores =
+        cpu.topology.sockets = sockets;
+        let cores = cpu.topology.cores.count.max(total_cores);
+        let threads = cpu.topology.threads.count.max(total_threads);
+        cpu.topology.cores =
             TopologyTier::new(cores, DataSource::Calculated("MP Table * CPUID cores"));
-        cpu.extra.topology.threads = TopologyTier::new(
+        cpu.topology.threads = TopologyTier::new(
             threads,
             DataSource::Calculated("MP Table logical processors"),
         );
-        if let Some(ref mut cache) = cpu.extra.topology.cache {
+        if let Some(ref mut cache) = cpu.topology.cache {
             cache.resolve_share_counts(cores, threads, mp_sockets);
         }
     }
 
     // 2. Calibrated PIT/TSC speed measurement fallback
-    if cpu.extra.topology.speed.base == 0 {
+    if cpu.topology.speed.base == 0 {
         let s = Speed::detect();
         if s.base > 0 {
-            cpu.extra.topology.speed = s;
+            cpu.topology.speed = s;
             if !cpu.cores.is_empty() && cpu.cores[0].speed.is_none() {
                 cpu.cores[0].speed = Some(s);
             }

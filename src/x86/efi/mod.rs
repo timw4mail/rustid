@@ -34,36 +34,34 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
     // 2. Multi-socket / multi-package topology from EFI MP Services / SMBIOS
     let efi_sockets = crate::x86::count::get_platform_socket_count();
     if efi_sockets.count > 1 {
-        cpu.extra.topology.sockets = efi_sockets;
+        cpu.topology.sockets = efi_sockets;
         let cores = cpu
-            .extra
             .topology
             .cores
             .count
             .max(cpuid_cores_per_package() * efi_sockets.count);
         let threads = cpu
-            .extra
             .topology
             .threads
             .count
             .max(cpuid_threads_per_package() * efi_sockets.count);
-        cpu.extra.topology.cores =
+        cpu.topology.cores =
             TopologyTier::new(cores, DataSource::Calculated("EFI sockets * CPUID cores"));
-        cpu.extra.topology.threads = TopologyTier::new(
+        cpu.topology.threads = TopologyTier::new(
             threads,
             DataSource::Calculated("EFI sockets * CPUID threads"),
         );
-        let sockets = cpu.extra.topology.sockets.count;
-        if let Some(ref mut cache) = cpu.extra.topology.cache {
+        let sockets = cpu.topology.sockets.count;
+        if let Some(ref mut cache) = cpu.topology.cache {
             cache.resolve_share_counts(cores, threads, sockets);
         }
     }
 
     // 3. Frequency measurement (TSC stall or SMBIOS fallback)
-    if cpu.extra.topology.speed.base == 0 {
+    if cpu.topology.speed.base == 0 {
         let measured = Speed::detect();
         if measured.base > 0 {
-            cpu.extra.topology.speed = measured;
+            cpu.topology.speed = measured;
             if cpu.cores.len() == 1 && cpu.cores[0].speed.is_none() {
                 cpu.cores[0].speed = Some(measured);
             }
