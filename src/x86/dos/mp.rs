@@ -18,17 +18,32 @@ impl Default for MpTable {
 }
 
 impl MpTable {
-    /// Returns the number of enabled processors.
+    /// Returns the total number of enabled logical processors (threads) found in MP Table.
     #[must_use]
     pub fn processor_count(&self) -> u32 {
         self.processors
     }
 
-    /// Returns the number of processor sockets.
+    /// Returns the detected socket count based on total logical processors and CPUID threads per package.
     #[must_use]
     pub fn socket_count(&self) -> u32 {
         let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
         (self.processors / threads_per_pkg).max(1)
+    }
+
+    /// Returns the total physical core count across all sockets.
+    #[must_use]
+    pub fn total_cores(&self) -> u32 {
+        let cores_per_pkg = crate::x86::cpuid_cores_per_package().max(1);
+        let sockets = self.socket_count();
+        cores_per_pkg * sockets
+    }
+
+    /// Returns the total logical thread count across all sockets.
+    #[must_use]
+    pub fn total_threads(&self) -> u32 {
+        let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
+        self.processors.max(threads_per_pkg)
     }
 }
 
@@ -92,12 +107,6 @@ impl MpTable {
     pub fn detect() -> MpTable {
         let mut table = MpTable { processors: 1 };
 
-        // MP Table lookup is only applicable to certain CPUs
-        if !(crate::x86::is_intel() || crate::x86::is_vortex() || crate::x86::is_centaur()) {
-            return table;
-        }
-
-        // Fallback: Scan memory ranges safely
         if let Some(mpfp) = Self::find_mpfp() {
             if mpfp.config_table_ptr != 0
                 && let Some(count) = Self::parse_config_table(mpfp.config_table_ptr)
@@ -133,7 +142,7 @@ impl MpTable {
             return None;
         }
 
-        let mut buf = [0u8; 512];
+        let mut buf = [0u8; 1024];
         for (i, b) in buf.iter_mut().enumerate() {
             if (off as usize + i) > 0xFFFF {
                 break;
@@ -339,5 +348,49 @@ mod tests {
         let mut data = [0u8; 64];
         data[0..4].copy_from_slice(b"INVALID");
         assert_eq!(MpTable::parse_pcmp_slice(&data), None);
+    }
+
+    #[test]
+    fn test_parse_pcmp_large_table_16_processors() {
+        let mut data = [0u8; 512];
+        data[0..4].copy_from_slice(b"PCMP");
+        // 16 processor entries + 4 bus entries = 20 entries
+        data[34..36].copy_from_slice(&20u16.to_le_bytes());
+
+        for i in 0..16 {
+            let off = 44 + i * 20;
+            data[off] = 0; // Processor
+            data[off + 1] = i as u8; // APIC ID
+            data[off + 3] = 0x01; // Enabled
+        }
+
+        // 4 bus entries (Type 1, 8 bytes)
+        for i in 0..4 {
+            let off = 44 + 16 * 20 + i * 8;
+            data[off] = 1;
+        }
+
+        assert_eq!(MpTable::parse_pcmp_slice(&data), Some(16));
+    }
+
+    #[test]
+    fn test_mp_table_topology_calculations() {
+        let mp_single = MpTable { processors: 1 };
+        assert_eq!(mp_single.processor_count(), 1);
+        assert_eq!(mp_single.socket_count(), 1);
+        assert_eq!(mp_single.total_cores(), 1);
+        assert_eq!(mp_single.total_threads(), 1);
+
+        let mp_dual = MpTable { processors: 2 };
+        assert_eq!(mp_dual.processor_count(), 2);
+        assert_eq!(mp_dual.socket_count(), 2);
+        assert_eq!(mp_dual.total_cores(), 2);
+        assert_eq!(mp_dual.total_threads(), 2);
+
+        let mp_quad = MpTable { processors: 4 };
+        assert_eq!(mp_quad.processor_count(), 4);
+        assert_eq!(mp_quad.socket_count(), 4);
+        assert_eq!(mp_quad.total_cores(), 4);
+        assert_eq!(mp_quad.total_threads(), 4);
     }
 }

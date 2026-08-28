@@ -226,8 +226,8 @@ impl CpuSignature {
     }
 }
 
-/// x86 architecture-specific data.
-#[derive(Debug, Default, PartialEq)]
+/// Extended x86-specific CPU information.
+#[derive(Debug, PartialEq, Default)]
 pub struct X86Data {
     /// Does this cpu have cpuid instruction support
     pub has_cpuid: bool,

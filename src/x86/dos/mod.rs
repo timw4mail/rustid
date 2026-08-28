@@ -4,7 +4,6 @@
 use super::vendor::cyrix::Cyrix;
 use crate::common::{DataSource, Speed, TopologyTier};
 use crate::x86::cpu::Cpu;
-use crate::x86::{cpuid_cores_per_package, cpuid_threads_per_package};
 use core::arch::asm;
 use core::fmt::Write;
 
@@ -30,28 +29,19 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
     // 1. Multi-socket detection from MP Table
     let mp_table = mp::MpTable::detect();
     let mp_sockets = mp_table.socket_count();
-    if mp_sockets > 1 {
+    let total_cores = mp_table.total_cores();
+    let total_threads = mp_table.total_threads();
+
+    if mp_sockets > 1 || total_threads > cpu.extra.topology.threads.count {
         let sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
         cpu.extra.topology.sockets = sockets;
-        let cores = cpu
-            .extra
-            .topology
-            .cores
-            .count
-            .max(cpuid_cores_per_package() * mp_sockets);
-        let threads = cpu
-            .extra
-            .topology
-            .threads
-            .count
-            .max(cpuid_threads_per_package() * mp_sockets);
-        cpu.extra.topology.cores = TopologyTier::new(
-            cores,
-            DataSource::Calculated("MP Table sockets * CPUID cores"),
-        );
+        let cores = cpu.extra.topology.cores.count.max(total_cores);
+        let threads = cpu.extra.topology.threads.count.max(total_threads);
+        cpu.extra.topology.cores =
+            TopologyTier::new(cores, DataSource::Calculated("MP Table * CPUID cores"));
         cpu.extra.topology.threads = TopologyTier::new(
             threads,
-            DataSource::Calculated("MP Table sockets * CPUID threads"),
+            DataSource::Calculated("MP Table logical processors"),
         );
         if let Some(ref mut cache) = cpu.extra.topology.cache {
             cache.resolve_share_counts(cores, threads, mp_sockets);

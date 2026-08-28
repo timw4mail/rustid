@@ -329,18 +329,20 @@ impl Topology {
 
         #[cfg(dos_os)]
         {
-            let mp_sockets = crate::x86::dos::mp::MpTable::detect().socket_count();
-            if mp_sockets > 1 {
+            let mp_table = crate::x86::dos::mp::MpTable::detect();
+            let mp_sockets = mp_table.socket_count();
+            let total_cores = mp_table.total_cores();
+            let total_threads = mp_table.total_threads();
+
+            if mp_sockets > 1 || total_threads > topo.threads.count {
                 topo.sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
                 topo.cores = TopologyTier::new(
-                    topo.cores.count.max(cpuid_cores_per_package() * mp_sockets),
-                    DataSource::Calculated("MP Table sockets * CPUID cores"),
+                    topo.cores.count.max(total_cores),
+                    DataSource::Calculated("MP Table * CPUID cores"),
                 );
                 topo.threads = TopologyTier::new(
-                    topo.threads
-                        .count
-                        .max(cpuid_threads_per_package() * mp_sockets),
-                    DataSource::Calculated("MP Table sockets * CPUID threads"),
+                    topo.threads.count.max(total_threads),
+                    DataSource::Calculated("MP Table logical processors"),
                 );
                 if let Some(c) = &mut topo.cache {
                     c.resolve_share_counts(topo.cores.count, topo.threads.count, mp_sockets);
