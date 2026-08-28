@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.0]
+
+### Fixed
+- DOS Topology detection using Intel MPTables was assuming one APIC id = 1 socket, rather than one APIC id = 1 logical cpu. (This caused a Core 2 Quad to show 4 sockets, 16 cores, 16 threads)
+
 ## [2.0.0] — Add missing Intel and AMD cpu mappings, fix edge cases, and more
 
 ### Added
