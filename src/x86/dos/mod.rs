@@ -66,22 +66,18 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
 #[cold]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    use crate::println;
-
     #[cfg(dos_ext)]
     if let Some(location) = _info.location() {
-        println!(
+        crate::println!(
             "Panic in file '{}' at line {}:{}",
             location.file(),
             location.line(),
             location.column(),
         );
     } else {
-        println!("Panic for unknown reason.");
+        crate::println!("Panic for unknown reason.");
     }
 
-    #[cfg(dos_real)]
-    println!("Panic!");
     exit(1);
 }
 
@@ -120,19 +116,253 @@ macro_rules! println {
     };
 }
 
-/// Writes a string to the DOS console.
+#[cfg(dos_ext)]
+static mut INITIAL_ATTR: u8 = 0x07;
+#[cfg(dos_ext)]
+static mut CURRENT_ATTR: u8 = 0x07;
+#[cfg(dos_ext)]
+static mut ATTR_INITIALIZED: bool = false;
+
+#[cfg(dos_ext)]
+fn is_stdout_redirected() -> bool {
+    let dev_info: u16;
+    unsafe {
+        asm!(
+            "int 0x21",
+            in("ah") 0x44_u8,
+            in("al") 0x00_u8,
+            in("bx") 1_u16, // STDOUT handle
+            lateout("dx") dev_info,
+            lateout("ax") _,
+            options(preserves_flags)
+        );
+    }
+    (dev_info & 0x80) == 0
+}
+
+#[cfg(dos_ext)]
+fn get_cursor_pos() -> (u8, u8) {
+    let dx: u16;
+    unsafe {
+        asm!(
+            "int 0x10",
+            in("ah") 0x03_u8,
+            in("bh") 0_u8,
+            lateout("dx") dx,
+            lateout("ax") _,
+            lateout("cx") _,
+            options(preserves_flags)
+        );
+    }
+    let row = (dx >> 8) as u8;
+    let col = (dx & 0xFF) as u8;
+    (row, col)
+}
+
+#[cfg(dos_ext)]
+fn set_cursor_pos(row: u8, col: u8) {
+    unsafe {
+        asm!(
+            "int 0x10",
+            in("ah") 0x02_u8,
+            in("bh") 0_u8,
+            in("dh") row,
+            in("dl") col,
+            lateout("ax") _,
+            options(preserves_flags)
+        );
+    }
+}
+
+#[cfg(dos_ext)]
+fn dos_console_write(s: &str) {
+    let video_mode = peek_u8(0x00400049);
+    let cols = {
+        let c = peek_u16(0x0040004A) as usize;
+        if c == 0 { 80 } else { c }
+    };
+    let rows = {
+        let r = peek_u8(0x00400084) as usize;
+        if r == 0 { 25 } else { r + 1 }
+    };
+    let vram_base = if video_mode == 7 {
+        0x000B0000 as *mut u16
+    } else {
+        0x000B8000 as *mut u16
+    };
+
+    let (mut row, mut col) = {
+        let (r, c) = get_cursor_pos();
+        (r as usize, c as usize)
+    };
+
+    if unsafe { !ATTR_INITIALIZED } {
+        let offset = row * cols + col;
+        let cell = unsafe { core::ptr::read_volatile(vram_base.add(offset)) };
+        let existing_attr = (cell >> 8) as u8;
+        let init_a = if existing_attr != 0 {
+            existing_attr
+        } else {
+            0x07
+        };
+        unsafe {
+            INITIAL_ATTR = init_a;
+            CURRENT_ATTR = init_a;
+            ATTR_INITIALIZED = true;
+        }
+    }
+
+    let mut chars = s.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        // Parse ANSI escape sequence \x1b[...m
+        if ch == '\x1b' && chars.peek() == Some(&'[') {
+            chars.next(); // Consume '['
+            let mut code = 0u32;
+            let mut has_code = false;
+            while let Some(&c) = chars.peek() {
+                if c.is_ascii_digit() {
+                    code = code * 10 + (c as u32 - '0' as u32);
+                    has_code = true;
+                    chars.next();
+                } else if c == ';' || c == 'm' {
+                    chars.next();
+                    let fg = match code {
+                        0 => unsafe { INITIAL_ATTR & 0x0F },
+                        30 => 0x00,      // Black
+                        31 => 0x04,      // Red
+                        32 | 92 => 0x0A, // Light Green
+                        33 | 93 => 0x0E, // Yellow
+                        34 => 0x09,      // Light Blue
+                        35 | 95 => 0x0D, // Light Magenta
+                        36 | 96 => 0x0B, // Light Cyan
+                        37 => 0x07,      // Light Gray
+                        90 => 0x08,      // Dark Gray
+                        91 => 0x0C,      // Light Red
+                        94 => 0x0B,      // Light Cyan
+                        97 => 0x0F,      // High-Intensity White
+                        _ => unsafe { INITIAL_ATTR & 0x0F },
+                    };
+                    unsafe {
+                        CURRENT_ATTR = (INITIAL_ATTR & 0xF0) | fg;
+                    }
+                    if c == 'm' {
+                        break;
+                    }
+                    code = 0;
+                    has_code = false;
+                } else {
+                    break;
+                }
+            }
+            if !has_code && chars.peek() == Some(&'m') {
+                chars.next();
+                unsafe {
+                    CURRENT_ATTR = INITIAL_ATTR;
+                }
+            }
+            continue;
+        }
+
+        match ch {
+            '\r' => col = 0,
+            '\n' => {
+                col = 0;
+                row += 1;
+            }
+            '\t' => {
+                col = (col + 8) & !7;
+            }
+            _ => {
+                let attr = unsafe { CURRENT_ATTR };
+                let cell = ((attr as u16) << 8) | (ch as u16 & 0xFF);
+                let offset = row * cols + col;
+                unsafe {
+                    core::ptr::write_volatile(vram_base.add(offset), cell);
+                }
+                col += 1;
+            }
+        }
+
+        if col >= cols {
+            col = 0;
+            row += 1;
+        }
+
+        if row >= rows {
+            let line_words = cols;
+            let total_words = (rows - 1) * cols;
+            unsafe {
+                core::ptr::copy(vram_base.add(line_words), vram_base, total_words);
+                let attr = CURRENT_ATTR;
+                let blank_cell = ((attr as u16) << 8) | (' ' as u16);
+                let last_line = vram_base.add(total_words);
+                for i in 0..cols {
+                    core::ptr::write_volatile(last_line.add(i), blank_cell);
+                }
+            }
+            row = rows - 1;
+        }
+    }
+
+    set_cursor_pos(row as u8, col as u8);
+}
+
+#[cfg(dos_ext)]
+fn write_redirected_str(s: &str) {
+    let mut chars = s.chars().peekable();
+    let mut buf = [0u8; 256];
+    let mut buf_len = 0;
+
+    let flush_buf = |buf: &mut [u8; 256], buf_len: &mut usize| {
+        if *buf_len > 0 {
+            let mut offset = 0;
+            while offset < *buf_len {
+                let chunk_size = (*buf_len - offset).min(32767);
+                write_chunk(&buf[offset..offset + chunk_size]);
+                offset += chunk_size;
+            }
+            *buf_len = 0;
+        }
+    };
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' && chars.peek() == Some(&'[') {
+            chars.next(); // Consume '['
+            while let Some(&c) = chars.peek() {
+                chars.next();
+                if c == 'm' {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        let mut code_units = [0u8; 4];
+        let encoded = ch.encode_utf8(&mut code_units);
+        for &b in encoded.as_bytes() {
+            buf[buf_len] = b;
+            buf_len += 1;
+            if buf_len >= buf.len() {
+                flush_buf(&mut buf, &mut buf_len);
+            }
+        }
+    }
+
+    flush_buf(&mut buf, &mut buf_len);
+}
+
+/// Writes a string to the DOS console or redirected file.
 pub fn _print_str(s: &str) {
     #[cfg(dos_ext)]
     {
         if s.is_empty() {
             return;
         }
-        let bytes = s.as_bytes();
-        let mut offset = 0;
-        while offset < bytes.len() {
-            let chunk_size = (bytes.len() - offset).min(32767);
-            write_chunk(&bytes[offset..offset + chunk_size]);
-            offset += chunk_size;
+        if is_stdout_redirected() {
+            write_redirected_str(s);
+        } else {
+            dos_console_write(s);
         }
     }
     #[cfg(dos_real)]
