@@ -1062,6 +1062,44 @@ cpuid_testsuite!(
     }
 );
 
+cpuid_testsuite!(
+    p4_northwood,
+    "dump/P4Northwood.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
+        }
+
+        test brand_string {
+            assert_brand_contains("Pentium(R) 4");
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 15, 0, 2, 7));
+        }
+
+        test arch_detection {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.extra.arch.micro_arch, MicroArch::Northwood);
+            assert_eq!(cpu.extra.arch.code_name, "Northwood");
+        }
+
+        test topology {
+            assert_topology(1, 1, 2);
+        }
+
+        test cache_detection {
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(cache.l1.size(), 8_192, "L1 data should be 8KB");
+            assert!(cache.l3.is_none(), "Northwood should have no L3 cache");
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.size(), 524_288, "L2 should be 512KB");
+            }
+        }
+    }
+);
+
 // ----------------------------------------------------------------------------
 // ! Miscellaneous Tests
 // ----------------------------------------------------------------------------

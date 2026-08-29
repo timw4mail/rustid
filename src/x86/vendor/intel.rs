@@ -363,6 +363,22 @@ impl Intel {
     }
 
     #[cfg(not(dos_real))]
+    fn disambiguate_0f_02h(
+        model: &str,
+        brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
+    ) -> CpuArch {
+        let has_l3 = crate::common::Cache::detect()
+            .and_then(|c| c.l3)
+            .is_some_and(|l| l.size() > 0);
+
+        if has_l3 || model.contains("Gallatin") || model.contains("Extreme") {
+            brand_arch(MicroArch::Northwood, "Gallatin", Some(N130))
+        } else {
+            brand_arch(MicroArch::Northwood, "Northwood", Some(N130))
+        }
+    }
+
+    #[cfg(not(dos_real))]
     fn modern_micro_arch(
         model: &str,
         s: CpuSignature,
@@ -406,15 +422,7 @@ impl Intel {
             // NetBurst (P4 / Xeon)
             (0, 15, 0, 0, _) => brand_arch(MicroArch::Willamette, "Willamette", Some(N180)),
             (0, 15, 0, 1, _) => brand_arch(MicroArch::Willamette, "Willamette/Foster", Some(N180)),
-            (0, 15, 0, 2, _) => brand_arch(
-                MicroArch::Northwood,
-                if model.contains("Xeon") {
-                    "Gallatin"
-                } else {
-                    "Northwood"
-                },
-                Some(N130),
-            ),
+            (0, 15, 0, 2, _) => Self::disambiguate_0f_02h(model, brand_arch),
 
             (0, 15, 0, 3, _) => brand_arch(MicroArch::Prescott, "Prescott", Some(N90)),
             (0, 15, 0, 4, _) => brand_arch(MicroArch::Prescott, "Prescott/Potomac", Some(N90)),
@@ -949,6 +957,19 @@ mod test {
         let arch_dmr = Intel::micro_arch("Intel Diamond Rapids", sig_dmr);
         assert_eq!(arch_dmr.micro_arch, MicroArch::DiamondRapids);
         assert_eq!(arch_dmr.code_name, "Diamond Rapids-X");
+
+        // NetBurst: Gallatin (0F_02H) via model string fallback
+        let sig_p4_0f02 = crate::x86::micro_arch::tests::dummy_signature(15, 2, 0, 0, 9);
+        let arch_gallatin_ee = Intel::micro_arch(
+            "Intel(R) Pentium(R) 4 Extreme Edition CPU 3.40GHz",
+            sig_p4_0f02,
+        );
+        assert_eq!(arch_gallatin_ee.micro_arch, MicroArch::Northwood);
+        assert_eq!(arch_gallatin_ee.code_name, "Gallatin");
+
+        let arch_gallatin_str = Intel::micro_arch("Intel Gallatin Processor", sig_p4_0f02);
+        assert_eq!(arch_gallatin_str.micro_arch, MicroArch::Northwood);
+        assert_eq!(arch_gallatin_str.code_name, "Gallatin");
 
         // Unknown Intel
         let sig_unknown = crate::x86::micro_arch::tests::dummy_signature(99, 0, 0, 0, 0);
