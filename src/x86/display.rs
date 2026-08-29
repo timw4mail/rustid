@@ -200,7 +200,7 @@ impl Cpu {
     }
 
     #[cfg(not(dos_real))]
-    fn print_centaur_features(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn format_centaur_features(&self, flags: CliFlags) -> Option<String> {
         use alloc::vec::Vec;
 
         let centaur_map = vendor::Centaur::get_feature_list();
@@ -211,7 +211,7 @@ impl Cpu {
                     list.push(String::from(*name));
                 } else {
                     if flags.color {
-                        list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name))
+                        list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name));
                     } else {
                         list.push(format!("{name}(disabled)"));
                     }
@@ -219,24 +219,28 @@ impl Cpu {
             }
 
             if !list.is_empty() {
-                println!("{}{}", disp.sublabel("Centaur"), list.join(", "));
+                return Some(list.join(", "));
             }
         }
+        None
     }
 
     #[allow(unused_variables)]
     fn print_features(&self, flags: CliFlags, disp: &CpuDisplay) {
-        if !self.features.is_empty() {
-            let keys = [
-                "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur",
-            ];
-            disp.display_features(&self.features, &keys);
+        let mut features = self.features.clone();
 
-            // Centaur features list
-            #[cfg(not(dos_real))]
-            if is_centaur() {
-                self.print_centaur_features(flags, disp);
-            }
+        #[cfg(not(dos_real))]
+        if is_centaur()
+            && let Some(centaur_str) = self.format_centaur_features(flags)
+        {
+            features.insert("Centaur", centaur_str);
+        }
+
+        if !features.is_empty() {
+            let keys = [
+                "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
+            ];
+            disp.display_features(&features, &keys);
         }
     }
 }
@@ -431,14 +435,17 @@ impl TCpuDisplay for Cpu {
             let cyrix = vendor::Cyrix::detect();
 
             if cyrix.dir0 != 0xFF {
-                println!("{}Model number: {:X}h", disp.label("Cyrix"), cyrix.dir0);
+                println!(
+                    "{}{:X}h",
+                    disp.inline_sublabel("Cyrix", "Model number"),
+                    cyrix.dir0
+                );
                 println!("{}{:X}h", disp.sublabel("Revision"), cyrix.revision);
                 println!("{}{:X}h", disp.sublabel("Stepping"), cyrix.stepping);
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
                     println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
                 }
-                #[cfg(not(dos_os))]
-                println!();
+                disp.newline();
             }
         }
     }

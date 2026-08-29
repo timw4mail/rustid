@@ -103,12 +103,12 @@ fn main() -> Result<()> {
             text_va = s_va;
             text_size = s_size;
             text_foff = s_foff;
-        } else if name == ".rodata" {
+        } else if name == ".rodata" || name == ".data" || name.starts_with(".rodata.") || name.starts_with(".data.") {
             if data_va == 0 || s_va < data_va {
                 data_va = s_va;
             }
             data_filesz += s_size;
-        } else if name == ".bss" {
+        } else if name == ".bss" || name.starts_with(".bss.") {
             if data_va == 0 || s_va < data_va {
                 data_va = s_va;
             }
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
     for i in 0..e_shnum {
         let (s_name, _, s_va, s_foff, s_size) = sh_entry(i);
         let name = sh_name_str(s_name as usize);
-        if (name == ".rodata" || name == ".data") && s_size > 0 {
+        if (name == ".rodata" || name == ".data" || name.starts_with(".rodata.") || name.starts_with(".data.")) && s_size > 0 {
             let rel = (s_va - data_va) as usize;
             let src = &elf[s_foff as usize..(s_foff + s_size) as usize];
             data_file_data[rel..rel + s_size as usize].copy_from_slice(src);

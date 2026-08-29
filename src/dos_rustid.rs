@@ -36,6 +36,7 @@ fn help() {
     println!("  ?, H, HELP      Show this help message");
     println!();
     println!("Flags (use / or - prefix):");
+    println!("  /M, /MONO   Don't output color");
     println!("  /V, /VERBOSE Output more detailed information");
     println!();
     println!("Examples:  RUSTID /E   RUSTID /VERBOSE");
@@ -54,7 +55,10 @@ pub extern "C" fn rust_main() -> ! {
 
     let args = get_args();
 
-    let mut flags = CliFlags::default();
+    let mut flags = CliFlags {
+        color: true,
+        ..Default::default()
+    };
     let mut action = "default";
     let mut had_error = false;
 
@@ -107,6 +111,10 @@ pub extern "C" fn rust_main() -> ! {
                 flags.verbose = true;
                 continue 'args;
             }
+            "MONO" => {
+                flags.color = false;
+                continue 'args;
+            }
             "DEBUG" => {
                 action = "debug";
                 continue 'args;
@@ -134,6 +142,7 @@ pub extern "C" fn rust_main() -> ! {
         for c in upper.chars() {
             match c {
                 'V' => flags.verbose = true,
+                'M' => flags.color = false,
                 'D' => action = "debug",
                 'E' => action = "everything",
                 'R' => action = "dump",

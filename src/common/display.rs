@@ -977,4 +977,21 @@ mod tests {
         assert!(f.color);
         assert!(f.verbose);
     }
+
+    #[test]
+    fn test_display_features_with_vendor_key() {
+        use alloc::collections::BTreeMap;
+
+        let disp = CpuDisplay {
+            flags: CliFlags::default(),
+        };
+        let mut features = BTreeMap::new();
+        features.insert("Base", String::from("FPU TSC MMX"));
+        features.insert("Centaur", String::from("RNG ACE PHE"));
+
+        let keys = [
+            "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
+        ];
+        disp.display_features(&features, &keys);
+    }
 }
