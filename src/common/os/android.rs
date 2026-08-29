@@ -2,8 +2,9 @@
 
 use super::linux_sysfs::*;
 use crate::common::{
-    DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, cleanup_soc_vendor,
-    is_generic_value,
+    CacheLevel, CacheType, DataSource, Level1Cache, OS, TDetect, TOSData, TopologyCount,
+    TopologyTier, cleanup_soc_vendor, format_compatible_pair, get_devicetree_compatible,
+    get_proc_cpuinfo_data, is_generic_value,
 };
 use std::collections::HashMap;
 

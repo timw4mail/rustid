@@ -74,13 +74,18 @@ check-win-arm:
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
 	cargo check --target aarch64-pc-windows-msvc
 
+# Compile check for Android ARM64
+check-android:
+	@if ! rustup target list --installed | grep -q aarch64-linux-android; then rustup target add aarch64-linux-android; fi
+	cargo check --target aarch64-linux-android
+
 # Compile check for 32-bit Linux 486
 check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-win-arm check-486
+check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486
 
 # More in-depth code style checking
 lint:
