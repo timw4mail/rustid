@@ -267,6 +267,43 @@ pub fn for_each_logical_core<F: FnMut()>(mut f: F) {
     }
 }
 
+/// Reads the `Hardware` SoC name from the trailing non-processor block of `/proc/cpuinfo`.
+#[cfg(std_os)]
+pub fn get_soc_from_proc_cpuinfo() -> Option<String> {
+    let cpuinfo = get_proc_cpuinfo_data();
+    if let Some(last) = cpuinfo.last()
+        && (!last.contains_key("processor"))
+        && let Some(raw_soc) = last.get("Hardware")
+    {
+        return Some(String::from(raw_soc.trim()));
+    }
+    None
+}
+
+/// Reads the `Model` system name from the trailing non-processor block of `/proc/cpuinfo`.
+#[cfg(std_os)]
+pub fn get_system_name_from_proc_cpuinfo() -> Option<String> {
+    if let Some(last) = get_proc_cpuinfo_data().last()
+        && (!last.contains_key("processor"))
+        && let Some(raw) = last.get("Model")
+        && !is_generic_value(raw.trim())
+    {
+        return Some(String::from(raw.trim()));
+    }
+    None
+}
+
+/// Resolves SoC identity from the last entry of `/proc/device-tree/compatible`.
+#[cfg(std_os)]
+pub fn get_soc_from_devicetree() -> Option<String> {
+    if let Some(raw_pairs) = get_devicetree_compatible()
+        && let Some(pair) = raw_pairs.last().cloned()
+    {
+        return Some(format_compatible_pair(pair));
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,5 +342,73 @@ mod tests {
         assert_eq!(parse_frequency_mhz("2400.00"), Some(2400));
         assert_eq!(parse_frequency_mhz("1500"), Some(1500));
         assert_eq!(parse_frequency_mhz(""), None);
+    }
+
+    #[test]
+    fn test_is_generic_value_placeholders() {
+        for value in [
+            "To Be Filled By O.E.M.",
+            "To Be Filled",
+            "System Product Name",
+            "System Name",
+            "Product Name",
+            "All Series",
+            "Default string",
+            "Not Specified",
+            "Not Applicable",
+            "Unknown",
+            "Generic",
+            "OEM",
+            "O.E.M.",
+        ] {
+            assert!(is_generic_value(value), "{value:?} should be generic");
+        }
+    }
+
+    #[test]
+    fn test_is_generic_value_whitespace_and_case() {
+        assert!(is_generic_value("  DEFAULT   STRING  "));
+        assert!(is_generic_value("to be filled by o.e.m."));
+        assert!(is_generic_value("\tSystem Product Name\n"));
+        assert!(is_generic_value(""));
+    }
+
+    #[test]
+    fn test_is_generic_value_real_names() {
+        for value in [
+            "ThinkPad X1 Carbon",
+            "HP Spectre x360",
+            "MacBookPro18,3",
+            "Dell XPS 13 9310",
+            "QEMU Standard PC (i440FX + PIIX, 1996)",
+            "Orange Pi 5",
+        ] {
+            assert!(!is_generic_value(value), "{value:?} should be real");
+        }
+    }
+
+    #[test]
+    fn test_is_known_hypervisor_vendor() {
+        for vendor in [
+            "QEMU",
+            "VMware, Inc.",
+            "innotek GmbH",
+            "Microsoft Corporation",
+        ] {
+            assert!(is_known_hypervisor_vendor(vendor));
+        }
+        for vendor in ["Dell Inc.", "ASUSTeK COMPUTER INC.", "LENOVO"] {
+            assert!(!is_known_hypervisor_vendor(vendor));
+        }
+    }
+
+    #[test]
+    fn test_normalize_for_compare() {
+        assert_eq!(
+            normalize_for_compare("  Default   String "),
+            "default string"
+        );
+        assert_eq!(normalize_for_compare("QEMU"), "qemu");
+        assert_eq!(normalize_for_compare(""), "");
     }
 }

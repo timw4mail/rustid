@@ -1,18 +1,11 @@
 #![cfg(target_os = "android")]
 
-use super::linux_sysfs::*;
 use crate::common::{
-    CacheLevel, CacheType, DataSource, Level1Cache, OS, TDetect, TOSData, TopologyCount,
-    TopologyTier, cleanup_soc_vendor, format_compatible_pair, get_devicetree_compatible,
-    get_proc_cpuinfo_data, is_generic_value,
+    DataSource, OS, TOSData, TopologyTier, cleanup_soc_vendor, get_soc_from_devicetree,
+    get_soc_from_proc_cpuinfo, get_system_name_from_proc_cpuinfo, is_generic_value,
+    read_devicetree_string,
 };
 use std::collections::HashMap;
-
-#[cfg(any(not(x86_cpu), test))]
-use crate::common::Cache;
-
-#[cfg(any(arm_cpu, test))]
-use std::collections::BTreeMap;
 
 // ----------------------------------------------------------------------------
 // Android System Properties (Text-parsing of getprop)
@@ -201,30 +194,6 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
 }
 
 // ----------------------------------------------------------------------------
-// Helpers for CPU Lists & /proc/cpuinfo
-// ----------------------------------------------------------------------------
-
-fn get_soc_cpuinfo() -> Option<String> {
-    let cpuinfo = get_proc_cpuinfo_data();
-    if let Some(last) = cpuinfo.last()
-        && (!last.contains_key("processor"))
-        && let Some(raw_soc) = last.get("Hardware")
-    {
-        return Some(String::from(raw_soc.trim()));
-    }
-    None
-}
-
-fn get_soc_devicetree() -> Option<String> {
-    if let Some(raw_pairs) = get_devicetree_compatible()
-        && let Some(pair) = raw_pairs.last().cloned()
-    {
-        return Some(format_compatible_pair(pair));
-    }
-    None
-}
-
-// ----------------------------------------------------------------------------
 // TOSData Implementation
 // ----------------------------------------------------------------------------
 
@@ -235,11 +204,11 @@ impl TOSData for OS {
             return Some(soc);
         }
 
-        if let Some(soc) = get_soc_cpuinfo() {
+        if let Some(soc) = get_soc_from_proc_cpuinfo() {
             return Some(soc);
         }
 
-        if let Some(soc) = get_soc_devicetree() {
+        if let Some(soc) = get_soc_from_devicetree() {
             return Some(soc);
         }
 
@@ -252,22 +221,12 @@ impl TOSData for OS {
             return Some(name);
         }
 
-        if let Some(last) = get_proc_cpuinfo_data().last()
-            && (!last.contains_key("processor"))
-            && let Some(raw) = last.get("Model")
-            && !is_generic_value(raw.trim())
-        {
-            return Some(String::from(raw.trim()));
+        if let Some(name) = get_system_name_from_proc_cpuinfo() {
+            return Some(name);
         }
 
-        if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/model") {
-            let raw: Vec<_> = raw.split('\0').collect();
-            if let Some(first) = raw.first() {
-                let trimmed = first.trim();
-                if !is_generic_value(trimmed) {
-                    return Some(String::from(trimmed));
-                }
-            }
+        if let Some(name) = read_devicetree_string("/proc/device-tree/model") {
+            return Some(name);
         }
 
         None
@@ -275,138 +234,6 @@ impl TOSData for OS {
 
     fn get_socket_count() -> TopologyTier {
         TopologyTier::new(1, DataSource::AndroidGetprop)
-    }
-}
-
-// ----------------------------------------------------------------------------
-// TopologyCount Detection
-// ----------------------------------------------------------------------------
-
-impl TDetect for TopologyCount {
-    fn detect() -> Self {
-        let sockets = OS::get_socket_count();
-        let mut topo = detect_sysfs_topology();
-        topo.sockets = sockets;
-        topo
-    }
-}
-
-// ----------------------------------------------------------------------------
-// Cache Detection
-// ----------------------------------------------------------------------------
-
-#[cfg(any(not(x86_cpu), test))]
-impl Cache {
-    #[cfg(not(x86_cpu))]
-    pub fn detect() -> Option<Cache> {
-        if let Some(cache) = Self::from_sys_fs() {
-            return Some(cache);
-        }
-
-        if let Some(cache) = Self::from_lscpu_command() {
-            return Some(cache);
-        }
-
-        None
-    }
-
-    pub(crate) fn from_sys_fs() -> Option<Cache> {
-        read_sysfs_cpu_cache(0)
-    }
-
-    /// Read cache info for each distinct CPU type (MIDR group) from sysfs.
-    #[cfg(any(arm_cpu, test))]
-    pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
-        read_sysfs_cache_per_type()
-    }
-
-    #[cfg(not(x86_cpu))]
-    fn from_lscpu_command() -> Option<Cache> {
-        let output = match std::process::Command::new("lscpu").arg("-C").output() {
-            Ok(o) => o.stdout,
-            Err(_) => return None,
-        };
-
-        let output_str = match String::from_utf8(output) {
-            Ok(s) => s,
-            Err(_) => return None,
-        };
-
-        let mut cache = Cache {
-            source: DataSource::Lscpu,
-            ..Default::default()
-        };
-        let mut found_cache = false;
-
-        let lines: Vec<&str> = output_str.lines().collect();
-        if lines.len() < 2 {
-            return None;
-        }
-
-        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
-
-        for line in lines.into_iter().skip(1) {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() <= 3 {
-                continue;
-            }
-
-            let name = parts[table_keys.iter().position(|&x| x == "NAME")?];
-            let size_str = parts[table_keys.iter().position(|&x| x == "ONE-SIZE")?];
-            let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
-
-            let size_bytes: u32 = if let Some(stripped) = size_str.strip_suffix('K') {
-                stripped.parse::<u32>().ok()? * 1024
-            } else if let Some(stripped) = size_str.strip_suffix('M') {
-                stripped.parse::<u32>().ok()? * 1024 * 1024
-            } else {
-                size_str.parse::<u32>().ok()? * 1024
-            };
-
-            let ways: u32 = ways_str.parse().unwrap_or(0);
-
-            match name {
-                "L1d" => {
-                    cache.l1 = Level1Cache::Split {
-                        data: CacheLevel::new(size_bytes, CacheType::Data, ways, 0),
-                        instruction: CacheLevel::default(),
-                    };
-                    found_cache = true;
-                }
-                "L1i" => {
-                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
-                        instruction.size = size_bytes;
-                        instruction.kind = CacheType::Instruction;
-                        instruction.assoc = ways;
-                    }
-                }
-                "L1" => {
-                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_bytes, ways));
-                    found_cache = true;
-                }
-                "L2" => {
-                    cache.l2 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
-                    found_cache = true;
-                }
-                "L3" => {
-                    cache.l3 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
-                    found_cache = true;
-                }
-                _ => {}
-            }
-        }
-
-        if let Level1Cache::Split { data, instruction } = &cache.l1
-            && instruction.size == 0
-            && data.size > 0
-        {
-            cache.l1 = Level1Cache::Split {
-                data: *data,
-                instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
-            };
-        }
-
-        if found_cache { Some(cache) } else { None }
     }
 }
 

@@ -1,8 +1,8 @@
 #![cfg(linux_os)]
 
 use crate::common::{
-    Cache, CacheLevel, CacheType, DataSource, Level1Cache, TopologyCount, TopologyTier,
-    expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
+    Cache, CacheLevel, CacheType, DataSource, Level1Cache, OS, TDetect, TOSData, TopologyCount,
+    TopologyTier, expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
 };
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -233,5 +233,142 @@ pub fn read_sysfs_cache_per_type() -> Option<BTreeMap<usize, Cache>> {
         None
     } else {
         Some(cache_map)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// TopologyCount Detection
+// ----------------------------------------------------------------------------
+
+impl TDetect for TopologyCount {
+    fn detect() -> Self {
+        let sockets = OS::get_socket_count();
+        let mut topo = detect_sysfs_topology();
+        topo.sockets = sockets;
+        topo
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Cache Detection
+// ----------------------------------------------------------------------------
+
+#[cfg(any(not(x86_cpu), test))]
+impl Cache {
+    #[cfg(not(x86_cpu))]
+    pub fn detect() -> Option<Cache> {
+        if let Some(cache) = Self::from_sys_fs() {
+            return Some(cache);
+        }
+
+        if let Some(cache) = Self::from_lscpu_command() {
+            return Some(cache);
+        }
+
+        None
+    }
+
+    #[cfg(not(x86_cpu))]
+    pub(crate) fn from_sys_fs() -> Option<Cache> {
+        read_sysfs_cpu_cache(0)
+    }
+
+    /// Read cache info for each distinct CPU type (MIDR group).
+    #[cfg(any(arm_cpu, test))]
+    pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
+        read_sysfs_cache_per_type()
+    }
+
+    #[cfg(not(x86_cpu))]
+    fn from_lscpu_command() -> Option<Cache> {
+        let output = match std::process::Command::new("lscpu").arg("-C").output() {
+            Ok(o) => o.stdout,
+            Err(_) => return None,
+        };
+
+        let output_str = match String::from_utf8(output) {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
+
+        let mut cache = Cache {
+            source: DataSource::Lscpu,
+            ..Default::default()
+        };
+        let mut found_cache = false;
+
+        let lines: Vec<&str> = output_str.lines().collect();
+
+        // No output from lscpu -C
+        if lines.len() < 2 {
+            return None;
+        }
+
+        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
+
+        // @TODO: Properly parse table to account for missing values
+        for line in lines.into_iter().skip(1) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() <= 3 {
+                continue;
+            }
+
+            let name = parts[table_keys.iter().position(|&x| x == "NAME")?];
+            let size_str = parts[table_keys.iter().position(|&x| x == "ONE-SIZE")?];
+            let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
+
+            // Parse size (e.g., "32K", "256K", "4M")
+            let size_bytes: u32 = if let Some(stripped) = size_str.strip_suffix('K') {
+                stripped.parse::<u32>().ok()? * 1024
+            } else if let Some(stripped) = size_str.strip_suffix('M') {
+                stripped.parse::<u32>().ok()? * 1024 * 1024
+            } else {
+                size_str.parse::<u32>().ok()? * 1024
+            };
+
+            let ways: u32 = ways_str.parse().unwrap_or(0);
+
+            match name {
+                "L1d" => {
+                    cache.l1 = Level1Cache::Split {
+                        data: CacheLevel::new(size_bytes, CacheType::Data, ways, 0),
+                        instruction: CacheLevel::default(),
+                    };
+                    found_cache = true;
+                }
+                "L1i" => {
+                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
+                        instruction.size = size_bytes;
+                        instruction.kind = CacheType::Instruction;
+                        instruction.assoc = ways;
+                    }
+                }
+                "L1" => {
+                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_bytes, ways));
+                    found_cache = true;
+                }
+                "L2" => {
+                    cache.l2 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
+                    found_cache = true;
+                }
+                "L3" => {
+                    cache.l3 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
+                    found_cache = true;
+                }
+                _ => {}
+            }
+        }
+
+        if let Level1Cache::Split { data, instruction } = &cache.l1
+            && instruction.size == 0
+            && data.size > 0
+        {
+            cache.l1 = Level1Cache::Split {
+                data: *data,
+                instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
+            };
+        }
+
+        if found_cache { Some(cache) } else { None }
     }
 }

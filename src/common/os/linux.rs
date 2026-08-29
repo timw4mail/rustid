@@ -1,31 +1,11 @@
 #![cfg(target_os = "linux")]
 
-use super::linux_sysfs::*;
 use crate::common::{
-    DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, format_compatible_pair,
-    get_devicetree_compatible, get_proc_cpuinfo_data,
+    DataSource, OS, TOSData, TopologyTier, format_compatible_pair, get_devicetree_compatible,
+    get_proc_cpuinfo_data, get_soc_from_devicetree, get_soc_from_proc_cpuinfo,
+    get_system_name_from_proc_cpuinfo, read_devicetree_string,
 };
 use std::collections::HashSet;
-
-#[cfg(any(not(x86_cpu), test))]
-use crate::common::Cache;
-
-#[cfg(not(x86_cpu))]
-use crate::common::{CacheLevel, CacheType, Level1Cache};
-
-#[cfg(any(arm_cpu, test))]
-use std::collections::BTreeMap;
-
-fn get_soc_cpuinfo() -> Option<String> {
-    let cpuinfo = get_proc_cpuinfo_data();
-    if let Some(last) = cpuinfo.last()
-        && (!last.contains_key("processor"))
-        && let Some(raw_soc) = last.get("Hardware")
-    {
-        return Some(String::from(raw_soc.trim()));
-    }
-    None
-}
 
 use super::{is_generic_value, is_known_hypervisor_vendor};
 
@@ -77,27 +57,12 @@ fn get_combined_dmi(fields: &[&str], vendor_only: bool) -> Option<String> {
 }
 
 fn get_raw_system_name() -> Option<String> {
-    // Let's look for a few possibilities that may have the formatted device name,
-    // or at least the easier to use system name
-    let simple_paths: Vec<_> = vec![
+    for path in [
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
-    ];
-
-    for path in simple_paths {
-        if let Ok(raw) = std::fs::read_to_string(path) {
-            let raw: Vec<_> = raw.split('\0').collect();
-            let raw = raw.first();
-            {
-                let raw = raw?;
-                let trimmed = raw.trim();
-
-                if is_generic_value(trimmed) {
-                    continue;
-                }
-
-                return Some(String::from(trimmed));
-            }
+    ] {
+        if let Some(name) = read_devicetree_string(path) {
+            return Some(name);
         }
     }
 
@@ -131,23 +96,13 @@ fn get_raw_system_name() -> Option<String> {
     None
 }
 
-fn get_soc_devicetree() -> Option<String> {
-    if let Some(raw_pairs) = get_devicetree_compatible()
-        && let Some(pair) = raw_pairs.last().cloned()
-    {
-        return Some(format_compatible_pair(pair));
-    }
-
-    None
-}
-
 impl TOSData for OS {
     fn get_soc() -> Option<String> {
-        if let Some(soc) = get_soc_cpuinfo() {
+        if let Some(soc) = get_soc_from_proc_cpuinfo() {
             return Some(soc);
         }
 
-        if let Some(soc) = get_soc_devicetree() {
+        if let Some(soc) = get_soc_from_devicetree() {
             return Some(soc);
         }
 
@@ -155,22 +110,11 @@ impl TOSData for OS {
     }
 
     fn get_system_name() -> Option<String> {
-        // Let's try /proc/cpuinfo first, as that will be formatted nicely
-        if let Some(last) = get_proc_cpuinfo_data().last()
-            && (!last.contains_key("processor"))
-            && let Some(raw) = last.get("Model")
-            && !is_generic_value(raw.trim())
-        {
-            return Some(String::from(raw.trim()));
+        if let Some(name) = get_system_name_from_proc_cpuinfo() {
+            return Some(name);
         }
 
-        let name = get_raw_system_name();
-
-        if name.is_some() {
-            return name;
-        }
-
-        None
+        get_raw_system_name()
     }
 
     fn get_socket_count() -> TopologyTier {
@@ -203,137 +147,6 @@ impl TOSData for OS {
         } else {
             TopologyTier::default()
         }
-    }
-}
-
-impl TDetect for TopologyCount {
-    fn detect() -> Self {
-        let sockets = OS::get_socket_count();
-        let mut topo = detect_sysfs_topology();
-        topo.sockets = sockets;
-        topo
-    }
-}
-
-#[cfg(any(not(x86_cpu), test))]
-impl Cache {
-    #[cfg(not(x86_cpu))]
-    pub fn detect() -> Option<Cache> {
-        if let Some(cache) = Self::from_sys_fs() {
-            return Some(cache);
-        }
-
-        if let Some(cache) = Self::from_lscpu_command() {
-            return Some(cache);
-        }
-
-        None
-    }
-
-    #[cfg(not(x86_cpu))]
-    pub(crate) fn from_sys_fs() -> Option<Cache> {
-        read_sysfs_cpu_cache(0)
-    }
-
-    /// Read cache info for each distinct CPU type (MIDR group).
-    #[cfg(any(arm_cpu, test))]
-    pub(crate) fn from_sys_fs_per_type() -> Option<BTreeMap<usize, Cache>> {
-        read_sysfs_cache_per_type()
-    }
-
-    #[cfg(not(x86_cpu))]
-    fn from_lscpu_command() -> Option<Cache> {
-        let output = match std::process::Command::new("lscpu").arg("-C").output() {
-            Ok(o) => o.stdout,
-            Err(_) => return None,
-        };
-
-        let output_str = match String::from_utf8(output) {
-            Ok(s) => s,
-            Err(_) => return None,
-        };
-
-        let mut cache = Cache {
-            source: DataSource::Lscpu,
-            ..Default::default()
-        };
-        let mut found_cache = false;
-
-        let lines: Vec<&str> = output_str.lines().collect();
-
-        // No output from lscpu -C
-        if lines.len() < 2 {
-            return None;
-        }
-
-        let table_keys: Vec<&str> = lines[0].split_whitespace().collect();
-
-        // @TODO: Properly parse table to account for missing values
-        for line in lines.into_iter().skip(1) {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() <= 3 {
-                continue;
-            }
-
-            let name = parts[table_keys.iter().position(|&x| x == "NAME")?];
-            let size_str = parts[table_keys.iter().position(|&x| x == "ONE-SIZE")?];
-            let ways_str = parts[table_keys.iter().position(|&x| x == "WAYS")?];
-
-            // Parse size (e.g., "32K", "256K", "4M")
-            let size_bytes: u32 = if let Some(stripped) = size_str.strip_suffix('K') {
-                stripped.parse::<u32>().ok()? * 1024
-            } else if let Some(stripped) = size_str.strip_suffix('M') {
-                stripped.parse::<u32>().ok()? * 1024 * 1024
-            } else {
-                size_str.parse::<u32>().ok()? * 1024
-            };
-
-            let ways: u32 = ways_str.parse().unwrap_or(0);
-
-            match name {
-                "L1d" => {
-                    cache.l1 = Level1Cache::Split {
-                        data: CacheLevel::new(size_bytes, CacheType::Data, ways, 0),
-                        instruction: CacheLevel::default(),
-                    };
-                    found_cache = true;
-                }
-                "L1i" => {
-                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
-                        instruction.size = size_bytes;
-                        instruction.kind = CacheType::Instruction;
-                        instruction.assoc = ways;
-                    }
-                }
-                "L1" => {
-                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_bytes, ways));
-                    found_cache = true;
-                }
-                "L2" => {
-                    cache.l2 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
-                    found_cache = true;
-                }
-                "L3" => {
-                    cache.l3 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
-                    found_cache = true;
-                }
-                _ => {}
-            }
-        }
-
-        // Handle case where L1 is split but L1i wasn't in the output
-        if let Level1Cache::Split { data, instruction } = &cache.l1
-            && instruction.size == 0
-            && data.size > 0
-        {
-            // Copy data settings to instruction
-            cache.l1 = Level1Cache::Split {
-                data: *data,
-                instruction: CacheLevel::new(data.size, CacheType::Instruction, data.assoc, 0),
-            };
-        }
-
-        if found_cache { Some(cache) } else { None }
     }
 }
 
