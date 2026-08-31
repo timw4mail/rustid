@@ -1,27 +1,32 @@
 # Changelog
 
-## [2.1.0] — Unified topology model, multi-socket display, PowerPC fixes, and common deduplication
+## [2.1.0] — Unified topology model, multi-socket display, NetBurst Gallatin detection, and common deduplication
 
 ### Added
+- **NetBurst Northwood vs. Gallatin Disambiguation via L3 Cache**: Added `disambiguate_0f_02h` to distinguish Intel NetBurst Pentium 4 (Northwood, without L3 cache) from Pentium 4 Extreme Edition / Xeon MP (Gallatin, with L3 cache) using live L3 cache detection (`Cache::has_l3()`) and model name fallback (`src/x86/vendor/intel.rs`, `src/common/cache.rs`)
+- **L3 Cache Helper Method**: Added `Cache::has_l3(&self) -> bool` method to easily check whether an L3 cache level is present and non-zero (`src/common/cache.rs`)
 - **DOS Colored Console Display**: Added driverless VGA text mode ANSI color rendering for 32-bit protected mode DOS (`dos32a` build, `rustid.exe`), matching output on CLI and UEFI targets; enabled `color: true` by default, added `/M` / `/MONO` flag support for monochrome output, and automatically stripped color escape sequences when output redirection to a file is detected (`src/dos_rustid.rs`, `src/x86/dos/mod.rs`)
-- **Unified CPU Topology on Common Struct**: Extracted the `Topology` struct (`sockets`, `dies`, `cores`, `threads`, `speed`, `cache`) into `src/common/topology.rs` and placed `topology: Topology` directly on the shared `Cpu<E, M>` object across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`)
+- **Unified CPU Topology on Common Struct**: Extracted the `Topology` struct (`sockets`, `dies`, `cores`, `threads`, `speed`, `cache`) into `src/common/topology.rs` and placed `topology: Topology` directly on the shared `Cpu<E, M>` generic object across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`) (`src/common/cpu.rs`, `src/common/topology.rs`)
 - **Multi-Socket Display Support**: Added physical socket count formatting across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`); outputs `Topology: <N> sockets, <C> cores, <T> threads` whenever physical socket count is greater than 1 or in verbose mode (`src/common/display.rs`)
-- **Sysfs Socket Detection**: Added physical package ID parsing from `/sys/devices/system/cpu/cpu*/topology/physical_package_id` and `/proc/cpuinfo` `physical id` to automatically detect multi-socket systems on Linux/Android (`src/common/os/linux_sysfs.rs`)
+- **Sysfs Socket Detection**: Added physical package ID parsing from `/sys/devices/system/cpu/cpu*/topology/physical_package_id` and `/proc/cpuinfo` `physical id` to automatically detect multi-socket systems on Linux and Android (`src/common/os/linux_sysfs.rs`)
 - **Single-Core SMT Display**: `display_topology_line` now explicitly displays thread count for single-core hyperthreaded CPUs (e.g. `1 core (2 threads)`) (`src/common/display.rs`)
-- **Centralized Linux Sysfs Module**: Extracted sysfs cache tree traversal (`read_sysfs_cpu_cache`, `read_sysfs_cache_per_type`) and topology reader (`detect_sysfs_topology`) into a shared `linux_sysfs` module compiled under `#[cfg(linux_os)]` (`src/common/os/linux_sysfs.rs`)
-- **Cross-Compilation CI & Target Checks**: Added `check-all` recipe to `justfile` and `Makefile` and integrated target compilation checks in GitHub Actions CI covering `x86_64-unknown-uefi`, `powerpc-unknown-linux-gnu`, `riscv64gc-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `aarch64-pc-windows-msvc` (`.github/workflows/ci.yml`, `justfile`, `Makefile`)
-- **Common Device-Tree and Integer Frequency Helpers**: Added pure `core`/`no_std` safe integer frequency parser `parse_frequency_mhz`, devicetree helpers (`read_devicetree_string`, `read_devicetree_u64`), and thread affinity iterator `for_each_logical_core` (`src/common/os/common.rs`)
-- **Xeon Dual-Socket Example**: Added dual-socket Pentium Pro / Xeon test fixture output (`examples/2PPRO.TXT`)
+- **Centralized Linux & Android Sysfs Module**: Extracted sysfs cache tree traversal (`read_sysfs_cpu_cache`, `read_sysfs_cache_per_type`), `lscpu -C` cache fallback parser, and topology reader (`detect_sysfs_topology`) into a shared `linux_sysfs` module compiled under `#[cfg(any(target_os = "linux", target_os = "android"))]` (`src/common/os/linux_sysfs.rs`)
+- **Common Device-Tree, Frequency, and OS Helpers**: Added pure `core`/`no_std` safe integer frequency parser `parse_frequency_mhz`, devicetree helpers (`read_devicetree_string`, `read_devicetree_u64`, `get_devicetree_compatible`, `format_compatible_pair`), CPU governor/status parsers (`parse_governor_from_str`, `parse_status_from_str`), and thread affinity iterator `for_each_logical_core` (`src/common/os/common.rs`)
+- **Cross-Compilation CI & Target Checks**: Added `check-all` recipe to `justfile` and `Makefile` with auto-installation of missing `rustup` targets, and integrated target compilation checks in GitHub Actions CI covering `x86_64-unknown-uefi`, `i586-unknown-none` (DOS), `aarch64-linux-android`, `powerpc-unknown-linux-gnu`, `riscv64gc-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `aarch64-pc-windows-msvc` (`.github/workflows/push.yml`, `justfile`, `Makefile`)
+- **ELF to LE Converter Section Handling**: Extended `elf2le` tool to match dotted ELF section names like `.rodata.*`, `.data.*`, and `.bss.*` for DOS32A protected-mode binaries (`tools/elf2le/src/main.rs`)
+- **Xeon & Pentium 4 Test Fixtures**: Added dual-socket Intel Xeon E5-2470 test fixture (`examples/xeon-e5-2470.txt`) and Intel Pentium 4 Northwood CPUID dump and tests (`tests/cpuid/dump/P4Northwood.txt`, `tests/cpuid_dump_test.rs`)
 
 ### Changed
-- **Deduplicated ARM Linux & Android OS Detection**: Replaced separate `src/arm/os/android.rs` (345 lines) with unified `src/arm/os/linux.rs` guarded by `#[cfg(linux_os)]`
+- **Deduplicated Linux & Android OS Detection**: Replaced separate `src/arm/os/android.rs` (345 lines) with unified `src/arm/os/linux.rs` guarded by `#[cfg(linux_os)]`, and consolidated duplicated sysfs and `/proc/cpuinfo` parsing logic across Linux and Android into `src/common/os/common.rs` and `src/common/os/linux_sysfs.rs` (`src/common/os/linux.rs`, `src/common/os/android.rs`)
 - **Separated CPUID Discovery from OS Enrichment**: Clarified separation between pure CPUID detection and live OS hardware enrichment (`enrich_cpu`) across DOS, EFI, and OS targets (`src/x86/cpu.rs`, `src/x86/os/mod.rs`, `src/x86/efi/mod.rs`, `src/x86/dos/mod.rs`)
-- **Architecture Module Alignment**: Refactored ARM, RISC-V, and PowerPC modules to follow consistent structure and display patterns (`src/arm/cpu.rs`, `src/riscv/cpu.rs`, `src/ppc/cpu.rs`)
+- **Architecture Module Alignment**: Refactored ARM, RISC-V, and PowerPC modules to follow consistent structure, shared generic CPU types, and unified display patterns (`src/arm/cpu.rs`, `src/riscv/cpu.rs`, `src/ppc/cpu.rs`, `src/ppc/micro_arch.rs`)
+- **Release Workflow Cleanup**: Configured release workflow to clean untracked/dirty files before crates.io packaging and publishing (`.github/workflows/release.yml`)
 
 ### Fixed
 - **PowerPC Clock Speed Detection**: Fixed clock speed reporting on Linux PowerPC (e.g. PowerBook G4 / PowerBook5,2) by prioritizing `/proc/cpuinfo` `clock: <N>MHz`, sysfs `cpufreq`, and CPU node devicetree clock (`/proc/device-tree/cpus/*/clock-frequency`) over root bus frequency (`/proc/device-tree/clock-frequency`, which reports the 166.66 MHz FSB bus clock) (`src/ppc/cpu.rs`)
 - **DOS Multi-Socket MP Table Detection**: Corrected DOS Intel MP Table topology calculation: MP Table entries represent logical processors (APIC IDs) rather than physical sockets, resolving false multi-socket reports on multi-core processors (e.g. Core 2 Quad previously reporting 4 sockets, 16 cores, 16 threads) (`src/x86/dos/mod.rs`, `src/x86/dos/mp.rs`)
-- **Cross-Platform Thread Affinity**: Unified logical core affinity switching loop in ARM Linux, Windows, and BSD to use `for_each_logical_core`
+- **Cross-Platform Thread Affinity**: Unified logical core affinity switching loop in ARM Linux, Windows, and BSD to use `for_each_logical_core` (`src/arm/os/mod.rs`, `src/common/os/common.rs`)
+- **Android Target Build**: Resolved compile errors and missing imports when targeting `aarch64-linux-android` (`src/common/os/android.rs`)
 
 ## [2.0.0] — Add missing Intel and AMD cpu mappings, fix edge cases, and more
 
