@@ -171,6 +171,16 @@ impl Cache {
         self.l1.size() == 0 && self.l2.is_none() && self.l3.is_none()
     }
 
+    pub fn has_l3(&self) -> bool {
+        if let Some(l3) = self.l3
+            && l3.size > 0
+        {
+            return true;
+        }
+
+        false
+    }
+
     /// Detects cache using platform/OS specific information sources.
     #[must_use]
     pub fn detect_os() -> Option<Cache> {

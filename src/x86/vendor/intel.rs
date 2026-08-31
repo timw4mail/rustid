@@ -367,9 +367,7 @@ impl Intel {
         model: &str,
         brand_arch: &impl Fn(MicroArch, &'static str, Option<&'static str>) -> CpuArch,
     ) -> CpuArch {
-        let has_l3 = crate::common::Cache::detect()
-            .and_then(|c| c.l3)
-            .is_some_and(|l| l.size() > 0);
+        let has_l3 = crate::common::Cache::detect().is_some_and(|c| c.has_l3());
 
         if has_l3 || model.contains("Gallatin") || model.contains("Extreme") {
             brand_arch(MicroArch::Northwood, "Gallatin", Some(N130))
