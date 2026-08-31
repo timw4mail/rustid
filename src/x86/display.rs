@@ -6,7 +6,6 @@ use super::*;
 use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
 use crate::println;
-use alloc::format;
 #[cfg(not(dos_real))]
 use alloc::string::String;
 
@@ -42,7 +41,7 @@ impl CpuDisplay {
         if count < 2 {
             String::new()
         } else {
-            format!("{}x ", count)
+            alloc::format!("{}x ", count)
         }
     }
 }
@@ -213,7 +212,7 @@ impl Cpu {
                     if flags.color {
                         list.push(CpuDisplay::ansi_color(ANSI_BRIGHT_BLACK, name));
                     } else {
-                        list.push(format!("{name}(disabled)"));
+                        list.push(alloc::format!("{name}(disabled)"));
                     }
                 }
             }
@@ -227,6 +226,7 @@ impl Cpu {
 
     #[allow(unused_variables)]
     fn print_features(&self, flags: CliFlags, disp: &CpuDisplay) {
+        #[allow(unused_mut)]
         let mut features = self.features.clone();
 
         #[cfg(not(dos_real))]
@@ -322,9 +322,9 @@ impl TCpuDisplay for Cpu {
             let major = (fw.revision >> 16) & 0xFFFF;
             let minor = fw.revision & 0xFFFF;
             let val = if vendor.is_empty() {
-                format!("EFI {}.{:02}", major, minor)
+                alloc::format!("EFI {}.{:02}", major, minor)
             } else {
-                format!("{} (EFI {}.{:02})", vendor, major, minor)
+                alloc::format!("{} (EFI {}.{:02})", vendor, major, minor)
             };
             disp.simple_line("Firmware", &val);
         }
@@ -400,12 +400,15 @@ impl TCpuDisplay for Cpu {
                 const NON_X3D_MB: u32 = 32;
 
                 let override_str = if l3.assoc > 0 {
-                    format!(
+                    alloc::format!(
                         "{}MB {}-way (X3D) + {}MB {}-way",
-                        x3d_mb, l3.assoc, NON_X3D_MB, l3.assoc
+                        x3d_mb,
+                        l3.assoc,
+                        NON_X3D_MB,
+                        l3.assoc
                     )
                 } else {
-                    format!("{}MB (X3D) + {}MB", x3d_mb, NON_X3D_MB)
+                    alloc::format!("{}MB (X3D) + {}MB", x3d_mb, NON_X3D_MB)
                 };
 
                 disp.display_cache_ext(
