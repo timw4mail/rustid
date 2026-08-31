@@ -19,7 +19,8 @@ mod gui {
     };
     use windows::Win32::Graphics::Gdi::{
         CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, COLOR_BTNFACE, CreateFontW, DEFAULT_CHARSET,
-        DeleteObject, FW_NORMAL, HBRUSH, HFONT, HGDIOBJ, OUT_DEFAULT_PRECIS, UpdateWindow,
+        DeleteObject, FW_NORMAL, GetDC, GetDeviceCaps, HBRUSH, HFONT, HGDIOBJ, LOGPIXELSX,
+        OUT_DEFAULT_PRECIS, ReleaseDC, UpdateWindow,
     };
     use windows::Win32::System::DataExchange::{
         CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
@@ -36,7 +37,6 @@ mod gui {
         OFN_PATHMUSTEXIST, OPENFILENAMEW,
     };
     use windows::Win32::UI::Controls::*;
-    use windows::Win32::UI::HiDpi::*;
     use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_F5};
     use windows::Win32::UI::WindowsAndMessaging::*;
     use windows::core::{PCWSTR, w};
@@ -180,7 +180,58 @@ mod gui {
 
     fn init_dpi_awareness() {
         unsafe {
-            let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            if let Ok(user32) = LoadLibraryW(w!("user32.dll")) {
+                type SetProcessDpiAwarenessContextFn = unsafe extern "system" fn(isize) -> i32;
+                if let Some(proc) = windows::Win32::System::LibraryLoader::GetProcAddress(
+                    user32,
+                    windows::core::s!("SetProcessDpiAwarenessContext"),
+                ) {
+                    let func: SetProcessDpiAwarenessContextFn = std::mem::transmute(proc);
+                    // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+                    if func(-4) != 0 {
+                        return;
+                    }
+                }
+
+                // Fallback for Windows Vista/7/8: SetProcessDPIAware
+                type SetProcessDPIAwareFn = unsafe extern "system" fn() -> i32;
+                if let Some(proc) = windows::Win32::System::LibraryLoader::GetProcAddress(
+                    user32,
+                    windows::core::s!("SetProcessDPIAware"),
+                ) {
+                    let func: SetProcessDPIAwareFn = std::mem::transmute(proc);
+                    let _ = func();
+                }
+            }
+        }
+    }
+
+    fn get_system_dpi() -> u32 {
+        unsafe {
+            if let Ok(user32) = LoadLibraryW(w!("user32.dll")) {
+                type GetDpiForSystemFn = unsafe extern "system" fn() -> u32;
+                if let Some(proc) = windows::Win32::System::LibraryLoader::GetProcAddress(
+                    user32,
+                    windows::core::s!("GetDpiForSystem"),
+                ) {
+                    let func: GetDpiForSystemFn = std::mem::transmute(proc);
+                    let dpi = func();
+                    if dpi > 0 {
+                        return dpi;
+                    }
+                }
+            }
+
+            let hdc = GetDC(None);
+            if !hdc.is_invalid() {
+                let dpi = GetDeviceCaps(Some(hdc), LOGPIXELSX) as u32;
+                let _ = ReleaseDC(None, hdc);
+                if dpi > 0 {
+                    return dpi;
+                }
+            }
+
+            96
         }
     }
 
@@ -1062,7 +1113,7 @@ mod gui {
                     let dpi = if !state_ptr.is_null() {
                         (*state_ptr).dpi
                     } else {
-                        GetDpiForSystem()
+                        get_system_dpi()
                     };
                     minmax.ptMinTrackSize = POINT {
                         x: scale(580, dpi),
@@ -1151,7 +1202,7 @@ mod gui {
                 return;
             }
 
-            let dpi = GetDpiForSystem();
+            let dpi = get_system_dpi();
             create_fonts(dpi);
 
             let win_w = scale(820, dpi);

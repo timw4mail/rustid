@@ -140,6 +140,16 @@ build-windows-gui:
 	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
 	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
 
+# Build for Windows 7+ (CLI), fully self-contained with no Windows 10/11 runtime dependencies
+[windows]
+build-windows-win7:
+	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --release
+
+# Build for Windows 7+ (GUI), fully self-contained with no Windows 10/11 runtime dependencies
+[windows]
+build-windows-gui-win7:
+	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --features gui --bin rustid-gui --release
+
 [windows]
 build-windows-arm:
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc

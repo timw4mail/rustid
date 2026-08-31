@@ -25,6 +25,8 @@
 
 extern crate alloc;
 
+pub use alloc::format;
+
 #[cfg(not(dos_real))]
 const APP: &str = "Rustid";
 

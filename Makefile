@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-gui build-windows-arm build-windows-gnu build-windows-gui-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-gui build-windows-win7 build-windows-gui-win7 build-windows-arm build-windows-gnu build-windows-gui-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -159,6 +159,14 @@ build-windows:
 build-windows-gui:
 	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
 	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
+
+# Build for Windows 7+ (CLI), fully self-contained with no Windows 10/11 runtime dependencies
+build-windows-win7:
+	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --release
+
+# Build for Windows 7+ (GUI), fully self-contained with no Windows 10/11 runtime dependencies
+build-windows-gui-win7:
+	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --features gui --bin rustid-gui --release
 
 build-windows-arm:
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
