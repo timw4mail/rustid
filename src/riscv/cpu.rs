@@ -51,14 +51,11 @@ impl TDetect for Cpu {
 }
 
 impl TCpuDisplay for Cpu {
-    fn debug(&self)
-    where
-        Self: std::fmt::Debug,
-    {
-        println!("{:#?}", self);
+    fn render_debug(&self) -> alloc::string::String {
+        alloc::format!("{:#?}", self)
     }
 
-    fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display_riscv(self, flags);
+    fn display_table_with_disp(&self, disp: &mut CpuDisplay) {
+        CpuDisplay::display_riscv(self, disp);
     }
 }

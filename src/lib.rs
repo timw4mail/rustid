@@ -85,17 +85,34 @@ pub use x86::efi::*;
 #[cfg(std_os)]
 pub use std::{print, println};
 
-pub fn version() {
-    println!(
+pub fn format_version() -> alloc::string::String {
+    alloc::format!(
         "--------------- {} {} ({}-{}) ---------------",
-        APP, VERSION, ARCH, OS
-    );
+        APP,
+        VERSION,
+        ARCH,
+        OS
+    )
+}
+
+pub fn version() {
+    println!("{}", format_version());
+}
+
+pub fn format_file_version() -> alloc::string::String {
+    alloc::format!(
+        "--------------- {} {} ({}-{}:from-cpuid-dump) ---------------",
+        APP,
+        VERSION,
+        ARCH,
+        OS
+    )
 }
 
 #[cfg(std_os)]
 #[cfg(x86_cpu)]
 pub fn file_version() {
-    println!("--------------- Rustid {VERSION} ({ARCH}-{OS}:from-cpuid-dump) ---------------");
+    println!("{}", format_file_version());
 }
 
 #[cfg(any(x86_cpu, dos_os))]

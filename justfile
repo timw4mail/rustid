@@ -63,8 +63,13 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
+# Compile check for Windows GUI
+check-windows-gui:
+	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
+	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486
+check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486 check-windows-gui
 
 # More in-depth code style checking
 lint:
@@ -129,6 +134,12 @@ build-windows:
 	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
 	cargo build --target x86_64-pc-windows-msvc --release
 
+# Build for modern windows (GUI), requires visual studio to be installed
+[windows]
+build-windows-gui:
+	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
+	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
+
 [windows]
 build-windows-arm:
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
@@ -138,6 +149,11 @@ build-windows-arm:
 build-windows-gnu: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
+
+# Build Windows GUI using MinGW/GNU target (cross-compilable from Linux)
+build-windows-gui-gnu: _cargo_cross
+	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
+	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
 
 # Build for linux arm64
 build-arm64: _cargo_cross

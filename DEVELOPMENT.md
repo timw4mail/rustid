@@ -45,7 +45,9 @@ This produces two binaries in the project root:
 - `just build-ppc` — Linux PowerPC
 - `just build-486` — 32-bit x86 Linux (486-compatible target spec)
 - `just build-mac` / `just build-mac-arm` — macOS (x86_64 / AArch64)
-- `just build-windows` / `just build-windows-arm` / `just build-windows-gnu` — Windows targets
+- `just build-windows` / `just build-windows-arm` / `just build-windows-gnu` — Windows CLI binaries
+- `just build-windows-gui` — Windows native GUI application (MSVC)
+- `just build-windows-gui-gnu` — Windows GUI application cross-compilable from Linux (MinGW/GNU)
 
 ## Testing & Quality
 

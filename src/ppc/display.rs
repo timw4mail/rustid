@@ -1,14 +1,13 @@
 use super::cpu::Cpu;
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay};
+use crate::common::{CpuDisplay, TCpuDisplay};
 
 impl TCpuDisplay for Cpu {
-    fn debug(&self) {
-        println!("PVR: {:x}", self.pvr);
-        println!("{:#?}", self);
+    fn render_debug(&self) -> alloc::string::String {
+        alloc::format!("PVR: {:x}\n{:#?}", self.pvr, self)
     }
 
-    fn display_table(&self, flags: CliFlags) {
-        let disp = CpuDisplay { flags };
+    fn display_table_with_disp(&self, disp: &mut CpuDisplay) {
+        let flags = disp.flags;
 
         disp.newline();
 
@@ -41,6 +40,6 @@ impl TCpuDisplay for Cpu {
             disp.display_core_cache(core.cache, total_cores, sockets);
         }
 
-        println!();
+        disp.print_raw_newline();
     }
 }

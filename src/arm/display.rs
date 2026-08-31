@@ -152,8 +152,8 @@ impl CpuDisplay {
         true
     }
 
-    pub fn display_arm(cpu_info: &Cpu, flags: CliFlags) {
-        let disp = CpuDisplay { flags };
+    pub fn display_arm(cpu_info: &Cpu, disp: &mut CpuDisplay) {
+        let flags = disp.flags;
 
         disp.newline();
 
@@ -252,33 +252,32 @@ impl CpuDisplay {
 }
 
 impl TCpuDisplay for Cpu {
-    fn debug(&self)
-    where
-        Self: std::fmt::Debug,
-    {
+    fn render_debug(&self) -> String {
+        let mut out = String::new();
         if !self.midrs.is_empty() {
-            println!("Main ID Register (MIDR) values:");
+            out.push_str("Main ID Register (MIDR) values:\n");
             for (i, midr) in self.midrs.iter().enumerate() {
-                println!("Midr {i}:");
-                println!("    Raw: 0x{:X}", midr.raw);
-                println!(
-                    "    Implementer: 0x{:X} ({})",
+                out.push_str(&alloc::format!("Midr {i}:\n"));
+                out.push_str(&alloc::format!("    Raw: 0x{:X}\n", midr.raw));
+                out.push_str(&alloc::format!(
+                    "    Implementer: 0x{:X} ({})\n",
                     midr.implementer,
                     <brand::Vendor as Into<&str>>::into(brand::Vendor::from(midr.implementer))
-                );
-                println!("    Variant: 0x{:X}", midr.variant);
-                println!("    Part Number: 0x{:X}", midr.part);
-                println!("    Revision: 0x{:X}", midr.revision);
+                ));
+                out.push_str(&alloc::format!("    Variant: 0x{:X}\n", midr.variant));
+                out.push_str(&alloc::format!("    Part Number: 0x{:X}\n", midr.part));
+                out.push_str(&alloc::format!("    Revision: 0x{:X}\n", midr.revision));
             }
 
-            println!();
+            out.push('\n');
         }
 
-        println!("{:#?}", self);
+        out.push_str(&alloc::format!("{:#?}", self));
+        out
     }
 
-    fn display_table(&self, flags: CliFlags) {
-        CpuDisplay::display_arm(self, flags);
+    fn display_table_with_disp(&self, disp: &mut CpuDisplay) {
+        CpuDisplay::display_arm(self, disp);
     }
 }
 
@@ -616,7 +615,7 @@ mod tests {
             compact: false,
             verbose: false,
         };
-        CpuDisplay::display_arm(&cpu, flags);
+        CpuDisplay::display_arm(&cpu, &mut CpuDisplay::new(flags));
     }
 
     #[test]
@@ -634,7 +633,7 @@ mod tests {
             compact: false,
             verbose: false,
         };
-        CpuDisplay::display_arm(&cpu, flags);
+        CpuDisplay::display_arm(&cpu, &mut CpuDisplay::new(flags));
     }
 
     #[test]

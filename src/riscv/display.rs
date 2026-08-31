@@ -3,8 +3,8 @@ use crate::common::{CliFlags, CpuDisplay, UNK};
 use crate::riscv::brand::format_uarch;
 
 impl CpuDisplay {
-    pub fn display_riscv(cpu_info: &Cpu, flags: CliFlags) {
-        let disp = CpuDisplay { flags };
+    pub fn display_riscv(cpu_info: &Cpu, disp: &mut CpuDisplay) {
+        let flags = disp.flags;
 
         disp.newline();
 

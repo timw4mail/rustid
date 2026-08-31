@@ -16,17 +16,71 @@ pub struct CliFlags {
 
 pub trait TCpuDisplay: super::cpu::TDetect {
     /// Display the Rust debug output of the CPU object
-    fn debug(&self);
+    fn debug(&self) {
+        println!("{}", self.render_debug());
+    }
+
+    /// Render the Rust debug output to a String
+    fn render_debug(&self) -> String;
 
     /// Display the CPU information in a table format
-    fn display_table(&self, flags: CliFlags);
+    fn display_table(&self, flags: CliFlags) {
+        let mut disp = CpuDisplay::new(flags);
+        self.display_table_with_disp(&mut disp);
+    }
+
+    /// Render the CPU information in a table format to a String
+    fn render_table(&self, flags: CliFlags) -> String {
+        let mut disp = CpuDisplay::with_buffer(flags);
+        self.display_table_with_disp(&mut disp);
+        disp.into_string().unwrap_or_default()
+    }
+
+    /// Format table output using a custom CpuDisplay
+    fn display_table_with_disp(&self, disp: &mut CpuDisplay);
 }
 
 pub struct CpuDisplay {
     pub flags: CliFlags,
+    buffer: Option<String>,
 }
 
 impl CpuDisplay {
+    pub fn new(flags: CliFlags) -> Self {
+        Self {
+            flags,
+            buffer: None,
+        }
+    }
+
+    pub fn with_buffer(flags: CliFlags) -> Self {
+        Self {
+            flags,
+            buffer: Some(String::new()),
+        }
+    }
+
+    pub fn into_string(self) -> Option<String> {
+        self.buffer
+    }
+
+    pub fn print_line(&mut self, s: &str) {
+        if let Some(buf) = &mut self.buffer {
+            buf.push_str(s);
+            buf.push('\n');
+        } else {
+            println!("{}", s);
+        }
+    }
+
+    pub fn print_raw_newline(&mut self) {
+        if let Some(buf) = &mut self.buffer {
+            buf.push('\n');
+        } else {
+            println!();
+        }
+    }
+
     pub fn raw_label(s: &str) -> String {
         format!("{:>14}: ", s)
     }
@@ -83,12 +137,13 @@ impl CpuDisplay {
     }
 
     /// Outputs just the label without a value followed by a newline.
-    pub fn print_label(&self, s: &str) {
-        println!("{}", self.label(s));
+    pub fn print_label(&mut self, s: &str) {
+        let l = self.label(s);
+        self.print_line(&l);
     }
 
     /// Outputs a core cluster heading (e.g. "Core #1", "Core #2").
-    pub fn core_heading(&self, index: usize) {
+    pub fn core_heading(&mut self, index: usize) {
         self.print_label(&format!("Core #{}", index + 1));
     }
 
@@ -123,45 +178,51 @@ impl CpuDisplay {
     }
 
     /// Outputs a simple line if the value is not UNK and not empty.
-    pub fn simple_line_if_known(&self, l: &str, v: &str) {
+    pub fn simple_line_if_known(&mut self, l: &str, v: &str) {
         if v != UNK && !v.is_empty() {
             self.simple_line(l, v);
         }
     }
 
     /// Outputs a section line if the value is not UNK and not empty.
-    pub fn section_line_if_known(&self, l: &str, v: &str) {
+    pub fn section_line_if_known(&mut self, l: &str, v: &str) {
         if v != UNK && !v.is_empty() {
             self.section_line(l, v);
         }
     }
 
     /// Outputs a simple line if the optional value is present, not UNK, and not empty.
-    pub fn simple_line_opt<T: AsRef<str>>(&self, l: &str, v: Option<T>) {
+    pub fn simple_line_opt<T: AsRef<str>>(&mut self, l: &str, v: Option<T>) {
         if let Some(val) = v {
             self.simple_line_if_known(l, val.as_ref());
         }
     }
 
     /// Outputs a section line if the optional value is present, not UNK, and not empty.
-    pub fn section_line_opt<T: AsRef<str>>(&self, l: &str, v: Option<T>) {
+    pub fn section_line_opt<T: AsRef<str>>(&mut self, l: &str, v: Option<T>) {
         if let Some(val) = v {
             self.section_line_if_known(l, val.as_ref());
         }
     }
 
     /// Outputs a simple line with a main value and parenthesized detail, e.g. "GenuineIntel (Intel)".
-    pub fn simple_line_with_detail(&self, l: &str, v: &str, detail: &str) {
+    pub fn simple_line_with_detail(&mut self, l: &str, v: &str, detail: &str) {
         self.simple_line(l, &format!("{v} ({detail})"));
     }
 
     /// Outputs a section line with a main value and parenthesized detail, e.g. "GenuineIntel (Intel)".
-    pub fn section_line_with_detail(&self, l: &str, v: &str, detail: &str) {
+    pub fn section_line_with_detail(&mut self, l: &str, v: &str, detail: &str) {
         self.section_line(l, &format!("{v} ({detail})"));
     }
 
     /// Displays a formatted value, and additionally outputs the raw value if `verbose` is true and raw differs.
-    pub fn display_with_raw(&self, label: &str, formatted: &str, raw: Option<&str>, verbose: bool) {
+    pub fn display_with_raw(
+        &mut self,
+        label: &str,
+        formatted: &str,
+        raw: Option<&str>,
+        verbose: bool,
+    ) {
         if let Some(raw_val) = raw
             && verbose
             && raw_val != UNK
@@ -177,22 +238,22 @@ impl CpuDisplay {
     }
 
     /// Outputs a formatted label and value with an additional newline if flags.compact is false
-    pub fn simple_line(&self, l: &str, v: &str) {
+    pub fn simple_line(&mut self, l: &str, v: &str) {
         self.section_line(l, v);
 
         self.newline();
     }
 
     /// Outputs a formatted label and value
-    pub fn section_line(&self, l: &str, v: &str) {
+    pub fn section_line(&mut self, l: &str, v: &str) {
         let l = self.label(l);
-        println!("{}{}", l, v);
+        self.print_line(&format!("{}{}", l, v));
     }
 
-    pub fn newline(&self) {
+    pub fn newline(&mut self) {
         #[cfg(not(dos_os))]
         if !self.flags.compact {
-            println!();
+            self.print_raw_newline();
         }
     }
 
@@ -208,21 +269,23 @@ impl CpuDisplay {
     }
 
     /// Displays frequency lines (Base/Boost inline sublabels or single section line).
-    pub fn display_frequency(&self, speed: Option<Speed>, flags: CliFlags) {
+    pub fn display_frequency(&mut self, speed: Option<Speed>, flags: CliFlags) {
         if let Some(speed) = speed
             && speed.base > 0
         {
             if speed.boost > speed.base {
-                println!(
+                let l1 = format!(
                     "{}{}",
                     self.inline_sublabel("Frequency", "Base"),
                     Self::format_frequency(speed.base)
                 );
-                println!(
+                self.print_line(&l1);
+                let l2 = format!(
                     "{}{}",
                     self.sublabel("Boost"),
                     Self::format_frequency(speed.boost)
                 );
+                self.print_line(&l2);
             } else {
                 self.section_line("Frequency", &Self::format_frequency(speed.base));
             }
@@ -234,7 +297,7 @@ impl CpuDisplay {
 
     /// Displays the Topology line for homogeneous or hybrid configurations.
     pub fn display_topology_line(
-        &self,
+        &mut self,
         sockets: u32,
         total_cores: u32,
         total_threads: u32,
@@ -279,7 +342,7 @@ impl CpuDisplay {
 
     /// Displays detected features using the standard ordered key list.
     pub fn display_features<K>(
-        &self,
+        &mut self,
         features: &alloc::collections::BTreeMap<K, String>,
         keys: &[&str],
     ) where
@@ -297,14 +360,16 @@ impl CpuDisplay {
             for key in keys {
                 if let Some(feat_str) = features.get(*key) {
                     if first {
-                        println!("{}{}", self.inline_sublabel("Features", key), feat_str);
+                        let l = format!("{}{}", self.inline_sublabel("Features", key), feat_str);
+                        self.print_line(&l);
                         first = false;
                     } else {
-                        println!("{}{}", self.sublabel(key), feat_str);
+                        let l = format!("{}{}", self.sublabel(key), feat_str);
+                        self.print_line(&l);
                     }
                 }
             }
-            println!();
+            self.newline();
         }
     }
 
@@ -317,7 +382,7 @@ impl CpuDisplay {
     }
 
     pub fn display_cache(
-        &self,
+        &mut self,
         cache: Option<Cache>,
         cache_count: &dyn Fn(u32) -> String,
         l3_socket_count: u32,
@@ -325,13 +390,18 @@ impl CpuDisplay {
         self.display_cache_ext(cache, cache_count, l3_socket_count, None);
     }
 
-    pub fn display_core_cache(&self, cache: Option<Cache>, core_count: u32, l3_socket_count: u32) {
+    pub fn display_core_cache(
+        &mut self,
+        cache: Option<Cache>,
+        core_count: u32,
+        l3_socket_count: u32,
+    ) {
         let cc = |s: u32| Self::cache_count(s, core_count);
         self.display_cache(cache, &cc, l3_socket_count);
     }
 
     pub fn display_cache_ext(
-        &self,
+        &mut self,
         cache: Option<Cache>,
         cache_count: &dyn Fn(u32) -> String,
         l3_socket_count: u32,
@@ -342,7 +412,8 @@ impl CpuDisplay {
                 Level1Cache::Unified(l1) => {
                     if l1.size > 0 {
                         let (num, unit) = Self::cache_size(l1.size);
-                        println!("{}L1: Unified {} {}", self.label("Cache"), num, unit);
+                        let l = format!("{}L1: Unified {} {}", self.label("Cache"), num, unit);
+                        self.print_line(&l);
                     }
                 }
                 Level1Cache::Split { data, instruction } => {
@@ -351,20 +422,22 @@ impl CpuDisplay {
 
                     if data.size > 0 {
                         if data.assoc > 0 {
-                            println!(
+                            let l = format!(
                                 "{}{}{} KB, {}-way",
                                 self.inline_sublabel("Cache", "L1d"),
                                 data_count,
                                 data.size / 1024,
                                 data.assoc
                             );
+                            self.print_line(&l);
                         } else {
-                            println!(
+                            let l = format!(
                                 "{}{}{} KB",
                                 self.inline_sublabel("Cache", "L1d"),
                                 data_count,
                                 data.size / 1024
                             );
+                            self.print_line(&l);
                         }
                     }
 
@@ -375,15 +448,22 @@ impl CpuDisplay {
                             self.inline_sublabel("Cache", "L1i")
                         };
                         if instruction.assoc > 0 {
-                            println!(
+                            let l = format!(
                                 "{}{}{} KB, {}-way",
                                 lbl,
                                 instruction_count,
                                 instruction.size / 1024,
                                 instruction.assoc
                             );
+                            self.print_line(&l);
                         } else {
-                            println!("{}{}{} KB", lbl, instruction_count, instruction.size / 1024,);
+                            let l = format!(
+                                "{}{}{} KB",
+                                lbl,
+                                instruction_count,
+                                instruction.size / 1024,
+                            );
+                            self.print_line(&l);
                         }
                     }
                 }
@@ -394,7 +474,7 @@ impl CpuDisplay {
                 let (num, unit) = Self::cache_size(l2.size);
 
                 if l2.assoc > 0 {
-                    println!(
+                    let l = format!(
                         "{} {}{} {}, {}-way",
                         self.sublabel("L2"),
                         count,
@@ -402,14 +482,17 @@ impl CpuDisplay {
                         unit,
                         l2.assoc
                     );
+                    self.print_line(&l);
                 } else {
-                    println!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
+                    let l = format!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
+                    self.print_line(&l);
                 }
             }
 
             if let Some(l3) = cache.l3 {
                 if let Some(override_str) = l3_override {
-                    println!("{} {}", self.sublabel("L3"), override_str);
+                    let l = format!("{} {}", self.sublabel("L3"), override_str);
+                    self.print_line(&l);
                 } else {
                     let (num, unit) = Self::cache_size(l3.size);
                     let count: String = if l3_socket_count > 1 {
@@ -419,7 +502,7 @@ impl CpuDisplay {
                     };
 
                     if l3.assoc > 0 {
-                        println!(
+                        let l = format!(
                             "{} {}{} {}, {}-way",
                             self.sublabel("L3"),
                             count,
@@ -427,8 +510,10 @@ impl CpuDisplay {
                             unit,
                             l3.assoc
                         );
+                        self.print_line(&l);
                     } else {
-                        println!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
+                        let l = format!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
+                        self.print_line(&l);
                     }
                 }
             }
@@ -438,7 +523,7 @@ impl CpuDisplay {
     }
 
     #[cfg(not(dos_os))]
-    pub fn display_system(&self, system: &str, flags: CliFlags) {
+    pub fn display_system(&mut self, system: &str, flags: CliFlags) {
         let formatted = self.format_system_name(system);
         self.display_with_raw("System", &formatted, Some(system), flags.verbose);
     }
@@ -714,37 +799,31 @@ mod tests {
 
     #[test]
     fn test_label_no_color() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(disp.label("Model"), "         Model: ");
     }
 
     #[test]
     fn test_sublabel_no_color() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(disp.sublabel("L1d"), "                L1d: ");
     }
 
     #[test]
     fn test_inline_sublabel_no_color() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(
             disp.inline_sublabel("Cache", "L1d"),
             "         Cache: L1d: "
@@ -783,13 +862,11 @@ mod tests {
 
     #[test]
     fn test_label_with_color() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: true,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: true,
+            compact: false,
+            verbose: false,
+        });
         let lbl = disp.label("Vendor");
         assert!(lbl.starts_with("\x1b["));
         assert!(lbl.contains("Vendor"));
@@ -850,13 +927,11 @@ mod tests {
 
     #[test]
     fn test_format_system_name_macbook_air_m1() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(
             disp.format_system_name("MacBookAir10,1"),
             "MacBook Air (M1, 2020)"
@@ -865,37 +940,31 @@ mod tests {
 
     #[test]
     fn test_format_system_name_unknown() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(disp.format_system_name("CustomPC"), "CustomPC");
     }
 
     #[test]
     fn test_format_system_name_mac_pro() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
     }
 
     #[test]
     fn test_format_system_name_powerpc() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         assert_eq!(
             disp.format_system_name("PowerMac11,2"),
             "Power Mac G5 (Late 2005)"
@@ -941,13 +1010,11 @@ mod tests {
 
     #[test]
     fn test_display_helpers_no_panic() {
-        let disp = CpuDisplay {
-            flags: CliFlags {
-                color: false,
-                compact: false,
-                verbose: false,
-            },
-        };
+        let mut disp = CpuDisplay::new(CliFlags {
+            color: false,
+            compact: false,
+            verbose: false,
+        });
         disp.print_label("Cores");
         disp.core_heading(0);
         disp.simple_line_if_known("MicroArch", "Zen 4");
@@ -982,9 +1049,7 @@ mod tests {
     fn test_display_features_with_vendor_key() {
         use alloc::collections::BTreeMap;
 
-        let disp = CpuDisplay {
-            flags: CliFlags::default(),
-        };
+        let mut disp = CpuDisplay::new(CliFlags::default());
         let mut features = BTreeMap::new();
         features.insert("Base", String::from("FPU TSC MMX"));
         features.insert("Centaur", String::from("RNG ACE PHE"));

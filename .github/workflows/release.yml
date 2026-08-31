@@ -43,6 +43,12 @@ jobs:
         run: |
           (cd target/efi-disk && zip -r ../../rustid-efi.zip EFI)
 
+      - name: Build Windows binaries
+        run: |
+          just build-windows-gnu
+          just build-windows-gui-gnu
+          zip -j rustid-windows.zip target/x86_64-pc-windows-gnu/release/rustid.exe target/x86_64-pc-windows-gnu/release/rustid-gui.exe
+
       - name: Upload DOS artifact
         uses: actions/upload-artifact@v6
         with:
@@ -54,6 +60,12 @@ jobs:
         with:
           name: rustid-efi
           path: rustid-efi.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rustid-windows
+          path: rustid-windows.zip
 
       - name: Extract changelog entry
         id: changelog
@@ -69,10 +81,10 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists, updating..."
             gh release edit "$TAG" --title "$RELEASE_TITLE" --notes-file release_notes.md
-            gh release upload "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' --clobber
+            gh release upload "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' --clobber
           else
             echo "Creating release $TAG..."
-            gh release create "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' --title "$RELEASE_TITLE" --notes-file release_notes.md
+            gh release create "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' --title "$RELEASE_TITLE" --notes-file release_notes.md
           fi
           rm -f release_notes.md release_title.txt
 

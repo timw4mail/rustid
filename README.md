@@ -16,6 +16,7 @@ This application is developed using *some* AI, mostly related to:
 - **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a set of binaries that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 - **UEFI Compatibility:** Compiles to a standalone UEFI application (32-bit and 64-bit x86)
+- **Windows GUI:** Native, lightweight Win32 GUI application (`rustid-gui.exe`) that can be cross-compiled from Linux.
 
 ## Platform Support
 

@@ -5,7 +5,6 @@ use super::*;
 #[cfg(not(dos_real))]
 use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
-use crate::println;
 #[cfg(not(dos_real))]
 use alloc::string::String;
 
@@ -48,7 +47,7 @@ impl CpuDisplay {
 
 // Formatting/display helpers
 impl Cpu {
-    fn print_misc_flags(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_misc_flags(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         let overdrive = self.signature.is_overdrive;
         let cpuid = self.has_cpuid;
 
@@ -65,7 +64,7 @@ impl Cpu {
         }
     }
 
-    fn print_model(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_model(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         let (raw_model, disp_model) = (Cpu::raw_model_string(), self.display_model_string());
 
         if disp_model != UNK {
@@ -77,7 +76,7 @@ impl Cpu {
         }
     }
 
-    fn print_topology(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_topology(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         if self.is_hybrid() {
             disp.display_topology_line(
                 self.topology.sockets.count,
@@ -136,7 +135,7 @@ impl Cpu {
         }
     }
 
-    fn print_speed(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_speed(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         let speed = self
             .cores
             .first()
@@ -146,7 +145,7 @@ impl Cpu {
         disp.display_frequency(Some(speed), flags);
     }
 
-    fn print_signature(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_signature(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         if self.signature != CpuSignature::default() {
             let key = if self.signature.source == DataSource::Cpuid
                 || self.signature.source == DataSource::CpuidDump
@@ -156,15 +155,16 @@ impl Cpu {
                 "Synthetic Sig"
             };
 
-            println!(
+            let l1 = format!(
                 "{}Family {:X}h, Model {:X}h, Stepping {:X}h",
                 disp.label(key),
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping
             );
+            disp.print_line(&l1);
             if flags.verbose {
-                println!(
+                let l2 = format!(
                     "{:>16}({:X}, {:X}, {:X}, {:X}, {:X})",
                     disp.sublabel("hex"),
                     self.signature.extended_family,
@@ -173,7 +173,8 @@ impl Cpu {
                     self.signature.model,
                     self.signature.stepping
                 );
-                println!(
+                disp.print_line(&l2);
+                let l3 = format!(
                     "{:>16}({}, {}, {}, {}, {})",
                     disp.sublabel("dec"),
                     self.signature.extended_family,
@@ -182,8 +183,9 @@ impl Cpu {
                     self.signature.model,
                     self.signature.stepping
                 );
+                disp.print_line(&l3);
             } else {
-                println!(
+                let l2 = format!(
                     "{:>16}({}, {}, {}, {}, {})",
                     "",
                     self.signature.extended_family,
@@ -192,6 +194,7 @@ impl Cpu {
                     self.signature.model,
                     self.signature.stepping
                 );
+                disp.print_line(&l2);
             }
 
             disp.newline();
@@ -225,7 +228,7 @@ impl Cpu {
     }
 
     #[allow(unused_variables)]
-    fn print_features(&self, flags: CliFlags, disp: &CpuDisplay) {
+    fn print_features(&self, flags: CliFlags, disp: &mut CpuDisplay) {
         #[allow(unused_mut)]
         let mut features = self.features.clone();
 
@@ -246,35 +249,45 @@ impl Cpu {
 }
 
 impl TCpuDisplay for Cpu {
-    fn debug(&self) {
+    fn render_debug(&self) -> String {
         #[cfg(not(dos_os))]
-        println!("{:#?}", self);
+        {
+            #[allow(unused_mut)]
+            let mut out = alloc::format!("{:#?}", self);
+            #[cfg(target_arch = "x86")]
+            if is_cyrix() {
+                out.push_str(&alloc::format!("\n\n{:#?}", super::vendor::Cyrix::detect()));
+            }
+            out
+        }
 
         #[cfg(dos_ext)]
         {
             use super::is_cyrix;
 
-            println!("{:?}", self);
+            let mut out = alloc::format!("{:?}", self);
             if is_cyrix() {
-                println!("{:?}", super::vendor::Cyrix::detect());
+                out.push_str(&alloc::format!("\n{:?}", super::vendor::Cyrix::detect()));
             }
+            out
         }
 
         #[cfg(dos_real)]
         {
             use super::is_cyrix;
 
-            println!("Cpu {{");
-            println!("  has_cpuid: {}", self.has_cpuid);
-            println!(
-                "  arch: CpuArch {{ model: \"{}\", micro_arch: \"{}\", code_name: \"{}\", brand: \"{}\" }}",
+            let mut out = String::new();
+            out.push_str("Cpu {\n");
+            out.push_str(&alloc::format!("  has_cpuid: {}\n", self.has_cpuid));
+            out.push_str(&alloc::format!(
+                "  arch: CpuArch {{ model: \"{}\", micro_arch: \"{}\", code_name: \"{}\", brand: \"{}\" }}\n",
                 self.arch.model,
                 self.arch.micro_arch.as_str(),
                 self.arch.code_name,
                 self.arch.brand_name
-            );
-            println!(
-                "  signature: CpuSignature {{ family: {}, model: {}, stepping: {}, source: \"{}\" }}",
+            ));
+            out.push_str(&alloc::format!(
+                "  signature: CpuSignature {{ family: {}, model: {}, stepping: {}, source: \"{}\" }}\n",
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping,
@@ -284,33 +297,34 @@ impl TCpuDisplay for Cpu {
                     DataSource::Cpuid => "Cpuid",
                     _ => "Other",
                 }
-            );
-            println!(
-                "  topology: Sockets={}, Cores={}, Threads={}, Speed={}MHz (measured={})",
+            ));
+            out.push_str(&alloc::format!(
+                "  topology: Sockets={}, Cores={}, Threads={}, Speed={}MHz (measured={})\n",
                 self.topology.sockets.count,
                 self.topology.cores.count,
                 self.topology.threads.count,
                 self.topology.speed.base,
                 self.topology.speed.measured
-            );
-            println!("}}");
+            ));
+            out.push_str("}\n");
 
             if is_cyrix() {
                 let cyrix = super::vendor::Cyrix::detect();
-                println!(
-                    "Cyrix {{ dir0: {:02X}h, revision: {:02X}h, stepping: {:X}h, multiplier: \"{}\", model: \"{}\" }}",
+                out.push_str(&alloc::format!(
+                    "Cyrix {{ dir0: {:02X}h, revision: {:02X}h, stepping: {:X}h, multiplier: \"{}\", model: \"{}\" }}\n",
                     cyrix.dir0,
                     cyrix.revision,
                     cyrix.stepping,
                     cyrix.multiplier,
                     cyrix.emodel.to_str()
-                );
+                ));
             }
+            out
         }
     }
 
-    fn display_table(&self, flags: CliFlags) {
-        let disp = CpuDisplay { flags };
+    fn display_table_with_disp(&self, disp: &mut CpuDisplay) {
+        let flags = disp.flags;
 
         #[cfg(uefi)]
         {
@@ -351,7 +365,7 @@ impl TCpuDisplay for Cpu {
         }
 
         // Cpu model string
-        self.print_model(flags, &disp);
+        self.print_model(flags, disp);
 
         disp.simple_line_if_known("MicroArch", ma);
 
@@ -369,10 +383,10 @@ impl TCpuDisplay for Cpu {
         disp.simple_line_opt("Easter Egg", self.easter_egg.as_deref());
 
         // Overdrive, CPUID support, etc
-        self.print_misc_flags(flags, &disp);
+        self.print_misc_flags(flags, disp);
 
         // Sockets / Cores / Threads
-        self.print_topology(flags, &disp);
+        self.print_topology(flags, disp);
 
         // Cache
         #[cfg(not(dos_real))]
@@ -424,29 +438,33 @@ impl TCpuDisplay for Cpu {
 
         // Clock Speed (Base/Boost)
         if !self.is_hybrid() {
-            self.print_speed(flags, &disp);
+            self.print_speed(flags, disp);
         }
 
         // CPU Signature
-        self.print_signature(flags, &disp);
+        self.print_signature(flags, disp);
 
         // CPU Features
-        self.print_features(flags, &disp);
+        self.print_features(flags, disp);
 
         #[cfg(target_arch = "x86")]
         if is_cyrix() {
             let cyrix = vendor::Cyrix::detect();
 
             if cyrix.dir0 != 0xFF {
-                println!(
+                let l1 = format!(
                     "{}{:X}h",
                     disp.inline_sublabel("Cyrix", "Model number"),
                     cyrix.dir0
                 );
-                println!("{}{:X}h", disp.sublabel("Revision"), cyrix.revision);
-                println!("{}{:X}h", disp.sublabel("Stepping"), cyrix.stepping);
+                disp.print_line(&l1);
+                let l2 = format!("{}{:X}h", disp.sublabel("Revision"), cyrix.revision);
+                disp.print_line(&l2);
+                let l3 = format!("{}{:X}h", disp.sublabel("Stepping"), cyrix.stepping);
+                disp.print_line(&l3);
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
-                    println!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
+                    let l4 = format!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
+                    disp.print_line(&l4);
                 }
                 disp.newline();
             }

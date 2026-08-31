@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-arm build-windows-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-gui build-windows-arm build-windows-gnu build-windows-gui-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -84,8 +84,13 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
+# Compile check for Windows GUI
+check-windows-gui:
+	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
+	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486
+check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486 check-windows-gui
 
 # More in-depth code style checking
 lint:
@@ -150,6 +155,11 @@ build-windows:
 	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
 	cargo build --target x86_64-pc-windows-msvc --release
 
+# Build for modern windows (GUI), requires visual studio to be installed
+build-windows-gui:
+	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
+	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
+
 build-windows-arm:
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
 	cargo build --target aarch64-pc-windows-msvc --release
@@ -159,6 +169,11 @@ endif
 build-windows-gnu: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --release
+
+# Build Windows GUI using MinGW/GNU target (cross-compilable from Linux)
+build-windows-gui-gnu: _cargo_cross
+	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
+	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
 
 # Build for linux arm64
 build-arm64: _cargo_cross
