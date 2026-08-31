@@ -5,8 +5,7 @@ use super::*;
 #[cfg(not(dos_real))]
 use super::cache::is_asymmetric_dual_ccd_x3d;
 use crate::common::{CliFlags, CpuDisplay, DataSource, TCpuDisplay, UNK};
-#[cfg(uefi)]
-use alloc::format;
+use crate::format;
 #[cfg(not(dos_real))]
 use alloc::string::String;
 
