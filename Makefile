@@ -30,7 +30,7 @@ default:
 
 ifeq ($(OS),Windows_NT)
 _cargo_cross:
-	@where cargo-cross >nul 2>&1 || cargo install cargo-cross
+	@where cargo-cross >/dev/null 2>&1 || cargo install cargo-cross
 else
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
@@ -163,7 +163,7 @@ build-windows-gui-x64: _cargo_cross
 	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
 ifeq ($(OS),Windows_NT)
 	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_64.exe" >nul 2>&1
+	@if exist "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_64.exe" >/dev/null 2>&1
 else
 	@mkdir -p target/dist
 	@cp target/x86_64-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
@@ -299,12 +299,12 @@ test-all: test test-x86 test-arm
 ifeq ($(OS),Windows_NT)
 # Run Windows arm tests
 test-arm: _cargo_cross
-	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
+	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >/dev/null || rustup target add aarch64-pc-windows-msvc
 	cargo cross test --target aarch64-pc-windows-gnu
 
 # Run tests for 32-bit x86
 test-x86:
-	@rustup target list --installed | findstr /c:"i686-pc-windows-msvc" >nul || rustup target add i686-pc-windows-msvc
+	@rustup target list --installed | findstr /c:"i686-pc-windows-msvc" >/dev/null || rustup target add i686-pc-windows-msvc
 	cargo test --target i686-pc-windows-msvc
 else
 # Run linux aarch64 tests

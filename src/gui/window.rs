@@ -20,7 +20,9 @@ use windows::core::{PCWSTR, w};
 
 use super::dialogs::copy_to_clipboard;
 #[cfg(x86_cpu)]
-use super::dialogs::{export_dump_dialog, open_dump_file_dialog, read_file_to_string, write_string_to_file};
+use super::dialogs::{
+    export_dump_dialog, open_dump_file_dialog, read_file_to_string, write_string_to_file,
+};
 use super::menu::*;
 use super::rtf::*;
 use super::state::*;
@@ -354,6 +356,7 @@ unsafe extern "system" fn main_wnd_proc(
                     let state = &mut *state_ptr;
 
                     match cmd_id {
+                        #[cfg(x86_cpu)]
                         IDM_FILE_OPEN =>
                         {
                             #[cfg(x86_cpu)]

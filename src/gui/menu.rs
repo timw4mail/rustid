@@ -12,6 +12,7 @@ use windows::core::{PCWSTR, w};
 
 use super::state::{AppState, IS_RICHEDIT, IS_UNICODE, ViewMode};
 
+#[cfg(x86_cpu)]
 pub const IDM_FILE_OPEN: u32 = 101;
 #[cfg(x86_cpu)]
 pub const IDM_FILE_EXPORT: u32 = 102;
@@ -39,6 +40,7 @@ pub fn create_main_menu() -> HMENU {
 
             // File Menu
             let hmenu_file = CreatePopupMenu().unwrap_or_default();
+            #[cfg(x86_cpu)]
             let _ = AppendMenuW(
                 hmenu_file,
                 MF_STRING,
@@ -52,6 +54,7 @@ pub fn create_main_menu() -> HMENU {
                 IDM_FILE_EXPORT as usize,
                 w!("Export CPUID Dump...\tCtrl+S"),
             );
+            #[cfg(x86_cpu)]
             let _ = AppendMenuW(hmenu_file, MF_SEPARATOR, 0, PCWSTR::null());
             let _ = AppendMenuW(
                 hmenu_file,
@@ -59,6 +62,7 @@ pub fn create_main_menu() -> HMENU {
                 IDM_FILE_COPY as usize,
                 w!("Copy All Text\tCtrl+C"),
             );
+            #[cfg(x86_cpu)]
             let _ = AppendMenuW(
                 hmenu_file,
                 MF_STRING,
@@ -155,6 +159,7 @@ pub fn create_main_menu() -> HMENU {
 
             // File Menu
             let hmenu_file = CreatePopupMenu();
+            #[cfg(x86_cpu)]
             AppendMenuA(
                 hmenu_file,
                 0,

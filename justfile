@@ -13,7 +13,7 @@ _cargo_cross:
 
 [windows]
 _cargo_cross:
-	@where cargo-cross >nul 2>&1 || cargo install cargo-cross
+	@where cargo-cross >/dev/null 2>&1 || cargo install cargo-cross
 
 # Check code validity and style
 check:
@@ -288,7 +288,7 @@ test-arm: _cargo_cross
 # Run Windows arm tests
 [windows]
 test-arm: _cargo_cross
-	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
+	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >/dev/null || rustup target add aarch64-pc-windows-msvc
 	cargo cross test --target aarch64-pc-windows-gnu
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
@@ -300,5 +300,5 @@ test-x86: _cargo_cross
 # Run tests for 32-bit x86
 [windows]
 test-x86:
-	@rustup target list --installed | findstr /c:"i686-pc-windows-msvc" >nul || rustup target add i686-pc-windows-msvc
+	@rustup target list --installed | findstr /c:"i686-pc-windows-msvc" >/dev/null || rustup target add i686-pc-windows-msvc
 	cargo test --target i686-pc-windows-msvc

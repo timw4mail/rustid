@@ -176,7 +176,7 @@ impl CpuDisplay {
         let total_threads = cpu_info.total_threads();
         let sockets = cpu_info.total_sockets();
 
-        if sockets > 1 || flags.verbose {
+        if cpu_info.is_hybrid() || flags.verbose {
             disp.display_topology_line(
                 sockets,
                 total_cores,
