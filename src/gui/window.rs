@@ -1,21 +1,24 @@
 //! Window management, window procedure, control layout, rendering, and main loop.
 
 use std::ffi::c_void;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 use rustid::Cpu;
 #[allow(unused_imports)]
 use rustid::common::{CpuDisplay, TDetect};
 
 use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Gdi::{COLOR_BTNFACE, HBRUSH, UpdateWindow};
+use windows::Win32::Graphics::Gdi::{
+    COLOR_BTNFACE, CreateSolidBrush, DeleteObject, HBRUSH, HDC, HGDIOBJ, InvalidateRect,
+    SetBkColor, SetTextColor, UpdateWindow,
+};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Controls::*;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_F5};
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{PCWSTR, w};
 
-use super::dialogs::copy_to_clipboard;
+use super::dialogs::{copy_to_clipboard, read_file_to_string, write_string_to_file};
 #[cfg(x86_cpu)]
 use super::dialogs::{export_dump_dialog, open_dump_file_dialog};
 use super::menu::*;
@@ -23,40 +26,118 @@ use super::rtf::*;
 use super::state::*;
 use super::theme::*;
 
-const EM_SETTEXTEX: u32 = WM_USER + 97;
+const EM_STREAMIN: u32 = WM_USER + 73;
+const SF_RTF: usize = 0x0002;
+const WM_CTLCOLOREDIT: u32 = 0x0133;
+const WM_CTLCOLORSTATIC: u32 = 0x0138;
 
 #[repr(C)]
-#[allow(clippy::upper_case_acronyms)]
-struct SETTEXTEX {
-    flags: u32,
-    codepage: u32,
+struct EDITSTREAM {
+    dw_cookie: usize,
+    dw_error: u32,
+    pfn_callback: Option<
+        unsafe extern "system" fn(
+            dw_cookie: usize,
+            pb_buff: *mut u8,
+            cb: i32,
+            pcb: *mut i32,
+        ) -> u32,
+    >,
+}
+
+struct StreamCookie<'a> {
+    data: &'a [u8],
+    offset: usize,
+}
+
+unsafe extern "system" fn edit_stream_in_callback(
+    dw_cookie: usize,
+    pb_buff: *mut u8,
+    cb: i32,
+    pcb: *mut i32,
+) -> u32 {
+    if dw_cookie == 0 || pb_buff.is_null() || pcb.is_null() || cb <= 0 {
+        return 0;
+    }
+    unsafe {
+        let cookie = &mut *(dw_cookie as *mut StreamCookie);
+        let remaining = &cookie.data[cookie.offset..];
+        let to_copy = remaining.len().min(cb as usize);
+        if to_copy > 0 {
+            std::ptr::copy_nonoverlapping(remaining.as_ptr(), pb_buff, to_copy);
+            cookie.offset += to_copy;
+            *pcb = to_copy as i32;
+        } else {
+            *pcb = 0;
+        }
+    }
+    0
+}
+
+static BRUSH_DARK: AtomicIsize = AtomicIsize::new(0);
+static BRUSH_LIGHT: AtomicIsize = AtomicIsize::new(0);
+
+fn get_dark_brush() -> HBRUSH {
+    let raw = BRUSH_DARK.load(Ordering::Relaxed);
+    if raw != 0 {
+        HBRUSH(raw as *mut c_void)
+    } else {
+        unsafe {
+            let b = CreateSolidBrush(COLORREF(0x00261B1A));
+            BRUSH_DARK.store(b.0 as isize, Ordering::Relaxed);
+            b
+        }
+    }
+}
+
+fn get_light_brush() -> HBRUSH {
+    let raw = BRUSH_LIGHT.load(Ordering::Relaxed);
+    if raw != 0 {
+        HBRUSH(raw as *mut c_void)
+    } else {
+        unsafe {
+            let b = CreateSolidBrush(COLORREF(0x00FFFFFF));
+            BRUSH_LIGHT.store(b.0 as isize, Ordering::Relaxed);
+            b
+        }
+    }
 }
 
 fn set_richedit_content(hwnd_edit: HWND, doc: &str, plain: &str) {
-    if IS_RICHEDIT.load(Ordering::Relaxed) && IS_UNICODE.load(Ordering::Relaxed) {
-        // Unicode RichEdit: stream RTF via EM_SETTEXTEX
-        let doc_bytes: Vec<u8> = doc.bytes().chain(std::iter::once(0)).collect();
-        let st = SETTEXTEX {
-            flags: 0,
-            codepage: 0,
+    if IS_RICHEDIT.load(Ordering::Relaxed) {
+        // Universal RichEdit path: stream RTF via EM_STREAMIN (supported on RichEdit 1.0, 2.0A, 2.0W, 5.0W)
+        let doc_bytes = doc.as_bytes();
+        let mut cookie = StreamCookie {
+            data: doc_bytes,
+            offset: 0,
         };
-        unsafe {
-            let _ = SendMessageW(
-                hwnd_edit,
-                EM_SETTEXTEX,
-                Some(WPARAM(&st as *const _ as usize)),
-                Some(LPARAM(doc_bytes.as_ptr() as isize)),
-            );
-        }
+        let mut es = EDITSTREAM {
+            dw_cookie: &mut cookie as *mut _ as usize,
+            dw_error: 0,
+            pfn_callback: Some(edit_stream_in_callback),
+        };
+        let _ = send_msg(hwnd_edit, EM_STREAMIN, SF_RTF, &mut es as *mut _ as isize);
     } else {
-        // ANSI path (Win9x/ME) or plain EDIT fallback:
-        // Use WM_SETTEXT with plain text via SendMessageA.
-        unsafe extern "system" {
-            fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize) -> isize;
-        }
-        let text_a = std::ffi::CString::new(plain).unwrap_or_default();
-        unsafe {
-            SendMessageA(hwnd_edit.0, 0x000C, 0, text_a.as_ptr() as isize); // WM_SETTEXT
+        // Plain EDIT fallback: use WM_SETTEXT with plain text
+        if IS_UNICODE.load(Ordering::Relaxed) {
+            let plain_u16 = to_pcwstr(plain);
+            unsafe {
+                let _ = SendMessageW(
+                    hwnd_edit,
+                    WM_SETTEXT,
+                    Some(WPARAM(0)),
+                    Some(LPARAM(plain_u16.as_ptr() as isize)),
+                );
+            }
+        } else {
+            unsafe extern "system" {
+                fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize)
+                -> isize;
+            }
+            let text_a = std::ffi::CString::new(plain).unwrap_or_default();
+            unsafe {
+                SendMessageA(hwnd_edit.0, 0x000C, 0, text_a.as_ptr() as isize); // WM_SETTEXT
+            }
         }
     }
 }
@@ -125,8 +206,12 @@ fn update_status_bar(state: &AppState, cpu: &Cpu) {
 fn render_current_text(state: &mut AppState) {
     #[cfg(x86_cpu)]
     if let Some(path) = &state.loaded_file {
-        let dump = rustid::x86::provider::CpuDump::parse_file(path);
-        rustid::x86::provider::set_cpuid_provider(dump);
+        if let Some(contents) = read_file_to_string(path) {
+            let dump = rustid::x86::provider::CpuDump::parse_str(&contents);
+            rustid::x86::provider::set_cpuid_provider(dump);
+        } else {
+            rustid::x86::provider::reset_cpuid_provider();
+        }
     } else {
         rustid::x86::provider::reset_cpuid_provider();
     }
@@ -163,6 +248,10 @@ fn render_current_text(state: &mut AppState) {
     // Format document and stream into RichEdit (or plain text for ANSI/EDIT fallback)
     let doc = to_rtf(&state.current_plain_text, state.dark_theme, state.color);
     set_richedit_content(state.hwnd_edit, &doc, &state.current_plain_text);
+
+    unsafe {
+        let _ = InvalidateRect(Some(state.hwnd_edit), None, true);
+    }
 
     update_menu_checks(state);
     update_status_bar(state, &cpu);
@@ -282,7 +371,7 @@ unsafe extern "system" fn main_wnd_proc(
                             );
                             if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
                                 let dump_content = generate_dump_info_plain();
-                                if std::fs::write(&save_path, dump_content).is_ok() {
+                                if write_string_to_file(&save_path, &dump_content) {
                                     let msg_text =
                                         format!("CPUID dump successfully saved to:\n{}", save_path);
                                     if IS_UNICODE.load(Ordering::Relaxed) {
@@ -425,8 +514,12 @@ unsafe extern "system" fn main_wnd_proc(
                                 );
                                 if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
                                     let dump_content = generate_dump_info_plain();
-                                    let _ = std::fs::write(&save_path, dump_content);
+                                    let _ = write_string_to_file(&save_path, &dump_content);
                                 }
+                                return LRESULT(0);
+                            }
+                            b'C' => {
+                                copy_to_clipboard(hwnd, &state.current_plain_text);
                                 return LRESULT(0);
                             }
                             b'1' => {
@@ -517,6 +610,22 @@ unsafe extern "system" fn main_wnd_proc(
                 }
                 LRESULT(0)
             }
+            WM_CTLCOLOREDIT | WM_CTLCOLORSTATIC => {
+                if !state_ptr.is_null() {
+                    let state = &*state_ptr;
+                    let hdc = HDC(wparam.0 as *mut c_void);
+                    if state.dark_theme {
+                        let _ = SetTextColor(hdc, COLORREF(0x00D4D4D4));
+                        let _ = SetBkColor(hdc, COLORREF(0x00261B1A));
+                        return LRESULT(get_dark_brush().0 as isize);
+                    } else {
+                        let _ = SetTextColor(hdc, COLORREF(0x001E1E1E));
+                        let _ = SetBkColor(hdc, COLORREF(0x00FFFFFF));
+                        return LRESULT(get_light_brush().0 as isize);
+                    }
+                }
+                LRESULT(0)
+            }
             WM_SETTINGCHANGE => {
                 if !state_ptr.is_null() {
                     let state = &mut *state_ptr;
@@ -534,6 +643,14 @@ unsafe extern "system" fn main_wnd_proc(
                 if !state_ptr.is_null() {
                     let _ = Box::from_raw(state_ptr);
                     set_window_state(hwnd, 0);
+                }
+                let dark_b = BRUSH_DARK.swap(0, Ordering::SeqCst);
+                if dark_b != 0 {
+                    let _ = DeleteObject(HGDIOBJ(dark_b as *mut c_void));
+                }
+                let light_b = BRUSH_LIGHT.swap(0, Ordering::SeqCst);
+                if light_b != 0 {
+                    let _ = DeleteObject(HGDIOBJ(light_b as *mut c_void));
                 }
                 PostQuitMessage(0);
                 LRESULT(0)

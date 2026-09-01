@@ -4,12 +4,13 @@ use std::ffi::c_void;
 use std::sync::atomic::Ordering;
 
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CheckMenuItem, CheckMenuRadioItem, CreateMenu, CreatePopupMenu, GetSubMenu, HMENU,
-    MF_BYCOMMAND, MF_CHECKED, MF_POPUP, MF_SEPARATOR, MF_STRING, MF_UNCHECKED,
+    AppendMenuW, CheckMenuItem, CheckMenuRadioItem, CreateMenu, CreatePopupMenu, EnableMenuItem,
+    GetSubMenu, HMENU, MF_BYCOMMAND, MF_CHECKED, MF_ENABLED, MF_GRAYED, MF_POPUP, MF_SEPARATOR,
+    MF_STRING, MF_UNCHECKED,
 };
 use windows::core::{PCWSTR, w};
 
-use super::state::{AppState, IS_UNICODE, ViewMode};
+use super::state::{AppState, IS_RICHEDIT, IS_UNICODE, ViewMode};
 
 pub const IDM_FILE_OPEN: u32 = 101;
 #[cfg(x86_cpu)]
@@ -287,15 +288,22 @@ pub fn update_menu_checks(state: &AppState) {
             MF_BYCOMMAND.0,
         );
 
-        let _ = CheckMenuItem(
-            hmenu_mode,
-            IDM_OPT_COLOR,
-            if state.color {
-                MF_CHECKED.0
-            } else {
-                MF_UNCHECKED.0
-            },
-        );
+        let is_richedit = IS_RICHEDIT.load(Ordering::Relaxed);
+        if is_richedit {
+            let _ = EnableMenuItem(hmenu_mode, IDM_OPT_COLOR, MF_BYCOMMAND | MF_ENABLED);
+            let _ = CheckMenuItem(
+                hmenu_mode,
+                IDM_OPT_COLOR,
+                if state.color {
+                    MF_CHECKED.0
+                } else {
+                    MF_UNCHECKED.0
+                },
+            );
+        } else {
+            let _ = EnableMenuItem(hmenu_mode, IDM_OPT_COLOR, MF_BYCOMMAND | MF_GRAYED);
+            let _ = CheckMenuItem(hmenu_mode, IDM_OPT_COLOR, MF_UNCHECKED.0);
+        }
 
         let _ = CheckMenuItem(
             hmenu_mode,

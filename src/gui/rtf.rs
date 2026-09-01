@@ -1,4 +1,4 @@
-﻿//! Plain report formatting and syntax-colored RTF generation.
+//! Plain report formatting and syntax-colored RTF generation.
 
 use rustid::Cpu;
 #[allow(unused_imports)]
@@ -68,16 +68,18 @@ pub fn rtf_escape(s: &str) -> String {
 }
 
 pub fn to_rtf(plain_text: &str, dark_theme: bool, color: bool) -> String {
+    let font_tbl = "{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Consolas;}{\\f1\\fmodern\\fprq1\\fcharset0 Courier New;}}";
+
     if !color {
         let escaped = rtf_escape(plain_text);
         return if dark_theme {
             format!(
-                "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{{\\fonttbl{{\\f0\\fnil\\fcharset0 Consolas;}}}}{{\\colortbl ;\\red212\\green212\\blue212;}}\\viewkind4\\uc1\\f0\\fs22\\cf1 {}\\par}}",
+                "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{font_tbl}{{\\colortbl ;\\red212\\green212\\blue212;}}\\viewkind4\\uc1\\f0\\f1\\fs22\\cf1 {}\\par}}",
                 escaped
             )
         } else {
             format!(
-                "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{{\\fonttbl{{\\f0\\fnil\\fcharset0 Consolas;}}}}{{\\colortbl ;\\red30\\green30\\blue30;}}\\viewkind4\\uc1\\f0\\fs22\\cf1 {}\\par}}",
+                "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{font_tbl}{{\\colortbl ;\\red30\\green30\\blue30;}}\\viewkind4\\uc1\\f0\\f1\\fs22\\cf1 {}\\par}}",
                 escaped
             )
         };
@@ -96,7 +98,7 @@ pub fn to_rtf(plain_text: &str, dark_theme: bool, color: bool) -> String {
     };
 
     let mut rtf = format!(
-        "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{{\\fonttbl{{\\f0\\fnil\\fcharset0 Consolas;}}}}{color_tbl}\\viewkind4\\uc1\\f0\\fs22 "
+        "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{font_tbl}{color_tbl}\\viewkind4\\uc1\\f0\\f1\\fs22 "
     );
 
     for line in plain_text.lines() {
