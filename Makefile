@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-all check-riscv check-win-arm lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows build-windows-gui build-windows-win7 build-windows-gui-win7 build-windows-arm build-windows-gnu build-windows-gui-gnu build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-x86-emu run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-windows-gui-32 check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui build-windows-gui-32 build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -69,11 +69,6 @@ check-riscv:
 	@if ! rustup target list --installed | grep -q riscv64gc-unknown-linux-gnu; then rustup target add riscv64gc-unknown-linux-gnu; fi
 	cargo check --target riscv64gc-unknown-linux-gnu
 
-# Compile check for Windows ARM
-check-win-arm:
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
-	cargo check --target aarch64-pc-windows-msvc
-
 # Compile check for Android ARM64
 check-android:
 	@if ! rustup target list --installed | grep -q aarch64-linux-android; then rustup target add aarch64-linux-android; fi
@@ -84,13 +79,18 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
-# Compile check for Windows GUI
+# Compile check for Windows GUI (64-bit)
 check-windows-gui:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
 
+# Compile check for Windows GUI (32-bit)
+check-windows-gui-32:
+	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
+	cargo check --target i686-pc-windows-gnu --features gui --bin rustid-gui
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486 check-windows-gui
+check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-windows-gui-32
 
 # More in-depth code style checking
 lint:
@@ -149,39 +149,15 @@ build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
 # Build all dos binaries
 build-dos: build-dos32a build-dos-real
 
-ifeq ($(OS),Windows_NT)
-# Build for modern windows (cli), requires visual studio to be installed
-build-windows:
-	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
-	cargo build --target x86_64-pc-windows-msvc --release
-
-# Build for modern windows (GUI), requires visual studio to be installed
-build-windows-gui:
-	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
-	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
-
-# Build for Windows 7+ (CLI), fully self-contained with no Windows 10/11 runtime dependencies
-build-windows-win7:
-	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --release
-
-# Build for Windows 7+ (GUI), fully self-contained with no Windows 10/11 runtime dependencies
-build-windows-gui-win7:
-	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --features gui --bin rustid-gui --release
-
-build-windows-arm:
-	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
-	cargo build --target aarch64-pc-windows-msvc --release
-endif
-
-# Build for modern windows (cli), can be easier than msvc build
-build-windows-gnu: _cargo_cross
-	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo cross build --target x86_64-pc-windows-gnu --release
-
-# Build Windows GUI using MinGW/GNU target (cross-compilable from Linux)
-build-windows-gui-gnu: _cargo_cross
+# Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
+build-windows-gui: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
+
+# Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
+build-windows-gui-32: _cargo_cross
+	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
+	cargo cross +nightly build --target build-config/i586-pc-windows-gnu.json -Z json-target-spec -Z build-std=std,panic_abort,core,alloc --features gui --bin rustid-gui --release
 
 # Build for linux arm64
 build-arm64: _cargo_cross
@@ -254,10 +230,6 @@ from-file:
 	@$(BASE_RUN) file $(ARG)
 
 ifeq ($(OS),Windows_NT)
-# Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
-run-x86-emu:
-	@rustup target list --installed | findstr /c:"arm64ec-pc-windows-msvc" >nul || rustup target add arm64ec-pc-windows-msvc
-	cargo run --target arm64ec-pc-windows-msvc $(ARG)
 
 # Run the dos build in DOSBox-X
 run-dos: build-dos

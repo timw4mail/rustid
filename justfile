@@ -48,11 +48,6 @@ check-riscv:
 	@if ! rustup target list --installed | grep -q riscv64gc-unknown-linux-gnu; then rustup target add riscv64gc-unknown-linux-gnu; fi
 	cargo check --target riscv64gc-unknown-linux-gnu
 
-# Compile check for Windows ARM
-check-win-arm:
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-msvc; then rustup target add aarch64-pc-windows-msvc; fi
-	cargo check --target aarch64-pc-windows-msvc
-
 # Compile check for Android ARM64
 check-android:
 	@if ! rustup target list --installed | grep -q aarch64-linux-android; then rustup target add aarch64-linux-android; fi
@@ -63,13 +58,18 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
-# Compile check for Windows GUI
+# Compile check for Windows GUI (64-bit)
 check-windows-gui:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
 
+# Compile check for Windows GUI (32-bit)
+check-windows-gui-32:
+	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
+	cargo check --target i686-pc-windows-gnu --features gui --bin rustid-gui
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-win-arm check-android check-486 check-windows-gui
+check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-windows-gui-32
 
 # More in-depth code style checking
 lint:
@@ -128,42 +128,22 @@ build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
 # Build all dos binaries
 build-dos: build-dos32a build-dos-real
 
-# Build for modern windows (cli), requires visual studio to be installed
-[windows]
-build-windows:
-	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
-	cargo build --target x86_64-pc-windows-msvc --release
-
-# Build for modern windows (GUI), requires visual studio to be installed
-[windows]
-build-windows-gui:
-	@rustup target list --installed | findstr /c:"x86_64-pc-windows-msvc" >nul || rustup target add x86_64-pc-windows-msvc
-	cargo build --target x86_64-pc-windows-msvc --features gui --bin rustid-gui --release
-
-# Build for Windows 7+ (CLI), fully self-contained with no Windows 10/11 runtime dependencies
-[windows]
-build-windows-win7:
-	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --release
-
-# Build for Windows 7+ (GUI), fully self-contained with no Windows 10/11 runtime dependencies
-[windows]
-build-windows-gui-win7:
-	cargo +nightly build --target x86_64-win7-windows-msvc -Z build-std=std,panic_abort --features gui --bin rustid-gui --release
-
-[windows]
-build-windows-arm:
-	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >nul || rustup target add aarch64-pc-windows-msvc
-	cargo build --target aarch64-pc-windows-msvc --release
-
-# Build for modern windows (cli), can be easier than msvc build
-build-windows-gnu: _cargo_cross
-	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo cross build --target x86_64-pc-windows-gnu --release
-
-# Build Windows GUI using MinGW/GNU target (cross-compilable from Linux)
-build-windows-gui-gnu: _cargo_cross
+# Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
+build-windows-gui: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
+
+# Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
+[linux, unix]
+build-windows-gui-32: _cargo_cross
+	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
+	cargo cross +nightly build --target build-config/i586-pc-windows-gnu.json -Z json-target-spec -Z build-std=std,panic_abort,core,alloc --features gui --bin rustid-gui --release
+
+# Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
+# On Windows, uses a helper script because cargo cross does not configure MinGW in PATH for JSON targets.
+[windows]
+build-windows-gui-32: _cargo_cross
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
 
 # Build for linux arm64
 build-arm64: _cargo_cross
@@ -236,11 +216,6 @@ run arg="":
 from-file arg="":
 	@{{base_run}} file {{arg}}
 
-# Run Windows arm64/x86_64 hybrid build - shows simulated x86 info
-[windows]
-run-x86-emu arg="":
-	@rustup target list --installed | findstr /c:"arm64ec-pc-windows-msvc" >nul || rustup target add arm64ec-pc-windows-msvc
-	cargo run --target arm64ec-pc-windows-msvc {{arg}}
 
 # Run the dos build in DOSBox-X
 [windows]
