@@ -360,7 +360,7 @@ unsafe extern "system" fn main_wnd_proc(
                         }
                         IDM_HELP_ABOUT => {
                             let about_text = format!(
-                                "Rustid v{}\nMulti-architecture CPU detection tool\nRunning on {}-{}\n\nFeatures: Standard Table, Debug, Everything, CPUID Dump, Native Colors, Cross-Compiled.",
+                                "Rustid v{}\nMulti-architecture CPU detection tool\nRunning on {}-{}",
                                 env!("CARGO_PKG_VERSION"),
                                 std::env::consts::ARCH,
                                 std::env::consts::OS
