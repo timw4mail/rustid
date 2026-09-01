@@ -1,5 +1,6 @@
 use super::micro_arch::CpuCore;
 use super::micro_arch::*;
+#[cfg(any(not(target_os = "macos"), test))]
 use crate::arm::brand::Vendor;
 use crate::common::*;
 use std::collections::{BTreeMap, HashSet};
