@@ -51,3 +51,8 @@ rustflags = [
 	"-C", "target-cpu=i486",
 	"-C", "target-feature=-sse,-sse2",
 ]
+
+[target.aarch64-pc-windows-gnullvm]
+rustflags = [
+	"-C", "target-feature=+crt-static",
+]

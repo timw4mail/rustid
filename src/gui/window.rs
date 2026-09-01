@@ -31,7 +31,7 @@ const SF_RTF: usize = 0x0002;
 const WM_CTLCOLOREDIT: u32 = 0x0133;
 const WM_CTLCOLORSTATIC: u32 = 0x0138;
 
-#[repr(C)]
+#[repr(C, packed(4))]
 struct EDITSTREAM {
     dw_cookie: usize,
     dw_error: u32,

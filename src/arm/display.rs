@@ -155,8 +155,6 @@ impl CpuDisplay {
     pub fn display_arm(cpu_info: &Cpu, disp: &mut CpuDisplay) {
         let flags = disp.flags;
 
-        disp.newline();
-
         if let Some(system) = &cpu_info.system {
             disp.display_system(system, flags);
         }
