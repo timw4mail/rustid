@@ -4,15 +4,8 @@
 
 ### Added
 - **Native Windows GUI Application (`rustid-gui`)**:
-  - Added a dedicated Win32 native GUI application built under the `gui` Cargo feature (`src/rustid_gui.rs`, `src/gui/mod.rs`)
-  - Modular GUI architecture with separated components:
-    - Window management, event loop, DPI scaling, and control layout (`src/gui/window.rs`)
-    - State management for view modes (Standard, Debug, Everything, Dump), display options (Color, Verbose, Compact, Dark Mode), and loaded CPUID dumps (`src/gui/state.rs`)
-    - Native Menu Bar with keyboard accelerators (File, Mode, Options, Help) (`src/gui/menu.rs`)
-    - Windows Common File Dialogs (`GetOpenFileName` / `GetSaveFileName`) for opening and exporting CPUID dump files, clipboard export, and About dialog (`src/gui/dialogs.rs`)
-    - ANSI-to-RTF converter with full Tokyo Night color palette and syntax highlighting for live RichEdit rendering (`src/gui/rtf.rs`)
-    - Windows dark theme detection and immersive titlebar support via `DwmSetWindowAttribute` (`src/gui/theme.rs`)
-    - Comprehensive Windows 9x / NT 4 compatibility shims with dynamic symbol resolution and static fallback stubs (`src/gui/shims.rs`)
+  - Added a dedicated Win32 GUI binary built under the `gui` Cargo feature (`src/rustid_gui.rs`, `src/gui/mod.rs`)
+  - There are 3 builds: x86_32, x86_64, and arm64
 - **Universal Windows Compatibility (Windows 95 through Windows 11)**:
   - Runtime Unicode vs. ANSI API detection (`IS_UNICODE`); automatically falls back to ANSI window registration (`RegisterClassExA`) and window creation (`CreateWindowExA`) on Windows 95/98/ME
   - Dynamic RichEdit version fallback chain: RichEdit 5.0 (`RichEdit50W`) -> RichEdit 2.0/3.0 (`RichEdit20W`/`RichEdit20A`) -> RichEdit 1.0 (`RICHEDIT` via `riched32.dll`) -> standard multiline `EDIT` control
@@ -35,6 +28,7 @@
 - **Release Workflow Binary Packaging**: Added Windows GUI binary builds to release workflow artifact generation (`.github/workflows/release.yml`)
 - **ELF to LE Converter Section Handling**: Extended `elf2le` tool to match dotted ELF section names like `.rodata.*`, `.data.*`, and `.bss.*` for DOS32A protected-mode binaries (`tools/elf2le/src/main.rs`)
 - **Xeon & Pentium 4 Test Fixtures**: Added dual-socket Intel Xeon E5-2470 test fixture (`examples/xeon-e5-2470.txt`) and Intel Pentium 4 Northwood CPUID dump and tests (`tests/cpuid/dump/P4Northwood.txt`, `tests/cpuid_dump_test.rs`)
+- **Easter Egg String Validation**: Added `Cpu::is_valid_easter_egg()` to validate candidate easter egg strings, filtering out empty, too-short, control-character-containing, non-alphanumeric, and repetitive strings (`src/x86/cpu.rs`)
 
 ### Changed
 - **Deduplicated Linux & Android OS Detection**: Replaced separate `src/arm/os/android.rs` (345 lines) with unified `src/arm/os/linux.rs` guarded by `#[cfg(linux_os)]`, and consolidated duplicated sysfs and `/proc/cpuinfo` parsing logic across Linux and Android into `src/common/os/common.rs` and `src/common/os/linux_sysfs.rs` (`src/common/os/linux.rs`, `src/common/os/android.rs`)
