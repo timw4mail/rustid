@@ -136,8 +136,7 @@ build-windows-gui: _cargo_cross
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 [linux, unix]
 build-windows-gui-32: _cargo_cross
-	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
-	cargo cross +nightly build --target build-config/i586-pc-windows-gnu.json -Z json-target-spec -Z build-std=std,panic_abort,core,alloc --features gui --bin rustid-gui --release
+	bash build-config/build-windows-gui-32.sh
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 # On Windows, uses a helper script because cargo cross does not configure MinGW in PATH for JSON targets.

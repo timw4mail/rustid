@@ -5,13 +5,12 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, CreateFontW, DEFAULT_CHARSET, DeleteObject,
-    FW_NORMAL, GetDC, GetDeviceCaps, HFONT, HGDIOBJ, LOGPIXELSX, OUT_DEFAULT_PRECIS, ReleaseDC,
+    CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, CreateFontW, DEFAULT_CHARSET, DeleteObject, FW_NORMAL,
+    GetDC, GetDeviceCaps, HFONT, HGDIOBJ, LOGPIXELSX, OUT_DEFAULT_PRECIS, ReleaseDC,
 };
 use windows::Win32::System::LibraryLoader::LoadLibraryW;
 use windows::Win32::System::Registry::{
-    HKEY, HKEY_CURRENT_USER, KEY_READ, REG_VALUE_TYPE, RegCloseKey, RegOpenKeyExW,
-    RegQueryValueExW,
+    HKEY, HKEY_CURRENT_USER, KEY_READ, REG_VALUE_TYPE, RegCloseKey, RegOpenKeyExW, RegQueryValueExW,
 };
 use windows::Win32::UI::Controls::{
     ICC_BAR_CLASSES, ICC_STANDARD_CLASSES, INITCOMMONCONTROLSEX, InitCommonControlsEx,

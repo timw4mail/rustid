@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetWindowLongPtrW, GWLP_USERDATA, HMENU, SetWindowLongPtrW, WM_USER,
+    GWLP_USERDATA, GetWindowLongPtrW, HMENU, SetWindowLongPtrW, WM_USER,
 };
 
 pub const IDC_STATUSBAR: i32 = 5001;

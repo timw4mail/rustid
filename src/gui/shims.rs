@@ -1169,4 +1169,3 @@ pub unsafe extern "system" fn rustid_try_enter_critical_section(
         1
     }
 }
-

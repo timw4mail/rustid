@@ -1,11 +1,11 @@
-﻿//! Menu definitions, construction, and state updates.
+//! Menu definitions, construction, and state updates.
 
 use std::ffi::c_void;
 use std::sync::atomic::Ordering;
 
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CheckMenuItem, CheckMenuRadioItem, CreateMenu, CreatePopupMenu, GetSubMenu,
-    HMENU, MF_BYCOMMAND, MF_CHECKED, MF_POPUP, MF_SEPARATOR, MF_STRING, MF_UNCHECKED,
+    AppendMenuW, CheckMenuItem, CheckMenuRadioItem, CreateMenu, CreatePopupMenu, GetSubMenu, HMENU,
+    MF_BYCOMMAND, MF_CHECKED, MF_POPUP, MF_SEPARATOR, MF_STRING, MF_UNCHECKED,
 };
 use windows::core::{PCWSTR, w};
 

@@ -7,9 +7,7 @@ use rustid::Cpu;
 #[allow(unused_imports)]
 use rustid::common::{CpuDisplay, TDetect};
 
-use windows::Win32::Foundation::{
-    COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
-};
+use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{COLOR_BTNFACE, HBRUSH, UpdateWindow};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Controls::*;
@@ -54,12 +52,7 @@ fn set_richedit_content(hwnd_edit: HWND, doc: &str, plain: &str) {
         // ANSI path (Win9x/ME) or plain EDIT fallback:
         // Use WM_SETTEXT with plain text via SendMessageA.
         unsafe extern "system" {
-            fn SendMessageA(
-                hWnd: *mut c_void,
-                Msg: u32,
-                wParam: usize,
-                lParam: isize,
-            ) -> isize;
+            fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize) -> isize;
         }
         let text_a = std::ffi::CString::new(plain).unwrap_or_default();
         unsafe {
@@ -116,8 +109,7 @@ fn update_status_bar(state: &AppState, cpu: &Cpu) {
         send_msg(state.hwnd_status, SB_SETTEXTW, 2, p3_u16.as_ptr() as isize);
     } else {
         unsafe extern "system" {
-            fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize)
-            -> isize;
+            fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize) -> isize;
         }
         let p1_a = std::ffi::CString::new(part1).unwrap_or_default();
         let p2_a = std::ffi::CString::new(part2).unwrap_or_default();
@@ -148,8 +140,7 @@ fn render_current_text(state: &mut AppState) {
         }
         ViewMode::Debug => generate_debug_info_plain(&cpu),
         ViewMode::Everything => {
-            let report =
-                generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump);
+            let report = generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump);
             let debug = generate_debug_info_plain(&cpu);
             format!("{}\r\n--------------------\r\n\r\n{}", report, debug)
         }
@@ -292,10 +283,8 @@ unsafe extern "system" fn main_wnd_proc(
                             if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
                                 let dump_content = generate_dump_info_plain();
                                 if std::fs::write(&save_path, dump_content).is_ok() {
-                                    let msg_text = format!(
-                                        "CPUID dump successfully saved to:\n{}",
-                                        save_path
-                                    );
+                                    let msg_text =
+                                        format!("CPUID dump successfully saved to:\n{}", save_path);
                                     if IS_UNICODE.load(Ordering::Relaxed) {
                                         let msg_u16 = to_pcwstr(&msg_text);
                                         let _ = MessageBoxW(
@@ -313,8 +302,8 @@ unsafe extern "system" fn main_wnd_proc(
                                                 uType: u32,
                                             ) -> i32;
                                         }
-                                        let txt_a = std::ffi::CString::new(msg_text)
-                                            .unwrap_or_default();
+                                        let txt_a =
+                                            std::ffi::CString::new(msg_text).unwrap_or_default();
                                         MessageBoxA(
                                             hwnd.0,
                                             txt_a.as_ptr() as *const u8,
@@ -393,8 +382,7 @@ unsafe extern "system" fn main_wnd_proc(
                                         uType: u32,
                                     ) -> i32;
                                 }
-                                let txt_a =
-                                    std::ffi::CString::new(about_text).unwrap_or_default();
+                                let txt_a = std::ffi::CString::new(about_text).unwrap_or_default();
                                 MessageBoxA(
                                     hwnd.0,
                                     txt_a.as_ptr() as *const u8,
@@ -435,8 +423,7 @@ unsafe extern "system" fn main_wnd_proc(
                                     "cpuid_dump_{}.txt",
                                     cpu.display_model_string().replace(' ', "_")
                                 );
-                                if let Some(save_path) = export_dump_dialog(hwnd, &default_name)
-                                {
+                                if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
                                     let dump_content = generate_dump_info_plain();
                                     let _ = std::fs::write(&save_path, dump_content);
                                 }
@@ -761,8 +748,7 @@ pub fn run() {
                         | WS_HSCROLL
                         | WS_TABSTOP
                         | WINDOW_STYLE(
-                            (ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL)
-                                as u32,
+                            (ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL) as u32,
                         ),
                     0,
                     0,
@@ -800,8 +786,7 @@ pub fn run() {
                 ) -> *mut c_void;
             }
             // ANSI path: try RichEdit 2.0A → 1.0 (RICHEDIT) → plain EDIT
-            let edit_classes_a: &[&[u8]] =
-                &[b"RichEdit20A\0", b"RICHEDIT\0", b"EDIT\0", b"Edit\0"];
+            let edit_classes_a: &[&[u8]] = &[b"RichEdit20A\0", b"RICHEDIT\0", b"EDIT\0", b"Edit\0"];
             for (i, class) in edit_classes_a.iter().enumerate() {
                 let h = CreateWindowExA(
                     0,

@@ -1,4 +1,4 @@
-﻿//! File dialogs and clipboard operations.
+//! File dialogs and clipboard operations.
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::DataExchange::{
@@ -7,8 +7,8 @@ use windows::Win32::System::DataExchange::{
 use windows::Win32::System::Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock};
 #[cfg(x86_cpu)]
 use windows::Win32::UI::Controls::Dialogs::{
-    GetOpenFileNameW, GetSaveFileNameW, OFN_FILEMUSTEXIST, OFN_OVERWRITEPROMPT,
-    OFN_PATHMUSTEXIST, OPENFILENAMEW,
+    GetOpenFileNameW, GetSaveFileNameW, OFN_FILEMUSTEXIST, OFN_OVERWRITEPROMPT, OFN_PATHMUSTEXIST,
+    OPENFILENAMEW,
 };
 use windows::core::{PCWSTR, w};
 
