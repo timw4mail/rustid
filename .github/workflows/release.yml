@@ -43,11 +43,10 @@ jobs:
         run: |
           (cd target/efi-disk && zip -r ../../rustid-efi.zip EFI)
 
-      - name: Build Windows binaries
+      - name: Build Windows GUI binaries
         run: |
-          just build-windows-gnu
-          just build-windows-gui-gnu
-          zip -j rustid-windows.zip target/x86_64-pc-windows-gnu/release/rustid.exe target/x86_64-pc-windows-gnu/release/rustid-gui.exe
+          just build-windows-gui
+          zip -j rustid-windows.zip target/dist/rustid_x86_32.exe target/dist/rustid_x86_64.exe target/dist/rustid_arm64.exe
 
       - name: Upload DOS artifact
         uses: actions/upload-artifact@v6

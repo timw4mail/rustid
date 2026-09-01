@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env pwsh
+#!/usr/bin/env pwsh
 # Build 32-bit Windows GUI targeting original Pentium (no SSE/SSE2).
 # Must be run from the repo root. Requires cargo cross and nightly toolchain.
 
@@ -54,5 +54,14 @@ cargo +nightly build `
     --features gui `
     --bin rustid-gui `
     --release
+
+if ($LASTEXITCODE -eq 0) {
+    if (-not (Test-Path "target\dist")) {
+        New-Item -ItemType Directory -Path "target\dist" | Out-Null
+    }
+    if (Test-Path "target\i586-pc-windows-gnu\release\rustid-gui.exe") {
+        Copy-Item "target\i586-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_32.exe" -Force
+    }
+}
 
 exit $LASTEXITCODE

@@ -1,8 +1,27 @@
 # Changelog
 
-## [2.1.0] — Unified topology model, multi-socket display, NetBurst Gallatin detection, and common deduplication
+## [2.1.0] — Native Windows GUI with Windows 9x backwards compatibility, unified topology model, multi-socket display, NetBurst Gallatin detection, and common deduplication
 
 ### Added
+- **Native Windows GUI Application (`rustid-gui`)**:
+  - Added a dedicated Win32 native GUI application built under the `gui` Cargo feature (`src/rustid_gui.rs`, `src/gui/mod.rs`)
+  - Modular GUI architecture with separated components:
+    - Window management, event loop, DPI scaling, and control layout (`src/gui/window.rs`)
+    - State management for view modes (Standard, Debug, Everything, Dump), display options (Color, Verbose, Compact, Dark Mode), and loaded CPUID dumps (`src/gui/state.rs`)
+    - Native Menu Bar with keyboard accelerators (File, Mode, Options, Help) (`src/gui/menu.rs`)
+    - Windows Common File Dialogs (`GetOpenFileName` / `GetSaveFileName`) for opening and exporting CPUID dump files, clipboard export, and About dialog (`src/gui/dialogs.rs`)
+    - ANSI-to-RTF converter with full Tokyo Night color palette and syntax highlighting for live RichEdit rendering (`src/gui/rtf.rs`)
+    - Windows dark theme detection and immersive titlebar support via `DwmSetWindowAttribute` (`src/gui/theme.rs`)
+    - Comprehensive Windows 9x / NT 4 compatibility shims with dynamic symbol resolution and static fallback stubs (`src/gui/shims.rs`)
+- **Universal Windows Compatibility (Windows 95 through Windows 11)**:
+  - Runtime Unicode vs. ANSI API detection (`IS_UNICODE`); automatically falls back to ANSI window registration (`RegisterClassExA`) and window creation (`CreateWindowExA`) on Windows 95/98/ME
+  - Dynamic RichEdit version fallback chain: RichEdit 5.0 (`RichEdit50W`) -> RichEdit 2.0/3.0 (`RichEdit20W`/`RichEdit20A`) -> RichEdit 1.0 (`RICHEDIT` via `riched32.dll`) -> standard multiline `EDIT` control
+  - Status bar (`msctls_statusbar32`) with 3-part layout (Model/OS, Data Source/Dump, View Mode/Settings) and ANSI compatibility
+  - File dialog dual-mode support (`OPENFILENAMEW` vs `OPENFILENAMEA`) for loading and saving CPUID dumps across all Windows generations
+- **32-bit Windows Cross-Compilation Pipeline**:
+  - Added `i586-pc-windows-gnu` custom JSON target specification (`build-config/i586-pc-windows-gnu.json`) targeting i586 architecture and Windows subsystem 4.0
+  - Added build automation scripts (`build-config/build-windows-gui-32.sh`, `build-config/build-windows-gui-32.ps1`) and recipes in `Makefile` and `justfile` (`build-windows-gui-32`, `build-windows-gui-64`, `build-windows-7-64`)
+  - Configured MinGW linker flags (`-Wl,--major-os-version,4 -Wl,--minor-os-version,0 -Wl,--major-subsystem-version,4 -Wl,--minor-subsystem-version,0`) for native execution on Windows 95, 98, ME, NT 4.0, 2000, XP, Vista, 7, 8, 10, and 11
 - **NetBurst Northwood vs. Gallatin Disambiguation via L3 Cache**: Added `disambiguate_0f_02h` to distinguish Intel NetBurst Pentium 4 (Northwood, without L3 cache) from Pentium 4 Extreme Edition / Xeon MP (Gallatin, with L3 cache) using live L3 cache detection (`Cache::has_l3()`) and model name fallback (`src/x86/vendor/intel.rs`, `src/common/cache.rs`)
 - **L3 Cache Helper Method**: Added `Cache::has_l3(&self) -> bool` method to easily check whether an L3 cache level is present and non-zero (`src/common/cache.rs`)
 - **DOS Colored Console Display**: Added driverless VGA text mode ANSI color rendering for 32-bit protected mode DOS (`dos32a` build, `rustid.exe`), matching output on CLI and UEFI targets; enabled `color: true` by default, added `/M` / `/MONO` flag support for monochrome output, and automatically stripped color escape sequences when output redirection to a file is detected (`src/dos_rustid.rs`, `src/x86/dos/mod.rs`)
@@ -13,6 +32,7 @@
 - **Centralized Linux & Android Sysfs Module**: Extracted sysfs cache tree traversal (`read_sysfs_cpu_cache`, `read_sysfs_cache_per_type`), `lscpu -C` cache fallback parser, and topology reader (`detect_sysfs_topology`) into a shared `linux_sysfs` module compiled under `#[cfg(any(target_os = "linux", target_os = "android"))]` (`src/common/os/linux_sysfs.rs`)
 - **Common Device-Tree, Frequency, and OS Helpers**: Added pure `core`/`no_std` safe integer frequency parser `parse_frequency_mhz`, devicetree helpers (`read_devicetree_string`, `read_devicetree_u64`, `get_devicetree_compatible`, `format_compatible_pair`), CPU governor/status parsers (`parse_governor_from_str`, `parse_status_from_str`), and thread affinity iterator `for_each_logical_core` (`src/common/os/common.rs`)
 - **Cross-Compilation CI & Target Checks**: Added `check-all` recipe to `justfile` and `Makefile` with auto-installation of missing `rustup` targets, and integrated target compilation checks in GitHub Actions CI covering `x86_64-unknown-uefi`, `i586-unknown-none` (DOS), `aarch64-linux-android`, `powerpc-unknown-linux-gnu`, `riscv64gc-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `aarch64-pc-windows-msvc` (`.github/workflows/push.yml`, `justfile`, `Makefile`)
+- **Release Workflow Binary Packaging**: Added Windows GUI binary builds to release workflow artifact generation (`.github/workflows/release.yml`)
 - **ELF to LE Converter Section Handling**: Extended `elf2le` tool to match dotted ELF section names like `.rodata.*`, `.data.*`, and `.bss.*` for DOS32A protected-mode binaries (`tools/elf2le/src/main.rs`)
 - **Xeon & Pentium 4 Test Fixtures**: Added dual-socket Intel Xeon E5-2470 test fixture (`examples/xeon-e5-2470.txt`) and Intel Pentium 4 Northwood CPUID dump and tests (`tests/cpuid/dump/P4Northwood.txt`, `tests/cpuid_dump_test.rs`)
 
@@ -23,6 +43,7 @@
 - **Release Workflow Cleanup**: Configured release workflow to clean untracked/dirty files before crates.io packaging and publishing (`.github/workflows/release.yml`)
 
 ### Fixed
+- **EFI Target Display Imports**: Fixed missing imports in x86 display module when building for UEFI targets (`src/x86/display.rs`)
 - **PowerPC Clock Speed Detection**: Fixed clock speed reporting on Linux PowerPC (e.g. PowerBook G4 / PowerBook5,2) by prioritizing `/proc/cpuinfo` `clock: <N>MHz`, sysfs `cpufreq`, and CPU node devicetree clock (`/proc/device-tree/cpus/*/clock-frequency`) over root bus frequency (`/proc/device-tree/clock-frequency`, which reports the 166.66 MHz FSB bus clock) (`src/ppc/cpu.rs`)
 - **DOS Multi-Socket MP Table Detection**: Corrected DOS Intel MP Table topology calculation: MP Table entries represent logical processors (APIC IDs) rather than physical sockets, resolving false multi-socket reports on multi-core processors (e.g. Core 2 Quad previously reporting 4 sockets, 16 cores, 16 threads) (`src/x86/dos/mod.rs`, `src/x86/dos/mp.rs`)
 - **Cross-Platform Thread Affinity**: Unified logical core affinity switching loop in ARM Linux, Windows, and BSD to use `for_each_logical_core` (`src/arm/os/mod.rs`, `src/common/os/common.rs`)

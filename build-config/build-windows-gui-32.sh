@@ -42,10 +42,14 @@ export CC_i586_pc_windows_gnu="i686-w64-mingw32-gcc"
 export AR_i586_pc_windows_gnu="i686-w64-mingw32-ar"
 export RUSTFLAGS="-L $mingw_lib -L $gcc_lib"
 
-exec cargo +nightly build \
+cargo +nightly build \
     -Z json-target-spec \
     -Z build-std=std,panic_abort,core,alloc \
     --target build-config/i586-pc-windows-gnu.json \
     --features gui \
     --bin rustid-gui \
     --release
+
+mkdir -p target/dist
+cp target/i586-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
+

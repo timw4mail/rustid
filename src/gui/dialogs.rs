@@ -13,14 +13,18 @@ use windows::Win32::UI::Controls::Dialogs::{
     GetOpenFileNameW, GetSaveFileNameW, OFN_FILEMUSTEXIST, OFN_OVERWRITEPROMPT, OFN_PATHMUSTEXIST,
     OPENFILENAMEW,
 };
+#[cfg(x86_cpu)]
 use windows::core::{PCWSTR, w};
 
 use super::state::{CF_UNICODETEXT_FORMAT, IS_UNICODE};
+#[cfg(x86_cpu)]
 use super::theme::to_pcwstr;
 
 const CF_TEXT_FORMAT: u32 = 1;
+#[cfg(x86_cpu)]
 const OPENFILENAME_SIZE_VERSION_400: u32 = 76;
 
+#[cfg(x86_cpu)]
 #[repr(C)]
 #[allow(dead_code)]
 struct OPENFILENAMEA {
@@ -50,6 +54,7 @@ struct OPENFILENAMEA {
 #[link(name = "comdlg32")]
 unsafe extern "system" {
     fn GlobalFree(hMem: *mut c_void) -> *mut c_void;
+    #[cfg(x86_cpu)]
     fn CreateFileA(
         lpFileName: *const u8,
         dwDesiredAccess: u32,
@@ -59,7 +64,9 @@ unsafe extern "system" {
         dwFlagsAndAttributes: u32,
         hTemplateFile: *mut c_void,
     ) -> *mut c_void;
+    #[cfg(x86_cpu)]
     fn GetFileSize(hFile: *mut c_void, lpFileSizeHigh: *mut u32) -> u32;
+    #[cfg(x86_cpu)]
     fn ReadFile(
         hFile: *mut c_void,
         lpBuffer: *mut c_void,
@@ -67,6 +74,7 @@ unsafe extern "system" {
         lpNumberOfBytesRead: *mut u32,
         lpOverlapped: *mut c_void,
     ) -> bool;
+    #[cfg(x86_cpu)]
     fn WriteFile(
         hFile: *mut c_void,
         lpBuffer: *const c_void,
@@ -74,6 +82,7 @@ unsafe extern "system" {
         lpNumberOfBytesWritten: *mut u32,
         lpOverlapped: *mut c_void,
     ) -> bool;
+    #[cfg(x86_cpu)]
     fn CloseHandle(hObject: *mut c_void) -> i32;
     #[cfg(x86_cpu)]
     fn GetOpenFileNameA(lpofn: *mut OPENFILENAMEA) -> i32;
@@ -81,6 +90,7 @@ unsafe extern "system" {
     fn GetSaveFileNameA(lpofn: *mut OPENFILENAMEA) -> i32;
 }
 
+#[cfg(x86_cpu)]
 pub fn read_file_to_string(path: &str) -> Option<String> {
     if let Ok(content) = std::fs::read_to_string(path) {
         return Some(content);
@@ -123,6 +133,7 @@ pub fn read_file_to_string(path: &str) -> Option<String> {
     }
 }
 
+#[cfg(x86_cpu)]
 pub fn write_string_to_file(path: &str, content: &str) -> bool {
     if std::fs::write(path, content).is_ok() {
         return true;

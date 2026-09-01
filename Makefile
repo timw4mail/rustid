@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui check-windows-gui-32 check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui build-windows-gui-32 build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
 
 # Lists the available actions
 default:
@@ -79,18 +79,26 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
-# Compile check for Windows GUI (64-bit)
-check-windows-gui:
+# Compile check for Windows GUI (64-bit x86 GNU)
+check-windows-gui-x64:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
 
-# Compile check for Windows GUI (32-bit)
+# Compile check for Windows GUI (32-bit x86 GNU)
 check-windows-gui-32:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
 	cargo check --target i686-pc-windows-gnu --features gui --bin rustid-gui
 
+# Compile check for Windows GUI (ARM64 GNU)
+check-windows-gui-arm64:
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
+	cargo check --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui
+
+# Compile check for all Windows GUI targets
+check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-windows-gui-32
+check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui
 
 # More in-depth code style checking
 lint:
@@ -150,13 +158,39 @@ build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
 build-dos: build-dos32a build-dos-real
 
 # Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
-build-windows-gui: _cargo_cross
+build-windows-gui-x64: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
+ifeq ($(OS),Windows_NT)
+	@if not exist "target\dist" mkdir "target\dist"
+	@if exist "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_64.exe" >nul 2>&1
+else
+	@mkdir -p target/dist
+	@cp target/x86_64-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
+endif
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 build-windows-gui-32: _cargo_cross
+ifeq ($(OS),Windows_NT)
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
+else
 	bash build-config/build-windows-gui-32.sh
+endif
+
+# Build ARM64 Windows GUI using LLVM MinGW/GNU target
+build-windows-gui-arm64: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
+	cargo cross build --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui --release
+ifeq ($(OS),Windows_NT)
+	@if not exist "target\dist" mkdir "target\dist"
+	@if exist "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" copy /Y "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" "target\dist\rustid_arm64.exe" >nul 2>&1
+else
+	@mkdir -p target/dist
+	@cp target/aarch64-pc-windows-gnullvm/release/rustid-gui.exe target/dist/rustid_arm64.exe 2>/dev/null || true
+endif
+
+# Build all Windows GUI binaries (x86 32-bit, x86 64-bit, ARM64)
+build-windows-gui: build-windows-gui-32 build-windows-gui-x64 build-windows-gui-arm64
 
 # Build for linux arm64
 build-arm64: _cargo_cross

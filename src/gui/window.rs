@@ -18,9 +18,9 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_F5
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{PCWSTR, w};
 
-use super::dialogs::{copy_to_clipboard, read_file_to_string, write_string_to_file};
+use super::dialogs::copy_to_clipboard;
 #[cfg(x86_cpu)]
-use super::dialogs::{export_dump_dialog, open_dump_file_dialog};
+use super::dialogs::{export_dump_dialog, open_dump_file_dialog, read_file_to_string, write_string_to_file};
 use super::menu::*;
 use super::rtf::*;
 use super::state::*;
