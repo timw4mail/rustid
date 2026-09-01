@@ -18,10 +18,10 @@
   "is-like-windows": true,
   "features": "-sse,-sse2",
   "late-link-args": {
-    "gnu": ["-lmsvcrt", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
-    "gnu-cc": ["-lmsvcrt", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
-    "gnu-lld": ["-lmsvcrt", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
-    "gnu-lld-cc": ["-lmsvcrt", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"]
+    "gnu": ["-lmsvcrt-os", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt-os", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
+    "gnu-cc": ["-lmsvcrt-os", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt-os", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
+    "gnu-lld": ["-lmsvcrt-os", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt-os", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"],
+    "gnu-lld-cc": ["-lmsvcrt-os", "-lmingwex", "-lmingw32", "-lgcc", "-lmsvcrt-os", "-lmingwex", "-luser32", "-lgdi32", "-lcomctl32", "-lkernel32"]
   },
   "late-link-args-dynamic": {
     "gnu": ["-lgcc_s"], "gnu-cc": ["-lgcc_s"], "gnu-lld": ["-lgcc_s"], "gnu-lld-cc": ["-lgcc_s"]
@@ -39,9 +39,9 @@
   "os": "windows",
   "pre-link-args": {
     "gnu": ["--dynamicbase", "--disable-auto-image-base", "-m", "i386pe", "--large-address-aware"],
-    "gnu-cc": ["-fno-use-linker-plugin", "-Wl,--dynamicbase", "-Wl,--disable-auto-image-base", "-Wl,--large-address-aware"],
+    "gnu-cc": ["-fno-use-linker-plugin", "-Wl,--dynamicbase", "-Wl,--disable-auto-image-base", "-Wl,--large-address-aware", "-mcrtdll=msvcrt-os"],
     "gnu-lld": ["--dynamicbase", "--disable-auto-image-base", "-m", "i386pe", "--large-address-aware"],
-    "gnu-lld-cc": ["-fno-use-linker-plugin", "-Wl,--dynamicbase", "-Wl,--disable-auto-image-base", "-Wl,--large-address-aware"]
+    "gnu-lld-cc": ["-fno-use-linker-plugin", "-Wl,--dynamicbase", "-Wl,--disable-auto-image-base", "-Wl,--large-address-aware", "-mcrtdll=msvcrt-os"]
   },
   "requires-uwtable": true,
   "target-family": ["windows"],
