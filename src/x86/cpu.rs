@@ -482,6 +482,39 @@ impl Cpu {
         String::from(s)
     }
 
+    /// Validates whether a candidate string is a plausible easter egg message.
+    ///
+    /// Requires printable ASCII characters, minimum length of 4, at least 3 alphabetic characters,
+    /// and at least 3 unique characters to filter out noise, control codes, and repeated filler.
+    pub(crate) fn is_valid_easter_egg(s: &str) -> bool {
+        // Must be at least 4 characters
+        if s.len() < 4 {
+            return false;
+        }
+
+        // All characters must be printable ASCII (space 0x20 through tilde 0x7E)
+        if !s.bytes().all(|b| (0x20..=0x7E).contains(&b)) {
+            return false;
+        }
+
+        // Must contain at least 3 ASCII alphabetic characters (a-z, A-Z)
+        let alpha_count = s.bytes().filter(|b| b.is_ascii_alphabetic()).count();
+        if alpha_count < 3 {
+            return false;
+        }
+
+        // Must have at least 3 unique characters to avoid repeated patterns
+        let mut seen = 0u128;
+        for b in s.bytes() {
+            seen |= 1u128 << (b & 0x7F);
+        }
+        if seen.count_ones() < 3 {
+            return false;
+        }
+
+        true
+    }
+
     pub(crate) fn easter_egg() -> Option<String> {
         let mut out: String = String::new();
         let brand = CpuBrand::detect();
@@ -514,7 +547,7 @@ impl Cpu {
         }
 
         let trimmed = out.trim();
-        if !trimmed.is_empty() {
+        if Self::is_valid_easter_egg(trimmed) {
             Some(String::from(trimmed))
         } else {
             None
@@ -850,5 +883,36 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(cpu_unknown.display_model_string(), "Unknown");
+    }
+
+    #[test]
+    fn test_is_valid_easter_egg() {
+        // Valid easter eggs
+        assert!(Cpu::is_valid_easter_egg("* Chris Norrie *"));
+        assert!(Cpu::is_valid_easter_egg("* Chris Norris *"));
+        assert!(Cpu::is_valid_easter_egg("IT'S HAMMER TIME"));
+        assert!(Cpu::is_valid_easter_egg("HELLO KITTY"));
+        assert!(Cpu::is_valid_easter_egg("NexGenerationAMD"));
+
+        // Invalid: too short
+        assert!(!Cpu::is_valid_easter_egg(""));
+        assert!(!Cpu::is_valid_easter_egg("a"));
+        assert!(!Cpu::is_valid_easter_egg("abc"));
+
+        // Invalid: control characters or non-ASCII
+        assert!(!Cpu::is_valid_easter_egg("\x01\x02\x03\x04"));
+        assert!(!Cpu::is_valid_easter_egg("Test\x00Str"));
+        assert!(!Cpu::is_valid_easter_egg("Test\x7FStr"));
+        assert!(!Cpu::is_valid_easter_egg("Test\u{A0}Str"));
+
+        // Invalid: insufficient alphabetic characters
+        assert!(!Cpu::is_valid_easter_egg("12345678"));
+        assert!(!Cpu::is_valid_easter_egg("!@#$%^&*()"));
+        assert!(!Cpu::is_valid_easter_egg("ab12"));
+
+        // Invalid: low character diversity / repeated noise
+        assert!(!Cpu::is_valid_easter_egg("aaaa"));
+        assert!(!Cpu::is_valid_easter_egg("abab"));
+        assert!(!Cpu::is_valid_easter_egg("----"));
     }
 }

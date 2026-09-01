@@ -1100,6 +1100,29 @@ cpuid_testsuite!(
     }
 );
 
+cpuid_testsuite!(
+    sis550,
+    "dump/sis550.TXT",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_SIS);
+        }
+
+        test brand_string {
+            assert_brand_eq("SiS 550/551/552 SoC");
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 5, 0, 0, 5));
+        }
+
+        test easter_egg {
+            let cpu = Cpu::detect();
+            assert_eq!(cpu.extra.easter_egg.as_deref(), Some("* Chris Norrie *"));
+        }
+    }
+);
+
 // ----------------------------------------------------------------------------
 // ! Miscellaneous Tests
 // ----------------------------------------------------------------------------
