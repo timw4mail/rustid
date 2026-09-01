@@ -178,15 +178,11 @@ else
 endif
 
 # Build ARM64 Windows GUI using LLVM MinGW/GNU target
-build-windows-gui-arm64: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
-	cargo cross build --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui --release
+build-windows-gui-arm64:
 ifeq ($(OS),Windows_NT)
-	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" copy /Y "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" "target\dist\rustid_arm64.exe" >nul 2>&1
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-arm64.ps1
 else
-	@mkdir -p target/dist
-	@cp target/aarch64-pc-windows-gnullvm/release/rustid-gui.exe target/dist/rustid_arm64.exe 2>/dev/null || true
+	bash build-config/build-windows-gui-arm64.sh
 endif
 
 # Build all Windows GUI binaries (x86 32-bit, x86 64-bit, ARM64)

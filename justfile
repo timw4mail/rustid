@@ -136,21 +136,12 @@ build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
 # Build all dos binaries
 build-dos: build-dos32a build-dos-real
 
-# Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
-[linux, unix]
+# Build 64-bit Windows GUI using MinGW/GNU target
 build-windows-gui-x64: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
 	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
 	@mkdir -p target/dist
 	@cp target/x86_64-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
-
-# Build 64-bit Windows GUI using MinGW/GNU target
-[windows]
-build-windows-gui-x64: _cargo_cross
-	@rustup target list --installed | findstr /c:"x86_64-pc-windows-gnu" >nul || rustup target add x86_64-pc-windows-gnu
-	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
-	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_64.exe" >nul 2>&1
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 [linux, unix]
@@ -158,26 +149,19 @@ build-windows-gui-32: _cargo_cross
 	bash build-config/build-windows-gui-32.sh
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
-# On Windows, uses a helper script because cargo cross does not configure MinGW in PATH for JSON targets.
 [windows]
 build-windows-gui-32: _cargo_cross
 	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
 
 # Build ARM64 Windows GUI using LLVM MinGW/GNU target
 [linux, unix]
-build-windows-gui-arm64: _cargo_cross
-	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
-	cargo cross build --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui --release
-	@mkdir -p target/dist
-	@cp target/aarch64-pc-windows-gnullvm/release/rustid-gui.exe target/dist/rustid_arm64.exe 2>/dev/null || true
+build-windows-gui-arm64:
+	bash build-config/build-windows-gui-arm64.sh
 
 # Build ARM64 Windows GUI using LLVM MinGW/GNU target
 [windows]
-build-windows-gui-arm64: _cargo_cross
-	@rustup target list --installed | findstr /c:"aarch64-pc-windows-gnullvm" >nul || rustup target add aarch64-pc-windows-gnullvm
-	cargo cross build --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui --release
-	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" copy /Y "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" "target\dist\rustid_arm64.exe" >nul 2>&1
+build-windows-gui-arm64:
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-arm64.ps1
 
 # Build all Windows GUI binaries (x86 32-bit, x86 64-bit, ARM64)
 build-windows-gui: build-windows-gui-32 build-windows-gui-x64 build-windows-gui-arm64
