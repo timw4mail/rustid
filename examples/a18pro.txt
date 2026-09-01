@@ -1,5 +1,4 @@
---------------- Rustid 2.0.0 (aarch64-macos) ---------------
-
+--------------- Rustid 2.1.0 (aarch64-macos) ---------------
         System: MacBook Neo (13-inch, 2026)
 
          Model: Apple A18 Pro
@@ -7,6 +6,8 @@
       Codename: Tahiti
 
        Process: 3nm
+
+      Topology: 6 cores (6 threads) across 2 core types
 
        Core #1: 
    Implementer: Apple
