@@ -24,7 +24,7 @@ pub struct OsCpuInfo {
 pub(crate) fn detect_cores(midrs: &[Midr]) -> Vec<CpuCore> {
     let mut cores: BTreeMap<(CoreType, Midr), CpuCore> = BTreeMap::new();
 
-    let runtime_cache = Cache::detect();
+    let runtime_cache = Cache::detect_os();
 
     #[cfg(linux_os)]
     let sysfs_per_type = Cache::from_sys_fs_per_type();

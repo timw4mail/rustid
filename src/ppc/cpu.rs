@@ -64,7 +64,7 @@ impl Cpu {
 
     fn detect_cache() -> Option<Cache> {
         #[cfg(any(target_os = "linux", target_family = "unix"))]
-        if let Some(cache) = Cache::detect() {
+        if let Some(cache) = Cache::detect_os() {
             return Some(cache);
         }
 

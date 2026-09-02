@@ -19,10 +19,9 @@ impl TOSData for OS {
     fn get_system_name() -> Option<SystemInfo> {
         let (model, key) = if let Some(prod) = get_sysctl_value("hw.product") {
             (prod, "hw.product")
-        } else if let Some(model) = get_sysctl_value("hw.model") {
-            (model, "hw.model")
         } else {
-            return None;
+            let model = get_sysctl_value("hw.model")?;
+            (model, "hw.model")
         };
 
         Some(SystemInfo::new(
