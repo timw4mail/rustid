@@ -45,6 +45,7 @@ thread_local! {
 
 /// Sets a custom CPUID provider for the current thread (used primarily for testing).
 pub fn set_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P) {
+    set_dump_cpu(0);
     THREAD_PROVIDER.with(|p| {
         *p.borrow_mut() = Some(Box::new(provider));
     });
@@ -52,6 +53,7 @@ pub fn set_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P)
 
 /// Resets the CPUID provider for the current thread.
 pub fn reset_cpuid_provider() {
+    set_dump_cpu(0);
     THREAD_PROVIDER.with(|p| {
         *p.borrow_mut() = None;
     });
@@ -59,6 +61,7 @@ pub fn reset_cpuid_provider() {
 
 /// Sets a custom global CPUID provider.
 pub fn set_global_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provider: P) {
+    set_dump_cpu(0);
     let mut p = PROVIDER
         .write()
         .expect("Failed to get CPUID Provider RefCell for writing");
@@ -67,6 +70,7 @@ pub fn set_global_cpuid_provider<P: CpuidProvider + Send + Sync + 'static>(provi
 
 /// Resets the global CPUID provider to the real implementation.
 pub fn reset_global_cpuid_provider() {
+    set_dump_cpu(0);
     let mut p = PROVIDER
         .write()
         .expect("Failed to get CPUID Provider RefCell for writing");
@@ -123,6 +127,7 @@ pub struct CpuDump {
 
 impl Default for CpuDump {
     fn default() -> Self {
+        set_dump_cpu(0);
         let cpus = vec![HashMap::new()];
         DUMP_CPU_COUNT.with(|c| c.set(cpus.len()));
         Self { cpus }
@@ -136,6 +141,7 @@ impl CpuDump {
     }
 
     pub fn parse_str(contents: &str) -> Self {
+        set_dump_cpu(0);
         let mut cpus: Vec<HashMap<(u32, u32), Cpuid>> = Vec::new();
         let mut current: Option<HashMap<(u32, u32), Cpuid>> = None;
 
@@ -242,9 +248,8 @@ impl CpuDump {
     #[must_use]
     pub fn get(&self, leaf: u32, sub_leaf: u32) -> Cpuid {
         let idx = CURRENT_DUMP_CPU.with(|c| c.get());
-        self.cpus
-            .get(idx)
-            .and_then(|map| map.get(&(leaf, sub_leaf)))
+        let map = self.cpus.get(idx).or_else(|| self.cpus.first());
+        map.and_then(|m| m.get(&(leaf, sub_leaf)))
             .copied()
             .unwrap_or_default()
     }

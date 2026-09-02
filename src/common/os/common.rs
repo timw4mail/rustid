@@ -21,6 +21,15 @@ pub fn normalize_for_compare(s: &str) -> String {
 /// Returns true when a DMI / device-tree / SMBIOS value is a firmware placeholder or
 /// other generic string that does not identify the actual hardware.
 pub fn is_generic_value(raw: &str) -> bool {
+    // Reject strings with ASCII control characters or non-printable garbage (e.g. "4\u{8}4\u{8}A\u{4}\u{5}")
+    if raw.chars().any(|c| {
+        ((c as u32) < 0x20 && c != '\t' && c != '\n' && c != '\r')
+            || (c as u32) == 0x7F
+            || c == '\u{FFFD}'
+    }) {
+        return true;
+    }
+
     const GENERIC: &[&str] = &[
         "to be filled by o.e.m.",
         "to be filled",
@@ -49,6 +58,7 @@ pub fn is_generic_value(raw: &str) -> bool {
         "- c2",
         "c1",
         "c2",
+        "4 4 a",
     ];
 
     let normalized = normalize_for_compare(raw);
@@ -74,6 +84,136 @@ pub fn is_known_hypervisor_vendor(vendor: &str) -> bool {
         "google",
     ];
     HYPERVISORS.contains(&vendor.as_str())
+}
+
+/// Returns true if the string matches an Apple hardware model identifier (e.g. "MacBook4,1", "Mac14,2", "MacPro7,1").
+pub fn is_apple_model_name(s: &str) -> bool {
+    let s = s.trim();
+    (s.starts_with("MacBook")
+        || s.starts_with("iMac")
+        || s.starts_with("Macmini")
+        || s.starts_with("MacPro")
+        || s.starts_with("MacStudio")
+        || s.starts_with("Mac")
+        || s.starts_with("PowerMac")
+        || s.starts_with("PowerBook")
+        || s.starts_with("iBook")
+        || s.starts_with("Xserve"))
+        && s.contains(',')
+}
+
+/// Attempts to extract or normalize an Apple Mac model identifier (e.g. "MacBook4,1", "MacBookPro15,2")
+/// from SMBIOS / BIOS strings (such as "MB41.88Z.00C1.B00.0802091544", "Mac-F4208CC8", or "MacBook4,1").
+pub fn parse_apple_model(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+
+    if is_apple_model_name(raw) {
+        return Some(String::from(raw));
+    }
+
+    // 1. Check Apple Board IDs (commonly reported by Windows SMBIOS Type 1 Product Name / Baseboard Product)
+    const BOARD_IDS: &[(&str, &str)] = &[
+        ("Mac-F4208CC8", "MacBook4,1"),
+        ("Mac-F42D86C8", "MacBook5,1"),
+        ("Mac-F42D88C8", "MacBook6,1"),
+        ("Mac-F22C86C8", "MacBook7,1"),
+        ("Mac-F42187C8", "MacBookPro3,1"),
+        ("Mac-F42C86C8", "MacBookPro4,1"),
+        ("Mac-F22587C8", "MacBookPro5,1"),
+        ("Mac-F22587A1", "MacBookPro5,2"),
+        ("Mac-F222BEC8", "MacBookPro5,3"),
+        ("Mac-F22589C6", "MacBookPro5,4"),
+        ("Mac-F2268DC8", "MacBookPro5,5"),
+        ("Mac-F22586C8", "MacBookPro6,1"),
+        ("Mac-F22589C8", "MacBookPro6,2"),
+        ("Mac-F2268EC8", "MacBookPro7,1"),
+        ("Mac-94245B3640C91C81", "MacBookPro8,1"),
+        ("Mac-94245A3940C91C80", "MacBookPro8,2"),
+        ("Mac-942459F5819B171B", "MacBookPro8,3"),
+        ("Mac-C3EC7CD22292981F", "MacBookPro10,1"),
+        ("Mac-AFD82502A00C3304", "MacBookPro10,2"),
+        ("Mac-189A3D4F975D5FFC", "MacBookPro11,1"),
+        ("Mac-2BD1B31983FE1663", "MacBookPro11,2"),
+        ("Mac-3CBD00234E554E41", "MacBookPro11,3"),
+        ("Mac-F42C88C8", "Macmini2,1"),
+        ("Mac-F2208EC8", "Macmini4,1"),
+        ("Mac-F42189C8", "Macmini3,1"),
+        ("Mac-F4218EC8", "Macmini1,1"),
+        ("Mac-F4208DC8", "MacBookAir1,1"),
+        ("Mac-942452F5819B1C1B", "MacBookAir3,1"),
+        ("Mac-94245A3640C91C81", "MacBookAir3,2"),
+        ("Mac-C08A6BB70A942AC2", "MacBookAir4,1"),
+        ("Mac-742912EFDBEE19B3", "MacBookAir4,2"),
+        ("Mac-F4218FC8", "MacPro1,1"),
+        ("Mac-F4208AC8", "MacPro2,1"),
+        ("Mac-F221BEC8", "MacPro4,1"),
+        ("Mac-F4218BC8", "iMac5,1"),
+        ("Mac-F4228EC8", "iMac6,1"),
+        ("Mac-F42388C8", "iMac7,1"),
+        ("Mac-F226BEC8", "iMac9,1"),
+        ("Mac-F2238BAE", "iMac10,1"),
+        ("Mac-F2238AC8", "iMac11,1"),
+        ("Mac-942B59F58194171B", "iMac12,1"),
+        ("Mac-942B5BF58194151B", "iMac12,2"),
+    ];
+
+    for (board_id, model_name) in BOARD_IDS {
+        if raw.eq_ignore_ascii_case(board_id) {
+            return Some(String::from(*model_name));
+        }
+    }
+
+    // 2. Check EFI BIOS Version tokens (e.g. "MB41.88Z...", "MBP31.88Z...")
+    let token = raw
+        .split(['.', ' ', '\t', '\0', '-'])
+        .find(|s| !s.is_empty())
+        .unwrap_or(raw);
+
+    const PREFIXES: &[(&str, &str)] = &[
+        ("MBP", "MacBookPro"),
+        ("MBA", "MacBookAir"),
+        ("MB", "MacBook"),
+        ("IM", "iMac"),
+        ("MM", "Macmini"),
+        ("MP", "MacPro"),
+        ("XS", "Xserve"),
+    ];
+
+    for (code, name) in PREFIXES {
+        if let Some(rest) = token.strip_prefix(code)
+            && rest.len() >= 2
+            && rest.chars().all(|c| c.is_ascii_digit())
+        {
+            let major = &rest[..rest.len() - 1];
+            let minor = &rest[rest.len() - 1..];
+            return Some(alloc::format!("{name}{major},{minor}"));
+        }
+    }
+
+    None
+}
+
+/// Combines vendor name and model/system name, prepending the vendor unless it is
+/// already present in the model or the model is an Apple model identifier.
+pub fn combine_vendor_and_model(vendor: Option<&str>, model: &str) -> String {
+    let model = model.trim();
+    if is_apple_model_name(model) {
+        return String::from(model);
+    }
+    if let Some(v) = vendor {
+        let v = v.trim();
+        if !v.is_empty() && !is_generic_value(v) {
+            let v_lower = v.to_ascii_lowercase();
+            let m_lower = model.to_ascii_lowercase();
+            if !m_lower.contains(&v_lower) {
+                return alloc::format!("{v} {model}");
+            }
+        }
+    }
+    String::from(model)
 }
 
 /// Parse a Linux/Android CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
@@ -418,5 +558,113 @@ mod tests {
         );
         assert_eq!(normalize_for_compare("QEMU"), "qemu");
         assert_eq!(normalize_for_compare(""), "");
+    }
+
+    #[test]
+    fn test_is_apple_model_name() {
+        assert!(is_apple_model_name("MacBook4,1"));
+        assert!(is_apple_model_name("MacBookPro18,3"));
+        assert!(is_apple_model_name("Macmini9,1"));
+        assert!(is_apple_model_name("MacPro7,1"));
+        assert!(is_apple_model_name("MacStudio1,1"));
+        assert!(is_apple_model_name("Mac14,2"));
+        assert!(is_apple_model_name("PowerMac11,2"));
+        assert!(is_apple_model_name("Xserve3,1"));
+        assert!(!is_apple_model_name("MacBook"));
+        assert!(!is_apple_model_name("ThinkPad T480"));
+        assert!(!is_apple_model_name("CustomPC"));
+    }
+
+    #[test]
+    fn test_combine_vendor_and_model() {
+        // Apple models should remain unchanged
+        assert_eq!(
+            combine_vendor_and_model(Some("Apple Inc."), "MacBook4,1"),
+            "MacBook4,1"
+        );
+        assert_eq!(
+            combine_vendor_and_model(Some("Apple"), "Mac14,2"),
+            "Mac14,2"
+        );
+
+        // Standard PC: vendor prepended
+        assert_eq!(
+            combine_vendor_and_model(Some("Dell Inc."), "Latitude 7490"),
+            "Dell Inc. Latitude 7490"
+        );
+        assert_eq!(
+            combine_vendor_and_model(Some("LENOVO"), "ThinkPad T480"),
+            "LENOVO ThinkPad T480"
+        );
+
+        // Vendor already in model: not duplicated
+        assert_eq!(
+            combine_vendor_and_model(Some("Dell Inc."), "Dell Inc. Latitude 7490"),
+            "Dell Inc. Latitude 7490"
+        );
+        assert_eq!(
+            combine_vendor_and_model(Some("Lenovo"), "Lenovo ThinkPad T480"),
+            "Lenovo ThinkPad T480"
+        );
+
+        // Motherboard vendor & board
+        assert_eq!(
+            combine_vendor_and_model(Some("ASUSTeK COMPUTER INC."), "ROG STRIX B550-F"),
+            "ASUSTeK COMPUTER INC. ROG STRIX B550-F"
+        );
+
+        // Generic vendor or None
+        assert_eq!(
+            combine_vendor_and_model(Some("Default string"), "CustomPC"),
+            "CustomPC"
+        );
+        assert_eq!(combine_vendor_and_model(None, "CustomPC"), "CustomPC");
+    }
+
+    #[test]
+    fn test_parse_apple_model() {
+        assert_eq!(
+            parse_apple_model("MB41.88Z.00C1.B00.0802091544"),
+            Some("MacBook4,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("MBP31.88Z.0070.B00.0706281432"),
+            Some("MacBookPro3,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("MBA11.88Z.00BB.B00.0803171226"),
+            Some("MacBookAir1,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("IM81.88Z.00C1.B00.0802091544"),
+            Some("iMac8,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("MM21.88Z.009A.B00.0706281359"),
+            Some("Macmini2,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("MP31.88Z.006C.B05.0802291410"),
+            Some("MacPro3,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("MacBook4,1"),
+            Some("MacBook4,1".to_string())
+        );
+        assert_eq!(
+            parse_apple_model("Mac-F4208CC8"),
+            Some("MacBook4,1".to_string())
+        );
+        assert_eq!(parse_apple_model("APPLE  - c1"), None);
+        assert_eq!(parse_apple_model("American Megatrends Inc."), None);
+    }
+
+    #[test]
+    fn test_is_generic_value_control_chars_and_firmware_garbage() {
+        assert!(is_generic_value("4\u{8}4\u{8}A\u{4}\u{5}"));
+        assert!(is_generic_value("4 4 A  "));
+        assert!(is_generic_value("4 4 a"));
+        assert!(is_generic_value("test\x00garbage"));
+        assert!(is_generic_value("bad\x1Fstring"));
     }
 }

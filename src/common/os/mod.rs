@@ -1,5 +1,5 @@
 //! Os-specific data gathering
-use crate::common::TopologyTier;
+use crate::common::{SystemInfo, TopologyTier};
 use alloc::string::String;
 
 #[cfg(bsd)]
@@ -55,7 +55,7 @@ pub use sysctl::*;
 pub struct OS;
 
 pub trait TOSData {
-    fn get_system_name() -> Option<String> {
+    fn get_system_name() -> Option<SystemInfo> {
         None
     }
 

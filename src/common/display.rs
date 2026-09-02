@@ -523,9 +523,35 @@ impl CpuDisplay {
     }
 
     #[cfg(not(dos_os))]
-    pub fn display_system(&mut self, system: &str, flags: CliFlags) {
-        let formatted = self.format_system_name(system);
-        self.display_with_raw("System", &formatted, Some(system), flags.verbose);
+    pub fn display_system(&mut self, system: &crate::common::SystemInfo, flags: CliFlags) {
+        if let Some(display_name) = system.display_name() {
+            let formatted = self.format_system_name(&display_name);
+            if flags.verbose {
+                self.section_line("System", &formatted);
+                if let Some(ref model) = system.model {
+                    if model != &formatted {
+                        self.section_line(
+                            "System Model",
+                            &alloc::format!("{model} ({:?})", system.model_source),
+                        );
+                    } else {
+                        self.section_line(
+                            "System Model Source",
+                            &alloc::format!("{:?}", system.model_source),
+                        );
+                    }
+                }
+                if let Some(ref vendor) = system.vendor {
+                    self.section_line(
+                        "System Vendor",
+                        &alloc::format!("{vendor} ({:?})", system.vendor_source),
+                    );
+                }
+                self.newline();
+            } else {
+                self.simple_line("System", &formatted);
+            }
+        }
     }
 
     /// Format the system name if it is a Mac, or other known string

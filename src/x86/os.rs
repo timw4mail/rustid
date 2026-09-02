@@ -13,7 +13,7 @@ use super::{
     core_type_from_cpuid, cpuid_cores_per_package, cpuid_threads_per_core,
     cpuid_threads_per_package, is_intel, vendor_str,
 };
-use crate::common::{Cache, CoreType, DataSource, Speed, TopologyTier, UNK};
+use crate::common::{Cache, CoreType, DataSource, Speed, SystemInfo, TopologyTier, UNK};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -22,7 +22,7 @@ use crate::common::{OS, TOSData};
 
 /// Returns the host system name reported by the operating system.
 #[must_use]
-pub fn get_system_name() -> Option<String> {
+pub fn get_system_name() -> Option<SystemInfo> {
     #[cfg(not(dos_os))]
     {
         OS::get_system_name()

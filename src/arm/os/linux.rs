@@ -40,7 +40,8 @@ pub fn detect() -> OsCpuInfo {
                 midrs.insert(midr);
                 all_midrs.push(midr);
             }
-            midr_source = DataSource::LinuxSysFs;
+            midr_source =
+                DataSource::LinuxSysFs("/sys/devices/system/cpu/cpu*/regs/identification/midr_el1");
         } else {
             panic!("Could not get midr value from sysfs");
         }
@@ -59,7 +60,8 @@ pub fn detect() -> OsCpuInfo {
                 midrs.insert(midr);
                 all_midrs.push(midr);
             }
-            midr_source = DataSource::LinuxSysFs;
+            midr_source =
+                DataSource::LinuxSysFs("/sys/devices/system/cpu/cpu*/regs/identification/midr_el1");
         }
     }
 

@@ -1,7 +1,7 @@
 #![cfg(target_os = "android")]
 
 use crate::common::{
-    DataSource, OS, TOSData, TopologyTier, cleanup_soc_vendor, get_soc_from_devicetree,
+    DataSource, OS, SystemInfo, TOSData, TopologyTier, cleanup_soc_vendor, get_soc_from_devicetree,
     get_soc_from_proc_cpuinfo, get_system_name_from_proc_cpuinfo, is_generic_value,
     read_devicetree_string,
 };
@@ -51,7 +51,7 @@ pub fn parse_getprop_output(output: &str) -> HashMap<String, String> {
     map
 }
 
-/// Retrieves all Android system properties by calling `getprop`.
+/// Retrieves all Android system properties via `getprop`.
 pub fn get_props() -> HashMap<String, String> {
     if let Some(out) = run_getprop_cmd(None) {
         let map = parse_getprop_output(&out);
@@ -80,12 +80,15 @@ pub fn get_property(props: &HashMap<String, String>, key: &str) -> Option<String
 }
 
 /// Extracts a friendly system/device name from Android system properties.
-pub fn extract_system_name(props: &HashMap<String, String>) -> Option<String> {
+pub fn extract_system_name(props: &HashMap<String, String>) -> Option<SystemInfo> {
     // 1. Market name (e.g., "Pixel 8 Pro", "Galaxy S24 Ultra")
     if let Some(market) = props.get("ro.product.marketname") {
         let trimmed = market.trim();
         if !trimmed.is_empty() && !is_generic_value(trimmed) {
-            return Some(trimmed.to_string());
+            return Some(SystemInfo::from_model(
+                trimmed,
+                DataSource::AndroidGetprop("ro.product.marketname"),
+            ));
         }
     }
 
@@ -104,20 +107,19 @@ pub fn extract_system_name(props: &HashMap<String, String>) -> Option<String> {
         .filter(|s| !s.is_empty() && !is_generic_value(s));
 
     if let (Some(mfg), Some(mdl)) = (manufacturer, model) {
-        let mfg_clean = cleanup_soc_vendor(mfg);
-        let mdl_lower = mdl.to_ascii_lowercase();
-        let mfg_lower = mfg.to_ascii_lowercase();
-        let mfg_clean_lower = mfg_clean.to_ascii_lowercase();
-
-        if mdl_lower.starts_with(&mfg_lower) || mdl_lower.starts_with(&mfg_clean_lower) {
-            return Some(mdl.to_string());
-        } else {
-            return Some(format!("{mfg_clean} {mdl}"));
-        }
+        return Some(SystemInfo::new(
+            Some(mfg.to_string()),
+            DataSource::AndroidGetprop("ro.product.manufacturer"),
+            Some(mdl.to_string()),
+            DataSource::AndroidGetprop("ro.product.model"),
+        ));
     }
 
     if let Some(mdl) = model {
-        return Some(mdl.to_string());
+        return Some(SystemInfo::from_model(
+            mdl,
+            DataSource::AndroidGetprop("ro.product.model"),
+        ));
     }
 
     // 3. Device or product code name
@@ -127,7 +129,10 @@ pub fn extract_system_name(props: &HashMap<String, String>) -> Option<String> {
     {
         let trimmed = device.trim();
         if !trimmed.is_empty() && !is_generic_value(trimmed) {
-            return Some(trimmed.to_string());
+            return Some(SystemInfo::from_model(
+                trimmed,
+                DataSource::AndroidGetprop("ro.product.device"),
+            ));
         }
     }
 
@@ -215,25 +220,28 @@ impl TOSData for OS {
         None
     }
 
-    fn get_system_name() -> Option<String> {
+    fn get_system_name() -> Option<SystemInfo> {
         let props = get_props();
         if let Some(name) = extract_system_name(&props) {
             return Some(name);
         }
 
         if let Some(name) = get_system_name_from_proc_cpuinfo() {
-            return Some(name);
+            return Some(SystemInfo::from_model(name, DataSource::LinuxProcCpuinfo));
         }
 
         if let Some(name) = read_devicetree_string("/proc/device-tree/model") {
-            return Some(name);
+            return Some(SystemInfo::from_model(
+                name,
+                DataSource::DeviceTree("/proc/device-tree/model"),
+            ));
         }
 
         None
     }
 
     fn get_socket_count() -> TopologyTier {
-        TopologyTier::new(1, DataSource::AndroidGetprop)
+        TopologyTier::new(1, DataSource::AndroidGetprop("ro.product.model"))
     }
 }
 
@@ -311,14 +319,17 @@ mod tests {
     #[test]
     fn test_extract_system_name_pixel() {
         let props = parse_getprop_output(PIXEL_GETPROP);
-        assert_eq!(extract_system_name(&props), Some("Pixel 8 Pro".to_string()));
+        assert_eq!(
+            extract_system_name(&props).and_then(|s| s.display_name()),
+            Some("Pixel 8 Pro".to_string())
+        );
     }
 
     #[test]
     fn test_extract_system_name_galaxy() {
         let props = parse_getprop_output(GALAXY_GETPROP);
         assert_eq!(
-            extract_system_name(&props),
+            extract_system_name(&props).and_then(|s| s.display_name()),
             Some("Samsung SM-S928B".to_string())
         );
     }
@@ -327,7 +338,7 @@ mod tests {
     fn test_extract_system_name_xiaomi() {
         let props = parse_getprop_output(QUALCOMM_GETPROP);
         assert_eq!(
-            extract_system_name(&props),
+            extract_system_name(&props).and_then(|s| s.display_name()),
             Some("Xiaomi 12 Pro".to_string())
         );
     }

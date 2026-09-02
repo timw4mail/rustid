@@ -1,5 +1,6 @@
+use super::is_generic_value;
 use super::sysctl::{get_sysctl_int_value, get_sysctl_value};
-use crate::common::{DataSource, OS, TOSData, TopologyTier};
+use crate::common::{DataSource, OS, SystemInfo, TOSData, TopologyTier};
 
 impl TOSData for OS {
     fn get_soc() -> Option<String> {
@@ -18,11 +19,20 @@ impl TOSData for OS {
         None
     }
 
-    fn get_system_name() -> Option<String> {
+    fn get_system_name() -> Option<SystemInfo> {
         #[cfg(any(target_os = "netbsd", target_os = "openbsd"))]
         {
             if let Some(model) = get_sysctl_value("hw.model") {
-                return Some(String::from(model.trim()));
+                let model = model.trim();
+                if !is_generic_value(model) {
+                    let vendor = get_sysctl_value("hw.vendor");
+                    return Some(SystemInfo::new(
+                        vendor,
+                        DataSource::Sysctrl("hw.vendor"),
+                        Some(model.to_string()),
+                        DataSource::Sysctrl("hw.model"),
+                    ));
+                }
             }
             None
         }
@@ -30,7 +40,13 @@ impl TOSData for OS {
         #[cfg(target_os = "freebsd")]
         {
             if let Some(sys) = get_sysctl_value("hw.fdt.model") {
-                return Some(String::from(sys.trim()));
+                let sys = sys.trim();
+                if !is_generic_value(sys) {
+                    return Some(SystemInfo::from_model(
+                        sys,
+                        DataSource::Sysctrl("hw.fdt.model"),
+                    ));
+                }
             }
             None
         }

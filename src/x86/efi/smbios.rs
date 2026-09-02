@@ -4,7 +4,8 @@
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-use crate::common::os::{is_generic_value, is_known_hypervisor_vendor};
+use crate::common::os::{is_generic_value, parse_apple_model};
+use crate::common::{DataSource, SystemInfo};
 
 #[cfg(uefi)]
 use super::os::{EfiConfigurationTable, get_system_table};
@@ -434,59 +435,78 @@ impl SmbiosData {
     }
 
     /// Determines the best human-readable system name matching Linux/macOS heuristics.
-    pub fn get_system_name(&self) -> Option<String> {
-        // 1. Check Type 1 Product Family / Product Name
+    pub fn get_system_name(&self) -> Option<SystemInfo> {
+        // 1. Apple model identification
         if let Some(sys) = &self.system {
-            if let Some(prod) = &sys.product_name {
-                if !is_generic_value(prod) {
-                    // For known hypervisors, fold in vendor (e.g., "QEMU Standard PC...")
-                    if let Some(mfg) = &sys.manufacturer {
-                        if is_known_hypervisor_vendor(mfg)
-                            && !prod
-                                .to_ascii_lowercase()
-                                .contains(&mfg.to_ascii_lowercase())
-                        {
-                            return Some(alloc::format!("{mfg} {prod}"));
-                        }
-                    }
-                    return Some(prod.clone());
-                }
+            if let Some(prod) = &sys.product_name
+                && let Some(mac) = parse_apple_model(prod)
+            {
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+                    Some(mac),
+                    DataSource::Smbios("SMBIOS Type 1:Product Name"),
+                ));
             }
-
-            if let Some(fam) = &sys.family {
-                if !is_generic_value(fam) {
-                    return Some(fam.clone());
-                }
+            if let Some(fam) = &sys.family
+                && let Some(mac) = parse_apple_model(fam)
+            {
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+                    Some(mac),
+                    DataSource::Smbios("SMBIOS Type 1:Family"),
+                ));
             }
-
-            // Hypervisor vendor only
-            if let Some(mfg) = &sys.manufacturer {
-                if is_known_hypervisor_vendor(mfg) {
-                    if let Some(prod) = &sys.product_name {
-                        return Some(alloc::format!("{mfg} {prod}"));
-                    }
-                    return Some(mfg.clone());
-                }
+        }
+        if let Some(board) = &self.board {
+            if let Some(prod) = &board.product_name
+                && let Some(mac) = parse_apple_model(prod)
+            {
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::Smbios("SMBIOS Type 2:BaseBoardManufacturer"),
+                    Some(mac),
+                    DataSource::Smbios("SMBIOS Type 2:BaseBoardProduct"),
+                ));
             }
         }
 
-        // 2. Fallback to Type 2 Baseboard Vendor + Product (e.g. ASUS/Gigabyte white-box desktop)
+        if let Some(sys) = &self.system {
+            if let Some(fam) = &sys.family
+                && !is_generic_value(fam)
+            {
+                return Some(SystemInfo::new(
+                    sys.manufacturer.clone(),
+                    DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+                    Some(fam.clone()),
+                    DataSource::Smbios("SMBIOS Type 1:Family"),
+                ));
+            }
+
+            if let Some(prod) = &sys.product_name
+                && !is_generic_value(prod)
+            {
+                return Some(SystemInfo::new(
+                    sys.manufacturer.clone(),
+                    DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+                    Some(prod.clone()),
+                    DataSource::Smbios("SMBIOS Type 1:Product Name"),
+                ));
+            }
+        }
+
+        // Fallback to Type 2 Baseboard Vendor + Product (e.g. ASUS/Gigabyte white-box desktop)
         if let Some(board) = &self.board {
-            if let (Some(mfg), Some(prod)) = (&board.manufacturer, &board.product_name) {
-                if !is_generic_value(prod) {
-                    if prod
-                        .to_ascii_lowercase()
-                        .contains(&mfg.to_ascii_lowercase())
-                    {
-                        return Some(prod.clone());
-                    } else {
-                        return Some(alloc::format!("{mfg} {prod}"));
-                    }
-                }
-            } else if let Some(prod) = &board.product_name {
-                if !is_generic_value(prod) {
-                    return Some(prod.clone());
-                }
+            if let Some(prod) = &board.product_name
+                && !is_generic_value(prod)
+            {
+                return Some(SystemInfo::new(
+                    board.manufacturer.clone(),
+                    DataSource::Smbios("SMBIOS Type 2:BaseBoardManufacturer"),
+                    Some(prod.clone()),
+                    DataSource::Smbios("SMBIOS Type 2:BaseBoardProduct"),
+                ));
             }
         }
 
@@ -549,7 +569,7 @@ pub fn detect_smbios() -> Option<SmbiosData> {
 }
 
 /// Discovers the system name from SMBIOS in UEFI.
-pub fn detect_smbios_system_name() -> Option<String> {
+pub fn detect_smbios_system_name() -> Option<SystemInfo> {
     #[cfg(uefi)]
     if let Some(smbios) = detect_smbios() {
         return smbios.get_system_name();
@@ -597,7 +617,10 @@ mod tests {
         assert_eq!(sys.family.as_deref(), Some("MacBook Pro"));
 
         let name = smbios.get_system_name();
-        assert_eq!(name.as_deref(), Some("MacBookPro18,3"));
+        assert_eq!(
+            name.and_then(|s| s.display_name()).as_deref(),
+            Some("MacBookPro18,3")
+        );
     }
 
     #[test]
@@ -623,7 +646,7 @@ mod tests {
         let smbios = SmbiosData::parse(&table);
         let name = smbios.get_system_name();
         assert_eq!(
-            name.as_deref(),
+            name.and_then(|s| s.display_name()).as_deref(),
             Some("ASUSTeK COMPUTER INC. ROG STRIX Z790-E GAMING WIFI")
         );
     }

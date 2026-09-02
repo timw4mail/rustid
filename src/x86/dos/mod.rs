@@ -121,7 +121,27 @@ static mut INITIAL_ATTR: u8 = 0x07;
 #[cfg(dos_ext)]
 static mut CURRENT_ATTR: u8 = 0x07;
 #[cfg(dos_ext)]
-static mut ATTR_INITIALIZED: bool = false;
+static mut COLOR_ENABLED: bool = true;
+
+/// Controls whether DOS console output renders ANSI color via VRAM or plain text via DOS stdout.
+pub fn set_color_mode(enabled: bool) {
+    #[cfg(dos_ext)]
+    unsafe {
+        COLOR_ENABLED = enabled;
+    }
+    #[cfg(not(dos_ext))]
+    let _ = enabled;
+}
+
+/// Returns whether DOS console color output is currently enabled.
+pub fn is_color_enabled() -> bool {
+    #[cfg(dos_ext)]
+    unsafe {
+        COLOR_ENABLED
+    }
+    #[cfg(not(dos_ext))]
+    true
+}
 
 #[cfg(dos_ext)]
 fn is_stdout_redirected() -> bool {
@@ -142,30 +162,24 @@ fn is_stdout_redirected() -> bool {
 
 #[cfg(dos_ext)]
 fn get_cursor_pos() -> (u8, u8) {
-    let dx: u16;
-    unsafe {
-        asm!(
-            "int 0x10",
-            in("ah") 0x03_u8,
-            in("bh") 0_u8,
-            lateout("dx") dx,
-            lateout("ax") _,
-            lateout("cx") _,
-            options(preserves_flags)
-        );
-    }
-    let row = (dx >> 8) as u8;
-    let col = (dx & 0xFF) as u8;
+    let page = (peek_u8(0x0462) & 0x07) as usize;
+    let bda_addr = 0x0450 + (page * 2);
+    let col = peek_u8(bda_addr as u32);
+    let row = peek_u8((bda_addr + 1) as u32);
     (row, col)
 }
 
 #[cfg(dos_ext)]
 fn set_cursor_pos(row: u8, col: u8) {
+    let page = (peek_u8(0x0462) & 0x07) as u8;
+    let bda_addr = 0x0450 + (page as usize * 2);
     unsafe {
+        core::ptr::write_volatile(bda_addr as *mut u8, col);
+        core::ptr::write_volatile((bda_addr + 1) as *mut u8, row);
         asm!(
             "int 0x10",
             in("ah") 0x02_u8,
-            in("bh") 0_u8,
+            in("bh") page,
             in("dh") row,
             in("dl") col,
             lateout("ax") _,
@@ -176,41 +190,26 @@ fn set_cursor_pos(row: u8, col: u8) {
 
 #[cfg(dos_ext)]
 fn dos_console_write(s: &str) {
-    let video_mode = peek_u8(0x00400049);
+    let video_mode = peek_u8(0x0449);
+    let page_offset = peek_u16(0x044E) as usize;
     let cols = {
-        let c = peek_u16(0x0040004A) as usize;
-        if c == 0 { 80 } else { c }
+        let c = peek_u16(0x044A) as usize;
+        if (40..=132).contains(&c) { c } else { 80 }
     };
     let rows = {
-        let r = peek_u8(0x00400084) as usize;
-        if r == 0 { 25 } else { r + 1 }
+        let r = peek_u8(0x0484) as usize;
+        if (23..=59).contains(&r) { r + 1 } else { 25 }
     };
     let vram_base = if video_mode == 7 {
-        0x000B0000 as *mut u16
+        (0x000B0000 + page_offset) as *mut u16
     } else {
-        0x000B8000 as *mut u16
+        (0x000B8000 + page_offset) as *mut u16
     };
 
     let (mut row, mut col) = {
         let (r, c) = get_cursor_pos();
-        (r as usize, c as usize)
+        ((r as usize).min(rows - 1), (c as usize).min(cols - 1))
     };
-
-    if unsafe { !ATTR_INITIALIZED } {
-        let offset = row * cols + col;
-        let cell = unsafe { core::ptr::read_volatile(vram_base.add(offset)) };
-        let existing_attr = (cell >> 8) as u8;
-        let init_a = if existing_attr != 0 {
-            existing_attr
-        } else {
-            0x07
-        };
-        unsafe {
-            INITIAL_ATTR = init_a;
-            CURRENT_ATTR = init_a;
-            ATTR_INITIALIZED = true;
-        }
-    }
 
     let mut chars = s.chars().peekable();
 
@@ -277,8 +276,10 @@ fn dos_console_write(s: &str) {
                 let attr = unsafe { CURRENT_ATTR };
                 let cell = ((attr as u16) << 8) | (ch as u16 & 0xFF);
                 let offset = row * cols + col;
-                unsafe {
-                    core::ptr::write_volatile(vram_base.add(offset), cell);
+                if offset < rows * cols {
+                    unsafe {
+                        core::ptr::write_volatile(vram_base.add(offset), cell);
+                    }
                 }
                 col += 1;
             }
@@ -359,7 +360,7 @@ pub fn _print_str(s: &str) {
         if s.is_empty() {
             return;
         }
-        if is_stdout_redirected() {
+        if !is_color_enabled() || is_stdout_redirected() {
             write_redirected_str(s);
         } else {
             dos_console_write(s);

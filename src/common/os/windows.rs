@@ -1,6 +1,6 @@
 use crate::common::{
-    DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier, is_generic_value,
-    is_known_hypervisor_vendor,
+    DataSource, OS, SystemInfo, TDetect, TOSData, TopologyCount, TopologyTier, is_generic_value,
+    parse_apple_model,
 };
 use windows::Win32::System::Registry::*;
 use windows::Win32::System::SystemInformation::*;
@@ -122,25 +122,44 @@ pub fn read_reg_binary(hkey: HKEY, value_name: &str) -> Option<Vec<u8>> {
     Some(buf)
 }
 
-/// Helper to check if a product name is an Apple model identifier (e.g. "MacBook4,1").
-fn is_apple_model_name(s: &str) -> bool {
-    let s = s.trim();
-    (s.starts_with("MacBook")
-        || s.starts_with("iMac")
-        || s.starts_with("Macmini")
-        || s.starts_with("MacPro")
-        || s.starts_with("MacStudio")
-        || s.starts_with("Mac")
-        || s.starts_with("Xserve"))
-        && s.contains(',')
+struct BiosRegistrySources {
+    mfr: &'static str,
+    prod: &'static str,
+    family: &'static str,
+    bios_ver: &'static str,
+    board_mfr: &'static str,
+    board_prod: &'static str,
 }
 
+const BIOS_REG_SOURCES: BiosRegistrySources = BiosRegistrySources {
+    mfr: r"HARDWARE\DESCRIPTION\System\BIOS:SystemManufacturer",
+    prod: r"HARDWARE\DESCRIPTION\System\BIOS:SystemProductName",
+    family: r"HARDWARE\DESCRIPTION\System\BIOS:SystemFamily",
+    bios_ver: r"HARDWARE\DESCRIPTION\System\BIOS:BIOSVersion",
+    board_mfr: r"HARDWARE\DESCRIPTION\System\BIOS:BaseBoardManufacturer",
+    board_prod: r"HARDWARE\DESCRIPTION\System\BIOS:BaseBoardProduct",
+};
+
+const SYSINFO_REG_SOURCES: BiosRegistrySources = BiosRegistrySources {
+    mfr: r"SYSTEM\CurrentControlSet\Control\SystemInformation:SystemManufacturer",
+    prod: r"SYSTEM\CurrentControlSet\Control\SystemInformation:SystemProductName",
+    family: r"SYSTEM\CurrentControlSet\Control\SystemInformation:SystemFamily",
+    bios_ver: r"SYSTEM\CurrentControlSet\Control\SystemInformation:BIOSVersion",
+    board_mfr: r"SYSTEM\CurrentControlSet\Control\SystemInformation:BaseBoardManufacturer",
+    board_prod: r"SYSTEM\CurrentControlSet\Control\SystemInformation:BaseBoardProduct",
+};
+
 /// Helper to extract system product/board name from a standard BIOS / SystemInformation registry key.
-fn get_system_from_bios_subkey(subkey: PCWSTR) -> Option<String> {
+fn get_system_from_bios_subkey(
+    subkey: PCWSTR,
+    sources: &BiosRegistrySources,
+) -> Option<SystemInfo> {
     let mut hkey = HKEY::default();
     let result = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, None, KEY_READ, &mut hkey) };
 
     if result.is_ok() {
+        let family =
+            read_reg_string(hkey, "SystemFamily").or_else(|| read_reg_string(hkey, "Family"));
         let product_name = read_reg_string(hkey, "SystemProductName")
             .or_else(|| read_reg_string(hkey, "SystemModel"))
             .or_else(|| read_reg_string(hkey, "Model"));
@@ -150,40 +169,76 @@ fn get_system_from_bios_subkey(subkey: PCWSTR) -> Option<String> {
             .or_else(|| read_reg_string(hkey, "BoardManufacturer"));
         let board_product = read_reg_string(hkey, "BaseBoardProduct")
             .or_else(|| read_reg_string(hkey, "BoardProduct"));
+        let bios_ver = read_reg_string(hkey, "BIOSVersion")
+            .or_else(|| read_reg_string(hkey, "SystemBiosVersion"));
 
         let _ = unsafe { RegCloseKey(hkey) };
 
-        if let Some(prod) = product_name
-            && !is_generic_value(&prod)
+        for s in [&product_name, &bios_ver, &family, &board_product]
+            .into_iter()
+            .flatten()
         {
-            if is_apple_model_name(&prod) {
-                return Some(prod);
+            if let Some(mac) = parse_apple_model(s) {
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::WindowsRegistry(sources.mfr),
+                    Some(mac),
+                    DataSource::WindowsRegistry(sources.bios_ver),
+                ));
             }
-            if let Some(mfr) = manufacturer
-                && !is_generic_value(&mfr)
-                && (is_known_hypervisor_vendor(&mfr)
-                    || !prod.to_lowercase().contains(&mfr.to_lowercase()))
-            {
-                return Some(format!("{mfr} {prod}"));
-            }
-            return Some(prod);
         }
 
-        if let Some(board_prod) = board_product
+        let is_apple = [
+            &manufacturer,
+            &board_vendor,
+            &product_name,
+            &family,
+            &bios_ver,
+        ]
+        .into_iter()
+        .flatten()
+        .any(|s| {
+            let s_lower = s.to_ascii_lowercase();
+            s_lower.starts_with("apple")
+                || s_lower.contains("apple")
+                || parse_apple_model(s).is_some()
+                || s.starts_with("Mac-")
+        });
+
+        if !is_apple
+            && let Some(fam) = family
+            && !is_generic_value(&fam)
+        {
+            return Some(SystemInfo::new(
+                manufacturer,
+                DataSource::WindowsRegistry(sources.mfr),
+                Some(fam),
+                DataSource::WindowsRegistry(sources.family),
+            ));
+        }
+
+        if !is_apple
+            && let Some(prod) = product_name
+            && !is_generic_value(&prod)
+        {
+            return Some(SystemInfo::new(
+                manufacturer,
+                DataSource::WindowsRegistry(sources.mfr),
+                Some(prod),
+                DataSource::WindowsRegistry(sources.prod),
+            ));
+        }
+
+        if !is_apple
+            && let Some(board_prod) = board_product
             && !is_generic_value(&board_prod)
         {
-            if is_apple_model_name(&board_prod) {
-                return Some(board_prod);
-            }
-            if let Some(board_mfr) = board_vendor
-                && !is_generic_value(&board_mfr)
-                && !board_prod
-                    .to_lowercase()
-                    .contains(&board_mfr.to_lowercase())
-            {
-                return Some(format!("{board_mfr} {board_prod}"));
-            }
-            return Some(board_prod);
+            return Some(SystemInfo::new(
+                board_vendor,
+                DataSource::WindowsRegistry(sources.board_mfr),
+                Some(board_prod),
+                DataSource::WindowsRegistry(sources.board_prod),
+            ));
         }
     }
 
@@ -191,7 +246,7 @@ fn get_system_from_bios_subkey(subkey: PCWSTR) -> Option<String> {
 }
 
 /// Helper to parse model & manufacturer from oeminfo.ini content.
-pub fn parse_oeminfo_content(content: &str) -> Option<String> {
+pub fn parse_oeminfo_content(content: &str) -> Option<SystemInfo> {
     let mut mfr: Option<String> = None;
     let mut model: Option<String> = None;
     for line in content.lines() {
@@ -207,20 +262,25 @@ pub fn parse_oeminfo_content(content: &str) -> Option<String> {
         }
     }
     if let Some(m) = model {
-        if let Some(f) = mfr
-            && !m.to_lowercase().contains(&f.to_lowercase())
-        {
-            return Some(format!("{f} {m}"));
-        }
-        return Some(m);
+        return Some(SystemInfo::new(
+            mfr,
+            DataSource::WindowsRegistry(r"oeminfo.ini:Manufacturer"),
+            Some(m),
+            DataSource::WindowsRegistry(r"oeminfo.ini:Model"),
+        ));
     } else if let Some(f) = mfr {
-        return Some(f);
+        return Some(SystemInfo::new(
+            Some(f),
+            DataSource::WindowsRegistry(r"oeminfo.ini:Manufacturer"),
+            None,
+            DataSource::DefaultValue,
+        ));
     }
     None
 }
 
 /// Reads OEM information from oeminfo.ini (standard on Windows 9x, 2000, XP).
-fn read_oeminfo_ini() -> Option<String> {
+fn read_oeminfo_ini() -> Option<SystemInfo> {
     let windir = std::env::var("SystemRoot")
         .or_else(|_| std::env::var("WINDIR"))
         .ok()?;
@@ -312,60 +372,8 @@ fn get_legacy_processor_count() -> u32 {
     num_procs.max(subkeys_count).max(1)
 }
 
-/// Attempts to extract or normalize an Apple Mac model identifier (e.g. "MacBook4,1", "MacBookPro15,2")
-/// from SMBIOS / BIOS strings (such as "MB41.88Z.00C1.B00.0802091544" or "MacBook4,1").
-pub fn parse_apple_model(raw: &str) -> Option<String> {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return None;
-    }
-
-    // Direct model check, e.g. "MacBook4,1", "MacBookPro18,3", "iMac14,2", "Macmini7,1", "Mac14,2"
-    if (raw.starts_with("MacBook")
-        || raw.starts_with("MacBookPro")
-        || raw.starts_with("MacBookAir")
-        || raw.starts_with("iMac")
-        || raw.starts_with("Macmini")
-        || raw.starts_with("MacPro")
-        || raw.starts_with("Mac")
-        || raw.starts_with("Xserve"))
-        && raw.contains(',')
-    {
-        return Some(raw.to_string());
-    }
-
-    // Extract first token before '.' or whitespace (e.g. "MB41.88Z.00C1.B00.0802091544" -> "MB41")
-    let token = raw
-        .split(['.', ' ', '\t', '\0', '-'])
-        .find(|s| !s.is_empty())
-        .unwrap_or(raw);
-
-    const PREFIXES: &[(&str, &str)] = &[
-        ("MBP", "MacBookPro"),
-        ("MBA", "MacBookAir"),
-        ("MB", "MacBook"),
-        ("IM", "iMac"),
-        ("MM", "Macmini"),
-        ("MP", "MacPro"),
-        ("XS", "Xserve"),
-    ];
-
-    for (code, name) in PREFIXES {
-        if let Some(rest) = token.strip_prefix(code)
-            && rest.len() >= 2
-            && rest.chars().all(|c| c.is_ascii_digit())
-        {
-            let major = &rest[..rest.len() - 1];
-            let minor = &rest[rest.len() - 1..];
-            return Some(format!("{name}{major},{minor}"));
-        }
-    }
-
-    None
-}
-
 /// Detects Apple Mac model identifier across Windows registry keys and BIOS version strings.
-fn detect_apple_mac_model() -> Option<String> {
+fn detect_apple_mac_model() -> Option<SystemInfo> {
     let mut hkey = HKEY::default();
 
     // 1. Check HARDWARE\DESCRIPTION\System\BIOS
@@ -392,7 +400,14 @@ fn detect_apple_mac_model() -> Option<String> {
             .flatten()
         {
             if let Some(mac) = parse_apple_model(s) {
-                return Some(mac);
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::WindowsRegistry(
+                        r"HARDWARE\DESCRIPTION\System\BIOS:SystemManufacturer",
+                    ),
+                    Some(mac),
+                    DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System\BIOS:BIOSVersion"),
+                ));
             }
         }
     }
@@ -415,7 +430,16 @@ fn detect_apple_mac_model() -> Option<String> {
 
         for s in [&prod, &bios_ver].into_iter().flatten() {
             if let Some(mac) = parse_apple_model(s) {
-                return Some(mac);
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::WindowsRegistry(
+                        r"SYSTEM\CurrentControlSet\Control\SystemInformation:SystemManufacturer",
+                    ),
+                    Some(mac),
+                    DataSource::WindowsRegistry(
+                        r"SYSTEM\CurrentControlSet\Control\SystemInformation:BIOSVersion",
+                    ),
+                ));
             }
         }
     }
@@ -437,16 +461,36 @@ fn detect_apple_mac_model() -> Option<String> {
         let _ = unsafe { RegCloseKey(hkey) };
 
         if let Some(s) = &bios_ver {
+            if let Some(mac) = parse_apple_model(s) {
+                return Some(SystemInfo::new(
+                    Some("Apple Inc.".to_string()),
+                    DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:Identifier"),
+                    Some(mac),
+                    DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:SystemBiosVersion"),
+                ));
+            }
             for part in s.split_whitespace() {
                 if let Some(mac) = parse_apple_model(part) {
-                    return Some(mac);
+                    return Some(SystemInfo::new(
+                        Some("Apple Inc.".to_string()),
+                        DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:Identifier"),
+                        Some(mac),
+                        DataSource::WindowsRegistry(
+                            r"HARDWARE\DESCRIPTION\System:SystemBiosVersion",
+                        ),
+                    ));
                 }
             }
         }
         if let Some(s) = &id
             && let Some(mac) = parse_apple_model(s)
         {
-            return Some(mac);
+            return Some(SystemInfo::new(
+                Some("Apple Inc.".to_string()),
+                DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:Identifier"),
+                Some(mac),
+                DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:Identifier"),
+            ));
         }
     }
 
@@ -456,8 +500,10 @@ fn detect_apple_mac_model() -> Option<String> {
 type PfnGetSystemFirmwareTable = unsafe extern "system" fn(u32, u32, *mut u8, u32) -> u32;
 
 /// Parse raw SMBIOS structures for system name (matches "System Model" in msinfo32).
-fn parse_smbios_structures_for_system_name(data: &[u8]) -> Option<String> {
+fn parse_smbios_structures_for_system_name(data: &[u8]) -> Option<SystemInfo> {
     let mut offset = 0;
+    let mut bios_ver: Option<String> = None;
+    let mut sys_family: Option<String> = None;
     let mut sys_prod: Option<String> = None;
     let mut sys_mfr: Option<String> = None;
     let mut board_prod: Option<String> = None;
@@ -500,10 +546,18 @@ fn parse_smbios_structures_for_system_name(data: &[u8]) -> Option<String> {
         };
 
         match type_ {
+            0 => {
+                if formatted.len() >= 6 {
+                    bios_ver = get_str(formatted[5]);
+                }
+            }
             1 => {
                 if formatted.len() >= 6 {
                     sys_mfr = get_str(formatted[4]);
                     sys_prod = get_str(formatted[5]);
+                }
+                if formatted.len() >= 0x1B {
+                    sys_family = get_str(formatted[0x1A]);
                 }
             }
             2 => {
@@ -519,42 +573,74 @@ fn parse_smbios_structures_for_system_name(data: &[u8]) -> Option<String> {
         offset = string_offset;
     }
 
-    if let Some(prod) = sys_prod
-        && !is_generic_value(&prod)
+    // Check for Apple Mac hardware model identifier first across all SMBIOS fields
+    for candidate in [&sys_prod, &bios_ver, &sys_family, &board_prod]
+        .into_iter()
+        .flatten()
     {
-        if is_apple_model_name(&prod) {
-            return Some(prod);
+        if let Some(mac) = parse_apple_model(candidate) {
+            return Some(SystemInfo::new(
+                Some("Apple Inc.".to_string()),
+                DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+                Some(mac),
+                DataSource::Smbios("SMBIOS Type 1:Product Name"),
+            ));
         }
-        if let Some(mfr) = sys_mfr
-            && !is_generic_value(&mfr)
-            && (is_known_hypervisor_vendor(&mfr)
-                || !prod.to_lowercase().contains(&mfr.to_lowercase()))
-        {
-            return Some(format!("{mfr} {prod}"));
-        }
-        return Some(prod);
     }
 
-    if let Some(board) = board_prod
+    let is_apple = [&sys_mfr, &board_mfr, &bios_ver, &sys_prod, &sys_family]
+        .into_iter()
+        .flatten()
+        .any(|s| {
+            let s_lower = s.to_ascii_lowercase();
+            s_lower.starts_with("apple")
+                || s_lower.contains("apple")
+                || parse_apple_model(s).is_some()
+                || s.starts_with("Mac-")
+        });
+
+    // Skip SMBIOS Family on Apple hardware (where Family is often firmware metadata like "4 4 A  ")
+    if !is_apple
+        && let Some(fam) = sys_family
+        && !is_generic_value(&fam)
+    {
+        return Some(SystemInfo::new(
+            sys_mfr,
+            DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+            Some(fam),
+            DataSource::Smbios("SMBIOS Type 1:Family"),
+        ));
+    }
+
+    if !is_apple
+        && let Some(prod) = sys_prod
+        && !is_generic_value(&prod)
+    {
+        return Some(SystemInfo::new(
+            sys_mfr,
+            DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
+            Some(prod),
+            DataSource::Smbios("SMBIOS Type 1:Product Name"),
+        ));
+    }
+
+    if !is_apple
+        && let Some(board) = board_prod
         && !is_generic_value(&board)
     {
-        if is_apple_model_name(&board) {
-            return Some(board);
-        }
-        if let Some(mfr) = board_mfr
-            && !is_generic_value(&mfr)
-            && !board.to_lowercase().contains(&mfr.to_lowercase())
-        {
-            return Some(format!("{mfr} {board}"));
-        }
-        return Some(board);
+        return Some(SystemInfo::new(
+            board_mfr,
+            DataSource::Smbios("SMBIOS Type 2:BaseBoardManufacturer"),
+            Some(board),
+            DataSource::Smbios("SMBIOS Type 2:BaseBoardProduct"),
+        ));
     }
 
     None
 }
 
 /// Reads SMBIOS table via GetSystemFirmwareTable (Windows Vista / 7 / 8 / 10 / 11 / Server 2003 SP1+).
-fn get_system_name_from_firmware_table() -> Option<String> {
+fn get_system_name_from_firmware_table() -> Option<SystemInfo> {
     use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
     use windows::core::s;
 
@@ -581,7 +667,7 @@ fn get_system_name_from_firmware_table() -> Option<String> {
 }
 
 /// Robustly parse an SMBIOS buffer (with or without header or at arbitrary offset).
-fn parse_smbios_buffer(buf: &[u8]) -> Option<String> {
+fn parse_smbios_buffer(buf: &[u8]) -> Option<SystemInfo> {
     if buf.len() < 8 {
         return None;
     }
@@ -611,7 +697,7 @@ fn parse_smbios_buffer(buf: &[u8]) -> Option<String> {
 }
 
 /// Reads SMBIOS table from mssmbios registry cache (standard on Windows 2000 and Windows XP).
-fn get_system_name_from_mssmbios_reg() -> Option<String> {
+fn get_system_name_from_mssmbios_reg() -> Option<SystemInfo> {
     let subkeys = [
         w!(r"SYSTEM\CurrentControlSet\Services\mssmbios\Data"),
         w!(r"SYSTEM\ControlSet001\Services\mssmbios\Data"),
@@ -643,31 +729,34 @@ fn get_system_name_from_mssmbios_reg() -> Option<String> {
 }
 
 impl TOSData for OS {
-    fn get_system_name() -> Option<String> {
-        // 0. Raw SMBIOS table via GetSystemFirmwareTable (same API used by msinfo32 "System Model")
-        if let Some(sys) = get_system_name_from_firmware_table() {
-            return Some(sys);
-        }
-
-        // 1. Raw SMBIOS table via mssmbios registry cache (Windows 2000 / XP)
-        if let Some(sys) = get_system_name_from_mssmbios_reg() {
-            return Some(sys);
-        }
-
-        // 2. Apple Mac hardware running Windows
+    fn get_system_name() -> Option<SystemInfo> {
+        // 0. Apple Mac hardware running Windows (must precede generic PC SMBIOS heuristics)
         if let Some(mac_model) = detect_apple_mac_model() {
             return Some(mac_model);
         }
 
-        // 2. Modern BIOS key (Windows Vista, 7, 8, 10, 11)
-        if let Some(sys) = get_system_from_bios_subkey(w!(r"HARDWARE\DESCRIPTION\System\BIOS")) {
+        // 1. Raw SMBIOS table via GetSystemFirmwareTable (same API used by msinfo32 "System Model")
+        if let Some(sys) = get_system_name_from_firmware_table() {
             return Some(sys);
         }
 
-        // 3. Windows 2000 / XP SystemInformation key
+        // 2. Raw SMBIOS table via mssmbios registry cache (Windows 2000 / XP)
+        if let Some(sys) = get_system_name_from_mssmbios_reg() {
+            return Some(sys);
+        }
+
+        // 3. Modern BIOS key (Windows Vista, 7, 8, 10, 11)
         if let Some(sys) =
-            get_system_from_bios_subkey(w!(r"SYSTEM\CurrentControlSet\Control\SystemInformation"))
+            get_system_from_bios_subkey(w!(r"HARDWARE\DESCRIPTION\System\BIOS"), &BIOS_REG_SOURCES)
         {
+            return Some(sys);
+        }
+
+        // 4. Windows 2000 / XP SystemInformation key
+        if let Some(sys) = get_system_from_bios_subkey(
+            w!(r"SYSTEM\CurrentControlSet\Control\SystemInformation"),
+            &SYSINFO_REG_SOURCES,
+        ) {
             return Some(sys);
         }
 
@@ -684,16 +773,16 @@ impl TOSData for OS {
             if let Some(m) = model
                 && !is_generic_value(&m)
             {
-                if is_apple_model_name(&m) {
-                    return Some(m);
-                }
-                if let Some(mfr) = manufacturer
-                    && !is_generic_value(&mfr)
-                    && !m.to_lowercase().contains(&mfr.to_lowercase())
-                {
-                    return Some(format!("{mfr} {m}"));
-                }
-                return Some(m);
+                return Some(SystemInfo::new(
+                    manufacturer,
+                    DataSource::WindowsRegistry(
+                        r"SOFTWARE\Microsoft\Windows\CurrentVersion\OEMInformation:Manufacturer",
+                    ),
+                    Some(m),
+                    DataSource::WindowsRegistry(
+                        r"SOFTWARE\Microsoft\Windows\CurrentVersion\OEMInformation:Model",
+                    ),
+                ));
             }
         }
 
@@ -702,7 +791,7 @@ impl TOSData for OS {
             return Some(sys);
         }
 
-        // 6. Hardware Description Identifier / BIOS Version string
+        // 6. Hardware Description Identifier / BIOS Version string (non-Apple fallback)
         let desc_subkey = w!(r"HARDWARE\DESCRIPTION\System");
         if unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, desc_subkey, None, KEY_READ, &mut hkey) }
             .is_ok()
@@ -711,23 +800,42 @@ impl TOSData for OS {
             let bios_ver = read_reg_string(hkey, "SystemBiosVersion");
             let _ = unsafe { RegCloseKey(hkey) };
 
-            if let Some(id_str) = id
-                && !is_generic_value(&id_str)
-                && id_str != "AT/AT COMPATIBLE"
-                && id_str != "PC-9800"
-                && !id_str.to_uppercase().starts_with("APPLE")
-            {
-                return Some(id_str);
-            }
+            let is_apple = id
+                .as_deref()
+                .map(|s| s.to_uppercase().starts_with("APPLE"))
+                .or_else(|| {
+                    bios_ver
+                        .as_deref()
+                        .map(|s| s.to_uppercase().starts_with("APPLE"))
+                })
+                .unwrap_or(false);
 
-            if let Some(ver) = bios_ver
-                && !is_generic_value(&ver)
-                && ver.len() > 3
-                && !ver
-                    .chars()
-                    .all(|c| c.is_ascii_digit() || c == '/' || c == '-' || c == '.')
-            {
-                return Some(ver);
+            if !is_apple {
+                if let Some(id_str) = id
+                    && !is_generic_value(&id_str)
+                    && id_str != "AT/AT COMPATIBLE"
+                    && id_str != "PC-9800"
+                {
+                    return Some(SystemInfo::from_model(
+                        id_str,
+                        DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System:Identifier"),
+                    ));
+                }
+
+                if let Some(ver) = bios_ver
+                    && !is_generic_value(&ver)
+                    && ver.len() > 3
+                    && !ver
+                        .chars()
+                        .all(|c| c.is_ascii_digit() || c == '/' || c == '-' || c == '.')
+                {
+                    return Some(SystemInfo::from_model(
+                        ver,
+                        DataSource::WindowsRegistry(
+                            r"HARDWARE\DESCRIPTION\System:SystemBiosVersion",
+                        ),
+                    ));
+                }
             }
         }
 
@@ -784,7 +892,10 @@ impl TOSData for OS {
                     offset += item.Size as usize;
                 }
                 if package_count > 0 {
-                    return TopologyTier::new(package_count, DataSource::WindowsRegistry);
+                    return TopologyTier::new(
+                        package_count,
+                        DataSource::WindowsRegistry("GetLogicalProcessorInformationEx"),
+                    );
                 }
             }
         }
@@ -796,7 +907,10 @@ impl TOSData for OS {
                 .filter(|e| e.relationship == 3) // RelationProcessorPackage = 3
                 .count() as u32;
             if package_count > 0 {
-                return TopologyTier::new(package_count, DataSource::WindowsRegistry);
+                return TopologyTier::new(
+                    package_count,
+                    DataSource::WindowsRegistry("GetLogicalProcessorInformation"),
+                );
             }
         }
 
@@ -807,11 +921,14 @@ impl TOSData for OS {
             {
                 let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
                 let sockets = (total_procs / threads_per_pkg).max(1);
-                return TopologyTier::new(sockets, DataSource::WindowsRegistry);
+                return TopologyTier::new(sockets, DataSource::WindowsRegistry("CentralProcessor"));
             }
             #[cfg(not(x86_cpu))]
             {
-                return TopologyTier::new(total_procs, DataSource::WindowsRegistry);
+                return TopologyTier::new(
+                    total_procs,
+                    DataSource::WindowsRegistry("CentralProcessor"),
+                );
             }
         }
 
@@ -897,7 +1014,7 @@ impl TDetect for TopologyCount {
             sockets,
             cores,
             threads,
-            source: DataSource::WindowsRegistry,
+            source: DataSource::WindowsRegistry("GetLogicalProcessorInformation"),
         }
     }
 }
@@ -930,7 +1047,7 @@ impl Cache {
         }
 
         let mut cache = Cache {
-            source: DataSource::WindowsRegistry,
+            source: DataSource::WindowsRegistry("GetLogicalProcessorInformationEx"),
             ..Default::default()
         };
         let mut found_cache = false;
@@ -1061,7 +1178,7 @@ Model=Dimension XPS T500
 SupportURL=http://support.dell.com
 "#;
         assert_eq!(
-            parse_oeminfo_content(content),
+            parse_oeminfo_content(content).and_then(|s| s.display_name()),
             Some("Dell Computer Corporation Dimension XPS T500".to_string())
         );
 
@@ -1071,7 +1188,7 @@ Manufacturer=IBM
 Model=IBM ThinkPad T42
 "#;
         assert_eq!(
-            parse_oeminfo_content(content_model_contains_mfr),
+            parse_oeminfo_content(content_model_contains_mfr).and_then(|s| s.display_name()),
             Some("IBM ThinkPad T42".to_string())
         );
 
@@ -1143,6 +1260,149 @@ Model=To be filled by O.E.M.
         // End of table (Type 127)
         buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
 
-        assert_eq!(parse_smbios_buffer(&buf), Some("MacBook4,1".to_string()));
+        assert_eq!(
+            parse_smbios_buffer(&buf, "test").and_then(|s| s.display_name()),
+            Some("MacBook4,1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_smbios_buffer_family_preferred() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
+
+        // Type 1 with Family
+        buf.push(1);
+        buf.push(0x1B);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(1); // Mfr: LENOVO
+        buf.push(2); // Prod: 20L5CTO1WW
+        buf.push(0); // Version
+        buf.extend_from_slice(&[0; 19]);
+        buf.push(3); // Family: ThinkPad T480
+
+        buf.extend_from_slice(b"LENOVO\0");
+        buf.extend_from_slice(b"20L5CTO1WW\0");
+        buf.extend_from_slice(b"ThinkPad T480\0");
+        buf.push(0);
+
+        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
+
+        assert_eq!(
+            parse_smbios_buffer(&buf, "test").and_then(|s| s.display_name()),
+            Some("LENOVO ThinkPad T480".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_smbios_buffer_baseboard_fallback() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
+
+        // Type 1: Generic System Product Name
+        buf.push(1);
+        buf.push(0x08);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(1); // Mfr: System manufacturer
+        buf.push(2); // Prod: System Product Name
+        buf.push(0);
+        buf.push(0);
+        buf.extend_from_slice(b"System manufacturer\0");
+        buf.extend_from_slice(b"System Product Name\0");
+        buf.push(0);
+
+        // Type 2: Baseboard
+        buf.push(2);
+        buf.push(0x08);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(1); // Board Mfr: ASUSTeK COMPUTER INC.
+        buf.push(2); // Board Prod: ROG STRIX B550-F GAMING
+        buf.push(0);
+        buf.push(0);
+        buf.extend_from_slice(b"ASUSTeK COMPUTER INC.\0");
+        buf.extend_from_slice(b"ROG STRIX B550-F GAMING\0");
+        buf.push(0);
+
+        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
+
+        assert_eq!(
+            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
+            Some("ASUSTeK COMPUTER INC. ROG STRIX B550-F GAMING".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_smbios_buffer_2008_macbook() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
+
+        // Type 0: BIOS Information with Apple EFI BIOS Version "MB41.88Z..."
+        buf.push(0);
+        buf.push(0x18);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(1); // Vendor: "Apple Inc."
+        buf.push(2); // BIOS Version: "MB41.88Z.00C1.B00.0802091544"
+        buf.extend_from_slice(&[0; 18]);
+        buf.extend_from_slice(b"Apple Inc.\0");
+        buf.extend_from_slice(b"MB41.88Z.00C1.B00.0802091544\0");
+        buf.push(0);
+
+        // Type 1: System Information with garbage family "4 4 A  "
+        buf.push(1);
+        buf.push(0x1B);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(1); // Mfr: "Apple Inc."
+        buf.push(2); // Prod: "Mac-F4208CC8"
+        buf.push(3); // Version: "1.0"
+        buf.extend_from_slice(&[0; 19]);
+        buf.push(4); // Family: "4 4 A  "
+        buf.extend_from_slice(b"Apple Inc.\0");
+        buf.extend_from_slice(b"Mac-F4208CC8\0");
+        buf.extend_from_slice(b"1.0\0");
+        buf.extend_from_slice(b"4 4 A  \0");
+        buf.push(0);
+
+        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
+
+        assert_eq!(
+            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
+            Some("MacBook4,1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_smbios_buffer_2008_macbook_control_chars() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
+
+        // Type 1: System Information with garbage family "4\u{8}4\u{8}A\u{4}\u{5}" and Board ID "Mac-F4208CC8"
+        buf.push(1);
+        buf.push(0x1B);
+        buf.extend_from_slice(&[0, 0]);
+        buf.push(0); // Mfr: None (0)
+        buf.push(1); // Prod: "Mac-F4208CC8"
+        buf.push(0); // Version: None
+        buf.extend_from_slice(&[0; 19]);
+        buf.push(2); // Family: "4\u{8}4\u{8}A\u{4}\u{5}"
+        buf.extend_from_slice(b"Mac-F4208CC8\0");
+        buf.extend_from_slice(b"4\x084\x08A\x04\x05\0");
+        buf.push(0);
+
+        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
+
+        let parsed = parse_smbios_buffer(&buf);
+        assert!(parsed.is_some());
+        let info = parsed.unwrap();
+        assert_eq!(info.display_name(), Some("MacBook4,1".to_string()));
+        assert_eq!(info.model.as_deref(), Some("MacBook4,1"));
+        assert_eq!(
+            info.model_source,
+            DataSource::Smbios("SMBIOS Type 1:Product Name")
+        );
+        assert_eq!(info.vendor, Some("Apple Inc.".to_string()));
+        assert_eq!(
+            info.vendor_source,
+            DataSource::Smbios("SMBIOS Type 1:Manufacturer")
+        );
     }
 }

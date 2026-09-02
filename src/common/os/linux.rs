@@ -1,13 +1,13 @@
 #![cfg(target_os = "linux")]
 
 use crate::common::{
-    DataSource, OS, TOSData, TopologyTier, format_compatible_pair, get_devicetree_compatible,
-    get_proc_cpuinfo_data, get_soc_from_devicetree, get_soc_from_proc_cpuinfo,
-    get_system_name_from_proc_cpuinfo, read_devicetree_string,
+    DataSource, OS, SystemInfo, TOSData, TopologyTier, format_compatible_pair,
+    get_devicetree_compatible, get_proc_cpuinfo_data, get_soc_from_devicetree,
+    get_soc_from_proc_cpuinfo, get_system_name_from_proc_cpuinfo, read_devicetree_string,
 };
 use std::collections::HashSet;
 
-use super::{is_generic_value, is_known_hypervisor_vendor};
+use super::{is_generic_value, parse_apple_model};
 
 /// Read a DMI field from sysfs, trying both the virtual and class mount
 /// points, and return its first NUL-delimited value trimmed.
@@ -24,73 +24,85 @@ fn get_dmi_field(field: &str) -> Option<String> {
     None
 }
 
-/// Read several DMI fields and join their non-generic values with a space,
-/// e.g. combining `sys_vendor` + `product_name` into "QEMU Standard PC ...".
-/// When `vendor_only` is set, only produce a result for known hypervisors so
-/// that real hardware strings are not prefixed with their manufacturer.
-fn get_combined_dmi(fields: &[&str], vendor_only: bool) -> Option<String> {
-    let mut parts = Vec::new();
-    for (i, field) in fields.iter().enumerate() {
-        if vendor_only && i == 0 {
-            continue;
-        }
-        let value = get_dmi_field(field)?;
-        if is_generic_value(&value) {
-            return None;
-        }
-        parts.push(value);
-    }
-
-    if vendor_only && !parts.is_empty() {
-        let vendor = get_dmi_field(fields[0])?;
-        if !is_known_hypervisor_vendor(&vendor) {
-            return None;
-        }
-        parts.insert(0, vendor);
-    }
-
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts.join(" "))
-    }
-}
-
-fn get_raw_system_name() -> Option<String> {
+fn get_raw_system_name() -> Option<SystemInfo> {
     for path in [
         "/proc/device-tree/model",
         "/proc/device-tree/smbios/smbios/system/product",
     ] {
         if let Some(name) = read_devicetree_string(path) {
-            return Some(name);
+            return Some(SystemInfo::from_model(
+                name,
+                DataSource::DeviceTree("/proc/device-tree/model"),
+            ));
         }
     }
 
-    for field in ["product_family", "product_name"] {
-        if let Some(name) = get_dmi_field(field)
-            && !is_generic_value(&name)
+    // 1. Apple model identification
+    for field in [
+        "product_name",
+        "bios_version",
+        "product_family",
+        "board_name",
+    ] {
+        if let Some(val) = get_dmi_field(field)
+            && let Some(mac) = parse_apple_model(&val)
         {
-            return Some(name);
+            return Some(SystemInfo::new(
+                Some("Apple Inc.".to_string()),
+                DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
+                Some(mac),
+                DataSource::LinuxSysFs("/sys/class/dmi/id/product_name"),
+            ));
         }
     }
 
-    // For hypervisors, fold the vendor in so we get useful names like
-    // "QEMU Standard PC (i440FX + PIIX, 1996)" instead of generic DMI strings.
-    if let Some(name) = get_combined_dmi(&["sys_vendor", "product_name"], true) {
-        return Some(name);
+    let prod = get_dmi_field("product_name");
+    let family = get_dmi_field("product_family");
+
+    if let Some(f) = family
+        && !is_generic_value(&f)
+    {
+        let sys_vendor = get_dmi_field("sys_vendor");
+        return Some(SystemInfo::new(
+            sys_vendor,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
+            Some(f),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_family"),
+        ));
     }
 
-    // When the product is a placeholder but the board is specific (common on
-    // white-box ASUS/Gigabyte systems), fall back to the board identity.
-    if let Some(name) = get_combined_dmi(&["board_vendor", "board_name"], false) {
-        return Some(name);
+    if let Some(p) = prod
+        && !is_generic_value(&p)
+    {
+        let sys_vendor = get_dmi_field("sys_vendor");
+        return Some(SystemInfo::new(
+            sys_vendor,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
+            Some(p),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_name"),
+        ));
+    }
+
+    if let Some(board) = get_dmi_field("board_name")
+        && !is_generic_value(&board)
+    {
+        let board_vendor = get_dmi_field("board_vendor");
+        return Some(SystemInfo::new(
+            board_vendor,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/board_vendor"),
+            Some(board),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/board_name"),
+        ));
     }
 
     // If we see nothing in sysfs, check the device tree 'compatible' value
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {
-        return Some(format_compatible_pair(pair));
+        return Some(SystemInfo::from_model(
+            format_compatible_pair(pair),
+            DataSource::DeviceTree("/proc/device-tree/compatible"),
+        ));
     }
 
     None
@@ -109,9 +121,9 @@ impl TOSData for OS {
         None
     }
 
-    fn get_system_name() -> Option<String> {
+    fn get_system_name() -> Option<SystemInfo> {
         if let Some(name) = get_system_name_from_proc_cpuinfo() {
-            return Some(name);
+            return Some(SystemInfo::from_model(name, DataSource::LinuxProcCpuinfo));
         }
 
         get_raw_system_name()
@@ -152,7 +164,7 @@ impl TOSData for OS {
 
 #[cfg(test)]
 mod tests {
-    use super::super::normalize_for_compare;
+    use super::super::{is_known_hypervisor_vendor, normalize_for_compare};
     use super::*;
     use crate::common::{expand_cpu_list, parse_cpu_list_count};
 

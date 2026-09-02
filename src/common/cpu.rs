@@ -1,5 +1,5 @@
 use crate::common::cache::Cache;
-use crate::common::topology::{Speed, Topology};
+use crate::common::topology::{Speed, SystemInfo, Topology};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -68,7 +68,7 @@ pub struct CpuCore<M = &'static str> {
 #[derive(Debug, Default, PartialEq)]
 pub struct Cpu<E = (), M = &'static str> {
     /// The system name, if applicable
-    pub system: Option<String>,
+    pub system: Option<SystemInfo>,
     /// CPU vendor name
     pub vendor: String,
     /// CPU model name

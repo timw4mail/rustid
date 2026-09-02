@@ -81,12 +81,18 @@ impl Cpu {
 
         // 2. Try sysfs cpufreq
         if let Some(speed) = Self::detect_clock_speed_from_cpufreq() {
-            return (Some(speed), DataSource::LinuxSysFs);
+            return (
+                Some(speed),
+                DataSource::LinuxSysFs("/sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq"),
+            );
         }
 
         // 3. Try device tree CPU nodes (/proc/device-tree/cpus/*/clock-frequency)
         if let Some(speed) = Self::detect_clock_speed_from_device_tree() {
-            return (Some(speed), DataSource::DeviceTree);
+            return (
+                Some(speed),
+                DataSource::DeviceTree("/proc/device-tree/cpus/*/clock-frequency"),
+            );
         }
 
         // 4. Try lscpu for clock speed

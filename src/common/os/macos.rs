@@ -1,4 +1,4 @@
-use crate::common::{DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier};
+use crate::common::{DataSource, OS, SystemInfo, TDetect, TOSData, TopologyCount, TopologyTier};
 
 use super::sysctl::*;
 
@@ -16,8 +16,21 @@ impl TDetect for TopologyCount {
 }
 
 impl TOSData for OS {
-    fn get_system_name() -> Option<String> {
-        get_sysctl_value("hw.product").or(get_sysctl_value("hw.model"))
+    fn get_system_name() -> Option<SystemInfo> {
+        let (model, key) = if let Some(prod) = get_sysctl_value("hw.product") {
+            (prod, "hw.product")
+        } else if let Some(model) = get_sysctl_value("hw.model") {
+            (model, "hw.model")
+        } else {
+            return None;
+        };
+
+        Some(SystemInfo::new(
+            Some("Apple Inc.".to_string()),
+            DataSource::Sysctrl(key),
+            Some(model),
+            DataSource::Sysctrl(key),
+        ))
     }
 
     fn get_socket_count() -> TopologyTier {

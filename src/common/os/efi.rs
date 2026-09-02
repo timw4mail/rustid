@@ -1,10 +1,9 @@
 #![cfg(uefi)]
 
-use crate::common::{OS, TOSData, TopologyTier};
-use alloc::string::String;
+use crate::common::{OS, SystemInfo, TOSData, TopologyTier};
 
 impl TOSData for OS {
-    fn get_system_name() -> Option<String> {
+    fn get_system_name() -> Option<SystemInfo> {
         crate::x86::efi::smbios::detect_smbios_system_name()
     }
 

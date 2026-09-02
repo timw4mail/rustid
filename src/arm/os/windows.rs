@@ -35,7 +35,8 @@ pub fn detect() -> OsCpuInfo {
             midrs.insert(midr);
             all_midrs.push(midr);
         }
-        midr_source = DataSource::WindowsRegistry;
+        midr_source =
+            DataSource::WindowsRegistry(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0:CP 0");
     }
 
     let primary_midr = midrs.iter().next().copied().unwrap_or(Midr::default());

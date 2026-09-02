@@ -1226,3 +1226,28 @@ fn test_pure_cpuid_detect_never_populates_os_data() {
     assert_eq!(cpu.topology.threads.count, 32);
     assert!(!cpu.topology.speed.measured);
 }
+
+#[test]
+fn test_sequential_multiple_dumps_loading() {
+    // 1. Load multi-context hybrid dump (20 threads)
+    set_file_cpuid_provider("dump/12700H.txt");
+    let cpu1 = Cpu::detect();
+    assert!(cpu1.is_hybrid());
+    assert_eq!(cpu1.topology.threads.count, 20);
+
+    // 2. Immediately load single-context SiS 550 dump
+    set_file_cpuid_provider("dump/sis550.TXT");
+    let cpu2 = Cpu::detect();
+    assert_eq!(cpu2.vendor, "SiS");
+    assert!(cpu2.display_model_string().contains("SiS 550"));
+    assert_eq!(cpu2.topology.threads.count, 1);
+
+    // 3. Immediately load Pentium Pro dump
+    set_file_cpuid_provider("dump/p6x2.txt");
+    let cpu3 = Cpu::detect();
+    assert_eq!(cpu3.vendor, "Intel");
+    assert!(cpu3.display_model_string().contains("Pentium Pro"));
+    assert_eq!(cpu3.topology.threads.count, 1);
+
+    reset_cpuid_provider();
+}

@@ -36,7 +36,10 @@ pub fn detect_sysfs_topology() -> TopologyCount {
             topo.cores = core_ids.len() as u32;
         }
         if !package_ids.is_empty() {
-            topo.sockets = TopologyTier::new(package_ids.len() as u32, DataSource::LinuxSysFs);
+            topo.sockets = TopologyTier::new(
+                package_ids.len() as u32,
+                DataSource::LinuxSysFs("/sys/devices/system/cpu/cpu*/topology/physical_package_id"),
+            );
         }
     }
 
@@ -89,7 +92,7 @@ pub fn read_sysfs_cpu_cache(cpu_num: u32) -> Option<Cache> {
     }
 
     let mut cache = Cache {
-        source: DataSource::LinuxSysFs,
+        source: DataSource::LinuxSysFs("/sys/devices/system/cpu/cpu*/cache"),
         ..Default::default()
     };
     let mut found_cache = false;

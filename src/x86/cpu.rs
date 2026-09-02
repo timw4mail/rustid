@@ -697,6 +697,8 @@ impl Cpu {
                 }
             }
 
+            provider::set_dump_cpu(0);
+
             if cores.len() > 1 {
                 return cores;
             }

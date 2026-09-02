@@ -1,4 +1,6 @@
 use crate::common::cache::Cache;
+use crate::common::combine_vendor_and_model;
+use alloc::string::String;
 
 /// CPU speed information (base and boost frequencies).
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
@@ -79,14 +81,65 @@ impl Default for TopologyCount {
     }
 }
 
-/// Where did this cpu information come from?
+/// The detected host system information with independent vendor and model data sources.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct SystemInfo {
+    pub vendor: Option<String>,
+    pub vendor_source: DataSource,
+    pub model: Option<String>,
+    pub model_source: DataSource,
+}
+
+impl SystemInfo {
+    pub fn new(
+        vendor: Option<String>,
+        vendor_source: DataSource,
+        model: Option<String>,
+        model_source: DataSource,
+    ) -> Self {
+        let vendor_source = if vendor.is_some() {
+            vendor_source
+        } else {
+            DataSource::DefaultValue
+        };
+        let model_source = if model.is_some() {
+            model_source
+        } else {
+            DataSource::DefaultValue
+        };
+        Self {
+            vendor,
+            vendor_source,
+            model,
+            model_source,
+        }
+    }
+
+    pub fn from_model(model: impl Into<String>, source: DataSource) -> Self {
+        Self {
+            vendor: None,
+            vendor_source: DataSource::DefaultValue,
+            model: Some(model.into()),
+            model_source: source,
+        }
+    }
+
+    /// Combines vendor and model for canonical display.
+    pub fn display_name(&self) -> Option<String> {
+        let model = self.model.as_deref()?;
+        let vendor = self.vendor.as_deref();
+        Some(combine_vendor_and_model(vendor, model))
+    }
+}
+
+/// Where did this cpu or system information come from?
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum DataSource {
-    /// A default value , when lookup fails
+    /// A default value, when lookup fails
     #[default]
     DefaultValue,
-    /// Value from Android getprop shell tool
-    AndroidGetprop,
+    /// Value from Android getprop shell tool with property name
+    AndroidGetprop(&'static str),
     /// Value generated from other inputs
     Calculated(&'static str),
     /// x86 cpuid instruction
@@ -99,26 +152,28 @@ pub enum DataSource {
     CpuMsr,
     /// value in cpu register on cpu reset
     CpuReset,
-    /// from device tree
-    DeviceTree,
+    /// from device tree with node path
+    DeviceTree(&'static str),
     /// sysinfo command on Haiku
     HaikuSysinfo,
     /// /proc/cpuinfo
     LinuxProcCpuinfo,
-    /// Linux virtual /sys directory tree
-    LinuxSysFs,
+    /// Linux virtual /sys directory tree with sysfs path
+    LinuxSysFs(&'static str),
     /// Determined from a set of pre-defined values
     LookupTable,
     /// Linux lscpu command
     Lscpu,
     /// x86 MpTable
     MpTable,
-    /// value from sysctrl tool
+    /// value from SMBIOS / DMI table with structure description
+    Smbios(&'static str),
+    /// value from sysctl tool with sysctl name
     Sysctrl(&'static str),
     /// value from system call
     SystemCall,
-    /// value from Windows registry
-    WindowsRegistry,
+    /// value from Windows registry with subkey / value path
+    WindowsRegistry(&'static str),
 }
 
 #[cfg(test)]
@@ -167,5 +222,33 @@ mod tests {
             measured: true,
         };
         assert!(s.measured);
+    }
+
+    #[test]
+    fn test_system_info_source_defaults_when_none() {
+        let info = SystemInfo::new(
+            None,
+            DataSource::Smbios("test"),
+            Some("Model X".to_string()),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_name"),
+        );
+        assert_eq!(info.vendor, None);
+        assert_eq!(info.vendor_source, DataSource::DefaultValue);
+        assert_eq!(info.model.as_deref(), Some("Model X"));
+        assert_eq!(
+            info.model_source,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_name")
+        );
+
+        let info2 = SystemInfo::new(
+            Some("Vendor Y".to_string()),
+            DataSource::Smbios("test"),
+            None,
+            DataSource::Smbios("test"),
+        );
+        assert_eq!(info2.vendor.as_deref(), Some("Vendor Y"));
+        assert_eq!(info2.vendor_source, DataSource::Smbios("test"));
+        assert_eq!(info2.model, None);
+        assert_eq!(info2.model_source, DataSource::DefaultValue);
     }
 }

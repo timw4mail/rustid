@@ -46,7 +46,7 @@ fn help() {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_main() -> ! {
     use rustid::common::{CliFlags, TCpuDisplay, TDetect};
-    use rustid::x86::dos::{exec_dos_binary, exit, get_args, init_heap};
+    use rustid::x86::dos::{exec_dos_binary, exit, get_args, init_heap, set_color_mode};
     use rustid::{Cpu, cyrix_cpuid_check, version};
 
     unsafe { init_heap() };
@@ -157,6 +157,8 @@ pub extern "C" fn rust_main() -> ! {
             }
         }
     }
+
+    set_color_mode(flags.color);
 
     if action == "help" || had_error {
         help();

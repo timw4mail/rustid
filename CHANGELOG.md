@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1] — Align Windows system name detection, cross-platform vendor prefixing, multi-dump loading fix, and DOS INT 10h console output
+
+### Fixed
+- **Windows System Name Detection Order & Apple Model Handling**: Aligned Windows SMBIOS table and Registry parsing order with Linux sysfs detection (`Family` -> `Product Name` -> `BaseBoard`). Extracted SMBIOS Type 1 `Family` string and prioritized it before `Product Name`, while prioritizing Apple hardware model identifiers across SMBIOS Type 0 (BIOS version `MB41...`), Type 1, and Registry keys ahead of non-standard vendor family fields (e.g. `4 4 A  `) so Apple Mac hardware running Windows maps cleanly to its consumer name (`src/common/os/windows.rs`, `src/common/os/common.rs`).
+- **Cross-Platform System Name Vendor Prefixing**: Added centralized `combine_vendor_and_model` and `is_apple_model_name` helpers to consistently attach hardware manufacturer/vendor names to system and motherboard model names across Linux, Windows, EFI, and BSD detection while preserving Apple hardware model identifiers (e.g. `MacBook4,1`, `Mac14,2`) for downstream consumer marketing name formatting (`src/common/os/common.rs`, `src/common/os/linux.rs`, `src/common/os/windows.rs`, `src/x86/efi/smbios.rs`, `src/common/os/bsd.rs`).
+- **Multi-Dump Sequential Loading Bug**: Fixed an issue where loading multi-core / hybrid CPUID dump files left the thread-local CPU context index pointing to a high index, causing subsequent dump file loads with fewer CPU contexts to fail CPUID queries and fall back to Generic 386/486 (`src/x86/provider.rs`, `src/x86/cpu.rs`, `tests/cpuid_dump_test.rs`).
+- **DOS Console Color and Monochrome Output Fix**: Resolved console corruption in 32-bit DOS (`rustid.exe`) by bypassing VRAM when `/M` or `/MONO` is passed or stdout is redirected, writing clean plain text via standard DOS `INT 21h, AH=40h`. Hardened direct VRAM color writing by clamping dimensions to safe bounds (`80x25`), eliminating volatile reads from contended UMA framebuffers (defaulting to standard attribute `0x07`), and tracking cursor coordinates directly via the BIOS Data Area (`src/x86/dos/mod.rs`, `src/dos_rustid.rs`).
+
 ## [2.1.0] — Native Windows GUI with Windows 9x backwards compatibility, unified topology model, multi-socket display, NetBurst Gallatin detection, and common deduplication
 
 ### Added
