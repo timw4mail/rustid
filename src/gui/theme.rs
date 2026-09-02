@@ -173,9 +173,9 @@ pub fn init_common_controls() {
             fn InitCommonControls();
         }
         InitCommonControls();
-        let _ = LoadLibraryA(b"msftedit.dll\0".as_ptr());
-        let _ = LoadLibraryA(b"riched20.dll\0".as_ptr());
-        let _ = LoadLibraryA(b"riched32.dll\0".as_ptr());
+        let _ = LoadLibraryA(c"msftedit.dll".as_ptr() as *const u8);
+        let _ = LoadLibraryA(c"riched20.dll".as_ptr() as *const u8);
+        let _ = LoadLibraryA(c"riched32.dll".as_ptr() as *const u8);
     }
 }
 
@@ -262,7 +262,7 @@ pub fn create_fonts(dpi: u32) {
                 0, // CLIP_DEFAULT_PRECIS
                 0, // DEFAULT_QUALITY
                 0,
-                b"Courier New\0".as_ptr(),
+                c"Courier New".as_ptr() as *const u8,
             );
             let hui = CreateFontA(
                 ui_height,
@@ -278,7 +278,7 @@ pub fn create_fonts(dpi: u32) {
                 0, // CLIP_DEFAULT_PRECIS
                 0, // DEFAULT_QUALITY
                 0,
-                b"Tahoma\0".as_ptr(),
+                c"Tahoma".as_ptr() as *const u8,
             );
             (HFONT(hmono), HFONT(hui))
         };

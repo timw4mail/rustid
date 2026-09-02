@@ -41,6 +41,14 @@ pub fn is_generic_value(raw: &str) -> bool {
         "x86",
         "x64",
         "laptop",
+        "apple - c1",
+        "apple - c2",
+        "apple - 1",
+        "apple - 2",
+        "- c1",
+        "- c2",
+        "c1",
+        "c2",
     ];
 
     let normalized = normalize_for_compare(raw);

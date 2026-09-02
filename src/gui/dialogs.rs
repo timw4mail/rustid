@@ -27,7 +27,7 @@ const OPENFILENAME_SIZE_VERSION_400: u32 = 76;
 #[cfg(x86_cpu)]
 #[repr(C)]
 #[allow(dead_code)]
-struct OPENFILENAMEA {
+struct OpenFileNameA {
     l_struct_size: u32,
     hwnd_owner: *mut c_void,
     h_instance: *mut c_void,
@@ -85,9 +85,9 @@ unsafe extern "system" {
     #[cfg(x86_cpu)]
     fn CloseHandle(hObject: *mut c_void) -> i32;
     #[cfg(x86_cpu)]
-    fn GetOpenFileNameA(lpofn: *mut OPENFILENAMEA) -> i32;
+    fn GetOpenFileNameA(lpofn: *mut OpenFileNameA) -> i32;
     #[cfg(x86_cpu)]
-    fn GetSaveFileNameA(lpofn: *mut OPENFILENAMEA) -> i32;
+    fn GetSaveFileNameA(lpofn: *mut OpenFileNameA) -> i32;
 }
 
 #[cfg(x86_cpu)]
@@ -205,10 +205,10 @@ pub fn copy_to_clipboard(hwnd_owner: HWND, text: &str) {
                     )
                     .is_err()
                     {
-                        let _ = GlobalFree(hmem.0 as *mut c_void);
+                        let _ = GlobalFree(hmem.0);
                     }
                 } else {
-                    let _ = GlobalFree(hmem.0 as *mut c_void);
+                    let _ = GlobalFree(hmem.0);
                 }
             }
         } else {
@@ -225,10 +225,10 @@ pub fn copy_to_clipboard(hwnd_owner: HWND, text: &str) {
                     )
                     .is_err()
                     {
-                        let _ = GlobalFree(hmem.0 as *mut c_void);
+                        let _ = GlobalFree(hmem.0);
                     }
                 } else {
-                    let _ = GlobalFree(hmem.0 as *mut c_void);
+                    let _ = GlobalFree(hmem.0);
                 }
             }
         }
@@ -267,7 +267,7 @@ pub fn open_dump_file_dialog(hwnd_parent: HWND) -> Option<String> {
         let mut file_buf = [0u8; 1024];
         let filter = b"CPUID Dump (*.txt;*.dump)\0*.txt;*.dump\0All Files (*.*)\0*.*\0\0";
 
-        let mut ofn = OPENFILENAMEA {
+        let mut ofn = OpenFileNameA {
             l_struct_size: OPENFILENAME_SIZE_VERSION_400,
             hwnd_owner: hwnd_parent.0,
             h_instance: std::ptr::null_mut(),
@@ -342,7 +342,7 @@ pub fn export_dump_dialog(hwnd_parent: HWND, default_filename: &str) -> Option<S
         let filter = b"CPUID Dump (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0";
         let def_ext = b"txt\0";
 
-        let mut ofn = OPENFILENAMEA {
+        let mut ofn = OpenFileNameA {
             l_struct_size: OPENFILENAME_SIZE_VERSION_400,
             hwnd_owner: hwnd_parent.0,
             h_instance: std::ptr::null_mut(),

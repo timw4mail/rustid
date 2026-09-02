@@ -34,7 +34,7 @@ const WM_CTLCOLOREDIT: u32 = 0x0133;
 const WM_CTLCOLORSTATIC: u32 = 0x0138;
 
 #[repr(C, packed(4))]
-struct EDITSTREAM {
+struct EditStream {
     dw_cookie: usize,
     dw_error: u32,
     pfn_callback: Option<
@@ -113,7 +113,7 @@ fn set_richedit_content(hwnd_edit: HWND, doc: &str, plain: &str) {
             data: doc_bytes,
             offset: 0,
         };
-        let mut es = EDITSTREAM {
+        let mut es = EditStream {
             dw_cookie: &mut cookie as *mut _ as usize,
             dw_error: 0,
             pfn_callback: Some(edit_stream_in_callback),
@@ -318,7 +318,7 @@ fn relayout_controls(state: &AppState, client_w: i32, client_h: i32) {
 }
 
 #[repr(C)]
-struct WNDCLASSEXA {
+struct WndClassExA {
     cb_size: u32,
     style: u32,
     lpfn_wnd_proc: Option<unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT>,
@@ -399,7 +399,7 @@ unsafe extern "system" fn main_wnd_proc(
                                         MessageBoxA(
                                             hwnd.0,
                                             txt_a.as_ptr() as *const u8,
-                                            b"Export Complete\0".as_ptr(),
+                                            c"Export Complete".as_ptr() as *const u8,
                                             0x00000040, // MB_OK | MB_ICONINFORMATION
                                         );
                                     }
@@ -478,7 +478,7 @@ unsafe extern "system" fn main_wnd_proc(
                                 MessageBoxA(
                                     hwnd.0,
                                     txt_a.as_ptr() as *const u8,
-                                    b"About Rustid\0".as_ptr(),
+                                    c"About Rustid".as_ptr() as *const u8,
                                     0x00000040,
                                 );
                             }
@@ -706,11 +706,11 @@ pub fn run() {
             // Windows 95 / 98 / ME fallback: Register ANSI window class
             IS_UNICODE.store(false, Ordering::Relaxed);
             unsafe extern "system" {
-                fn RegisterClassExA(lpwcx: *const WNDCLASSEXA) -> u16;
+                fn RegisterClassExA(lpwcx: *const WndClassExA) -> u16;
                 fn LoadCursorA(hInstance: *mut c_void, lpCursorName: *const u8) -> *mut c_void;
             }
-            let wc_a = WNDCLASSEXA {
-                cb_size: std::mem::size_of::<WNDCLASSEXA>() as u32,
+            let wc_a = WndClassExA {
+                cb_size: std::mem::size_of::<WndClassExA>() as u32,
                 style: 3, // CS_HREDRAW | CS_VREDRAW
                 lpfn_wnd_proc: Some(main_wnd_proc),
                 cb_cls_extra: 0,
@@ -813,7 +813,7 @@ pub fn run() {
                 win_w,
                 win_h,
                 std::ptr::null_mut(),
-                hmenu_bar.0 as *mut c_void,
+                hmenu_bar.0,
                 hinstance.0,
                 state_raw_ptr as *mut c_void,
             );
@@ -836,7 +836,10 @@ pub fn run() {
                 fn LoadLibraryA(lpFileName: *const u8) -> *mut c_void;
             }
             let mut riched_loaded = false;
-            for dll in [b"riched20.dll\0".as_ptr(), b"riched32.dll\0".as_ptr()] {
+            for dll in [
+                c"riched20.dll".as_ptr() as *const u8,
+                c"riched32.dll".as_ptr() as *const u8,
+            ] {
                 let h = LoadLibraryA(dll);
                 if !h.is_null() {
                     riched_loaded = true;
@@ -976,7 +979,7 @@ pub fn run() {
             }
             let h = CreateWindowExA(
                 0,
-                b"msctls_statusbar32\0".as_ptr(),
+                c"msctls_statusbar32".as_ptr() as *const u8,
                 std::ptr::null(),
                 0x50000000 | 0x0100, // WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP
                 0,

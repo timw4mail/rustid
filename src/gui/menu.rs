@@ -164,36 +164,41 @@ pub fn create_main_menu() -> HMENU {
                 hmenu_file,
                 0,
                 IDM_FILE_OPEN as usize,
-                b"Open Dump...\tCtrl+O\0".as_ptr(),
+                c"Open Dump...\tCtrl+O".as_ptr() as *const u8,
             );
             #[cfg(x86_cpu)]
             AppendMenuA(
                 hmenu_file,
                 0,
                 IDM_FILE_EXPORT as usize,
-                b"Export CPUID Dump...\tCtrl+S\0".as_ptr(),
+                c"Export CPUID Dump...\tCtrl+S".as_ptr() as *const u8,
             );
             AppendMenuA(hmenu_file, 0x800, 0, std::ptr::null());
             AppendMenuA(
                 hmenu_file,
                 0,
                 IDM_FILE_COPY as usize,
-                b"Copy All Text\tCtrl+C\0".as_ptr(),
+                c"Copy All Text\tCtrl+C".as_ptr() as *const u8,
             );
             AppendMenuA(
                 hmenu_file,
                 0,
                 IDM_FILE_REFRESH as usize,
-                b"Refresh Hardware\tF5\0".as_ptr(),
+                c"Refresh Hardware\tF5".as_ptr() as *const u8,
             );
             AppendMenuA(hmenu_file, 0x800, 0, std::ptr::null());
             AppendMenuA(
                 hmenu_file,
                 0,
                 IDM_FILE_EXIT as usize,
-                b"Exit\tAlt+F4\0".as_ptr(),
+                c"Exit\tAlt+F4".as_ptr() as *const u8,
             );
-            AppendMenuA(hmenu_bar, 0x10, hmenu_file as usize, b"&File\0".as_ptr());
+            AppendMenuA(
+                hmenu_bar,
+                0x10,
+                hmenu_file as usize,
+                c"&File".as_ptr() as *const u8,
+            );
 
             // Mode Menu
             let hmenu_mode = CreatePopupMenu();
@@ -201,54 +206,59 @@ pub fn create_main_menu() -> HMENU {
                 hmenu_mode,
                 0,
                 IDM_MODE_STANDARD as usize,
-                b"Standard Summary\tCtrl+1\0".as_ptr(),
+                c"Standard Summary\tCtrl+1".as_ptr() as *const u8,
             );
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_MODE_DEBUG as usize,
-                b"Debug Information (-d)\tCtrl+2\0".as_ptr(),
+                c"Debug Information (-d)\tCtrl+2".as_ptr() as *const u8,
             );
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_MODE_EVERYTHING as usize,
-                b"Everything (-e)\tCtrl+3\0".as_ptr(),
+                c"Everything (-e)\tCtrl+3".as_ptr() as *const u8,
             );
             #[cfg(x86_cpu)]
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_MODE_DUMP as usize,
-                b"Raw CPUID Dump (-r)\tCtrl+4\0".as_ptr(),
+                c"Raw CPUID Dump (-r)\tCtrl+4".as_ptr() as *const u8,
             );
             AppendMenuA(hmenu_mode, 0x800, 0, std::ptr::null());
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_OPT_COLOR as usize,
-                b"Colorized Output\0".as_ptr(),
+                c"Colorized Output".as_ptr() as *const u8,
             );
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_OPT_DARK_THEME as usize,
-                b"Dark Theme\0".as_ptr(),
+                c"Dark Theme".as_ptr() as *const u8,
             );
             AppendMenuA(hmenu_mode, 0x800, 0, std::ptr::null());
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_OPT_VERBOSE as usize,
-                b"Verbose Mode (-v)\0".as_ptr(),
+                c"Verbose Mode (-v)".as_ptr() as *const u8,
             );
             AppendMenuA(
                 hmenu_mode,
                 0,
                 IDM_OPT_COMPACT as usize,
-                b"Compact Mode (-c)\0".as_ptr(),
+                c"Compact Mode (-c)".as_ptr() as *const u8,
             );
-            AppendMenuA(hmenu_bar, 0x10, hmenu_mode as usize, b"&Mode\0".as_ptr());
+            AppendMenuA(
+                hmenu_bar,
+                0x10,
+                hmenu_mode as usize,
+                c"&Mode".as_ptr() as *const u8,
+            );
 
             // Help Menu
             let hmenu_help = CreatePopupMenu();
@@ -256,9 +266,14 @@ pub fn create_main_menu() -> HMENU {
                 hmenu_help,
                 0,
                 IDM_HELP_ABOUT as usize,
-                b"&About Rustid\0".as_ptr(),
+                c"&About Rustid".as_ptr() as *const u8,
             );
-            AppendMenuA(hmenu_bar, 0x10, hmenu_help as usize, b"&Help\0".as_ptr());
+            AppendMenuA(
+                hmenu_bar,
+                0x10,
+                hmenu_help as usize,
+                c"&Help".as_ptr() as *const u8,
+            );
 
             HMENU(hmenu_bar)
         }

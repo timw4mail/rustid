@@ -463,7 +463,7 @@ impl TCpuDisplay for Cpu {
                 let l3 = format!("{}{:X}h", disp.sublabel("Stepping"), cyrix.stepping);
                 disp.print_line(&l3);
                 if !cyrix.multiplier.is_empty() && cyrix.multiplier != "0" {
-                    let l4 = format!("{}{}x", disp.sublabel("Bus Multiplier"), &cyrix.multiplier);
+                    let l4 = format!("{}{}x", disp.sublabel("Bus Multiplier"), cyrix.multiplier);
                     disp.print_line(&l4);
                 }
                 disp.newline();
