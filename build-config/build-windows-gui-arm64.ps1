@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env pwsh
+#!/usr/bin/env pwsh
 # Build ARM64 Windows GUI binary using LLVM MinGW/GNU target (aarch64-pc-windows-gnullvm).
 # Must be run from the repo root.
 

@@ -14,14 +14,21 @@ if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then
     rustup target add i686-pc-windows-gnu
 fi
 
+# Ensure nightly rust-src is installed for -Z build-std
+if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then
+    echo "Installing rust-src for nightly..."
+    rustup component add rust-src --toolchain nightly
+fi
+
 # Find the MinGW-w64 toolchain (downloaded by cargo cross)
 search_base="${CROSS_COMPILER_DIR:-/tmp/rust-cross-compiler}"
+mkdir -p "$search_base"
 
 mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
 
 if [ -z "$mingw_dir" ] || [ ! -d "$mingw_dir/bin" ]; then
     echo "MinGW-w64 toolchain not found. Downloading via cargo cross..."
-    cargo cross build --target i686-pc-windows-gnu --features gui --bin rustid-gui --release 2>/dev/null || true
+    cargo cross build --target i686-pc-windows-gnu --features gui --bin rustid-gui --release
     mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
 fi
 
@@ -32,7 +39,7 @@ fi
 
 mingw_bin="$mingw_dir/bin"
 mingw_lib="$mingw_dir/i686-w64-mingw32/lib"
-gcc_lib=$(find "$mingw_dir/lib/gcc/i686-w64-mingw32" -maxdepth 1 -type d ! -path "*/i686-w64-mingw32" | sort -V | tail -1)
+gcc_lib=$(find "$mingw_dir/lib/gcc/i686-w64-mingw32" -maxdepth 1 -type d ! -path "*/i686-w64-mingw32" 2>/dev/null | sort -V | tail -1)
 
 echo "Using MinGW at: $mingw_bin"
 

@@ -12,9 +12,19 @@ if (-not (rustup target list --installed | Select-String "i686-pc-windows-gnu"))
     rustup target add i686-pc-windows-gnu
 }
 
+# Ensure nightly rust-src is installed for -Z build-std
+if (-not (rustup component list --installed --toolchain nightly | Select-String "rust-src")) {
+    Write-Host "Installing rust-src for nightly..."
+    rustup component add rust-src --toolchain nightly
+}
+
 # Find the MinGW-w64 toolchain (downloaded by cargo cross)
 $searchBase = if ($CrossCompilerDir) { $CrossCompilerDir } else {
     Join-Path ([System.IO.Path]::GetTempPath()) "rust-cross-compiler"
+}
+
+if (-not (Test-Path $searchBase)) {
+    New-Item -ItemType Directory -Path $searchBase | Out-Null
 }
 
 $mingwDir = Get-ChildItem -Path $searchBase -Filter "i686-w64-mingw32*" -Directory -ErrorAction SilentlyContinue |

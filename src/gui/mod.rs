@@ -1,4 +1,4 @@
-﻿//! Top-level GUI module for rustid-gui.
+//! Top-level GUI module for rustid-gui.
 
 pub mod dialogs;
 pub mod menu;

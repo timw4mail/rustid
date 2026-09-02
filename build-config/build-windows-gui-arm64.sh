@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Build ARM64 Windows GUI binary using LLVM MinGW/GNU target (aarch64-pc-windows-gnullvm).

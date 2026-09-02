@@ -1,4 +1,4 @@
-﻿#![cfg_attr(windows_os, windows_subsystem = "windows")]
+#![cfg_attr(windows_os, windows_subsystem = "windows")]
 
 #[cfg(not(windows_os))]
 fn main() {
