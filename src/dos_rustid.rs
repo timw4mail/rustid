@@ -28,16 +28,17 @@ fn help() {
     println!("Usage: RUSTID [/FLAGS] [COMMAND]");
     println!();
     println!("Commands:");
-    println!("  (no args)    Display CPU information");
-    println!("  D, DEBUG     Display detailed debug information");
+    println!("  (no args)      Display CPU information");
+    println!("  D, DEBUG       Display detailed debug information");
     println!("  E, EVERYTHING  Show CPU information and debug information");
-    println!("  R, DUMP      Dump raw CPUID values");
-    println!("  V, VERSION   Display version info");
-    println!("  ?, H, HELP      Show this help message");
+    println!("  R, DUMP        Dump raw CPUID values");
+    println!("  V, VERSION     Display version info");
+    println!("  ?, H, HELP     Show this help message");
     println!();
     println!("Flags (use / or - prefix):");
-    println!("  /M, /MONO   Don't output color");
-    println!("  /V, /VERBOSE Output more detailed information");
+    println!("  /C  /COMPACT   Display information in compact mode");
+    println!("  /M, /MONO      Don't output color");
+    println!("  /V, /VERBOSE   Output more detailed information");
     println!();
     println!("Examples:  RUSTID /E   RUSTID /VERBOSE");
 }
@@ -107,6 +108,10 @@ pub extern "C" fn rust_main() -> ! {
 
         // Try long-form keywords first (more than one char, not all single-char flags)
         match &upper[..] {
+            "COMPACT" => {
+                flags.compact = false;
+                continue 'args;
+            }
             "VERBOSE" => {
                 flags.verbose = true;
                 continue 'args;
@@ -141,6 +146,7 @@ pub extern "C" fn rust_main() -> ! {
         // Fall back to per-character single-char flags (e.g. /MV = mono + verbose)
         for c in upper.chars() {
             match c {
+                'C' => flags.compact = true,
                 'V' => flags.verbose = true,
                 'M' => flags.color = false,
                 'D' => action = "debug",

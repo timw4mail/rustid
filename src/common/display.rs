@@ -251,7 +251,6 @@ impl CpuDisplay {
     }
 
     pub fn newline(&mut self) {
-        #[cfg(not(dos_os))]
         if !self.flags.compact {
             self.print_raw_newline();
         }
