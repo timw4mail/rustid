@@ -50,15 +50,15 @@ if (Test-Path (Join-Path $destDir "bin")) {
 cargo build `
     --target aarch64-pc-windows-gnullvm `
     --features gui `
-    --bin rustid-gui `
+    --bin gui `
     --release
 
 if ($LASTEXITCODE -eq 0) {
     if (-not (Test-Path "target\dist")) {
         New-Item -ItemType Directory -Path "target\dist" | Out-Null
     }
-    if (Test-Path "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe") {
-        Copy-Item "target\aarch64-pc-windows-gnullvm\release\rustid-gui.exe" "target\dist\rustid_arm64.exe" -Force
+    if (Test-Path "target\aarch64-pc-windows-gnullvm\release\gui.exe") {
+        Copy-Item "target\aarch64-pc-windows-gnullvm\release\gui.exe" "target\dist\rustid_arm64.exe" -Force
     }
 }
 

@@ -6,7 +6,7 @@ fn main() {
 }
 
 #[cfg(windows_os)]
-#[path = "gui/windows/mod.rs"]
+#[path = "../gui/windows/mod.rs"]
 mod gui;
 
 #[cfg(windows_os)]

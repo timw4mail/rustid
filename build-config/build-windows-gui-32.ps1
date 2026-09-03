@@ -33,7 +33,7 @@ $mingwDir = Get-ChildItem -Path $searchBase -Filter "i686-w64-mingw32*" -Directo
 
 if (-not $mingwDir) {
     Write-Host "MinGW-w64 toolchain not found. Downloading via cargo cross..."
-    cargo cross build --target i686-pc-windows-gnu --features gui --bin rustid-gui --release 2>&1 | Out-Null
+    cargo cross build --target i686-pc-windows-gnu --features gui --bin gui --release 2>&1 | Out-Null
     $mingwDir = Get-ChildItem -Path $searchBase -Filter "i686-w64-mingw32*" -Directory -ErrorAction SilentlyContinue |
         Where-Object { Test-Path (Join-Path $_.FullName "bin\dlltool.exe") } |
         Select-Object -First 1
@@ -62,15 +62,15 @@ cargo +nightly build `
     -Z build-std=std,panic_abort,core,alloc `
     --target build-config/i586-pc-windows-gnu.json `
     --features gui `
-    --bin rustid-gui `
+    --bin gui `
     --release
 
 if ($LASTEXITCODE -eq 0) {
     if (-not (Test-Path "target\dist")) {
         New-Item -ItemType Directory -Path "target\dist" | Out-Null
     }
-    if (Test-Path "target\i586-pc-windows-gnu\release\rustid-gui.exe") {
-        Copy-Item "target\i586-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_32.exe" -Force
+    if (Test-Path "target\i586-pc-windows-gnu\release\gui.exe") {
+        Copy-Item "target\i586-pc-windows-gnu\release\gui.exe" "target\dist\rustid_x86_32.exe" -Force
     }
 }
 

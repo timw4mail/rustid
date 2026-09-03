@@ -12,7 +12,7 @@ Binaries produced:
 
 | Binary | Cargo bin | Mode | Purpose |
 |--------|-----------|------|---------|
-| `rustid.exe` | `dos_rustid` | 32-bit DOS32A | Main CPU identification (formatted table output) |
+| `rustid.exe` | `dos` | 32-bit DOS32A | Main CPU identification (formatted table output) |
 | `rust86.exe` | `rust86` | 16-bit Real Mode | Real-mode fallback CPU identification & debug diagnostics (`/D`) |
 
 **Note**: You will only need to directly run `rustid.exe`, as `rust86.exe` will be executed automatically if running on a pre-CPUID CPU.

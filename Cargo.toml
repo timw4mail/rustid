@@ -38,21 +38,21 @@ core_affinity = "0.8.3"
 
 [[bin]]
 name = "rustid"
-path="src/rustid.rs"
+path = "src/rustid.rs"
 
 [[bin]]
-name = "rustid-gui"
+name = "gui"
 required-features = ["gui"]
-path = "src/rustid_gui.rs"
+path = "src/bin/gui.rs"
 
 [[bin]]
-name = "dos_rustid"
-path = "src/dos_rustid.rs"
+name = "dos"
+path = "src/bin/dos.rs"
 
 [[bin]]
-name = "efi_rustid"
+name = "efi"
 required-features = ["efi-build"]
-path = "src/efi_rustid.rs"
+path = "src/bin/efi.rs"
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)', 'cfg(uefi)', 'cfg(nostd_os)'] }
