@@ -245,10 +245,9 @@ build-efi-32:
 # Build both 32-bit and 64-bit EFI binaries
 build-efi: build-efi-64 build-efi-32
 
-# Build for 32-bit Linux musl via cross (works on 486-class cpus)
+# Build for 32-bit Linux musl (works on 486-class cpus)
 build-486-musl: _cargo_cross
-	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
-	cargo cross +nightly build -t i586-unknown-linux-musl --rustflag '-C' --rustflag 'target-cpu=i486' --rustflag '-C' --rustflag 'link-arg=-Wl,-Bstatic' --rustflag '-C' --rustflag 'link-arg=-lgcc' --rustflag '-C' --rustflag 'link-arg=-latomic' --build-std --panic-immediate-abort --release
+	bash build-config/build-486-musl.sh
 
 # Remove build files
 clean: clean-files
