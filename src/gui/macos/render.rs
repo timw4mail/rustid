@@ -4,9 +4,9 @@
 //! produced by the shared `rustid` crate, then rendered with the same
 //! line-labeling heuristics as the RTF generator, but as an `NSMutableAttributedString`.
 
+use objc2::AnyThread;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::AnyThread;
 use objc2_app_kit::{NSColor, NSFont, NSFontAttributeName, NSForegroundColorAttributeName};
 use objc2_foundation::{
     NSAttributedString, NSMutableAttributedString, NSMutableDictionary, NSString,
@@ -17,8 +17,9 @@ use rustid::Cpu;
 use rustid::common::{CliFlags, CpuDisplay, TCpuDisplay, TDetect};
 
 /// Mirror of the Windows `ViewMode` enum.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub enum ViewMode {
+    #[default]
     Standard,
     Debug,
     Everything,
@@ -30,7 +31,12 @@ fn norm_newlines(s: &str) -> String {
     s.replace("\r\n", "\n").replace('\n', "\r\n")
 }
 
-pub fn generate_report_plain(cpu: &Cpu, verbose: bool, compact: bool, is_from_dump: bool) -> String {
+pub fn generate_report_plain(
+    cpu: &Cpu,
+    verbose: bool,
+    compact: bool,
+    is_from_dump: bool,
+) -> String {
     let version_header = if is_from_dump {
         rustid::format_file_version()
     } else {
@@ -157,12 +163,7 @@ pub fn render_report(
     out
 }
 
-fn append_line(
-    out: &Retained<NSMutableAttributedString>,
-    line: &str,
-    dark: bool,
-    font: &NSFont,
-) {
+fn append_line(out: &Retained<NSMutableAttributedString>, line: &str, dark: bool, font: &NSFont) {
     if line.starts_with("---------------") || line.starts_with("--------------------") {
         push(out, line, dark, font, LineStyle::Header);
         return;

@@ -2,37 +2,47 @@
 
 pub mod render;
 
-use std::cell::OnceCell;
+use std::cell::{Cell, OnceCell, RefCell};
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
+#[cfg(x86_cpu)]
+use objc2_app_kit::NSOpenPanel;
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSAutoresizingMaskOptions,
-    NSBackingStoreType, NSColor, NSFont, NSMenu, NSMenuItem, NSModalResponseOK, NSPasteboard,
-    NSPasteboardTypeString, NSSavePanel, NSScrollView, NSTextView, NSWindow, NSWindowDelegate,
-    NSWindowStyleMask,
+    NSBackingStoreType, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSMenu,
+    NSMenuItem, NSModalResponseOK, NSPasteboard, NSPasteboardTypeString, NSSavePanel, NSScrollView,
+    NSTextView, NSWindow, NSWindowDelegate, NSWindowStyleMask,
 };
 use objc2_foundation::{
-    ns_string, MainThreadMarker, NSArray, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
-    NSString, NSUserDefaults,
+    MainThreadMarker, NSArray, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    NSUserDefaults, ns_string,
 };
 
+use render::{ViewMode, generate_debug_info_plain, generate_report_plain, render_report};
 use rustid::Cpu;
 #[allow(unused_imports)]
 use rustid::common::CpuDisplay;
-use render::{ViewMode, generate_debug_info_plain, generate_report_plain, render_report};
 #[allow(unused_imports)]
 use rustid::common::TDetect;
 
 const WINDOW_W: f64 = 860.0;
 const WINDOW_H: f64 = 620.0;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 struct AppDelegateIvars {
     window: OnceCell<Retained<NSWindow>>,
     text_view: OnceCell<Retained<NSTextView>>,
-    mode: OnceCell<ViewMode>,
+    mode: Cell<ViewMode>,
+    verbose: Cell<bool>,
+    compact: Cell<bool>,
+    dark_override: Cell<Option<bool>>,
+    #[allow(dead_code)]
+    loaded_file: RefCell<Option<String>>,
+    verbose_item: OnceCell<Retained<NSMenuItem>>,
+    compact_item: OnceCell<Retained<NSMenuItem>>,
+    dark_item: OnceCell<Retained<NSMenuItem>>,
 }
 
 define_class!(
@@ -47,7 +57,6 @@ define_class!(
         #[unsafe(method(applicationDidFinishLaunching:))]
         fn did_finish_launching(&self, _notification: &objc2_foundation::NSNotification) {
             let mtm = self.mtm();
-            self.ivars().mode.set(ViewMode::Standard).unwrap();
 
             let window = unsafe {
                 NSWindow::initWithContentRect_styleMask_backing_defer(
@@ -74,7 +83,10 @@ define_class!(
                 NSAutoresizingMaskOptions::ViewWidthSizable
                     | NSAutoresizingMaskOptions::ViewHeightSizable,
             );
-            self.ivars().text_view.set(text_view).unwrap();
+            self.ivars()
+                .text_view
+                .set(text_view)
+                .expect("text view ivar set exactly once");
 
             let scroll = NSScrollView::initWithFrame(
                 NSScrollView::alloc(mtm),
@@ -82,14 +94,19 @@ define_class!(
             );
             scroll.setHasVerticalScroller(true);
             scroll.setHasHorizontalScroller(false);
-            scroll.setDocumentView(Some(self.ivars().text_view.get().unwrap()));
+            scroll.setDocumentView(Some(
+                self.ivars().text_view.get().expect("text view just set"),
+            ));
 
             let view = window.contentView().expect("window must have content view");
             view.addSubview(&scroll);
             window.center();
             window.makeKeyAndOrderFront(None);
 
-            self.ivars().window.set(window).unwrap();
+            self.ivars()
+                .window
+                .set(window)
+                .expect("window ivar set exactly once");
 
             setup_menus(self, mtm);
             self.refresh();
@@ -119,12 +136,67 @@ define_class!(
             self.set_mode(ViewMode::Everything);
         }
 
+        #[cfg(x86_cpu)]
+        #[unsafe(method(showDumpView:))]
+        fn show_dump(&self, _sender: Option<&AnyObject>) {
+            self.set_mode(ViewMode::Dump);
+        }
+
+        #[unsafe(method(toggleVerbose:))]
+        fn toggle_verbose(&self, _sender: Option<&AnyObject>) {
+            self.set_verbose(!self.ivars().verbose.get());
+        }
+
+        #[unsafe(method(toggleCompact:))]
+        fn toggle_compact(&self, _sender: Option<&AnyObject>) {
+            self.set_compact(!self.ivars().compact.get());
+        }
+
+        #[unsafe(method(toggleDark:))]
+        fn toggle_dark(&self, _sender: Option<&AnyObject>) {
+            let next = !self.is_dark();
+            self.ivars().dark_override.set(Some(next));
+            if let Some(item) = self.ivars().dark_item.get() {
+                set_item_state(item, next);
+            }
+            self.refresh();
+        }
+
+        #[cfg(x86_cpu)]
+        #[unsafe(method(openDump:))]
+        #[allow(deprecated)]
+        fn open_dump(&self, _sender: Option<&AnyObject>) {
+            let mtm = self.mtm();
+            let panel = NSOpenPanel::openPanel(mtm);
+            panel.setCanChooseFiles(true);
+            panel.setCanChooseDirectories(false);
+            panel.setAllowsMultipleSelection(false);
+            let file_types = NSArray::from_retained_slice(&[NSString::from_str("txt")]);
+            panel.setAllowedFileTypes(Some(&file_types));
+            if panel.runModal() == NSModalResponseOK
+                && let Some(url) = panel.URLs().firstObject()
+                && let Some(path) = url.path()
+            {
+                self.ivars().loaded_file.borrow_mut().replace(path.to_string());
+                self.refresh();
+            }
+        }
+
+        #[unsafe(method(refreshHardware:))]
+        fn refresh_hardware(&self, _sender: Option<&AnyObject>) {
+            #[cfg(x86_cpu)]
+            {
+                rustid::x86::provider::reset_cpuid_provider();
+                self.ivars().loaded_file.borrow_mut().take();
+            }
+            self.refresh();
+        }
+
         #[unsafe(method(saveReport:))]
         #[allow(deprecated)]
         fn save_report(&self, _sender: Option<&AnyObject>) {
             let mtm = self.mtm();
-            let cpu = Cpu::detect();
-            let plain = generate_report_plain(&cpu, false, false, false);
+            let plain = self.current_text();
             let nsstr = NSString::from_str(&plain);
 
             let panel = NSSavePanel::savePanel(mtm);
@@ -140,15 +212,37 @@ define_class!(
             }
         }
 
+        #[cfg(x86_cpu)]
+        #[unsafe(method(exportDump:))]
+        #[allow(deprecated)]
+        fn export_dump(&self, _sender: Option<&AnyObject>) {
+            let mtm = self.mtm();
+            let cpu = Cpu::detect();
+            let model = cpu.display_model_string().replace([' ', '/', '\\'], "_");
+            let dump = render::generate_dump_info_plain();
+            let nsstr = NSString::from_str(&dump);
+
+            let panel = NSSavePanel::savePanel(mtm);
+            panel.setAllowedFileTypes(Some(&NSArray::from_retained_slice(&[NSString::from_str(
+                "txt",
+            )])));
+            panel.setNameFieldStringValue(&NSString::from_str(&format!("cpuid_dump_{model}.txt")));
+            if panel.runModal() == NSModalResponseOK
+                && let Some(url) = panel.URL()
+                && let Some(data) = nsstr.dataUsingEncoding(4)
+            {
+                data.writeToURL_atomically(&url, true);
+            }
+        }
+
         #[unsafe(method(copyReport:))]
         fn copy_report(&self, _sender: Option<&AnyObject>) {
-            let cpu = Cpu::detect();
-            let plain = generate_report_plain(&cpu, false, false, false);
+            let plain = self.current_text();
             let nsstr = NSString::from_str(&plain);
             let pb = NSPasteboard::generalPasteboard();
             pb.clearContents();
             unsafe {
-                pb.setString_forType(&nsstr, &NSPasteboardTypeString);
+                pb.setString_forType(&nsstr, NSPasteboardTypeString);
             }
         }
     }
@@ -161,31 +255,77 @@ impl Delegate {
     }
 
     fn text(&self) -> &NSTextView {
-        self.ivars().text_view.get().unwrap()
+        self.ivars()
+            .text_view
+            .get()
+            .expect("text view created at launch")
     }
 
     fn set_mode(&self, mode: ViewMode) {
-        self.ivars().mode.set(mode).unwrap();
+        self.ivars().mode.set(mode);
+        self.refresh();
+    }
+
+    fn set_verbose(&self, verbose: bool) {
+        self.ivars().verbose.set(verbose);
+        if let Some(item) = self.ivars().verbose_item.get() {
+            set_item_state(item, verbose);
+        }
+        self.refresh();
+    }
+
+    fn set_compact(&self, compact: bool) {
+        self.ivars().compact.set(compact);
+        if let Some(item) = self.ivars().compact_item.get() {
+            set_item_state(item, compact);
+        }
         self.refresh();
     }
 
     fn is_dark(&self) -> bool {
+        if let Some(override_val) = self.ivars().dark_override.get() {
+            return override_val;
+        }
         NSUserDefaults::standardUserDefaults()
             .stringForKey(&NSString::from_str("AppleInterfaceStyle"))
             .is_some_and(|v| v.to_string() == "Dark")
     }
 
-    fn refresh(&self) {
+    fn current_text(&self) -> String {
+        #[cfg(x86_cpu)]
+        if let Some(path) = self.ivars().loaded_file.borrow().clone() {
+            if let Ok(contents) = std::fs::read_to_string(&path) {
+                let dump = rustid::x86::provider::CpuDump::parse_str(&contents);
+                rustid::x86::provider::set_cpuid_provider(dump);
+            } else {
+                rustid::x86::provider::reset_cpuid_provider();
+            }
+        }
+
         let cpu = Cpu::detect();
-        let mode = *self.ivars().mode.get().unwrap();
-        let plain = match mode {
-            ViewMode::Standard => generate_report_plain(&cpu, false, false, false),
+        let verbose = self.ivars().verbose.get();
+        let compact = self.ivars().compact.get();
+        #[cfg(x86_cpu)]
+        let is_from_dump = self.ivars().loaded_file.borrow().is_some();
+        #[cfg(not(x86_cpu))]
+        let is_from_dump = false;
+
+        let mode = self.ivars().mode.get();
+        match mode {
+            ViewMode::Standard => generate_report_plain(&cpu, verbose, compact, is_from_dump),
             ViewMode::Debug => generate_debug_info_plain(&cpu),
-            ViewMode::Everything => generate_report_plain(&cpu, true, false, false),
+            ViewMode::Everything => {
+                let report = generate_report_plain(&cpu, verbose, compact, is_from_dump);
+                let debug = generate_debug_info_plain(&cpu);
+                format!("{report}\r\n--------------------\r\n\r\n{debug}")
+            }
             #[cfg(x86_cpu)]
             ViewMode::Dump => render::generate_dump_info_plain(),
-        };
+        }
+    }
 
+    fn refresh(&self) {
+        let plain = self.current_text();
         let dark = self.is_dark();
         let font = NSFont::monospacedSystemFontOfSize_weight(13.0, 0.0);
         let bg = if dark {
@@ -197,10 +337,18 @@ impl Delegate {
         let text_view = self.text();
         text_view.setBackgroundColor(&bg);
         let attributed = render_report(&plain, dark, &font);
-        unsafe {
-            let _: () = msg_send![text_view, setAttributedString: &*attributed];
+        if let Some(storage) = unsafe { text_view.textStorage() } {
+            storage.setAttributedString(&attributed);
         }
     }
+}
+
+fn set_item_state(item: &NSMenuItem, on: bool) {
+    item.setState(if on {
+        NSControlStateValueOn
+    } else {
+        NSControlStateValueOff
+    });
 }
 
 fn make_item(
@@ -245,6 +393,30 @@ fn setup_menus(delegate: &Delegate, mtm: MainThreadMarker) {
         sel!(saveReport:),
         Some(obj_any(delegate)),
     ));
+    #[cfg(x86_cpu)]
+    file_menu.addItem(&make_item(
+        mtm,
+        "Export CPUID Dump…",
+        "",
+        sel!(exportDump:),
+        Some(obj_any(delegate)),
+    ));
+    file_menu.addItem(&NSMenuItem::separatorItem(mtm));
+    #[cfg(x86_cpu)]
+    file_menu.addItem(&make_item(
+        mtm,
+        "Open CPUID Dump…",
+        "o",
+        sel!(openDump:),
+        Some(obj_any(delegate)),
+    ));
+    file_menu.addItem(&make_item(
+        mtm,
+        "Refresh Hardware",
+        "r",
+        sel!(refreshHardware:),
+        Some(obj_any(delegate)),
+    ));
 
     let view_menu = NSMenu::new(mtm);
     view_menu.addItem(&make_item(
@@ -268,17 +440,69 @@ fn setup_menus(delegate: &Delegate, mtm: MainThreadMarker) {
         sel!(showEverythingView:),
         Some(obj_any(delegate)),
     ));
+    #[cfg(x86_cpu)]
+    view_menu.addItem(&make_item(
+        mtm,
+        "CPUID Dump View",
+        "4",
+        sel!(showDumpView:),
+        Some(obj_any(delegate)),
+    ));
+
+    let options_menu = NSMenu::new(mtm);
+    let verbose_item = make_item(
+        mtm,
+        "Verbose Output",
+        "",
+        sel!(toggleVerbose:),
+        Some(obj_any(delegate)),
+    );
+    let compact_item = make_item(
+        mtm,
+        "Compact Mode",
+        "",
+        sel!(toggleCompact:),
+        Some(obj_any(delegate)),
+    );
+    let dark_item = make_item(
+        mtm,
+        "Dark Mode",
+        "",
+        sel!(toggleDark:),
+        Some(obj_any(delegate)),
+    );
+    options_menu.addItem(&verbose_item);
+    options_menu.addItem(&compact_item);
+    options_menu.addItem(&dark_item);
+    delegate
+        .ivars()
+        .verbose_item
+        .set(verbose_item)
+        .expect("verbose menu item set once");
+    delegate
+        .ivars()
+        .compact_item
+        .set(compact_item)
+        .expect("compact menu item set once");
+    delegate
+        .ivars()
+        .dark_item
+        .set(dark_item)
+        .expect("dark menu item set once");
 
     let app_bar_item = make_item(mtm, "Rustid", "", sel!(noop:), None);
     let file_bar_item = make_item(mtm, "File", "", sel!(noop:), None);
     let view_bar_item = make_item(mtm, "View", "", sel!(noop:), None);
+    let options_bar_item = make_item(mtm, "Options", "", sel!(noop:), None);
     app_bar_item.setSubmenu(Some(&app_menu));
     file_bar_item.setSubmenu(Some(&file_menu));
     view_bar_item.setSubmenu(Some(&view_menu));
+    options_bar_item.setSubmenu(Some(&options_menu));
 
     main_menu.addItem(&app_bar_item);
     main_menu.addItem(&file_bar_item);
     main_menu.addItem(&view_bar_item);
+    main_menu.addItem(&options_bar_item);
 
     app.setMainMenu(Some(&main_menu));
     app.setActivationPolicy(NSApplicationActivationPolicy::Regular);

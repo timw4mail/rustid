@@ -4,8 +4,10 @@ set -euo pipefail
 # Build the macOS GUI (rustid-gui) as a universal "fat" binary and package it
 # as Rustid.app, zipped as rustid-macos.zip.
 #
-# Requires an osxcross setup providing the Apple SDK + linker for both
-# x86_64-apple-darwin and aarch64-apple-darwin. See MACOS.md.
+# Works two ways:
+#   * Natively on macOS: Apple's clang builds both x86_64 and arm64 slices.
+#   * Cross-compiling from Linux: requires osxcross providing the Apple SDK +
+#     linker wrappers (<triple>-clang). See MACOS.md.
 # Must be run from the repo root.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,10 +28,16 @@ OUT="${BUILD_DIR}/rustid-gui-macos"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+# On a native macOS host, .cargo/config.toml points the Darwin targets at the
+# osxcross <triple>-clang wrappers, which do not exist natively. Natively we
+# build both slices with the system clang, so override the linker for both the
+# target slices and the host (build scripts run on the host arch).
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=clang
+    export CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER=clang
+fi
+
 # Build the GUI for each slice.
-# If a system `lipo`/CoreFoundation SDK is unavailable, the user must provide
-# CC/linker env vars for osxcross; otherwise plain cargo (with the linker
-# configured in .cargo/config.toml) is used.
 echo "Building x86_64 slice..."
 cargo build --target x86_64-apple-darwin --features gui --bin rustid-gui --release
 

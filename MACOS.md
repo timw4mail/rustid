@@ -63,9 +63,16 @@ documented futher-research item rather than a shipped feature.
 
 ## Prerequisites
 
-Because macOS is the only target here with a proprietary SDK requirement, the
-standard `cargo-xcross` Docker images are **not published** for Darwin. You
-must build a local cross environment once:
+There are two supported ways to build for macOS:
+
+**Natively on a Mac.** No extra toolchain is needed — Apple's `clang`/`lipo`
+already handle both `x86_64` and `arm64`. The `build-mac-gui` recipe and
+`build-config/build-macos.sh` detect that we are on a Mac and point Cargo at
+the system `clang` automatically (see below).
+
+**Cross-compiling from Linux.** Because macOS is the only target with a
+proprietary SDK requirement, the standard `cargo-xcross` Docker images are
+**not published** for Darwin. You must build a local cross environment once:
 
 - **`osxcross`** — installs a macOS SDK and an `llvm-dsymutil`/`ld64` chain
   usable from Linux. See <https://github.com/tpoechtrager/osxcross>.
@@ -83,6 +90,18 @@ must build a local cross environment once:
 The only thing required beyond the toolchain is Cargo's own declared macOS
 dependencies (`objc2`, `objc2-foundation`, `objc2-app-kit`), which are
 activated automatically on macOS targets.
+
+**Recommended: one-shot bundle build.** The `build-mac-gui` recipe (see
+`justfile`) drives `build-config/build-macos.sh`, which builds both slices,
+merges them with `lipo`, assembles `Rustid.app`, and zips it as
+`target/dist/rustid-macos.zip`. On a Mac it automatically sets
+`CARGO_TARGET_*_APPLE_DARWIN_LINKER=clang` so the `.cargo/config.toml`
+osxcross wrappers are not required; on Linux it relies on the osxcross
+wrappers in `PATH`.
+
+Building the slices manually works too (a `.cargo/config.toml` sets the
+osxcross wrapper linkers, so override them with `clang` when building natively
+on a Mac):
 
 **CLI (both slices):**
 ```bash
@@ -147,10 +166,17 @@ The macOS GUI lives in `src/gui/macos/` and is selected in
 parallel to the Win32 GUI in `src/gui/windows/`.
 
 - `mod.rs` — AppKit `NSApplication` + `NSWindow` + scrollable `NSTextView`
-  report viewer, an application menu, and File/View menus. Actions: switch
-  between Standard / Debug / Everything views, copy the report to the
-  pasteboard, and save it to disk. Dark mode is honoured through the
-  `AppleInterfaceStyle` user default.
+  report viewer and application menus. Layout:
+  - **File** — Copy Report (⌘C), Save Report… (⌘S), Export CPUID Dump…
+    (x86 only), Open CPUID Dump… (⌘O, x86 only), and Refresh Hardware (⌘R,
+    reloads live hardware / clears the dump).
+  - **View** — Standard / Debug / Everything / CPUID Dump (x86 only) views.
+  - **Options** — Verbose Output, Compact Mode, and Dark Mode checkboxes.
+  - Everything appends the debug dump to the report; Copy/Save always export
+    whatever is currently displayed. Dark mode is honoured through the
+    `AppleInterfaceStyle` user default unless overridden via the Options menu.
+    Loading a CPUID dump file points the CPUID provider at the dump, mirroring
+    the CLI `-f`/Windows GUI behaviour.
 - `render.rs` — reuses the shared report-generation code in `rustid` and
   renders the same line-coloring heuristics (labels, headers, values,
   highlights, dividers) as the Windows RTF generator, but emitted as an

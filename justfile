@@ -7,6 +7,13 @@ default:
 base_run := if arch() == "powerpc" { "cargo +nightly run -Z build-std" } else { "cargo run" }
 base_check := if arch() == "powerpc" { "cargo +nightly check -Z build-std --all-targets" } else { "cargo check --all-targets" }
 
+# On a native macOS host, .cargo/config.toml points the Darwin targets at the
+# osxcross <triple>-clang wrappers, which don't exist. Use the system clang so
+# native host checks/lints link correctly. Harmless on other hosts (the Darwin
+# targets aren't built by host-only recipes there).
+export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER := "clang"
+export CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER := "clang"
+
 [linux, unix]
 _cargo_cross:
 	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
