@@ -91,8 +91,11 @@ check-windows-gui-arm64:
 # Compile check for all Windows GUI targets
 check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
 
+# Compile check for CI targets and platforms
+check-ci: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64 check-ppc check-ppc64
+check-all: check-ci check-ppc check-ppc64
 
 # More in-depth code style checking
 lint:

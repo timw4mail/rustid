@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86 check-ci
 
 # Lists the available actions
 default:
@@ -112,8 +112,11 @@ check-windows-gui-arm64:
 # Compile check for all Windows GUI targets
 check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
 
+# Compile check for CI targets and platforms
+check-ci: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64
+
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64 check-ppc check-ppc64
+check-all: check-ci check-ppc check-ppc64
 
 # More in-depth code style checking
 lint:

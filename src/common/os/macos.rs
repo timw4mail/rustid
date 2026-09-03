@@ -26,7 +26,7 @@ impl TOSData for OS {
 
         Some(SystemInfo::new(
             Some("Apple Inc.".to_string()),
-            DataSource::Sysctrl(key),
+            DataSource::DefaultValue,
             Some(model),
             DataSource::Sysctrl(key),
         ))
