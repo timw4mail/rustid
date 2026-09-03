@@ -58,6 +58,21 @@ check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
 
+# Compile check for linux arm64
+check-arm64: _cargo_cross
+	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
+	cargo cross check --target aarch64-unknown-linux-gnu
+
+# Compile check for linux powerpc
+check-ppc: _cargo_cross
+	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
+	cargo cross +nightly check --target powerpc-unknown-linux-gnu -Z build-std
+
+# Compile check for linux powerpc64
+check-ppc64: _cargo_cross
+	@if ! rustup target list --installed | grep -q powerpc64-unknown-linux-gnu; then rustup target add powerpc64-unknown-linux-gnu; fi
+	cargo cross +nightly check --target powerpc64-unknown-linux-gnu -Z build-std
+
 # Compile check for Windows GUI (64-bit x86 GNU)
 check-windows-gui-x64:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
@@ -77,7 +92,7 @@ check-windows-gui-arm64:
 check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
 
 # Compile check for all supported targets and platforms
-check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui
+check-all: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64 check-ppc check-ppc64
 
 # More in-depth code style checking
 lint:
