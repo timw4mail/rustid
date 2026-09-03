@@ -5,16 +5,16 @@
 mod gui;
 
 #[cfg(macos_os)]
-#[path = "gui/macos/mod.rs"]
+#[path = "../gui/macos/mod.rs"]
 mod gui;
 
-#[cfg(any(windows_os, macos_os))]
 fn main() {
+    #[cfg(any(windows_os, macos_os))]
     gui::run();
-}
 
-#[cfg(not(any(windows_os, macos_os)))]
-fn main() {
-    eprintln!("rustid-gui is currently supported only on Windows and macOS targets.");
-    std::process::exit(1);
+    #[cfg(not(any(windows_os, macos_os)))]
+    {
+        eprintln!("gui is currently supported only on Windows and macOS targets.");
+        std::process::exit(1);
+    }
 }

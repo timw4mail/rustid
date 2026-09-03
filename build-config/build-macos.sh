@@ -39,15 +39,15 @@ fi
 
 # Build the GUI for each slice.
 echo "Building x86_64 slice..."
-cargo build --target x86_64-apple-darwin --features gui --bin rustid-gui --release
+cargo build --target x86_64-apple-darwin --features gui --bin gui --release
 
 echo "Building aarch64 slice..."
-cargo build --target aarch64-apple-darwin --features gui --bin rustid-gui --release
+cargo build --target aarch64-apple-darwin --features gui --bin gui --release
 
 # Merge into a universal binary. Prefer Apple's lipo when available, otherwise
 # use tools/make_fat (the fat-macho helper in this repo).
-SLICE_X86="target/x86_64-apple-darwin/release/rustid-gui"
-SLICE_ARM="target/aarch64-apple-darwin/release/rustid-gui"
+SLICE_X86="target/x86_64-apple-darwin/release/gui"
+SLICE_ARM="target/aarch64-apple-darwin/release/gui"
 
 if command -v lipo >/dev/null 2>&1; then
     lipo -create "$SLICE_X86" "$SLICE_ARM" -output "$OUT"
