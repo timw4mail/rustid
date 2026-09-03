@@ -10,28 +10,22 @@ default-run = "rustid"
 
 [dependencies]
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-core-foundation = { version = "0.3", features = ["objc2"] }
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSAttributedString", "NSDictionary", "NSString", "NSURL", "NSValue", "NSGeometry", "NSRange", "NSProcessInfo", "NSNotification", "NSObject", "NSData", "NSBundle", "NSFileManager", "NSUserDefaults"] }
+objc2-app-kit = { version = "0.3", features = [
+    "NSApplication", "NSWindow", "NSView", "NSTextView", "NSText", "NSScrollView",
+    "NSMenu", "NSMenuItem", "NSAppearance", "NSFont", "NSAlert", "NSPasteboard",
+    "NSOpenPanel", "NSSavePanel", "NSColor", "NSImage", "NSResponder", "NSWorkspace",
+    "NSButton", "NSButtonCell", "NSCell", "NSControl", "NSAttributedString",
+] }
 
 [profile.release]
 opt-level = "z"
 lto = true
 strip = true
 panic = "abort"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.62.2", default-features = false, features = [
-    "Win32_Foundation",
-    "Win32_System_SystemInformation",
-    "Win32_System_Registry",
-    "Win32_System_Threading",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_UI_Controls",
-    "Win32_UI_Controls_Dialogs",
-    "Win32_Graphics_Gdi",
-    "Win32_System_LibraryLoader",
-    "Win32_System_DataExchange",
-    "Win32_System_Memory",
-    "Win32_UI_Input_KeyboardAndMouse",
-] }
 
 [target.'cfg(not(any(target_os = "none", target_os = "uefi", target_arch = "arm")))'.dependencies]
 core_affinity = "0.8.3"
@@ -61,7 +55,7 @@ required-features = ["efi-build"]
 path = "src/efi_rustid.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)', 'cfg(uefi)', 'cfg(nostd_os)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)', 'cfg(uefi)', 'cfg(nostd_os)', 'cfg(macos_os)'] }
 
 [lints.clippy]
 unwrap_used = "warn"

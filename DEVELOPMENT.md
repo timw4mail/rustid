@@ -48,6 +48,7 @@ This produces two binaries in the project root:
 - `just build-windows` / `just build-windows-arm` / `just build-windows-gnu` — Windows CLI binaries
 - `just build-windows-gui` — Windows native GUI application (MSVC)
 - `just build-windows-gui-gnu` — Windows GUI application cross-compilable from Linux (MinGW/GNU)
+- `just build-mac-gui` — macOS GUI universal binary packaged as `Rustid.app` (`rustid-macos.zip`); requires osxcross, see [`MACOS.md`](MACOS.md)
 
 ## Testing & Quality
 

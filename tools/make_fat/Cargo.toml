@@ -1,0 +1,7 @@
+[package]
+name = "make-fat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fat-macho = "0.5"

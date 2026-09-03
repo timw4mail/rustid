@@ -186,6 +186,10 @@ build-mac-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-apple-darwin; then rustup target add aarch64-apple-darwin; fi
 	cargo cross build --target aarch64-apple-darwin --release
 
+# Build the macOS GUI as a universal binary packaged into Rustid.app (rustid-macos.zip)
+build-mac-gui:
+	bash build-config/build-macos.sh
+
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi

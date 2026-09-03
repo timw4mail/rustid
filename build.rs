@@ -222,6 +222,7 @@ fn main() {
         bsd: { any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
         linux_os: { any(target_os = "android", target_os = "linux") },
         unix_os: { any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
+        macos_os: { target_os = "macos" },
         windows_os: { target_os = "windows" },
 
         // CPU Architectures
