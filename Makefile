@@ -43,23 +43,23 @@ check:
 # Compile check for 64-bit x86 EFI application
 check-efi-64:
 	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
-	cargo check --target x86_64-unknown-uefi --features efi-build --bin efi_rustid
+	cargo check --target x86_64-unknown-uefi --features efi-build --bin efi
 
 # Compile check for 32-bit x86 EFI application
 check-efi-32:
 	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
-	cargo check --target i686-unknown-uefi --features efi-build --bin efi_rustid
+	cargo check --target i686-unknown-uefi --features efi-build --bin efi
 
 # Compile check for both 32-bit and 64-bit EFI
 check-efi: check-efi-64 check-efi-32
 
 # Compile check for DOS (real-mode EXE)
 check-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos_rustid
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
 
 # Compile check for DOS/32A (protected-mode LE)
 check-dos32a: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos --release
 
 # Compile check for all DOS targets
 check-dos: check-dos32a check-dos-real
@@ -97,17 +97,17 @@ check-ppc64: _cargo_cross
 # Compile check for Windows GUI (64-bit x86 GNU)
 check-windows-gui-x64:
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo check --target x86_64-pc-windows-gnu --features gui --bin rustid-gui
+	cargo check --target x86_64-pc-windows-gnu --features gui --bin gui
 
 # Compile check for Windows GUI (32-bit x86 GNU)
 check-windows-gui-32:
 	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
-	cargo check --target i686-pc-windows-gnu --features gui --bin rustid-gui
+	cargo check --target i686-pc-windows-gnu --features gui --bin gui
 
 # Compile check for Windows GUI (ARM64 GNU)
 check-windows-gui-arm64:
 	@if ! rustup target list --installed | grep -q aarch64-pc-windows-gnullvm; then rustup target add aarch64-pc-windows-gnullvm; fi
-	cargo check --target aarch64-pc-windows-gnullvm --features gui --bin rustid-gui
+	cargo check --target aarch64-pc-windows-gnullvm --features gui --bin gui
 
 # Compile check for all Windows GUI targets
 check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
@@ -151,8 +151,8 @@ _build-dos-tools:
 
 # Build for DOS (EXE format)
 build-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos_rustid
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos_rustid rust86.exe
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos rust86.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 
 _build-dos32a-tools:
@@ -160,8 +160,8 @@ _build-dos32a-tools:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
 
 _build-dos32a-rustid: _build-dos32a-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos_rustid --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos_rustid rustid.le
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos --release
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos rustid.le
 	@if command -v dosbox-x >/dev/null 2>&1; then \
 		dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; \
 	elif [ -f "C:/DOSBox-X/dosbox-x.exe" ]; then \
@@ -178,13 +178,13 @@ build-dos: build-dos32a build-dos-real
 # Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
 build-windows-gui-x64: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin rustid-gui --release
+	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin gui --release
 ifeq ($(OS),Windows_NT)
 	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\rustid-gui.exe" "target\dist\rustid_x86_64.exe" >/dev/null 2>&1
+	@if exist "target\x86_64-pc-windows-gnu\release\gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\gui.exe" "target\dist\rustid_x86_64.exe" >/dev/null 2>&1
 else
 	@mkdir -p target/dist
-	@cp target/x86_64-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
+	@cp target/x86_64-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
 endif
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
@@ -238,16 +238,16 @@ build-486:
 # Build 64-bit x86 EFI application
 build-efi-64:
 	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
-	cargo build --target x86_64-unknown-uefi --features efi-build --bin efi_rustid --release
+	cargo build --target x86_64-unknown-uefi --features efi-build --bin efi --release
 	@mkdir -p target/efi-disk/EFI/BOOT
-	@cp target/x86_64-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTX64.EFI
+	@cp target/x86_64-unknown-uefi/release/efi.efi target/efi-disk/EFI/BOOT/BOOTX64.EFI
 
 # Build 32-bit x86 EFI application
 build-efi-32:
 	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
-	cargo build --target i686-unknown-uefi --features efi-build --bin efi_rustid --release
+	cargo build --target i686-unknown-uefi --features efi-build --bin efi --release
 	@mkdir -p target/efi-disk/EFI/BOOT
-	@cp target/i686-unknown-uefi/release/efi_rustid.efi target/efi-disk/EFI/BOOT/BOOTIA32.EFI
+	@cp target/i686-unknown-uefi/release/efi.efi target/efi-disk/EFI/BOOT/BOOTIA32.EFI
 
 # Build both 32-bit and 64-bit EFI binaries
 build-efi: build-efi-64 build-efi-32

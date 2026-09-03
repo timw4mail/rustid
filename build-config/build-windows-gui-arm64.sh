@@ -41,10 +41,10 @@ fi
 cargo build \
     --target aarch64-pc-windows-gnullvm \
     --features gui \
-    --bin rustid-gui \
+    --bin gui \
     --release
 
 mkdir -p target/dist
-if [ -f target/aarch64-pc-windows-gnullvm/release/rustid-gui.exe ]; then
-    cp target/aarch64-pc-windows-gnullvm/release/rustid-gui.exe target/dist/rustid_arm64.exe
+if [ -f target/aarch64-pc-windows-gnullvm/release/gui.exe ]; then
+    cp target/aarch64-pc-windows-gnullvm/release/gui.exe target/dist/rustid_arm64.exe
 fi

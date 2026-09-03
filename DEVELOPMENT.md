@@ -33,7 +33,7 @@ just build-dos
 # or: make build-dos
 ```
 This produces two binaries in the project root:
-- `rustid.exe` — 32-bit protected-mode DOS32A binary (`dos_rustid` cargo binary)
+- `rustid.exe` — 32-bit protected-mode DOS32A binary (`dos` cargo binary)
 - `rust86.exe` — 16-bit real-mode fallback binary with debug support (`rust86` cargo binary)
 
 **Individual DOS Builds:**

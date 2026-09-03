@@ -28,7 +28,7 @@ mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>
 
 if [ -z "$mingw_dir" ] || [ ! -d "$mingw_dir/bin" ]; then
     echo "MinGW-w64 toolchain not found. Downloading via cargo cross..."
-    cargo cross build --target i686-pc-windows-gnu --features gui --bin rustid-gui --release
+    cargo cross build --target i686-pc-windows-gnu --features gui --bin gui --release
     mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
 fi
 
@@ -54,9 +54,9 @@ cargo +nightly build \
     -Z build-std=std,panic_abort,core,alloc \
     --target build-config/i586-pc-windows-gnu.json \
     --features gui \
-    --bin rustid-gui \
+    --bin gui \
     --release
 
 mkdir -p target/dist
-cp target/i586-pc-windows-gnu/release/rustid-gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
+cp target/i586-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
 

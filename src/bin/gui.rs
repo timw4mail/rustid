@@ -1,7 +1,7 @@
 #![cfg_attr(windows_os, windows_subsystem = "windows")]
 
 #[cfg(windows_os)]
-#[path = "gui/windows/mod.rs"]
+#[path = "../gui/windows/mod.rs"]
 mod gui;
 
 #[cfg(macos_os)]
