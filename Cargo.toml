@@ -46,14 +46,8 @@ required-features = ["gui"]
 path = "src/rustid_gui.rs"
 
 [[bin]]
-name = "rust86"
-required-features = ["dos-build"]
-path= "src/rust86.rs"
-
-[[bin]]
 name = "dos_rustid"
-required-features = ["dos32a-build"]
-path= "src/dos_rustid.rs"
+path = "src/dos_rustid.rs"
 
 [[bin]]
 name = "efi_rustid"
