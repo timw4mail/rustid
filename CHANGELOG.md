@@ -1,8 +1,23 @@
 # Changelog
 
-## [2.1.1] — Align Windows system name detection, cross-platform vendor prefixing, multi-dump loading fix, and DOS INT 10h console output
+## [2.1.1] — Binary/bin restructuring, DOS topology & compact-mode fixes, and aligned Windows system name detection
+
+### Added
+- **DOS `/COMPACT` Flag**: Added `/C` / `/COMPACT` flag support to the 32-bit DOS extender binary (`rustid.exe`) and removed the DOS-specific `newline()` override so DOS output respects the `compact` flag like the CLI and UEFI targets instead of always rendering compact (`src/dos_rustid.rs`, `src/common/display.rs`)
+- **Additional Architecture Check Recipes**: Added `check-arm64`, `check-ppc`, and `check-ppc64` compile-check recipes to `Makefile` and `justfile`, wired into `check-all` (`Makefile`, `justfile`)
+- **Repeatable i486 musl Build**: Added dedicated `build-config/build-486-musl.sh` script that downloads/uses the musl.cc `i486-linux-musl-cross` toolchain, replacing the fragile inline cargo-cross invocation for `build-486-musl` (`build-config/build-486-musl.sh`, `Makefile`, `justfile`)
+- **Bay Trail Test Fixture**: Added Intel Bay Trail N3540 CPUID dump test fixture with core/thread/topology assertions (`tests/cpuid/dump/N3540.txt`, `tests/cpuid_dump_test.rs`)
+
+### Changed
+- **Unified DOS Binaries**: Combined the separate real-mode (`rust86`) and DOS-extender (`dos_rustid`) cargo binaries into a single `dos_rustid` binary that produces both `rust86.exe` and `rustid.exe` depending on the target (`src/dos_rustid.rs`, `Cargo.toml`, `Makefile`, `justfile`)
+- **Cargo Binary Restructure**: Moved binary sources into `src/bin/` and renamed them for consistency: `rustid-gui` → `gui`, `dos_rustid` → `dos`, `efi_rustid` → `efi`, with all build scripts, workflows, and docs updated (`src/bin/dos.rs`, `src/bin/efi.rs`, `src/bin/gui.rs`, `Cargo.toml`, `Makefile`, `justfile`, `build-config/*`)
+- **Windows GUI Submodule Layout**: Moved the Windows GUI implementation into a `src/gui/windows/` submodule, gating it behind `target_os = "windows"` (`src/gui/mod.rs`, `src/gui/windows/mod.rs`)
+- **CI Check Split**: Separated PowerPC compile checks from GitHub Actions CI; added a `check-ci` recipe covering CI targets while `check-all` additionally runs PowerPC checks (`.github/workflows/push.yml`, `Makefile`, `justfile`)
+- **Topology Detection Robustness**: CPUID Leaf B/19/1F topology domains now drive package core, thread, and threads-per-core counts via a new `Topology::domains_summary` helper (with an added `shift` field per domain), and SMT width is computed from the APIC topology domain shift to avoid undercounting (e.g. on Bay Trail) (`src/x86/topology.rs`, `src/x86/fns.rs`, `src/x86/display.rs`)
 
 ### Fixed
+- **Bay Trail Core/Thread Count in DOS**: Corrected MP Table handling so MP Table sockets are combined with CPUID cores/threads-per-package rather than trusting the MP Table's total core/thread values, fixing spurious core/thread counts on Bay Trail processors (e.g. N3540) (`src/x86/dos/mod.rs`, `src/x86/topology.rs`)
+- **ARM, PowerPC, and macOS Build Errors**: Fixed cross-target compile errors by switching ARM and PowerPC runtime cache detection to `Cache::detect_os()` and correcting the macOS system name lookup fallback (`src/arm/os/mod.rs`, `src/ppc/cpu.rs`, `src/common/os/macos.rs`)
 - **Windows System Name Detection Order & Apple Model Handling**: Aligned Windows SMBIOS table and Registry parsing order with Linux sysfs detection (`Family` -> `Product Name` -> `BaseBoard`). Extracted SMBIOS Type 1 `Family` string and prioritized it before `Product Name`, while prioritizing Apple hardware model identifiers across SMBIOS Type 0 (BIOS version `MB41...`), Type 1, and Registry keys ahead of non-standard vendor family fields (e.g. `4 4 A  `) so Apple Mac hardware running Windows maps cleanly to its consumer name (`src/common/os/windows.rs`, `src/common/os/common.rs`).
 - **Cross-Platform System Name Vendor Prefixing**: Added centralized `combine_vendor_and_model` and `is_apple_model_name` helpers to consistently attach hardware manufacturer/vendor names to system and motherboard model names across Linux, Windows, EFI, and BSD detection while preserving Apple hardware model identifiers (e.g. `MacBook4,1`, `Mac14,2`) for downstream consumer marketing name formatting (`src/common/os/common.rs`, `src/common/os/linux.rs`, `src/common/os/windows.rs`, `src/x86/efi/smbios.rs`, `src/common/os/bsd.rs`).
 - **Multi-Dump Sequential Loading Bug**: Fixed an issue where loading multi-core / hybrid CPUID dump files left the thread-local CPU context index pointing to a high index, causing subsequent dump file loads with fewer CPU contexts to fail CPUID queries and fall back to Generic 386/486 (`src/x86/provider.rs`, `src/x86/cpu.rs`, `tests/cpuid_dump_test.rs`).
