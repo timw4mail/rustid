@@ -553,8 +553,8 @@ impl CpuDisplay {
         }
     }
 
-    /// Format the system name if it is a Mac, or other known string
-    pub fn format_system_name(&self, raw: &str) -> String {
+    /// Convert raw Mac model string to friendlier name
+    fn format_mac_model(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
         // Additional models based on information in MacTracker App
         let model = match raw {
@@ -784,7 +784,17 @@ impl CpuDisplay {
             _ => raw,
         };
 
-        String::from(model)
+        if model != raw {
+            format!("Apple {model}")
+        } else {
+            String::from(raw)
+        }
+    }
+
+    /// Format the system name if it is a known string
+    pub fn format_system_name(&self, raw: &str) -> String {
+        // For now, just mac models
+        self.format_mac_model(raw)
     }
 
     #[inline]
@@ -959,7 +969,7 @@ mod tests {
         });
         assert_eq!(
             disp.format_system_name("MacBookAir10,1"),
-            "MacBook Air (M1, 2020)"
+            "Apple MacBook Air (M1, 2020)"
         );
     }
 
@@ -980,7 +990,7 @@ mod tests {
             compact: false,
             verbose: false,
         });
-        assert_eq!(disp.format_system_name("MacPro7,1"), "Mac Pro (2019)");
+        assert_eq!(disp.format_system_name("MacPro7,1"), "Apple Mac Pro (2019)");
     }
 
     #[test]
@@ -992,7 +1002,7 @@ mod tests {
         });
         assert_eq!(
             disp.format_system_name("PowerMac11,2"),
-            "Power Mac G5 (Late 2005)"
+            "Apple Power Mac G5 (Late 2005)"
         );
     }
 

@@ -1,10 +1,27 @@
 # Development Setup
 
+Note: Currently targets Rust 1.94.1, as that is the latest version on Haiku
+
 ## Prerequisites (development)
 - **Rust Toolchain**: `rustup` and `cargo`. Nightly toolchain with `rust-src` component is required for DOS builds (`-Z build-std`).
 - **`just` or `make`**: Task runner to execute build scripts. Install with `cargo install just` or use `make`.
 - **DOSBox-X**: **Required** for building `rustid.exe` and running/testing DOS binaries.
 - **QEMU & OVMF** (optional): Used for running and testing UEFI binaries (`just run-efi-64` / `just run-efi-32`).
+
+## Platform-specific notes
+
+### DOS
+* DOS builds require `dosbox-x`
+* Compilation target only
+
+### Haiku
+* Haiku is not supported by rustup, so there is no native cross-compile support
+* Haiku does have `cargo`
+* Use `make` instead of `just`
+* Rust has to be installed from `HaikuDepot`, or via the Terminal:
+```bash
+pkgman install rust_bin
+```
 
 ## Building
 
@@ -81,6 +98,10 @@ just run
 Run with CPUID dump input file:
 ```bash
 just from-file -- path/to/dump.txt
+```
+or
+```bash
+cargo run -- -f path/to/dump.txt
 ```
 
 Launch 64-bit EFI binary in QEMU:
