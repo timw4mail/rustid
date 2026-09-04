@@ -1101,6 +1101,39 @@ cpuid_testsuite!(
 );
 
 cpuid_testsuite!(
+    intel_n3540,
+    "dump/N3540.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
+            assert!(is_intel());
+        }
+
+        test brand_string {
+            assert_brand_contains("N3540");
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 6, 3, 7, 8));
+        }
+
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0xB);
+        }
+
+        test topology {
+            assert_topology(1, 4, 4);
+        }
+
+        test package_counts {
+            assert_eq!(cpuid_cores_per_package(), 4);
+            assert_eq!(cpuid_threads_per_package(), 4);
+            assert_eq!(cpuid_threads_per_core(), 1);
+        }
+    }
+);
+
+cpuid_testsuite!(
     sis550,
     "dump/sis550.TXT",
     {

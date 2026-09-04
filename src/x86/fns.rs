@@ -14,6 +14,7 @@ use super::constants::*;
 use super::quirks::get_vendor_by_quirk;
 
 use super::is_hypervisor_guest;
+use super::topology::Topology;
 use crate::common::{CoreType, DataSource};
 use alloc::string::String;
 
@@ -359,9 +360,10 @@ pub use cpuid_counts::*;
 
 #[cfg(not(dos_real))]
 mod cpuid_counts {
+    use super::Topology;
     use super::*;
 
-    /// Returns the number of physical cores per package for Intel CPUs.
+    /// Returns the number of physical cores per package for Intel CPUs (Leaf 4 fallback).
     #[must_use]
     pub fn intel_cores_per_package() -> u32 {
         if is_intel() && is_valid_leaf(LEAF_4) {
@@ -374,7 +376,7 @@ mod cpuid_counts {
         1
     }
 
-    /// Returns the number of logical threads per package for Intel CPUs.
+    /// Returns the number of logical threads per package for Intel CPUs (Leaf 1 fallback).
     #[must_use]
     pub fn intel_threads_per_package() -> u32 {
         if is_intel() && is_valid_leaf(LEAF_1) {
@@ -389,7 +391,7 @@ mod cpuid_counts {
         intel_cores_per_package()
     }
 
-    /// Returns the number of logical threads per physical core for Intel CPUs.
+    /// Returns the number of logical threads per physical core for Intel CPUs (fallback).
     #[must_use]
     pub fn intel_threads_per_core() -> u32 {
         let cores = intel_cores_per_package();
@@ -490,6 +492,10 @@ mod cpuid_counts {
     /// Returns the number of physical cores per package from CPUID across all vendors.
     #[must_use]
     pub fn cpuid_cores_per_package() -> u32 {
+        if let Some((cores, _, _)) = Topology::domains_summary(&Topology::detect_domains()) {
+            return cores;
+        }
+
         if is_intel() {
             intel_cores_per_package()
         } else if is_amd() {
@@ -504,6 +510,10 @@ mod cpuid_counts {
     /// Returns the number of logical threads per package from CPUID across all vendors.
     #[must_use]
     pub fn cpuid_threads_per_package() -> u32 {
+        if let Some((_, threads, _)) = Topology::domains_summary(&Topology::detect_domains()) {
+            return threads;
+        }
+
         if is_intel() {
             intel_threads_per_package()
         } else if is_amd() {
@@ -518,6 +528,10 @@ mod cpuid_counts {
     /// Returns the number of logical threads per physical core from CPUID across all vendors.
     #[must_use]
     pub fn cpuid_threads_per_core() -> u32 {
+        if let Some((_, _, t_per_core)) = Topology::domains_summary(&Topology::detect_domains()) {
+            return t_per_core;
+        }
+
         if is_intel() {
             intel_threads_per_core()
         } else if is_amd() {

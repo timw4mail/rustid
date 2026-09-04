@@ -43,7 +43,8 @@ impl MpTable {
     #[must_use]
     pub fn total_threads(&self) -> u32 {
         let threads_per_pkg = crate::x86::cpuid_threads_per_package().max(1);
-        self.processors.max(threads_per_pkg)
+        let sockets = self.socket_count();
+        self.processors.max(threads_per_pkg * sockets)
     }
 }
 

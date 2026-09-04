@@ -1,5 +1,6 @@
 use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
+use super::topology::{Topology, TopologyType};
 use super::*;
 
 #[cfg(not(dos_real))]
@@ -20,8 +21,15 @@ impl CpuDisplay {
         if share_count == 0 {
             socket_count.max(1)
         } else {
+            let domains = Topology::detect_domains();
+            let apic_smt_width = domains
+                .iter()
+                .find(|d| d.kind == TopologyType::Thread)
+                .map(|d| 1u32 << d.shift)
+                .unwrap_or(1);
             let smt_width = cpuid_threads_per_core()
                 .max(thread_count / core_count.max(1))
+                .max(apic_smt_width)
                 .max(1);
             let cores_sharing = (share_count / smt_width).max(1);
             let count = core_count / cores_sharing;
