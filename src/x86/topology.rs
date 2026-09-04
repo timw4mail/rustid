@@ -165,6 +165,7 @@ pub struct TopologyDomain {
     pub level: u32,
     pub kind: TopologyType,
     pub count: u32,
+    pub shift: u32,
 }
 
 /// CPU topology domain type.
@@ -192,6 +193,36 @@ pub enum TopologyType {
 pub type DomainList = Vec<TopologyDomain>;
 
 impl Topology {
+    /// Summarizes a domain list into `(cores_per_package, threads_per_package, threads_per_core)`.
+    #[must_use]
+    pub fn domains_summary(domains: &[TopologyDomain]) -> Option<(u32, u32, u32)> {
+        if domains.is_empty() {
+            return None;
+        }
+
+        let mut threads_per_core = 1;
+        let mut threads_per_package = 0;
+
+        for d in domains {
+            if d.kind == TopologyType::Thread {
+                threads_per_core = d.count;
+            }
+            if d.count > threads_per_package {
+                threads_per_package = d.count;
+            }
+        }
+
+        if threads_per_package == 0 {
+            return None;
+        }
+
+        let t_per_core = threads_per_core.max(1);
+        let t_per_pkg = threads_per_package.max(1);
+        let c_per_pkg = (t_per_pkg / t_per_core).max(1);
+
+        Some((c_per_pkg, t_per_pkg, t_per_core))
+    }
+
     /// Detects CPU topology purely from CPUID leaves without touching OS information.
     #[must_use]
     pub fn detect_cpuid() -> Self {
@@ -311,17 +342,17 @@ impl Topology {
         {
             let mp_table = crate::x86::dos::mp::MpTable::detect();
             let mp_sockets = mp_table.socket_count();
-            let total_cores = mp_table.total_cores();
-            let total_threads = mp_table.total_threads();
 
-            if mp_sockets > 1 || total_threads > topo.threads.count {
+            if mp_sockets > 1 {
                 topo.sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
                 topo.cores = TopologyTier::new(
-                    topo.cores.count.max(total_cores),
+                    topo.cores.count.max(cpuid_cores_per_package() * mp_sockets),
                     DataSource::Calculated("MP Table * CPUID cores"),
                 );
                 topo.threads = TopologyTier::new(
-                    topo.threads.count.max(total_threads),
+                    topo.threads
+                        .count
+                        .max(cpuid_threads_per_package() * mp_sockets),
                     DataSource::Calculated("MP Table logical processors"),
                 );
                 if let Some(c) = &mut topo.cache {
@@ -342,42 +373,21 @@ impl Topology {
     /// Returns (sockets, total_cores, total_threads) from pure CPUID queries
     fn count_cpuid_domains(domains: &DomainList) -> (TopologyTier, TopologyTier, TopologyTier) {
         let sockets = TopologyTier::new(1, cpuid_data_source());
-        let threads = cpuid_threads_per_package();
-        let cores = cpuid_cores_per_package();
-
-        if domains.is_empty() {
-            return (
+        if let Some((cores, threads, _)) = Self::domains_summary(domains) {
+            (
+                sockets,
+                TopologyTier::new(cores, DataSource::Calculated("Cpuid")),
+                TopologyTier::new(threads, DataSource::Calculated("Cpuid")),
+            )
+        } else {
+            let threads = cpuid_threads_per_package();
+            let cores = cpuid_cores_per_package();
+            (
                 sockets,
                 TopologyTier::new(cores.max(1), cpuid_data_source()),
                 TopologyTier::new(threads.max(1), cpuid_data_source()),
-            );
+            )
         }
-
-        let mut threads_per_core = 1;
-        let mut threads_per_package = 0;
-
-        for d in domains {
-            if d.kind == TopologyType::Thread {
-                threads_per_core = d.count;
-            }
-            if d.count > threads_per_package {
-                threads_per_package = d.count;
-            }
-        }
-
-        if threads_per_package == 0 {
-            threads_per_package = threads;
-        }
-
-        let t_per_core = threads_per_core.max(1);
-        let t_per_pkg = threads_per_package.max(1);
-        let c_per_pkg = t_per_pkg / t_per_core;
-
-        (
-            sockets,
-            TopologyTier::new(c_per_pkg.max(1), DataSource::Calculated("Cpuid")),
-            TopologyTier::new(t_per_pkg.max(1), DataSource::Calculated("Cpuid")),
-        )
     }
 
     pub(crate) fn detect_domains() -> DomainList {
@@ -413,6 +423,7 @@ impl Topology {
             let domain_lcpus = res.ebx;
             let level = res.ecx & 0xFF;
             let domain_type = (res.ecx >> 8) & 0xFF;
+            let shift = res.eax & 0x1F;
 
             if domain_type == 0 {
                 break;
@@ -429,6 +440,7 @@ impl Topology {
                             _ => TopologyType::Invalid,
                         },
                         count: domain_lcpus,
+                        shift,
                     });
                 }
                 // Intel Topology V2
@@ -445,6 +457,7 @@ impl Topology {
                             _ => TopologyType::Invalid,
                         },
                         count: domain_lcpus,
+                        shift,
                     });
                 }
                 // AMD Topology V2
@@ -459,6 +472,7 @@ impl Topology {
                             _ => TopologyType::Invalid,
                         },
                         count: domain_lcpus,
+                        shift,
                     });
                 }
                 _ => return d,
@@ -479,6 +493,7 @@ mod tests {
         assert_eq!(d.level, 0);
         assert_eq!(d.kind, TopologyType::Invalid);
         assert_eq!(d.count, 0);
+        assert_eq!(d.shift, 0);
     }
 
     #[test]
@@ -487,10 +502,32 @@ mod tests {
             level: 1,
             kind: TopologyType::Core,
             count: 4,
+            shift: 2,
         };
         assert_eq!(d.level, 1);
         assert_eq!(d.kind, TopologyType::Core);
         assert_eq!(d.count, 4);
+        assert_eq!(d.shift, 2);
+    }
+
+    #[test]
+    fn test_domains_summary() {
+        let domains = vec![
+            TopologyDomain {
+                level: 0,
+                kind: TopologyType::Thread,
+                count: 2,
+                shift: 1,
+            },
+            TopologyDomain {
+                level: 1,
+                kind: TopologyType::Core,
+                count: 8,
+                shift: 4,
+            },
+        ];
+        let summary = Topology::domains_summary(&domains);
+        assert_eq!(summary, Some((4, 8, 2)));
     }
 
     #[test]

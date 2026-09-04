@@ -2,6 +2,7 @@
 //! DOS (16-bit real mode and 32-bit protected mode) environment support for rustid.
 
 use super::vendor::cyrix::Cyrix;
+use super::{cpuid_cores_per_package, cpuid_threads_per_package};
 use crate::common::{DataSource, Speed, TopologyTier};
 use crate::x86::cpu::Cpu;
 use core::arch::asm;
@@ -29,14 +30,20 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
     // 1. Multi-socket detection from MP Table
     let mp_table = mp::MpTable::detect();
     let mp_sockets = mp_table.socket_count();
-    let total_cores = mp_table.total_cores();
-    let total_threads = mp_table.total_threads();
 
-    if mp_sockets > 1 || total_threads > cpu.topology.threads.count {
+    if mp_sockets > 1 {
         let sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
         cpu.topology.sockets = sockets;
-        let cores = cpu.topology.cores.count.max(total_cores);
-        let threads = cpu.topology.threads.count.max(total_threads);
+        let cores = cpu
+            .topology
+            .cores
+            .count
+            .max(cpuid_cores_per_package() * mp_sockets);
+        let threads = cpu
+            .topology
+            .threads
+            .count
+            .max(cpuid_threads_per_package() * mp_sockets);
         cpu.topology.cores =
             TopologyTier::new(cores, DataSource::Calculated("MP Table * CPUID cores"));
         cpu.topology.threads = TopologyTier::new(
