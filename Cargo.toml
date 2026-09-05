@@ -10,7 +10,7 @@ default-run = "rustid"
 
 [dependencies]
 
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(all(target_os = "macos", target_feature = "gui"))'.dependencies]
 objc2 = "0.6"
 objc2-core-foundation = { version = "0.3", features = ["objc2"] }
 objc2-foundation = { version = "0.3", features = ["NSArray", "NSAttributedString", "NSDictionary", "NSString", "NSURL", "NSValue", "NSGeometry", "NSRange", "NSProcessInfo", "NSNotification", "NSObject", "NSData", "NSBundle", "NSFileManager", "NSUserDefaults"] }

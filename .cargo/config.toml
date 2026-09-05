@@ -60,8 +60,8 @@ rustflags = [
 # macOS cross-compilation from Linux (requires osxcross; see MACOS.md).
 # osxcross installs `<triple>-clang` wrappers; make sure its bin dir is in
 # PATH when invoking these targets.
-[target.x86_64-apple-darwin]
-linker = "x86_64-apple-darwin-clang"
-
-[target.aarch64-apple-darwin]
-linker = "aarch64-apple-darwin-clang"
+# [target.x86_64-apple-darwin]
+# linker = "x86_64-apple-darwin-clang"
+#
+# [target.aarch64-apple-darwin]
+# linker = "aarch64-apple-darwin-clang"

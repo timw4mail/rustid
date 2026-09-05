@@ -11,8 +11,8 @@ base_check := if arch() == "powerpc" { "cargo +nightly check -Z build-std --all-
 # osxcross <triple>-clang wrappers, which don't exist. Use the system clang so
 # native host checks/lints link correctly. Harmless on other hosts (the Darwin
 # targets aren't built by host-only recipes there).
-export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER := "clang"
-export CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER := "clang"
+#export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER := "clang"
+#export CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER := "clang"
 
 [linux, unix]
 _cargo_cross:
