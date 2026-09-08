@@ -1,8 +1,8 @@
 //! Plain report formatting and syntax-colored RTF generation.
 
-use rustid::Cpu;
+use crate::Cpu;
 #[allow(unused_imports)]
-use rustid::common::{CliFlags, CpuDisplay, Level1Cache, TCpuDisplay, TDetect, UNK};
+use crate::common::{CliFlags, CpuDisplay, Level1Cache, TCpuDisplay, TDetect, UNK};
 
 pub fn generate_report_plain(
     cpu: &Cpu,
@@ -11,9 +11,9 @@ pub fn generate_report_plain(
     is_from_dump: bool,
 ) -> String {
     let version_header = if is_from_dump {
-        rustid::format_file_version()
+        crate::format_file_version()
     } else {
-        rustid::format_version()
+        crate::format_version()
     };
     let flags = CliFlags {
         color: false,
@@ -34,7 +34,7 @@ pub fn generate_debug_info_plain(cpu: &Cpu) -> String {
 
 #[cfg(x86_cpu)]
 pub fn generate_dump_info_plain() -> String {
-    use rustid::x86::{dump::dump_cpu, topology::Topology};
+    use crate::x86::{dump::dump_cpu, topology::Topology};
     let mut output = String::new();
     let topo = Topology::detect();
     let logical_cores = topo.threads.count as usize;

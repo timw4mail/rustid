@@ -3,9 +3,9 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicIsize, Ordering};
 
-use rustid::Cpu;
+use crate::Cpu;
 #[allow(unused_imports)]
-use rustid::common::{CpuDisplay, TDetect};
+use crate::common::{CpuDisplay, TDetect};
 
 use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
@@ -209,13 +209,13 @@ fn render_current_text(state: &mut AppState) {
     #[cfg(x86_cpu)]
     if let Some(path) = &state.loaded_file {
         if let Some(contents) = read_file_to_string(path) {
-            let dump = rustid::x86::provider::CpuDump::parse_str(&contents);
-            rustid::x86::provider::set_cpuid_provider(dump);
+            let dump = crate::x86::provider::CpuDump::parse_str(&contents);
+            crate::x86::provider::set_cpuid_provider(dump);
         } else {
-            rustid::x86::provider::reset_cpuid_provider();
+            crate::x86::provider::reset_cpuid_provider();
         }
     } else {
-        rustid::x86::provider::reset_cpuid_provider();
+        crate::x86::provider::reset_cpuid_provider();
     }
 
     let cpu = Cpu::detect();

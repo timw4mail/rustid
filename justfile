@@ -91,6 +91,13 @@ check-windows-gui-arm64:
 # Compile check for all Windows GUI targets
 check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-arm64
 
+# Compile check for Haiku GUI
+check-haiku-gui:
+	cargo check --features gui
+
+# Compile check for all GUI targets
+check-gui: check-windows-gui check-haiku-gui
+
 # Compile check for CI targets and platforms
 check-ci: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64
 
