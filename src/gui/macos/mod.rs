@@ -20,12 +20,12 @@ use objc2_foundation::{
     NSUserDefaults, ns_string,
 };
 
+use crate::Cpu;
+#[allow(unused_imports)]
+use crate::common::CpuDisplay;
+#[allow(unused_imports)]
+use crate::common::TDetect;
 use render::{ViewMode, generate_debug_info_plain, generate_report_plain, render_report};
-use rustid::Cpu;
-#[allow(unused_imports)]
-use rustid::common::CpuDisplay;
-#[allow(unused_imports)]
-use rustid::common::TDetect;
 
 const WINDOW_W: f64 = 860.0;
 const WINDOW_H: f64 = 620.0;
@@ -186,7 +186,7 @@ define_class!(
         fn refresh_hardware(&self, _sender: Option<&AnyObject>) {
             #[cfg(x86_cpu)]
             {
-                rustid::x86::provider::reset_cpuid_provider();
+                crate::x86::provider::reset_cpuid_provider();
                 self.ivars().loaded_file.borrow_mut().take();
             }
             self.refresh();
@@ -295,10 +295,10 @@ impl Delegate {
         #[cfg(x86_cpu)]
         if let Some(path) = self.ivars().loaded_file.borrow().clone() {
             if let Ok(contents) = std::fs::read_to_string(&path) {
-                let dump = rustid::x86::provider::CpuDump::parse_str(&contents);
-                rustid::x86::provider::set_cpuid_provider(dump);
+                let dump = crate::x86::provider::CpuDump::parse_str(&contents);
+                crate::x86::provider::set_cpuid_provider(dump);
             } else {
-                rustid::x86::provider::reset_cpuid_provider();
+                crate::x86::provider::reset_cpuid_provider();
             }
         }
 
