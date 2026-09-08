@@ -220,6 +220,7 @@ fn main() {
 
         // Operating System Families
         bsd: { any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
+        haiku_os: { target_os = "haiku" },
         linux_os: { any(target_os = "android", target_os = "linux") },
         unix_os: { any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
         macos_os: { target_os = "macos" },
@@ -230,5 +231,43 @@ fn main() {
         arm_cpu: { any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec") },
         ppc_cpu: { any(target_arch = "powerpc", target_arch = "powerpc64") },
         riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") }
+    }
+
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let has_gui = std::env::var("CARGO_FEATURE_GUI").is_ok();
+    if target_os == "haiku" && has_gui {
+        if let Ok(out_dir) = std::env::var("OUT_DIR") {
+            let cxx = std::env::var("CXX").unwrap_or_else(|_| "c++".to_string());
+            let ar = std::env::var("AR").unwrap_or_else(|_| "ar".to_string());
+            let obj_file = format!("{}/haiku_bridge.o", out_dir);
+            let lib_file = format!("{}/librustid_haiku_bridge.a", out_dir);
+
+            let compile_status = std::process::Command::new(&cxx)
+                .args([
+                    "-c",
+                    "-O2",
+                    "-std=c++17",
+                    "src/gui/haiku/bridge/haiku_bridge.cpp",
+                    "-o",
+                    &obj_file,
+                ])
+                .status();
+
+            if let Ok(status) = compile_status
+                && status.success()
+            {
+                let _ = std::process::Command::new(&ar)
+                    .args(["crus", &lib_file, &obj_file])
+                    .status();
+                println!("cargo:rustc-link-search=native={}", out_dir);
+                println!("cargo:rustc-link-lib=static=rustid_haiku_bridge");
+                println!("cargo:rustc-link-lib=be");
+                println!("cargo:rustc-link-lib=tracker");
+                println!("cargo:rustc-link-lib=stdc++");
+                println!("cargo:rustc-link-lib=root");
+            }
+        }
+        println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.cpp");
+        println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
     }
 }

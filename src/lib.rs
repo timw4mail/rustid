@@ -58,6 +58,9 @@ extern crate std;
 
 pub mod common;
 
+#[cfg(any(feature = "gui", test))]
+pub mod gui;
+
 #[cfg(x86_cpu)]
 pub mod x86;
 #[cfg(x86_cpu)]
