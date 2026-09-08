@@ -47,6 +47,7 @@ export PATH="$mingw_bin:$PATH"
 export CARGO_TARGET_I586_PC_WINDOWS_GNU_LINKER="i686-w64-mingw32-gcc"
 export CC_i586_pc_windows_gnu="i686-w64-mingw32-gcc"
 export AR_i586_pc_windows_gnu="i686-w64-mingw32-ar"
+export WINDRES="i686-w64-mingw32-windres"
 export RUSTFLAGS="-L $mingw_lib -L $gcc_lib"
 
 cargo +nightly build \

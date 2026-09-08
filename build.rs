@@ -269,4 +269,51 @@ fn main() {
         println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.cpp");
         println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
     }
+
+    if target_os == "windows" && has_gui {
+        if let Ok(out_dir) = std::env::var("OUT_DIR") {
+            let rc_file = "build-config/rustid.rc";
+            let out_res = format!("{}/rustid_res.o", out_dir);
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+
+            let target = std::env::var("TARGET").unwrap_or_default();
+            let target_windres = format!("{}-windres", target);
+            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+
+            let windres_candidates = [
+                std::env::var("WINDRES").unwrap_or_default(),
+                target_windres,
+                "x86_64-w64-mingw32-windres".to_string(),
+                "i686-w64-mingw32-windres".to_string(),
+                "llvm-windres".to_string(),
+                "windres".to_string(),
+            ];
+
+            let mut compiled = false;
+            for candidate in &windres_candidates {
+                if candidate.is_empty() {
+                    continue;
+                }
+                let mut cmd = std::process::Command::new(candidate);
+                cmd.args(["-I", &manifest_dir, "-i", rc_file, "-o", &out_res, "-O", "coff"]);
+                if arch == "x86" {
+                    cmd.args(["-F", "pe-i386"]);
+                } else if arch == "x86_64" {
+                    cmd.args(["-F", "pe-x86-64"]);
+                }
+                if let Ok(status) = cmd.status()
+                    && status.success()
+                {
+                    compiled = true;
+                    break;
+                }
+            }
+
+            if compiled {
+                println!("cargo:rustc-link-arg={}", out_res);
+            }
+        }
+        println!("cargo:rerun-if-changed=build-config/rustid.rc");
+        println!("cargo:rerun-if-changed=assets/rustid.ico");
+    }
 }

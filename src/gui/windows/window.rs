@@ -686,6 +686,9 @@ pub fn run() {
         let class_name_w = w!("RustidModernMainWindowClass");
         let class_name_a = b"RustidModernMainWindowClass\0";
 
+        let h_icon = LoadIconW(Some(HINSTANCE(hinstance.0)), PCWSTR(1 as usize as *const u16)).unwrap_or_default();
+        let mut h_icon_a = std::ptr::null_mut();
+
         let wc_w = WNDCLASSEXW {
             cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
             style: CS_HREDRAW | CS_VREDRAW,
@@ -693,12 +696,12 @@ pub fn run() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: HINSTANCE(hinstance.0),
-            hIcon: HICON::default(),
+            hIcon: h_icon,
             hCursor: LoadCursorW(None, IDC_ARROW).unwrap_or_default(),
             hbrBackground: HBRUSH((COLOR_BTNFACE.0 + 1) as *mut c_void),
             lpszMenuName: PCWSTR::null(),
             lpszClassName: class_name_w,
-            hIconSm: HICON::default(),
+            hIconSm: h_icon,
         };
 
         let reg = RegisterClassExW(&wc_w);
@@ -708,7 +711,9 @@ pub fn run() {
             unsafe extern "system" {
                 fn RegisterClassExA(lpwcx: *const WndClassExA) -> u16;
                 fn LoadCursorA(hInstance: *mut c_void, lpCursorName: *const u8) -> *mut c_void;
+                fn LoadIconA(hInstance: *mut c_void, lpIconName: *const u8) -> *mut c_void;
             }
+            h_icon_a = LoadIconA(hinstance.0, 1 as usize as *const u8);
             let wc_a = WndClassExA {
                 cb_size: std::mem::size_of::<WndClassExA>() as u32,
                 style: 3, // CS_HREDRAW | CS_VREDRAW
@@ -716,12 +721,12 @@ pub fn run() {
                 cb_cls_extra: 0,
                 cb_wnd_extra: 0,
                 h_instance: hinstance.0,
-                h_icon: std::ptr::null_mut(),
+                h_icon: h_icon_a,
                 h_cursor: LoadCursorA(std::ptr::null_mut(), 32512 as *const u8),
                 hbr_background: (COLOR_BTNFACE.0 + 1) as *mut c_void,
                 lpsz_menu_name: std::ptr::null(),
                 lpsz_class_name: class_name_a.as_ptr(),
-                h_icon_sm: std::ptr::null_mut(),
+                h_icon_sm: h_icon_a,
             };
             let reg_a = RegisterClassExA(&wc_a);
             if reg_a == 0 {
@@ -826,6 +831,19 @@ pub fn run() {
 
         let state = &mut *state_raw_ptr;
         state.hwnd_main = hwnd_main;
+
+        if IS_UNICODE.load(Ordering::Relaxed) {
+            if !h_icon.is_invalid() {
+                SendMessageW(hwnd_main, WM_SETICON, Some(WPARAM(ICON_BIG as usize)), Some(LPARAM(h_icon.0 as isize)));
+                SendMessageW(hwnd_main, WM_SETICON, Some(WPARAM(ICON_SMALL as usize)), Some(LPARAM(h_icon.0 as isize)));
+            }
+        } else if !h_icon_a.is_null() {
+            unsafe extern "system" {
+                fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize) -> isize;
+            }
+            SendMessageA(hwnd_main.0, WM_SETICON, ICON_BIG as usize, h_icon_a as isize);
+            SendMessageA(hwnd_main.0, WM_SETICON, ICON_SMALL as usize, h_icon_a as isize);
+        }
 
         // Load RichEdit DLL so RichEdit20A/RichEdit20W classes are registered.
         // riched20.dll = RichEdit 2.0/3.0 (Win98+/NT4 SP3+).
