@@ -280,14 +280,32 @@ fn main() {
             let target_windres = format!("{}-windres", target);
             let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
-            let windres_candidates = [
-                std::env::var("WINDRES").unwrap_or_default(),
-                target_windres,
-                "x86_64-w64-mingw32-windres".to_string(),
-                "i686-w64-mingw32-windres".to_string(),
-                "llvm-windres".to_string(),
-                "windres".to_string(),
-            ];
+            let mut windres_candidates = Vec::new();
+            if let Ok(env_windres) = std::env::var("WINDRES") {
+                if !env_windres.is_empty() {
+                    windres_candidates.push(env_windres);
+                }
+            }
+            windres_candidates.push(target_windres);
+            match arch.as_str() {
+                "aarch64" => {
+                    windres_candidates.push("aarch64-w64-mingw32-windres".to_string());
+                }
+                "x86_64" => {
+                    windres_candidates.push("x86_64-w64-mingw32-windres".to_string());
+                }
+                "x86" => {
+                    windres_candidates.push("i686-w64-mingw32-windres".to_string());
+                }
+                "arm" => {
+                    windres_candidates.push("armv7-w64-mingw32-windres".to_string());
+                }
+                _ => {}
+            }
+            windres_candidates.push("llvm-windres".to_string());
+            windres_candidates.push("windres".to_string());
+
+            let _ = std::fs::remove_file(&out_res);
 
             let mut compiled = false;
             for candidate in &windres_candidates {
@@ -300,6 +318,10 @@ fn main() {
                     cmd.args(["-F", "pe-i386"]);
                 } else if arch == "x86_64" {
                     cmd.args(["-F", "pe-x86-64"]);
+                } else if arch == "aarch64" {
+                    cmd.args(["--target", "aarch64-w64-mingw32"]);
+                } else if arch == "arm" {
+                    cmd.args(["--target", "armv7-w64-mingw32"]);
                 }
                 if let Ok(status) = cmd.status()
                     && status.success()
@@ -313,6 +335,7 @@ fn main() {
                 println!("cargo:rustc-link-arg={}", out_res);
             }
         }
+        println!("cargo:rerun-if-env-changed=WINDRES");
         println!("cargo:rerun-if-changed=build-config/rustid.rc");
         println!("cargo:rerun-if-changed=assets/rustid.ico");
     }

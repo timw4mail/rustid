@@ -47,6 +47,8 @@ if (Test-Path (Join-Path $destDir "bin")) {
     $env:PATH = "$binPath;$($env:PATH)"
 }
 
+$env:WINDRES = "aarch64-w64-mingw32-windres"
+
 cargo build `
     --target aarch64-pc-windows-gnullvm `
     --features gui `

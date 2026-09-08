@@ -38,6 +38,8 @@ if ! command -v aarch64-w64-mingw32-clang >/dev/null 2>&1; then
     fi
 fi
 
+export WINDRES="aarch64-w64-mingw32-windres"
+
 cargo build \
     --target aarch64-pc-windows-gnullvm \
     --features gui \
