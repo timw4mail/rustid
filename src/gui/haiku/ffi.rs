@@ -9,6 +9,8 @@ pub type QuitCallback = unsafe extern "C" fn();
 
 #[link(name = "rustid_haiku_bridge", kind = "static")]
 #[link(name = "be")]
+#[link(name = "tracker")]
+#[link(name = "stdc++")]
 #[link(name = "root")]
 unsafe extern "C" {
     pub fn haiku_gui_init(

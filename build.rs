@@ -261,6 +261,8 @@ fn main() {
                 println!("cargo:rustc-link-search=native={}", out_dir);
                 println!("cargo:rustc-link-lib=static=rustid_haiku_bridge");
                 println!("cargo:rustc-link-lib=be");
+                println!("cargo:rustc-link-lib=tracker");
+                println!("cargo:rustc-link-lib=stdc++");
                 println!("cargo:rustc-link-lib=root");
             }
         }

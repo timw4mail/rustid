@@ -191,6 +191,12 @@ build-windows-gui-arm64:
 # Build all Windows GUI binaries (x86 32-bit, x86 64-bit, ARM64)
 build-windows-gui: build-windows-gui-32 build-windows-gui-x64 build-windows-gui-arm64
 
+# Build Haiku GUI application
+build-haiku-gui:
+	cargo build --features gui --bin gui --release
+	@mkdir -p target/dist
+	@cp target/release/gui target/dist/rustid_haiku 2>/dev/null || true
+
 # Build for linux arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
