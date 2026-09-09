@@ -1,5 +1,7 @@
 use super::constants::*;
-use super::{cpuid_data_source, is_valid_leaf, vendor_str, x86_cpuid_count};
+#[cfg(not(dos_real))]
+use super::x86_cpuid_count;
+use super::{cpuid_data_source, is_valid_leaf, vendor_str};
 pub use crate::common::Topology;
 use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::x86::{cpuid_cores_per_package, cpuid_threads_per_package};
@@ -391,25 +393,33 @@ impl Topology {
     }
 
     pub(crate) fn detect_domains() -> DomainList {
-        let d: DomainList = Vec::new();
-
-        if !is_valid_leaf(LEAF_0B) {
-            return d;
+        #[cfg(dos_real)]
+        {
+            Vec::new()
         }
+        #[cfg(not(dos_real))]
+        {
+            let d: DomainList = Vec::new();
 
-        let v2_leaf = match &*vendor_str() {
-            VENDOR_INTEL => LEAF_1F,
-            VENDOR_AMD => EXT_LEAF_26,
-            _ => 0,
-        };
+            if !is_valid_leaf(LEAF_0B) {
+                return d;
+            }
 
-        if v2_leaf > 0 && is_valid_leaf(v2_leaf) {
-            Self::detect_domains_leaf(v2_leaf)
-        } else {
-            Self::detect_domains_leaf(LEAF_0B)
+            let v2_leaf = match &*vendor_str() {
+                VENDOR_INTEL => LEAF_1F,
+                VENDOR_AMD => EXT_LEAF_26,
+                _ => 0,
+            };
+
+            if v2_leaf > 0 && is_valid_leaf(v2_leaf) {
+                Self::detect_domains_leaf(v2_leaf)
+            } else {
+                Self::detect_domains_leaf(LEAF_0B)
+            }
         }
     }
 
+    #[cfg(not(dos_real))]
     fn detect_domains_leaf(leaf: u32) -> DomainList {
         let mut d: DomainList = Vec::new();
 

@@ -158,6 +158,7 @@ impl CpuDisplay {
     }
 
     /// Case-insensitively checks if either string is contained in the other or if they are equal.
+    #[cfg(any(arm_cpu, test))]
     pub fn is_duplicate(a: &str, b: &str) -> bool {
         if a.is_empty() || b.is_empty() {
             return false;

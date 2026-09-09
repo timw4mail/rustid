@@ -1,5 +1,6 @@
 use super::cpu::Cpu;
 use super::micro_arch::MicroArch;
+#[cfg(not(dos_real))]
 use super::topology::{Topology, TopologyType};
 use super::*;
 
@@ -85,6 +86,7 @@ impl Cpu {
     }
 
     fn print_topology(&self, flags: CliFlags, disp: &mut CpuDisplay) {
+        #[cfg(not(dos_real))]
         if self.is_hybrid() {
             disp.display_topology_line(
                 self.topology.sockets.count,
@@ -237,21 +239,30 @@ impl Cpu {
 
     #[allow(unused_variables)]
     fn print_features(&self, flags: CliFlags, disp: &mut CpuDisplay) {
-        #[allow(unused_mut)]
-        let mut features = self.features.clone();
-
         #[cfg(not(dos_real))]
-        if is_centaur()
-            && let Some(centaur_str) = self.format_centaur_features(flags)
         {
-            features.insert("Centaur", centaur_str);
+            let mut features = self.features.clone();
+
+            if is_centaur()
+                && let Some(centaur_str) = self.format_centaur_features(flags)
+            {
+                features.insert("Centaur", centaur_str);
+            }
+
+            if !features.is_empty() {
+                let keys = [
+                    "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
+                ];
+                disp.display_features(&features, &keys);
+            }
         }
 
-        if !features.is_empty() {
-            let keys = [
-                "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
-            ];
-            disp.display_features(&features, &keys);
+        #[cfg(dos_real)]
+        {
+            if !self.features.is_empty() {
+                let keys = ["Base", "Cyrix"];
+                disp.display_features(&self.features, &keys);
+            }
         }
     }
 }
@@ -273,9 +284,9 @@ impl TCpuDisplay for Cpu {
         {
             use super::is_cyrix;
 
-            let mut out = alloc::format!("{:?}", self);
+            let mut out = alloc::format!("{:#?}", self);
             if is_cyrix() {
-                out.push_str(&alloc::format!("\n{:?}", super::vendor::Cyrix::detect()));
+                out.push_str(&alloc::format!("\n{:#?}", super::vendor::Cyrix::detect()));
             }
             out
         }
@@ -283,49 +294,46 @@ impl TCpuDisplay for Cpu {
         #[cfg(dos_real)]
         {
             use super::is_cyrix;
+            use core::fmt::Write;
 
             let mut out = String::new();
-            out.push_str("Cpu {\n");
-            out.push_str(&alloc::format!("  has_cpuid: {}\n", self.has_cpuid));
-            out.push_str(&alloc::format!(
-                "  arch: CpuArch {{ model: \"{}\", micro_arch: \"{}\", code_name: \"{}\", brand: \"{}\" }}\n",
+            let src_str = match self.signature.source {
+                DataSource::CpuReset => "CpuReset",
+                DataSource::CpuMsr => "CpuMsr",
+                DataSource::Cpuid => "Cpuid",
+                _ => "Other",
+            };
+
+            let _ = write!(
+                out,
+                "Cpu {{\n  has_cpuid: {}\n  arch: CpuArch {{ model: \"{}\", micro_arch: \"{}\", code_name: \"{}\", brand: \"{}\" }}\n  signature: CpuSignature {{ family: {}, model: {}, stepping: {}, source: \"{}\" }}\n  topology: Sockets={}, Cores={}, Threads={}, Speed={}MHz (measured={})\n}}\n",
+                self.has_cpuid,
                 self.arch.model,
                 self.arch.micro_arch.as_str(),
                 self.arch.code_name,
-                self.arch.brand_name
-            ));
-            out.push_str(&alloc::format!(
-                "  signature: CpuSignature {{ family: {}, model: {}, stepping: {}, source: \"{}\" }}\n",
+                self.arch.brand_name,
                 self.signature.display_family,
                 self.signature.display_model,
                 self.signature.stepping,
-                match self.signature.source {
-                    DataSource::CpuReset => "CpuReset",
-                    DataSource::CpuMsr => "CpuMsr",
-                    DataSource::Cpuid => "Cpuid",
-                    _ => "Other",
-                }
-            ));
-            out.push_str(&alloc::format!(
-                "  topology: Sockets={}, Cores={}, Threads={}, Speed={}MHz (measured={})\n",
+                src_str,
                 self.topology.sockets.count,
                 self.topology.cores.count,
                 self.topology.threads.count,
                 self.topology.speed.base,
                 self.topology.speed.measured
-            ));
-            out.push_str("}\n");
+            );
 
             if is_cyrix() {
                 let cyrix = super::vendor::Cyrix::detect();
-                out.push_str(&alloc::format!(
+                let _ = write!(
+                    out,
                     "Cyrix {{ dir0: {:02X}h, revision: {:02X}h, stepping: {:X}h, multiplier: \"{}\", model: \"{}\" }}\n",
                     cyrix.dir0,
                     cyrix.revision,
                     cyrix.stepping,
                     cyrix.multiplier,
                     cyrix.emodel.to_str()
-                ));
+                );
             }
             out
         }

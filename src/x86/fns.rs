@@ -14,6 +14,7 @@ use super::constants::*;
 use super::quirks::get_vendor_by_quirk;
 
 use super::is_hypervisor_guest;
+#[cfg(not(dos_real))]
 use super::topology::Topology;
 use crate::common::{CoreType, DataSource};
 use alloc::string::String;
