@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0] — Native Haiku GUI application, cross-platform application icons, and Windows resource embedding
+
+### Added
+- **Native Haiku GUI Application**:
+  - Added Haiku graphical interface
+- **Application Icons Across Platforms**:
+  - Added multi-resolution application icons for Windows (`assets/rustid.ico`), macOS (`assets/rustid.icns`), Vector SVG (`assets/rustid.svg`), Haiku (`assets/haiku/rustid.rdef`, `assets/haiku/rustid.hvif`, `assets/haiku/rustid_16.png`, `32.png`, `64.png`, `128.png`), and PNG source artwork (`assets/rustid.png`)
+  - Added Haiku resource definition (`assets/haiku/rustid.rdef`) and build recipe support to compile and embed icon/signature resources using Haiku `rc`, `xres`, and `mimeset` (`Makefile`, `justfile`, `assets/haiku/README.md`)
+- **Windows GUI Icon & Resource Embedding**:
+  - Added Windows resource file (`build-config/rustid.rc`) embedding application icon as Resource ID 1 (`IDI_APPLICATION`)
+  - Added architecture-specific multi-resolution Windows icon variants with bold white serif silkscreen text: `assets/windows/rustid_x86.{ico,png}` (`"x86"`), `assets/windows/rustid_x64.{ico,png}` (`"x64"`), and `assets/windows/rustid_arm64.{ico,png}` (`"arm64"`)
+  - Updated `build.rs` to dynamically route icon resources based on `CARGO_CFG_TARGET_ARCH` and integrated automated `windres` / `rc` resource compilation across MinGW x86, x86_64, ARM64, and ARM targets (`build.rs`)
+  - Updated Win32 GUI window creation to load and assign application icons via `LoadIconW` / `LoadIconA` and `WM_SETICON` (`ICON_BIG` and `ICON_SMALL`) supporting both modern Windows and Windows 9x ANSI paths (`src/gui/windows/window.rs`)
+  - Added `WINDRES` toolchain environment variables in Windows 32-bit and ARM64 GUI build scripts (`build-config/build-windows-gui-32.{sh,ps1}`, `build-config/build-windows-gui-arm64.{sh,ps1}`)
+
 ## [2.1.1] — Binary/bin restructuring, DOS topology & compact-mode fixes, and aligned Windows system name detection
 
 ### Added

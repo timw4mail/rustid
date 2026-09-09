@@ -270,4 +270,88 @@ fn main() {
         println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.cpp");
         println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
     }
+
+    if target_os == "windows" && has_gui {
+        if let Ok(out_dir) = std::env::var("OUT_DIR") {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+
+            let ico_rel_path = match arch.as_str() {
+                "x86" => "assets/windows/rustid_x86.ico",
+                "x86_64" => "assets/windows/rustid_x64.ico",
+                "aarch64" => "assets/windows/rustid_arm64.ico",
+                _ => "assets/rustid.ico",
+            };
+            let ico_full_path = format!("{}/{}", manifest_dir, ico_rel_path);
+
+            let rc_file = format!("{}/rustid.rc", out_dir);
+            let rc_content = format!("1 ICON \"{}\"\n", ico_full_path.replace('\\', "/"));
+            let _ = std::fs::write(&rc_file, rc_content);
+
+            let out_res = format!("{}/rustid_res.o", out_dir);
+            let target = std::env::var("TARGET").unwrap_or_default();
+            let target_windres = format!("{}-windres", target);
+
+            let mut windres_candidates = Vec::new();
+            if let Ok(env_windres) = std::env::var("WINDRES") {
+                if !env_windres.is_empty() {
+                    windres_candidates.push(env_windres);
+                }
+            }
+            windres_candidates.push(target_windres);
+            match arch.as_str() {
+                "aarch64" => {
+                    windres_candidates.push("aarch64-w64-mingw32-windres".to_string());
+                }
+                "x86_64" => {
+                    windres_candidates.push("x86_64-w64-mingw32-windres".to_string());
+                }
+                "x86" => {
+                    windres_candidates.push("i686-w64-mingw32-windres".to_string());
+                }
+                "arm" => {
+                    windres_candidates.push("armv7-w64-mingw32-windres".to_string());
+                }
+                _ => {}
+            }
+            windres_candidates.push("llvm-windres".to_string());
+            windres_candidates.push("windres".to_string());
+
+            let _ = std::fs::remove_file(&out_res);
+
+            let mut compiled = false;
+            for candidate in &windres_candidates {
+                if candidate.is_empty() {
+                    continue;
+                }
+                let mut cmd = std::process::Command::new(candidate);
+                cmd.args(["-I", &manifest_dir, "-i", &rc_file, "-o", &out_res, "-O", "coff"]);
+                if arch == "x86" {
+                    cmd.args(["-F", "pe-i386"]);
+                } else if arch == "x86_64" {
+                    cmd.args(["-F", "pe-x86-64"]);
+                } else if arch == "aarch64" {
+                    cmd.args(["--target", "aarch64-w64-mingw32"]);
+                } else if arch == "arm" {
+                    cmd.args(["--target", "armv7-w64-mingw32"]);
+                }
+                if let Ok(status) = cmd.status()
+                    && status.success()
+                {
+                    compiled = true;
+                    break;
+                }
+            }
+
+            if compiled {
+                println!("cargo:rustc-link-arg={}", out_res);
+            }
+        }
+        println!("cargo:rerun-if-env-changed=WINDRES");
+        println!("cargo:rerun-if-changed=build-config/rustid.rc");
+        println!("cargo:rerun-if-changed=assets/rustid.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_x86.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_x64.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_arm64.ico");
+    }
 }

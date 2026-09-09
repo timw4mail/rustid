@@ -243,7 +243,7 @@ unsafe extern "C" fn on_quit_callback() {
 
 pub fn run() {
     let title = format!(
-        "Rustid {} - CPU Information ({}-{})",
+        "Rustid {} ({}-{})",
         env!("CARGO_PKG_VERSION"),
         std::env::consts::ARCH,
         std::env::consts::OS

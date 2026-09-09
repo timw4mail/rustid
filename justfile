@@ -203,6 +203,13 @@ build-haiku-gui:
 	cargo build --features gui --bin gui --release
 	@mkdir -p target/dist
 	@cp target/release/gui target/dist/rustid_haiku 2>/dev/null || true
+	@if command -v rc >/dev/null 2>&1 && command -v xres >/dev/null 2>&1; then \
+		rc -o target/dist/rustid.rsrc assets/haiku/rustid.rdef && \
+		xres -o target/dist/rustid_haiku target/dist/rustid.rsrc && \
+		xres -o target/release/gui target/dist/rustid.rsrc 2>/dev/null || true; \
+		(command -v mimeset >/dev/null 2>&1 && mimeset -f target/dist/rustid_haiku 2>/dev/null || true); \
+		echo "Attached Haiku icon and resources to rustid_haiku"; \
+	fi
 
 # Build for linux arm64
 build-arm64: _cargo_cross

@@ -55,6 +55,7 @@ $env:PATH = "$mingwBin;$($env:PATH)"
 $env:CARGO_TARGET_I586_PC_WINDOWS_GNU_LINKER = "i686-w64-mingw32-gcc"
 $env:CC_i586_pc_windows_gnu  = "i686-w64-mingw32-gcc"
 $env:AR_i586_pc_windows_gnu  = "i686-w64-mingw32-ar"
+$env:WINDRES                 = "i686-w64-mingw32-windres"
 $env:RUSTFLAGS = "-L $mingwLib -L $gccLib"
 
 cargo +nightly build `
