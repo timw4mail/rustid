@@ -1,14 +1,9 @@
 #![cfg_attr(windows_os, windows_subsystem = "windows")]
 
-#[cfg(not(any(windows_os, macos_os, target_os = "haiku")))]
-fn main() {
-    eprintln!("rustid-gui is currently supported on Windows, MacOS and Haiku targets.");
-}
-
-#[cfg(windows_os)]
+#[cfg(target_os = "windows")]
 use rustid::gui::windows as gui;
 
-#[cfg(macos_os)]
+#[cfg(target_os = "macos")]
 use rustid::gui::macos as gui;
 
 #[cfg(target_os = "haiku")]

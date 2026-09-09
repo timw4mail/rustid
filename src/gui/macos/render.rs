@@ -1,8 +1,8 @@
-//! macOS report generation and syntax-colored attributed string rendering.
+//! macOS syntax-colored attributed string rendering.
 //!
-//! Mirrors the Windows `gui/rtf.rs` behaviour: the same plain-text reports are
-//! produced by the shared `rustid` crate, then rendered with the same
-//! line-labeling heuristics as the RTF generator, but as an `NSMutableAttributedString`.
+//! Mirrors the Windows `gui/rtf.rs` behaviour: plain-text reports are
+//! rendered with the same line-labeling heuristics as the RTF generator,
+//! but as an `NSMutableAttributedString`.
 
 use objc2::AnyThread;
 use objc2::rc::Retained;
@@ -11,63 +11,6 @@ use objc2_app_kit::{NSColor, NSFont, NSFontAttributeName, NSForegroundColorAttri
 use objc2_foundation::{
     NSAttributedString, NSMutableAttributedString, NSMutableDictionary, NSString,
 };
-
-use crate::Cpu;
-#[allow(unused_imports)]
-use crate::common::{CliFlags, CpuDisplay, TCpuDisplay, TDetect};
-
-/// Mirror of the Windows `ViewMode` enum.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-pub enum ViewMode {
-    #[default]
-    Standard,
-    Debug,
-    Everything,
-    #[cfg(x86_cpu)]
-    Dump,
-}
-
-fn norm_newlines(s: &str) -> String {
-    s.replace("\r\n", "\n").replace('\n', "\r\n")
-}
-
-pub fn generate_report_plain(
-    cpu: &Cpu,
-    verbose: bool,
-    compact: bool,
-    is_from_dump: bool,
-) -> String {
-    let version_header = if is_from_dump {
-        crate::format_file_version()
-    } else {
-        crate::format_version()
-    };
-    let flags = CliFlags {
-        color: false,
-        compact,
-        verbose,
-    };
-    let sep = if compact { "\r\n" } else { "\r\n\r\n" };
-    let table = cpu.render_table(flags);
-    let crlf_table = norm_newlines(&table);
-    format!("{}{}{}", version_header, sep, crlf_table)
-}
-
-pub fn generate_debug_info_plain(cpu: &Cpu) -> String {
-    norm_newlines(&cpu.render_debug())
-}
-
-#[cfg(x86_cpu)]
-pub fn generate_dump_info_plain() -> String {
-    use crate::x86::{dump::dump_cpu, topology::Topology};
-    let mut output = String::new();
-    let topo = Topology::detect();
-    let logical_cores = topo.threads.count as usize;
-    for i in 0..logical_cores {
-        dump_cpu(&mut output, i);
-    }
-    norm_newlines(&output)
-}
 
 #[derive(Copy, Clone)]
 enum LineStyle {

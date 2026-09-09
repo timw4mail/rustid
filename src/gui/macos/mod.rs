@@ -21,11 +21,11 @@ use objc2_foundation::{
 };
 
 use crate::Cpu;
-#[allow(unused_imports)]
-use crate::common::CpuDisplay;
-#[allow(unused_imports)]
-use crate::common::TDetect;
-use render::{ViewMode, generate_debug_info_plain, generate_report_plain, render_report};
+use crate::common::CliFlags;
+use crate::common::TCpuDisplay;
+use crate::common::cpu::TDetect;
+use crate::gui::common::{self, ReportSource, ViewMode};
+use render::render_report;
 
 const WINDOW_W: f64 = 860.0;
 const WINDOW_H: f64 = 620.0;
@@ -186,7 +186,7 @@ define_class!(
         fn refresh_hardware(&self, _sender: Option<&AnyObject>) {
             #[cfg(x86_cpu)]
             {
-                crate::x86::provider::reset_cpuid_provider();
+                common::configure_dump_provider_from_contents(None);
                 self.ivars().loaded_file.borrow_mut().take();
             }
             self.refresh();
@@ -219,7 +219,7 @@ define_class!(
             let mtm = self.mtm();
             let cpu = Cpu::detect();
             let model = cpu.display_model_string().replace([' ', '/', '\\'], "_");
-            let dump = render::generate_dump_info_plain();
+            let dump = common::generate_dump_info_plain();
             let nsstr = NSString::from_str(&dump);
 
             let panel = NSSavePanel::savePanel(mtm);
@@ -293,35 +293,24 @@ impl Delegate {
 
     fn current_text(&self) -> String {
         #[cfg(x86_cpu)]
-        if let Some(path) = self.ivars().loaded_file.borrow().clone() {
-            if let Ok(contents) = std::fs::read_to_string(&path) {
-                let dump = crate::x86::provider::CpuDump::parse_str(&contents);
-                crate::x86::provider::set_cpuid_provider(dump);
-            } else {
-                crate::x86::provider::reset_cpuid_provider();
-            }
+        {
+            let contents = self
+                .ivars()
+                .loaded_file
+                .borrow()
+                .as_deref()
+                .and_then(|p| std::fs::read_to_string(p).ok());
+            common::configure_dump_provider_from_contents(contents.as_deref());
         }
 
         let cpu = Cpu::detect();
-        let verbose = self.ivars().verbose.get();
-        let compact = self.ivars().compact.get();
-        #[cfg(x86_cpu)]
-        let is_from_dump = self.ivars().loaded_file.borrow().is_some();
-        #[cfg(not(x86_cpu))]
-        let is_from_dump = false;
-
-        let mode = self.ivars().mode.get();
-        match mode {
-            ViewMode::Standard => generate_report_plain(&cpu, verbose, compact, is_from_dump),
-            ViewMode::Debug => generate_debug_info_plain(&cpu),
-            ViewMode::Everything => {
-                let report = generate_report_plain(&cpu, verbose, compact, is_from_dump);
-                let debug = generate_debug_info_plain(&cpu);
-                format!("{report}\r\n--------------------\r\n\r\n{debug}")
-            }
-            #[cfg(x86_cpu)]
-            ViewMode::Dump => render::generate_dump_info_plain(),
-        }
+        let flags = CliFlags {
+            color: false,
+            compact: self.ivars().compact.get(),
+            verbose: self.ivars().verbose.get(),
+        };
+        let source = ReportSource::from(self.ivars().loaded_file.borrow().is_some());
+        common::build_view_text(&cpu, self.ivars().mode.get(), flags, source)
     }
 
     fn refresh(&self) {

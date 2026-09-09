@@ -132,9 +132,9 @@ pub fn build_view_text(cpu: &Cpu, mode: ViewMode, flags: CliFlags, source: Repor
 }
 
 /// Sets up or resets the CPUID dump provider depending on whether file content is provided.
-pub fn configure_dump_provider_from_contents(contents: Option<&str>) {
+pub fn configure_dump_provider_from_contents(_contents: Option<&str>) {
     #[cfg(x86_cpu)]
-    if let Some(c) = contents {
+    if let Some(c) = _contents {
         let dump = crate::x86::provider::CpuDump::parse_str(c);
         crate::x86::provider::set_cpuid_provider(dump);
     } else {
