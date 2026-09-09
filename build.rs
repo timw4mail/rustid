@@ -272,13 +272,24 @@ fn main() {
 
     if target_os == "windows" && has_gui {
         if let Ok(out_dir) = std::env::var("OUT_DIR") {
-            let rc_file = "build-config/rustid.rc";
-            let out_res = format!("{}/rustid_res.o", out_dir);
             let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
+            let ico_rel_path = match arch.as_str() {
+                "x86" => "assets/windows/rustid_x86.ico",
+                "x86_64" => "assets/windows/rustid_x64.ico",
+                "aarch64" => "assets/windows/rustid_arm64.ico",
+                _ => "assets/rustid.ico",
+            };
+            let ico_full_path = format!("{}/{}", manifest_dir, ico_rel_path);
+
+            let rc_file = format!("{}/rustid.rc", out_dir);
+            let rc_content = format!("1 ICON \"{}\"\n", ico_full_path.replace('\\', "/"));
+            let _ = std::fs::write(&rc_file, rc_content);
+
+            let out_res = format!("{}/rustid_res.o", out_dir);
             let target = std::env::var("TARGET").unwrap_or_default();
             let target_windres = format!("{}-windres", target);
-            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
             let mut windres_candidates = Vec::new();
             if let Ok(env_windres) = std::env::var("WINDRES") {
@@ -313,7 +324,7 @@ fn main() {
                     continue;
                 }
                 let mut cmd = std::process::Command::new(candidate);
-                cmd.args(["-I", &manifest_dir, "-i", rc_file, "-o", &out_res, "-O", "coff"]);
+                cmd.args(["-I", &manifest_dir, "-i", &rc_file, "-o", &out_res, "-O", "coff"]);
                 if arch == "x86" {
                     cmd.args(["-F", "pe-i386"]);
                 } else if arch == "x86_64" {
@@ -338,5 +349,8 @@ fn main() {
         println!("cargo:rerun-if-env-changed=WINDRES");
         println!("cargo:rerun-if-changed=build-config/rustid.rc");
         println!("cargo:rerun-if-changed=assets/rustid.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_x86.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_x64.ico");
+        println!("cargo:rerun-if-changed=assets/windows/rustid_arm64.ico");
     }
 }
