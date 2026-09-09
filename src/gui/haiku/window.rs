@@ -4,6 +4,9 @@ use std::ffi::{CStr, CString, c_char};
 use std::sync::Mutex;
 
 use crate::Cpu;
+use crate::common::cpu::TDetect;
+use crate::gui::ReportSource;
+use crate::gui::common;
 
 use super::dialogs::*;
 use super::ffi;
