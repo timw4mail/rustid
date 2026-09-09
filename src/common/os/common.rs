@@ -461,6 +461,7 @@ mod tests {
         assert_eq!(parse_cpu_list_count("0-7"), 8);
         assert_eq!(parse_cpu_list_count("0-3,4-7"), 8);
         assert_eq!(parse_cpu_list_count("0"), 1);
+        assert_eq!(parse_cpu_list_count(" 0-3, 8-11 "), 8);
         assert_eq!(parse_cpu_list_count(""), 0);
     }
 
@@ -468,6 +469,12 @@ mod tests {
     fn test_expand_cpu_list() {
         assert_eq!(expand_cpu_list("0-3"), alloc::vec![0, 1, 2, 3]);
         assert_eq!(expand_cpu_list("0,4,7"), alloc::vec![0, 4, 7]);
+        assert_eq!(
+            expand_cpu_list("0-3,8-11"),
+            alloc::vec![0, 1, 2, 3, 8, 9, 10, 11]
+        );
+        let empty: alloc::vec::Vec<u32> = alloc::vec![];
+        assert_eq!(expand_cpu_list(""), empty);
     }
 
     #[test]

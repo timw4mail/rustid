@@ -77,16 +77,7 @@ pub fn format_uarch(raw: &str) -> String {
         "wch" => "WCH",
         "nuclei" => "Nuclei",
         "xiangshan" => "XiangShan",
-        other => {
-            let mut chars = other.chars();
-            match chars.next() {
-                None => return String::new(),
-                Some(first) => {
-                    let rest: String = chars.collect();
-                    return format!("{}{}", first.to_uppercase(), rest.to_lowercase());
-                }
-            }
-        }
+        other => return crate::common::util::ucfirst(other),
     };
     if parts.len() > 1 {
         format!("{} {}", vendor_str, parts[1].to_uppercase())

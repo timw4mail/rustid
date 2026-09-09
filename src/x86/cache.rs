@@ -191,43 +191,14 @@ impl Cache {
         for i in 0..iteration_count {
             let res = x86_cpuid_count(LEAF_2, i);
 
-            // EAX
-            if (res.eax & 0x8000_0000) == 0 {
-                let start_offset = if i == 0 { 8u32 } else { 0u32 };
-                for offset in (start_offset..32).step_by(8) {
-                    let desc = (res.eax >> offset) & 0xFF;
-                    if desc != 0 && desc != 0xFF {
-                        desc_list.push(desc);
-                    }
-                }
-            }
-
-            // EBX
-            if (res.ebx & 0x8000_0000) == 0 {
-                for offset in (0u32..32).step_by(8) {
-                    let desc = (res.ebx >> offset) & 0xFF;
-                    if desc != 0 && desc != 0xFF {
-                        desc_list.push(desc);
-                    }
-                }
-            }
-
-            // ECX
-            if (res.ecx & 0x8000_0000) == 0 {
-                for offset in (0u32..32).step_by(8) {
-                    let desc = (res.ecx >> offset) & 0xFF;
-                    if desc != 0 && desc != 0xFF {
-                        desc_list.push(desc);
-                    }
-                }
-            }
-
-            // EDX
-            if (res.edx & 0x8000_0000) == 0 {
-                for offset in (0u32..32).step_by(8) {
-                    let desc = (res.edx >> offset) & 0xFF;
-                    if desc != 0 && desc != 0xFF {
-                        desc_list.push(desc);
+            for (reg_idx, reg_val) in [res.eax, res.ebx, res.ecx, res.edx].into_iter().enumerate() {
+                if (reg_val & 0x8000_0000) == 0 {
+                    let start_offset = if i == 0 && reg_idx == 0 { 8u32 } else { 0u32 };
+                    for offset in (start_offset..32).step_by(8) {
+                        let desc = (reg_val >> offset) & 0xFF;
+                        if desc != 0 && desc != 0xFF {
+                            desc_list.push(desc);
+                        }
                     }
                 }
             }

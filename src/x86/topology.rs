@@ -429,54 +429,40 @@ impl Topology {
                 break;
             }
 
-            match leaf {
+            let kind = match leaf {
                 // Topology v1
-                LEAF_0B => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                LEAF_0B => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    _ => TopologyType::Invalid,
+                },
                 // Intel Topology V2
-                LEAF_1F => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            3 => TopologyType::Module,
-                            4 => TopologyType::Tile,
-                            5 => TopologyType::Die,
-                            6 => TopologyType::Socket,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                LEAF_1F => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    3 => TopologyType::Module,
+                    4 => TopologyType::Tile,
+                    5 => TopologyType::Die,
+                    6 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
                 // AMD Topology V2
-                EXT_LEAF_26 => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            3 => TopologyType::Die,
-                            4 => TopologyType::Socket,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                EXT_LEAF_26 => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    3 => TopologyType::Die,
+                    4 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
                 _ => return d,
-            }
+            };
+
+            d.push(TopologyDomain {
+                level,
+                kind,
+                count: domain_lcpus,
+                shift,
+            });
         }
 
         d
