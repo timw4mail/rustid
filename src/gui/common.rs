@@ -96,7 +96,11 @@ pub fn generate_report_plain(cpu: &Cpu, flags: CliFlags, source: ReportSource) -
             "\n\n"
         }
     };
-    let table = normalize_newlines(cpu.render_table(flags));
+    let plain_flags = CliFlags {
+        color: false,
+        ..flags
+    };
+    let table = normalize_newlines(cpu.render_table(plain_flags));
     format!("{}{}{}", version_header, sep, table)
 }
 
@@ -185,4 +189,51 @@ pub fn format_status_parts(
     );
 
     (part1, part2, part3)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::cpu::TDetect;
+
+    #[test]
+    fn test_generate_report_plain_no_ansi() {
+        let cpu = Cpu::detect();
+        let flags = CliFlags {
+            color: true,
+            compact: false,
+            verbose: true,
+        };
+        let report = generate_report_plain(&cpu, flags, ReportSource::LiveHardware);
+        assert!(
+            !report.contains("\x1b["),
+            "GUI plain report must not contain ANSI escape sequences"
+        );
+    }
+
+    #[test]
+    fn test_build_view_text_no_ansi() {
+        let cpu = Cpu::detect();
+        let flags = CliFlags {
+            color: true,
+            compact: false,
+            verbose: true,
+        };
+        let text = build_view_text(&cpu, ViewMode::Standard, flags, ReportSource::LiveHardware);
+        assert!(
+            !text.contains("\x1b["),
+            "build_view_text standard mode must not contain ANSI escape sequences"
+        );
+
+        let everything_text = build_view_text(
+            &cpu,
+            ViewMode::Everything,
+            flags,
+            ReportSource::LiveHardware,
+        );
+        assert!(
+            !everything_text.contains("\x1b["),
+            "build_view_text everything mode must not contain ANSI escape sequences"
+        );
+    }
 }
