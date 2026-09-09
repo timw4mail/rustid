@@ -1,3 +1,6 @@
+pub mod common;
+pub use common::*;
+
 #[cfg(target_os = "windows")]
 pub mod windows;
 

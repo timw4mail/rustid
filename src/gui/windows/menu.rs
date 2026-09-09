@@ -314,7 +314,7 @@ pub fn update_menu_checks(state: &AppState) {
             let _ = CheckMenuItem(
                 hmenu_mode,
                 IDM_OPT_COLOR,
-                if state.color {
+                if state.flags.color {
                     MF_CHECKED.0
                 } else {
                     MF_UNCHECKED.0
@@ -328,7 +328,7 @@ pub fn update_menu_checks(state: &AppState) {
         let _ = CheckMenuItem(
             hmenu_mode,
             IDM_OPT_DARK_THEME,
-            if state.dark_theme {
+            if state.theme.is_dark() {
                 MF_CHECKED.0
             } else {
                 MF_UNCHECKED.0
@@ -338,7 +338,7 @@ pub fn update_menu_checks(state: &AppState) {
         let _ = CheckMenuItem(
             hmenu_mode,
             IDM_OPT_VERBOSE,
-            if state.verbose {
+            if state.flags.verbose {
                 MF_CHECKED.0
             } else {
                 MF_UNCHECKED.0
@@ -348,7 +348,7 @@ pub fn update_menu_checks(state: &AppState) {
         let _ = CheckMenuItem(
             hmenu_mode,
             IDM_OPT_COMPACT,
-            if state.compact {
+            if state.flags.compact {
                 MF_CHECKED.0
             } else {
                 MF_UNCHECKED.0

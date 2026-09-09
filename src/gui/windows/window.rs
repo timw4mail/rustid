@@ -145,41 +145,12 @@ fn set_richedit_content(hwnd_edit: HWND, doc: &str, plain: &str) {
 }
 
 fn update_status_bar(state: &AppState, cpu: &Cpu) {
-    #[cfg(x86_cpu)]
-    let model = cpu.display_model_string();
-    #[cfg(not(x86_cpu))]
-    let model = if !cpu.model.is_empty() {
-        &cpu.model
-    } else {
-        "CPU"
-    };
-    let arch = std::env::consts::ARCH;
-    let os = std::env::consts::OS;
-
-    let part1 = format!("{} ({}-{})", model, arch, os);
-    let part2 = if let Some(path) = &state.loaded_file {
-        let filename = std::path::Path::new(path)
-            .file_name()
-            .and_then(|f| f.to_str())
-            .unwrap_or(path);
-        format!("Dump File: {}", filename)
-    } else {
-        "Live Hardware".to_string()
-    };
-
-    let mode_str = match state.mode {
-        ViewMode::Standard => "Standard",
-        ViewMode::Debug => "Debug (-d)",
-        ViewMode::Everything => "Everything (-e)",
-        #[cfg(x86_cpu)]
-        ViewMode::Dump => "CPUID Dump (-r)",
-    };
-
-    let part3 = format!(
-        "{} | Colors: {} | Theme: {}",
-        mode_str,
-        if state.color { "On" } else { "Off" },
-        if state.dark_theme { "Dark" } else { "Light" }
+    let (part1, part2, part3) = crate::gui::common::format_status_parts(
+        cpu,
+        state.loaded_file.as_deref(),
+        state.mode,
+        state.flags,
+        state.theme,
     );
 
     let p1_u16 = to_pcwstr(&part1);
@@ -207,39 +178,20 @@ fn update_status_bar(state: &AppState, cpu: &Cpu) {
 
 fn render_current_text(state: &mut AppState) {
     #[cfg(x86_cpu)]
-    if let Some(path) = &state.loaded_file {
-        if let Some(contents) = read_file_to_string(path) {
-            let dump = crate::x86::provider::CpuDump::parse_str(&contents);
-            crate::x86::provider::set_cpuid_provider(dump);
-        } else {
-            crate::x86::provider::reset_cpuid_provider();
-        }
-    } else {
-        crate::x86::provider::reset_cpuid_provider();
+    {
+        let contents = state.loaded_file.as_deref().and_then(read_file_to_string);
+        crate::gui::common::configure_dump_provider_from_contents(contents.as_deref());
     }
 
     let cpu = Cpu::detect();
+    let source = ReportSource::from(state.loaded_file.is_some());
 
-    let is_from_dump = state.loaded_file.is_some();
-    let plain_text = match state.mode {
-        ViewMode::Standard => {
-            generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump)
-        }
-        ViewMode::Debug => generate_debug_info_plain(&cpu),
-        ViewMode::Everything => {
-            let report = generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump);
-            let debug = generate_debug_info_plain(&cpu);
-            format!("{}\r\n--------------------\r\n\r\n{}", report, debug)
-        }
-        #[cfg(x86_cpu)]
-        ViewMode::Dump => generate_dump_info_plain(),
-    };
-
-    state.current_plain_text = plain_text;
+    state.current_plain_text =
+        crate::gui::common::build_view_text(&cpu, state.mode, state.flags, source);
 
     // Set background color for RichEdit (not supported on plain EDIT or ANSI path)
     if IS_RICHEDIT.load(Ordering::Relaxed) {
-        let bg_color = if state.dark_theme {
+        let bg_color = if state.theme.is_dark() {
             COLORREF(0x00261B1A) // dark background #1a1b26 (BGR: 0x261B1A)
         } else {
             COLORREF(0x00FFFFFF) // white
@@ -248,7 +200,7 @@ fn render_current_text(state: &mut AppState) {
     }
 
     // Format document and stream into RichEdit (or plain text for ANSI/EDIT fallback)
-    let doc = to_rtf(&state.current_plain_text, state.dark_theme, state.color);
+    let doc = to_rtf(&state.current_plain_text, state.theme, state.flags.color);
     set_richedit_content(state.hwnd_edit, &doc, &state.current_plain_text);
 
     unsafe {
@@ -259,7 +211,7 @@ fn render_current_text(state: &mut AppState) {
     update_status_bar(state, &cpu);
 
     if !state.hwnd_main.is_invalid() {
-        set_window_dark_titlebar(state.hwnd_main, state.dark_theme);
+        set_window_dark_titlebar(state.hwnd_main, state.theme.is_dark());
     }
 }
 
@@ -373,7 +325,7 @@ unsafe extern "system" fn main_wnd_proc(
                                 cpu.display_model_string().replace([' ', '/', '\\'], "_")
                             );
                             if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
-                                let dump_content = generate_dump_info_plain();
+                                let dump_content = crate::gui::common::generate_dump_info_plain();
                                 if write_string_to_file(&save_path, &dump_content) {
                                     let msg_text =
                                         format!("CPUID dump successfully saved to:\n{}", save_path);
@@ -434,20 +386,20 @@ unsafe extern "system" fn main_wnd_proc(
                             render_current_text(state);
                         }
                         IDM_OPT_COLOR => {
-                            state.color = !state.color;
+                            state.flags.color = !state.flags.color;
                             render_current_text(state);
                         }
                         IDM_OPT_DARK_THEME => {
-                            state.dark_theme = !state.dark_theme;
+                            state.theme.toggle();
                             state.custom_theme_set = true;
                             render_current_text(state);
                         }
                         IDM_OPT_VERBOSE => {
-                            state.verbose = !state.verbose;
+                            state.flags.verbose = !state.flags.verbose;
                             render_current_text(state);
                         }
                         IDM_OPT_COMPACT => {
-                            state.compact = !state.compact;
+                            state.flags.compact = !state.flags.compact;
                             render_current_text(state);
                         }
                         IDM_HELP_ABOUT => {
@@ -516,7 +468,8 @@ unsafe extern "system" fn main_wnd_proc(
                                     cpu.display_model_string().replace(' ', "_")
                                 );
                                 if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
-                                    let dump_content = generate_dump_info_plain();
+                                    let dump_content =
+                                        crate::gui::common::generate_dump_info_plain();
                                     let _ = write_string_to_file(&save_path, &dump_content);
                                 }
                                 return LRESULT(0);
@@ -617,7 +570,7 @@ unsafe extern "system" fn main_wnd_proc(
                 if !state_ptr.is_null() {
                     let state = &*state_ptr;
                     let hdc = HDC(wparam.0 as *mut c_void);
-                    if state.dark_theme {
+                    if state.theme.is_dark() {
                         let _ = SetTextColor(hdc, COLORREF(0x00D4D4D4));
                         let _ = SetBkColor(hdc, COLORREF(0x00261B1A));
                         return LRESULT(get_dark_brush().0 as isize);
@@ -634,8 +587,8 @@ unsafe extern "system" fn main_wnd_proc(
                     let state = &mut *state_ptr;
                     if !state.custom_theme_set {
                         let sys_dark = is_system_dark_theme();
-                        if state.dark_theme != sys_dark {
-                            state.dark_theme = sys_dark;
+                        if state.theme.is_dark() != sys_dark {
+                            state.theme = GuiTheme::from(sys_dark);
                             render_current_text(state);
                         }
                     }
@@ -686,7 +639,11 @@ pub fn run() {
         let class_name_w = w!("RustidModernMainWindowClass");
         let class_name_a = b"RustidModernMainWindowClass\0";
 
-        let h_icon = LoadIconW(Some(HINSTANCE(hinstance.0)), PCWSTR(1 as usize as *const u16)).unwrap_or_default();
+        let h_icon = LoadIconW(
+            Some(HINSTANCE(hinstance.0)),
+            PCWSTR(1 as usize as *const u16),
+        )
+        .unwrap_or_default();
         let mut h_icon_a = std::ptr::null_mut();
 
         let wc_w = WNDCLASSEXW {
@@ -755,11 +712,13 @@ pub fn run() {
             hmenu: hmenu_bar,
             dpi,
             mode: ViewMode::Standard,
-            color: true,
-            dark_theme: is_dark,
+            flags: crate::common::CliFlags {
+                compact: false,
+                color: true,
+                verbose: false,
+            },
+            theme: GuiTheme::from(is_dark),
             custom_theme_set: false,
-            verbose: false,
-            compact: false,
             loaded_file: None,
             current_plain_text: String::new(),
         });
@@ -834,15 +793,36 @@ pub fn run() {
 
         if IS_UNICODE.load(Ordering::Relaxed) {
             if !h_icon.is_invalid() {
-                SendMessageW(hwnd_main, WM_SETICON, Some(WPARAM(ICON_BIG as usize)), Some(LPARAM(h_icon.0 as isize)));
-                SendMessageW(hwnd_main, WM_SETICON, Some(WPARAM(ICON_SMALL as usize)), Some(LPARAM(h_icon.0 as isize)));
+                SendMessageW(
+                    hwnd_main,
+                    WM_SETICON,
+                    Some(WPARAM(ICON_BIG as usize)),
+                    Some(LPARAM(h_icon.0 as isize)),
+                );
+                SendMessageW(
+                    hwnd_main,
+                    WM_SETICON,
+                    Some(WPARAM(ICON_SMALL as usize)),
+                    Some(LPARAM(h_icon.0 as isize)),
+                );
             }
         } else if !h_icon_a.is_null() {
             unsafe extern "system" {
-                fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize) -> isize;
+                fn SendMessageA(hWnd: *mut c_void, Msg: u32, wParam: usize, lParam: isize)
+                -> isize;
             }
-            SendMessageA(hwnd_main.0, WM_SETICON, ICON_BIG as usize, h_icon_a as isize);
-            SendMessageA(hwnd_main.0, WM_SETICON, ICON_SMALL as usize, h_icon_a as isize);
+            SendMessageA(
+                hwnd_main.0,
+                WM_SETICON,
+                ICON_BIG as usize,
+                h_icon_a as isize,
+            );
+            SendMessageA(
+                hwnd_main.0,
+                WM_SETICON,
+                ICON_SMALL as usize,
+                h_icon_a as isize,
+            );
         }
 
         // Load RichEdit DLL so RichEdit20A/RichEdit20W classes are registered.
