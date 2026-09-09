@@ -64,9 +64,13 @@ file "$OUT"
 BUNDLE="$BUILD_DIR/Rustid.app"
 mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources"
 cp "$OUT" "$BUNDLE/Contents/MacOS/rustid-gui"
+cp "$REPO_ROOT/assets/rustid.icns" "$BUNDLE/Contents/Resources/rustid.icns"
+
+VERSION=$(grep -m1 '^version = ' "$REPO_ROOT/Cargo.toml" | cut -d '"' -f2)
+VERSION="${VERSION:-2.2.0}"
 
 # Minimal Info.plist (CFBundleExecutable must match the binary name).
-cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
+cat > "$BUNDLE/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -76,9 +80,10 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDisplayName</key><string>Rustid</string>
     <key>CFBundleIdentifier</key><string>net.timshomepage.rustid.gui</string>
     <key>CFBundleExecutable</key><string>rustid-gui</string>
+    <key>CFBundleIconFile</key><string>rustid</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>2.1.1</string>
-    <key>CFBundleVersion</key><string>2.1.1</string>
+    <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+    <key>CFBundleVersion</key><string>${VERSION}</string>
     <key>LSMinimumSystemVersion</key><string>11.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>

@@ -145,7 +145,7 @@ Rustid.app/
     MacOS/
       rustid-gui        # the universal "fat" binary
     Resources/
-      AppIcon.icns      # optional app icon
+      rustid.icns       # application icon
 ```
 
 The `build-mac-gui` recipe (see `justfile`) assembles this layout and zips it
