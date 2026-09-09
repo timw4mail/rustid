@@ -16,12 +16,15 @@ pub fn get_platform_socket_count() -> TopologyTier {
     );
 
     #[cfg(uefi)]
-    let mut sockets_detected = {
+    let sockets_detected = {
         let threads_per_pkg = cpuid_threads_per_package().max(1);
         let cores_per_pkg = cpuid_cores_per_package().max(1);
+        let smbios = crate::x86::efi::smbios::detect_smbios();
+        let is_laptop = smbios.as_ref().map(|s| s.is_laptop()).unwrap_or(false);
 
-        // 1. Check MP Services (Authoritative for active CPU hardware packages)
-        if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
+        if is_laptop {
+            TopologyTier::new(1, DataSource::Calculated("SMBIOS"))
+        } else if let Some(mp) = crate::x86::efi::mp::EfiMpServices::detect() {
             let total_threads = mp.processor_count() as u32;
             let mp_sockets = mp.socket_count() as u32;
             if total_threads > 0 && threads_per_pkg > 0 {
@@ -33,53 +36,49 @@ pub fn get_platform_socket_count() -> TopologyTier {
             } else {
                 TopologyTier::new(mp_sockets.max(1), DataSource::Calculated("EFI MP Services"))
             }
-        } else if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
-            if smbios.is_laptop() {
-                TopologyTier::new(1, DataSource::Calculated("SMBIOS"))
+        } else if let Some(smbios) = smbios {
+            let populated = smbios
+                .processors
+                .iter()
+                .filter(|p| p.is_populated && p.is_enabled)
+                .collect::<alloc::vec::Vec<_>>();
+
+            let has_multi_core_field = populated.iter().any(|p| p.core_count > 1);
+
+            if has_multi_core_field {
+                TopologyTier::new(
+                    populated.len().max(1) as u32,
+                    DataSource::Calculated("SMBIOS"),
+                )
             } else {
-                let populated = smbios
-                    .processors
-                    .iter()
-                    .filter(|p| p.is_populated && p.is_enabled)
-                    .collect::<alloc::vec::Vec<_>>();
+                let mut unique_sockets = alloc::vec::Vec::new();
+                for p in &populated {
+                    if let Some(desig) = &p.socket_designation {
+                        let trimmed = desig.trim();
+                        if !trimmed.is_empty() && !unique_sockets.contains(&trimmed) {
+                            unique_sockets.push(trimmed);
+                        }
+                    }
+                }
 
-                let has_multi_core_field = populated.iter().any(|p| p.core_count > 1);
-
-                if has_multi_core_field {
+                if unique_sockets.len() > 1 && unique_sockets.len() < populated.len() {
+                    TopologyTier::new(
+                        unique_sockets.len() as u32,
+                        DataSource::Calculated("SMBIOS"),
+                    )
+                } else if populated.len() > 1
+                    && cores_per_pkg > 1
+                    && populated.len() as u32 >= cores_per_pkg
+                {
+                    TopologyTier::new(
+                        (populated.len() as u32 / cores_per_pkg).max(1),
+                        DataSource::Calculated("SMBIOS"),
+                    )
+                } else {
                     TopologyTier::new(
                         populated.len().max(1) as u32,
                         DataSource::Calculated("SMBIOS"),
                     )
-                } else {
-                    let mut unique_sockets = alloc::vec::Vec::new();
-                    for p in &populated {
-                        if let Some(desig) = &p.socket_designation {
-                            let trimmed = desig.trim();
-                            if !trimmed.is_empty() && !unique_sockets.contains(&trimmed) {
-                                unique_sockets.push(trimmed);
-                            }
-                        }
-                    }
-
-                    if unique_sockets.len() > 1 && unique_sockets.len() < populated.len() {
-                        TopologyTier::new(
-                            unique_sockets.len() as u32,
-                            DataSource::Calculated("SMBIOS"),
-                        )
-                    } else if populated.len() > 1
-                        && cores_per_pkg > 1
-                        && populated.len() as u32 >= cores_per_pkg
-                    {
-                        TopologyTier::new(
-                            (populated.len() as u32 / cores_per_pkg).max(1),
-                            DataSource::Calculated("SMBIOS"),
-                        )
-                    } else {
-                        TopologyTier::new(
-                            populated.len().max(1) as u32,
-                            DataSource::Calculated("SMBIOS"),
-                        )
-                    }
                 }
             }
         } else {
@@ -93,15 +92,6 @@ pub fn get_platform_socket_count() -> TopologyTier {
     } else {
         TopologyTier::new(1, cpuid_data_source())
     };
-
-    #[cfg(uefi)]
-    {
-        if let Some(smbios) = crate::x86::efi::smbios::detect_smbios() {
-            if smbios.is_laptop() {
-                sockets_detected.count = 1;
-            }
-        }
-    }
 
     sockets_detected
 }

@@ -1,8 +1,6 @@
 //! Plain report formatting and styled text run generation for Haiku's BTextView.
 
-use crate::Cpu;
-#[allow(unused_imports)]
-use crate::common::{CliFlags, CpuDisplay, Level1Cache, TCpuDisplay, TDetect, UNK};
+pub use crate::gui::common::GuiTheme;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -54,45 +52,8 @@ pub const PALETTE_DARK: Palette = Palette {
     divider: RgbColor::new(86, 95, 137),
 };
 
-pub fn generate_report_plain(
-    cpu: &Cpu,
-    verbose: bool,
-    compact: bool,
-    is_from_dump: bool,
-) -> String {
-    let version_header = if is_from_dump {
-        crate::format_file_version()
-    } else {
-        crate::format_version()
-    };
-    let flags = CliFlags {
-        color: false,
-        compact,
-        verbose,
-    };
-    let sep = if compact { "\n" } else { "\n\n" };
-    let table = cpu.render_table(flags);
-    format!("{}{}{}", version_header, sep, table)
-}
-
-pub fn generate_debug_info_plain(cpu: &Cpu) -> String {
-    cpu.render_debug()
-}
-
-#[cfg(x86_cpu)]
-pub fn generate_dump_info_plain() -> String {
-    use crate::x86::{dump::dump_cpu, topology::Topology};
-    let mut output = String::new();
-    let topo = Topology::detect();
-    let logical_cores = topo.threads.count as usize;
-    for i in 0..logical_cores {
-        dump_cpu(&mut output, i);
-    }
-    output
-}
-
-pub fn parse_text_runs(text: &str, dark_theme: bool, color: bool) -> (RgbColor, Vec<TextRun>) {
-    let palette = if dark_theme {
+pub fn parse_text_runs(text: &str, theme: GuiTheme, color: bool) -> (RgbColor, Vec<TextRun>) {
+    let palette = if theme.is_dark() {
         &PALETTE_DARK
     } else {
         &PALETTE_LIGHT
@@ -275,7 +236,7 @@ mod tests {
     #[test]
     fn test_parse_text_runs_plain() {
         let sample = "--------------- Rustid 2.1.1 ---------------\n        Vendor: AuthenticAMD\n";
-        let (bg, runs) = parse_text_runs(sample, false, false);
+        let (bg, runs) = parse_text_runs(sample, GuiTheme::Light, false);
         assert_eq!(bg, PALETTE_LIGHT.background);
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].offset, 0);
@@ -286,11 +247,11 @@ mod tests {
     #[test]
     fn test_parse_text_runs_colored_light_and_dark() {
         let sample = "--------------- Rustid 2.1.1 ---------------\n        Vendor: AuthenticAMD\n";
-        let (bg_light, runs_light) = parse_text_runs(sample, false, true);
+        let (bg_light, runs_light) = parse_text_runs(sample, GuiTheme::Light, true);
         assert_eq!(bg_light, PALETTE_LIGHT.background);
         assert!(runs_light.len() >= 2);
 
-        let (bg_dark, runs_dark) = parse_text_runs(sample, true, true);
+        let (bg_dark, runs_dark) = parse_text_runs(sample, GuiTheme::Dark, true);
         assert_eq!(bg_dark, PALETTE_DARK.background);
         assert_eq!(runs_dark.len(), runs_light.len());
         assert_eq!(runs_dark[0].color, PALETTE_DARK.sublabel);
@@ -299,7 +260,7 @@ mod tests {
     #[test]
     fn test_parse_text_runs_sublabel_and_signature() {
         let sample = "     Signature: Family 1Ah, Model 44h\n                (11, 15, 4, 4, 0)\n";
-        let (_bg, runs) = parse_text_runs(sample, false, true);
+        let (_bg, runs) = parse_text_runs(sample, GuiTheme::Light, true);
         assert!(runs.len() >= 3);
         // Signature tuple should be highlighted
         let has_highlight = runs.iter().any(|r| r.color == PALETTE_LIGHT.highlight);

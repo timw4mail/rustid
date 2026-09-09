@@ -41,7 +41,7 @@ check-efi: check-efi-64 check-efi-32
 
 # Compile check for DOS (real-mode EXE)
 check-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x -C panic=immediate-abort -Z unstable-options" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc --target build-config/i486-dos.json --release --features dos-build --bin dos
 
 # Compile check for DOS/32A (protected-mode LE)
 check-dos32a: _build-dos32a-tools
@@ -144,7 +144,7 @@ _build-dos-tools:
 
 # Build for DOS (EXE format)
 build-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x -C panic=immediate-abort -Z unstable-options" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc --target build-config/i486-dos.json --release --features dos-build --bin dos
 	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos rust86.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 

@@ -4,8 +4,9 @@ use std::ffi::{CStr, CString, c_char};
 use std::sync::Mutex;
 
 use crate::Cpu;
-#[allow(unused_imports)]
-use crate::common::{CpuDisplay, TDetect};
+use crate::common::cpu::TDetect;
+use crate::gui::ReportSource;
+use crate::gui::common;
 
 use super::dialogs::*;
 use super::ffi;
@@ -30,38 +31,18 @@ where
 
 pub fn render_current_text(state: &mut AppState) {
     #[cfg(x86_cpu)]
-    if let Some(path) = &state.loaded_file {
-        if let Some(contents) = read_file_to_string(path) {
-            let dump = crate::x86::provider::CpuDump::parse_str(&contents);
-            crate::x86::provider::set_cpuid_provider(dump);
-        } else {
-            crate::x86::provider::reset_cpuid_provider();
-        }
-    } else {
-        crate::x86::provider::reset_cpuid_provider();
+    {
+        let contents = state.loaded_file.as_deref().and_then(read_file_to_string);
+        common::configure_dump_provider_from_contents(contents.as_deref());
     }
 
     let cpu = Cpu::detect();
-    let is_from_dump = state.loaded_file.is_some();
+    let source = ReportSource::from(state.loaded_file.is_some());
 
-    let plain_text = match state.mode {
-        ViewMode::Standard => {
-            generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump)
-        }
-        ViewMode::Debug => generate_debug_info_plain(&cpu),
-        ViewMode::Everything => {
-            let report = generate_report_plain(&cpu, state.verbose, state.compact, is_from_dump);
-            let debug = generate_debug_info_plain(&cpu);
-            format!("{}\n--------------------\n\n{}", report, debug)
-        }
-        #[cfg(x86_cpu)]
-        ViewMode::Dump => generate_dump_info_plain(),
-    };
-
-    state.current_plain_text = plain_text;
+    state.current_plain_text = common::build_view_text(&cpu, state.mode, state.flags, source);
 
     let (bg_color, runs) =
-        parse_text_runs(&state.current_plain_text, state.dark_theme, state.color);
+        parse_text_runs(&state.current_plain_text, state.theme, state.flags.color);
 
     let c_text = CString::new(state.current_plain_text.clone()).unwrap_or_default();
     unsafe {
@@ -79,42 +60,12 @@ pub fn render_current_text(state: &mut AppState) {
 }
 
 fn update_status_bar(state: &AppState, cpu: &Cpu) {
-    #[cfg(x86_cpu)]
-    let model = cpu.display_model_string();
-    #[cfg(not(x86_cpu))]
-    let model = if !cpu.model.is_empty() {
-        &cpu.model
-    } else {
-        "CPU"
-    };
-
-    let arch = std::env::consts::ARCH;
-    let os = std::env::consts::OS;
-
-    let part1 = format!("{} ({}-{})", model, arch, os);
-    let part2 = if let Some(path) = &state.loaded_file {
-        let filename = std::path::Path::new(path)
-            .file_name()
-            .and_then(|f| f.to_str())
-            .unwrap_or(path);
-        format!("Dump File: {}", filename)
-    } else {
-        "Live Hardware".to_string()
-    };
-
-    let mode_str = match state.mode {
-        ViewMode::Standard => "Standard",
-        ViewMode::Debug => "Debug (-d)",
-        ViewMode::Everything => "Everything (-e)",
-        #[cfg(x86_cpu)]
-        ViewMode::Dump => "CPUID Dump (-r)",
-    };
-
-    let part3 = format!(
-        "{} | Colors: {} | Theme: {}",
-        mode_str,
-        if state.color { "On" } else { "Off" },
-        if state.dark_theme { "Dark" } else { "Light" }
+    let (part1, part2, part3) = common::format_status_parts(
+        cpu,
+        state.loaded_file.as_deref(),
+        state.mode,
+        state.flags,
+        state.theme,
     );
 
     let c_p1 = CString::new(part1).unwrap_or_default();
@@ -138,10 +89,10 @@ fn update_menu_checks(state: &AppState) {
     unsafe {
         ffi::haiku_gui_set_menu_checks(
             active_mode_id,
-            state.color,
-            state.dark_theme,
-            state.verbose,
-            state.compact,
+            state.flags.color,
+            state.theme.is_dark(),
+            state.flags.verbose,
+            state.flags.compact,
         );
     }
 }
@@ -186,19 +137,19 @@ unsafe extern "C" fn on_command_callback(cmd_id: u32) {
             render_current_text(state);
         }
         IDM_OPT_COLOR => {
-            state.color = !state.color;
+            state.flags.color = !state.flags.color;
             render_current_text(state);
         }
         IDM_OPT_DARK_THEME => {
-            state.dark_theme = !state.dark_theme;
+            state.theme.toggle();
             render_current_text(state);
         }
         IDM_OPT_VERBOSE => {
-            state.verbose = !state.verbose;
+            state.flags.verbose = !state.flags.verbose;
             render_current_text(state);
         }
         IDM_OPT_COMPACT => {
-            state.compact = !state.compact;
+            state.flags.compact = !state.flags.compact;
             render_current_text(state);
         }
         IDM_HELP_ABOUT => {
@@ -221,7 +172,7 @@ unsafe extern "C" fn on_file_callback(path_ptr: *const c_char, is_save: bool) {
     if is_save {
         #[cfg(x86_cpu)]
         {
-            let dump_content = generate_dump_info_plain();
+            let dump_content = crate::gui::common::generate_dump_info_plain();
             if write_string_to_file(&path, &dump_content) {
                 let msg = format!("CPUID dump successfully saved to:\n{}", path);
                 show_alert("Export Complete", &msg);

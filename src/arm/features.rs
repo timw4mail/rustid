@@ -215,57 +215,25 @@ pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'st
     let has_atomics =
         src.get("atomics").copied().unwrap_or(false) || src.get("lse").copied().unwrap_or(false);
 
-    d.insert("fp", src.get("fp").copied().unwrap_or(false));
-    d.insert("asimd", has_asimd);
-    d.insert("cpuid", src.get("cpuid").copied().unwrap_or(false));
-    d.insert("evtstrm", src.get("evtstrm").copied().unwrap_or(false));
-    d.insert("neon", has_asimd);
-    d.insert("asimdhp", src.get("asimdhp").copied().unwrap_or(false));
-    d.insert("asimdfhm", src.get("asimdfhm").copied().unwrap_or(false));
-    d.insert("asimddp", src.get("asimddp").copied().unwrap_or(false));
-    d.insert("asimdrdm", src.get("asimdrdm").copied().unwrap_or(false));
-    d.insert("aes", src.get("aes").copied().unwrap_or(false));
-    d.insert("pmull", src.get("pmull").copied().unwrap_or(false));
-    d.insert("sha1", src.get("sha1").copied().unwrap_or(false));
-    d.insert("sha2", src.get("sha2").copied().unwrap_or(false));
-    d.insert("sha3", src.get("sha3").copied().unwrap_or(false));
-    d.insert("sha512", src.get("sha512").copied().unwrap_or(false));
-    d.insert("sm3", src.get("sm3").copied().unwrap_or(false));
-    d.insert("sm4", src.get("sm4").copied().unwrap_or(false));
-    d.insert("atomics", has_atomics);
-    d.insert("lse", has_atomics);
-    d.insert("lse2", src.get("lse2").copied().unwrap_or(false));
-    d.insert("fphp", src.get("fphp").copied().unwrap_or(false));
-    d.insert("fp16", src.get("fp16").copied().unwrap_or(false));
-    d.insert("fcma", src.get("fcma").copied().unwrap_or(false));
-    d.insert("jscvt", src.get("jscvt").copied().unwrap_or(false));
-    d.insert("crc32", src.get("crc32").copied().unwrap_or(false));
-    d.insert("dcpop", src.get("dcpop").copied().unwrap_or(false));
+    for &category in &[
+        BASE_FEATURES,
+        SIMD_FEATURES,
+        CRYPTO_FEATURES,
+        ATOMIC_FEATURES,
+        FP_FEATURES,
+        MISC_FEATURES,
+    ] {
+        for &f in category {
+            d.insert(f, src.get(f).copied().unwrap_or(false));
+        }
+    }
+
     d.insert("lrcpc", src.get("lrcpc").copied().unwrap_or(false));
     d.insert("lrcpc2", src.get("lrcpc2").copied().unwrap_or(false));
-    d.insert("flagm", src.get("flagm").copied().unwrap_or(false));
-    d.insert("flagm2", src.get("flagm2").copied().unwrap_or(false));
-    d.insert("dit", src.get("dit").copied().unwrap_or(false));
-    d.insert("ssbs", src.get("ssbs").copied().unwrap_or(false));
-    d.insert("bti", src.get("bti").copied().unwrap_or(false));
-    d.insert("pauth", src.get("pauth").copied().unwrap_or(false));
-    d.insert("pauth2", src.get("pauth2").copied().unwrap_or(false));
-    d.insert("fpac", src.get("fpac").copied().unwrap_or(false));
-    d.insert("specres", src.get("specres").copied().unwrap_or(false));
-    d.insert("specres2", src.get("specres2").copied().unwrap_or(false));
-    d.insert("csv2", src.get("csv2").copied().unwrap_or(false));
-    d.insert("csv3", src.get("csv3").copied().unwrap_or(false));
-    d.insert("ecv", src.get("ecv").copied().unwrap_or(false));
-    d.insert("sb", src.get("sb").copied().unwrap_or(false));
-    d.insert("frintts", src.get("frintts").copied().unwrap_or(false));
-    d.insert("dpb", src.get("dpb").copied().unwrap_or(false));
-    d.insert("dpb2", src.get("dpb2").copied().unwrap_or(false));
-    d.insert("dotprod", src.get("dotprod").copied().unwrap_or(false));
-    d.insert("bf16", src.get("bf16").copied().unwrap_or(false));
-    d.insert("i8mm", src.get("i8mm").copied().unwrap_or(false));
-    d.insert("sve", src.get("sve").copied().unwrap_or(false));
-    d.insert("sve2", src.get("sve2").copied().unwrap_or(false));
-    d.insert("sme", src.get("sme").copied().unwrap_or(false));
+    d.insert("asimd", has_asimd);
+    d.insert("neon", has_asimd);
+    d.insert("atomics", has_atomics);
+    d.insert("lse", has_atomics);
 
     d
 }

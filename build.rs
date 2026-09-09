@@ -1,3 +1,7 @@
+use std::env::var;
+use std::fs;
+use std::process::Command;
+
 /// Vendored cfg_aliases v0.2.1
 /// See: <https://github.com/katharostech/cfg_aliases/blob/v0.2.1/src/lib.rs>
 #[macro_export]
@@ -207,6 +211,133 @@ macro_rules! cfg_aliases {
     }
 }
 
+fn build_haiku_gui(out_dir: String) {
+    let cxx = var("CXX").unwrap_or_else(|_| "c++".to_string());
+    let ar = var("AR").unwrap_or_else(|_| "ar".to_string());
+    let obj_file = format!("{}/haiku_bridge.o", out_dir);
+    let lib_file = format!("{}/librustid_haiku_bridge.a", out_dir);
+
+    let compile_status = Command::new(&cxx)
+        .args([
+            "-c",
+            "-O2",
+            "-std=c++17",
+            "src/gui/haiku/bridge/haiku_bridge.cpp",
+            "-o",
+            &obj_file,
+        ])
+        .status();
+
+    if let Ok(status) = compile_status
+        && status.success()
+    {
+        let _ = Command::new(&ar)
+            .args(["crus", &lib_file, &obj_file])
+            .status();
+        println!("cargo:rustc-link-search=native={}", out_dir);
+        println!("cargo:rustc-link-lib=static=rustid_haiku_bridge");
+        println!("cargo:rustc-link-lib=be");
+        println!("cargo:rustc-link-lib=tracker");
+        println!("cargo:rustc-link-lib=stdc++");
+        println!("cargo:rustc-link-lib=root");
+    }
+
+    println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.cpp");
+    println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
+}
+
+fn build_windows_gui(out_dir: String) {
+    let manifest_dir = var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+    let arch = var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+
+    let ico_rel_path = match arch.as_str() {
+        "x86" => "assets/windows/rustid_x86.ico",
+        "x86_64" => "assets/windows/rustid_x64.ico",
+        "aarch64" => "assets/windows/rustid_arm64.ico",
+        _ => "assets/rustid.ico",
+    };
+    let ico_full_path = format!("{}/{}", manifest_dir, ico_rel_path);
+
+    let rc_file = format!("{}/rustid.rc", out_dir);
+    let rc_content = format!("1 ICON \"{}\"\n", ico_full_path.replace('\\', "/"));
+    let _ = fs::write(&rc_file, rc_content);
+
+    let out_res = format!("{}/rustid_res.o", out_dir);
+    let target = var("TARGET").unwrap_or_default();
+    let target_windres = format!("{}-windres", target);
+
+    let mut windres_candidates = Vec::new();
+    if let Ok(env_windres) = var("WINDRES")
+        && !env_windres.is_empty()
+    {
+        windres_candidates.push(env_windres);
+    }
+    windres_candidates.push(target_windres);
+    match arch.as_str() {
+        "aarch64" => {
+            windres_candidates.push("aarch64-w64-mingw32-windres".to_string());
+        }
+        "x86_64" => {
+            windres_candidates.push("x86_64-w64-mingw32-windres".to_string());
+        }
+        "x86" => {
+            windres_candidates.push("i686-w64-mingw32-windres".to_string());
+        }
+        "arm" => {
+            windres_candidates.push("armv7-w64-mingw32-windres".to_string());
+        }
+        _ => {}
+    }
+    windres_candidates.push("llvm-windres".to_string());
+    windres_candidates.push("windres".to_string());
+
+    let _ = fs::remove_file(&out_res);
+
+    let mut compiled = false;
+    for candidate in &windres_candidates {
+        if candidate.is_empty() {
+            continue;
+        }
+        let mut cmd = Command::new(candidate);
+        cmd.args([
+            "-I",
+            &manifest_dir,
+            "-i",
+            &rc_file,
+            "-o",
+            &out_res,
+            "-O",
+            "coff",
+        ]);
+        if arch == "x86" {
+            cmd.args(["-F", "pe-i386"]);
+        } else if arch == "x86_64" {
+            cmd.args(["-F", "pe-x86-64"]);
+        } else if arch == "aarch64" {
+            cmd.args(["--target", "aarch64-w64-mingw32"]);
+        } else if arch == "arm" {
+            cmd.args(["--target", "armv7-w64-mingw32"]);
+        }
+        if let Ok(status) = cmd.status()
+            && status.success()
+        {
+            compiled = true;
+            break;
+        }
+    }
+
+    if compiled {
+        println!("cargo:rustc-link-arg={}", out_res);
+    }
+
+    println!("cargo:rerun-if-env-changed=WINDRES");
+    println!("cargo:rerun-if-changed=build-config/rustid.rc");
+    println!("cargo:rerun-if-changed=assets/rustid.ico");
+    println!("cargo:rerun-if-changed=assets/windows/rustid_x86.ico");
+    println!("cargo:rerun-if-changed=assets/windows/rustid_x64.ico");
+    println!("cargo:rerun-if-changed=assets/windows/rustid_arm64.ico");
+}
+
 fn main() {
     // Setup cfg aliases
     cfg_aliases! {
@@ -233,125 +364,13 @@ fn main() {
         riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") }
     }
 
-    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    let has_gui = std::env::var("CARGO_FEATURE_GUI").is_ok();
-    if target_os == "haiku" && has_gui {
-        if let Ok(out_dir) = std::env::var("OUT_DIR") {
-            let cxx = std::env::var("CXX").unwrap_or_else(|_| "c++".to_string());
-            let ar = std::env::var("AR").unwrap_or_else(|_| "ar".to_string());
-            let obj_file = format!("{}/haiku_bridge.o", out_dir);
-            let lib_file = format!("{}/librustid_haiku_bridge.a", out_dir);
-
-            let compile_status = std::process::Command::new(&cxx)
-                .args([
-                    "-c",
-                    "-O2",
-                    "-std=c++17",
-                    "src/gui/haiku/bridge/haiku_bridge.cpp",
-                    "-o",
-                    &obj_file,
-                ])
-                .status();
-
-            if let Ok(status) = compile_status
-                && status.success()
-            {
-                let _ = std::process::Command::new(&ar)
-                    .args(["crus", &lib_file, &obj_file])
-                    .status();
-                println!("cargo:rustc-link-search=native={}", out_dir);
-                println!("cargo:rustc-link-lib=static=rustid_haiku_bridge");
-                println!("cargo:rustc-link-lib=be");
-                println!("cargo:rustc-link-lib=tracker");
-                println!("cargo:rustc-link-lib=stdc++");
-                println!("cargo:rustc-link-lib=root");
-            }
+    if var("CARGO_FEATURE_GUI").is_ok()
+        && let Ok(out_dir) = var("OUT_DIR")
+    {
+        match var("CARGO_CFG_TARGET_OS").unwrap_or_default().as_str() {
+            "haiku" => build_haiku_gui(out_dir),
+            "windows" => build_windows_gui(out_dir),
+            _ => (),
         }
-        println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.cpp");
-        println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
-    }
-
-    if target_os == "windows" && has_gui {
-        if let Ok(out_dir) = std::env::var("OUT_DIR") {
-            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-
-            let ico_rel_path = match arch.as_str() {
-                "x86" => "assets/windows/rustid_x86.ico",
-                "x86_64" => "assets/windows/rustid_x64.ico",
-                "aarch64" => "assets/windows/rustid_arm64.ico",
-                _ => "assets/rustid.ico",
-            };
-            let ico_full_path = format!("{}/{}", manifest_dir, ico_rel_path);
-
-            let rc_file = format!("{}/rustid.rc", out_dir);
-            let rc_content = format!("1 ICON \"{}\"\n", ico_full_path.replace('\\', "/"));
-            let _ = std::fs::write(&rc_file, rc_content);
-
-            let out_res = format!("{}/rustid_res.o", out_dir);
-            let target = std::env::var("TARGET").unwrap_or_default();
-            let target_windres = format!("{}-windres", target);
-
-            let mut windres_candidates = Vec::new();
-            if let Ok(env_windres) = std::env::var("WINDRES") {
-                if !env_windres.is_empty() {
-                    windres_candidates.push(env_windres);
-                }
-            }
-            windres_candidates.push(target_windres);
-            match arch.as_str() {
-                "aarch64" => {
-                    windres_candidates.push("aarch64-w64-mingw32-windres".to_string());
-                }
-                "x86_64" => {
-                    windres_candidates.push("x86_64-w64-mingw32-windres".to_string());
-                }
-                "x86" => {
-                    windres_candidates.push("i686-w64-mingw32-windres".to_string());
-                }
-                "arm" => {
-                    windres_candidates.push("armv7-w64-mingw32-windres".to_string());
-                }
-                _ => {}
-            }
-            windres_candidates.push("llvm-windres".to_string());
-            windres_candidates.push("windres".to_string());
-
-            let _ = std::fs::remove_file(&out_res);
-
-            let mut compiled = false;
-            for candidate in &windres_candidates {
-                if candidate.is_empty() {
-                    continue;
-                }
-                let mut cmd = std::process::Command::new(candidate);
-                cmd.args(["-I", &manifest_dir, "-i", &rc_file, "-o", &out_res, "-O", "coff"]);
-                if arch == "x86" {
-                    cmd.args(["-F", "pe-i386"]);
-                } else if arch == "x86_64" {
-                    cmd.args(["-F", "pe-x86-64"]);
-                } else if arch == "aarch64" {
-                    cmd.args(["--target", "aarch64-w64-mingw32"]);
-                } else if arch == "arm" {
-                    cmd.args(["--target", "armv7-w64-mingw32"]);
-                }
-                if let Ok(status) = cmd.status()
-                    && status.success()
-                {
-                    compiled = true;
-                    break;
-                }
-            }
-
-            if compiled {
-                println!("cargo:rustc-link-arg={}", out_res);
-            }
-        }
-        println!("cargo:rerun-if-env-changed=WINDRES");
-        println!("cargo:rerun-if-changed=build-config/rustid.rc");
-        println!("cargo:rerun-if-changed=assets/rustid.ico");
-        println!("cargo:rerun-if-changed=assets/windows/rustid_x86.ico");
-        println!("cargo:rerun-if-changed=assets/windows/rustid_x64.ico");
-        println!("cargo:rerun-if-changed=assets/windows/rustid_arm64.ico");
     }
 }

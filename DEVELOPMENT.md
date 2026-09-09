@@ -118,3 +118,24 @@ Launch DOS build in DOSBox-X:
 ```bash
 just run-dos
 ```
+
+## Code Style & Architectural Guidelines
+
+To maintain readability, modularity, and consistency across platforms, adhere to the following conventions:
+
+### 1. Platform Constants over Runtime Boolean Flags
+- Prefer compile-time `#[cfg(...)]` constants (e.g., `NEWLINE`) over plumbing runtime boolean flags (e.g., `crlf: bool`) through function signatures when behavior is determined solely by the target platform.
+
+### 2. Pass Cohesive Structs over Individual Flags
+- Pass structured configuration types (e.g., `flags: CliFlags`) instead of separate boolean flags (`verbose: bool`, `compact: bool`, `color: bool`).
+
+### 3. Use Domain Enums Instead of Booleans
+- Use explicit enums with descriptive variants (e.g., `GuiTheme::Light` / `GuiTheme::Dark`, `ReportSource::LiveHardware` / `ReportSource::DumpFile`) for function parameters instead of `bool` flags.
+
+### 4. Direct Common Calls over Forwarding Wrappers
+- Invoke shared functions from common modules (such as `crate::gui::common::*`) directly at call sites rather than creating redundant 1-line forwarding wrappers in platform-specific files.
+
+### 5. Concise Iterations & Utility Reuse
+- Unify repetitive multi-register processing with array loops (e.g., iterating `[res.eax, res.ebx, res.ecx, res.edx]`).
+- Use iterator chains (`.filter_map()`, `.collect()`) for feature aggregation.
+- Reuse existing string/formatting helpers in `crate::common::util` (such as `ucfirst`) across architecture modules.

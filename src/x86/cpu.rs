@@ -52,37 +52,47 @@ impl FeatureClass {
     pub fn detect() -> FeatureClass {
         use super::*;
 
-        if has_avx512_f() {
-            return FeatureClass::x86_64_v4;
+        #[cfg(not(dos_real))]
+        {
+            if has_avx512_f() {
+                return FeatureClass::x86_64_v4;
+            }
+
+            if has_avx() && has_avx2() && has_bmi1() && has_bmi2() && has_f16c() && has_fma() {
+                return FeatureClass::x86_64_v3;
+            }
+
+            if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3()
+            {
+                return FeatureClass::x86_64_v2;
+            }
+
+            if has_amd64() {
+                return FeatureClass::x86_64_v1;
+            }
+
+            #[cfg(target_arch = "x86")]
+            if is_cyrix() {
+                return Cyrix::get_feature_class();
+            }
+
+            if has_sse3() {
+                return FeatureClass::i686_SSE3;
+            }
+
+            if has_sse2() {
+                return FeatureClass::i686_SSE2;
+            }
+
+            if has_sse() {
+                return FeatureClass::i686_SSE;
+            }
         }
 
-        if has_avx() && has_avx2() && has_bmi1() && has_bmi2() && has_f16c() && has_fma() {
-            return FeatureClass::x86_64_v3;
-        }
-
-        if has_cx16() && has_popcnt() && has_sse3() && has_sse41() && has_sse42() && has_ssse3() {
-            return FeatureClass::x86_64_v2;
-        }
-
-        if has_amd64() {
-            return FeatureClass::x86_64_v1;
-        }
-
+        #[cfg(dos_real)]
         #[cfg(target_arch = "x86")]
         if is_cyrix() {
             return Cyrix::get_feature_class();
-        }
-
-        if has_sse3() {
-            return FeatureClass::i686_SSE3;
-        }
-
-        if has_sse2() {
-            return FeatureClass::i686_SSE2;
-        }
-
-        if has_sse() {
-            return FeatureClass::i686_SSE;
         }
 
         if has_cmov() {
@@ -419,6 +429,7 @@ impl Cpu {
             | MicroArch::EzraT
             | MicroArch::Nehemiah => "VIA C3",
             MicroArch::Esther => "VIA C7",
+            #[cfg(not(dos_real))]
             MicroArch::Isaiah => {
                 if self.arch.model.contains("Eden") {
                     &self.arch.model.replace("Eden", "Nano")

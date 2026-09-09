@@ -460,32 +460,22 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
 
     let mut map = BTreeMap::new();
 
-    let mut basic: Vec<&'static str> = Vec::with_capacity(BASIC_FEATURES.len());
-    let mut sse: Vec<&'static str> = Vec::with_capacity(SSE_FEATURES.len());
-    let mut avx: Vec<&'static str> = Vec::with_capacity(AVX_FEATURES.len());
-    let mut avx512: Vec<&'static str> = Vec::with_capacity(AVX512_FEATURES.len());
-    let mut encryption: Vec<&'static str> = Vec::with_capacity(SECURITY_FEATURES.len());
-    let mut math: Vec<&'static str> = Vec::with_capacity(MATH_FEATURES.len());
-    let mut other: Vec<&'static str> = Vec::with_capacity(OTHER_FEATURES.len());
-
-    for (v, key, checks) in [
-        (&mut basic, "Base", BASIC_FEATURES),
-        (&mut sse, "SSE", SSE_FEATURES),
-        (&mut avx, "AVX", AVX_FEATURES),
-        (&mut avx512, "AVX512", AVX512_FEATURES),
-        (&mut encryption, "Security", SECURITY_FEATURES),
-        (&mut math, "Math", MATH_FEATURES),
-        (&mut other, "Other", OTHER_FEATURES),
+    for &(key, checks) in &[
+        ("Base", BASIC_FEATURES),
+        ("SSE", SSE_FEATURES),
+        ("AVX", AVX_FEATURES),
+        ("AVX512", AVX512_FEATURES),
+        ("Security", SECURITY_FEATURES),
+        ("Math", MATH_FEATURES),
+        ("Other", OTHER_FEATURES),
     ] {
-        for (name, check) in checks {
-            if check() {
-                v.push(name);
-            }
-        }
+        let features: Vec<&'static str> = checks
+            .iter()
+            .filter_map(|&(name, check)| if check() { Some(name) } else { None })
+            .collect();
 
-        if !v.is_empty() {
-            let s = v.join(" ");
-            map.insert(key, s);
+        if !features.is_empty() {
+            map.insert(key, features.join(" "));
         }
     }
 

@@ -1,48 +1,6 @@
 //! Plain report formatting and syntax-colored RTF generation.
 
-use crate::Cpu;
-#[allow(unused_imports)]
-use crate::common::{CliFlags, CpuDisplay, Level1Cache, TCpuDisplay, TDetect, UNK};
-
-pub fn generate_report_plain(
-    cpu: &Cpu,
-    verbose: bool,
-    compact: bool,
-    is_from_dump: bool,
-) -> String {
-    let version_header = if is_from_dump {
-        crate::format_file_version()
-    } else {
-        crate::format_version()
-    };
-    let flags = CliFlags {
-        color: false,
-        compact,
-        verbose,
-    };
-    let sep = if compact { "\r\n" } else { "\r\n\r\n" };
-    let table = cpu.render_table(flags);
-    let crlf_table = table.replace("\r\n", "\n").replace('\n', "\r\n");
-    format!("{}{}{}", version_header, sep, crlf_table)
-}
-
-pub fn generate_debug_info_plain(cpu: &Cpu) -> String {
-    cpu.render_debug()
-        .replace("\r\n", "\n")
-        .replace('\n', "\r\n")
-}
-
-#[cfg(x86_cpu)]
-pub fn generate_dump_info_plain() -> String {
-    use crate::x86::{dump::dump_cpu, topology::Topology};
-    let mut output = String::new();
-    let topo = Topology::detect();
-    let logical_cores = topo.threads.count as usize;
-    for i in 0..logical_cores {
-        dump_cpu(&mut output, i);
-    }
-    output.replace("\r\n", "\n").replace('\n', "\r\n")
-}
+pub use crate::gui::common::GuiTheme;
 
 pub fn rtf_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 10);
@@ -67,12 +25,12 @@ pub fn rtf_escape(s: &str) -> String {
     out
 }
 
-pub fn to_rtf(plain_text: &str, dark_theme: bool, color: bool) -> String {
+pub fn to_rtf(plain_text: &str, theme: GuiTheme, color: bool) -> String {
     let font_tbl = "{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Consolas;}{\\f1\\fmodern\\fprq1\\fcharset0 Courier New;}}";
 
     if !color {
         let escaped = rtf_escape(plain_text);
-        return if dark_theme {
+        return if theme.is_dark() {
             format!(
                 "{{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat{font_tbl}{{\\colortbl ;\\red212\\green212\\blue212;}}\\viewkind4\\uc1\\f0\\f1\\fs22\\cf1 {}\\par}}",
                 escaped
@@ -91,7 +49,7 @@ pub fn to_rtf(plain_text: &str, dark_theme: bool, color: bool) -> String {
     // Color 3: Body text (Off-white or Charcoal)
     // Color 4: Warm highlight (Numbers, Hex, Features)
     // Color 5: Muted gray (Dividers)
-    let color_tbl = if dark_theme {
+    let color_tbl = if theme.is_dark() {
         "{\\colortbl ;\\red115\\green218\\blue202;\\red125\\green207\\blue255;\\red212\\green212\\blue212;\\red255\\green158\\blue100;\\red86\\green95\\blue137;}"
     } else {
         "{\\colortbl ;\\red9\\green134\\blue88;\\red4\\green81\\blue165;\\red30\\green30\\blue30;\\red163\\green21\\blue21;\\red110\\green118\\blue129;}"

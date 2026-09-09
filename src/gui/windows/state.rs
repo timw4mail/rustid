@@ -23,14 +23,8 @@ pub static IS_UNICODE: AtomicBool = AtomicBool::new(true);
 // Used to gate EM_SETTEXTEX / EM_SETBKGNDCOLOR / EM_EXLIMITTEXT.
 pub static IS_RICHEDIT: AtomicBool = AtomicBool::new(true);
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ViewMode {
-    Standard,
-    Debug,
-    Everything,
-    #[cfg(x86_cpu)]
-    Dump,
-}
+use crate::common::CliFlags;
+pub use crate::gui::common::{GuiTheme, ReportSource, ViewMode};
 
 pub struct AppState {
     pub hwnd_main: HWND,
@@ -39,11 +33,9 @@ pub struct AppState {
     pub hmenu: HMENU,
     pub dpi: u32,
     pub mode: ViewMode,
-    pub color: bool,
-    pub dark_theme: bool,
+    pub flags: CliFlags,
+    pub theme: GuiTheme,
     pub custom_theme_set: bool,
-    pub verbose: bool,
-    pub compact: bool,
     pub loaded_file: Option<String>,
     pub current_plain_text: String,
 }

@@ -303,15 +303,7 @@ pub extern "C" fn rust_main() -> ! {
         }
         "dump" => {
             use rustid::print;
-            use rustid::x86::{dump::dump_cpu, topology::Topology};
-
-            let mut output = alloc::string::String::new();
-            let topo = Topology::detect();
-            let logical_cores = topo.threads.count as usize;
-            for i in 0..logical_cores {
-                dump_cpu(&mut output, i);
-            }
-            print!("{}", output);
+            print!("{}", rustid::x86::dump::dump_all_cpus());
         }
         "version" => {}
         "default" => {

@@ -49,60 +49,62 @@ fn main() {
 
     #[allow(clippy::while_let_on_iterator)]
     while let Some(arg) = args.next() {
-        let stripped = arg
-            .strip_prefix("--")
-            .unwrap_or_else(|| arg.strip_prefix('-').unwrap_or(&arg));
-
-        match stripped {
-            "c" | "compact" => flags.compact = true,
-            "m" | "mono" => flags.color = false,
-            "e" | "everything" => action = "everything",
-            "r" | "dump" => action = "dump",
-            #[cfg(x86_cpu)]
-            "f" | "file" => {
-                file_path = args.next();
-                if file_path.is_none() {
-                    eprintln!("Error: 'file' option requires a path");
+        if let Some(long) = arg.strip_prefix("--") {
+            match long {
+                "compact" => flags.compact = true,
+                "mono" => flags.color = false,
+                "everything" => action = "everything",
+                "dump" => action = "dump",
+                "debug" => action = "debug",
+                #[cfg(x86_cpu)]
+                "file" => {
+                    file_path = args.next();
+                    if file_path.is_none() {
+                        eprintln!("Error: 'file' option requires a path");
+                        help();
+                        return;
+                    }
+                }
+                "verbose" => flags.verbose = true,
+                "version" => action = "version",
+                "help" => action = "help",
+                _ => {
+                    eprintln!("Unknown command: {arg}");
                     help();
                     return;
                 }
             }
-            "v" | "verbose" => flags.verbose = true,
-            "V" | "version" => action = "version",
-            "h" | "help" => action = "help",
-            "d" | "debug" => action = "debug",
-            _ if arg.starts_with('-') && !arg.starts_with("--") => {
-                for c in arg.chars().skip(1) {
-                    match c {
-                        'c' => flags.compact = true,
-                        'm' => flags.color = false,
-                        'e' => action = "everything",
-                        'r' => action = "dump",
-                        #[cfg(x86_cpu)]
-                        'f' => {
-                            file_path = args.next();
-                            if file_path.is_none() {
-                                eprintln!("Error: '-f' flag requires a path");
-                                help();
-                                return;
-                            }
-                        }
-                        'v' => flags.verbose = true,
-                        'V' => action = "version",
-                        'h' => action = "help",
-                        _ => {
-                            eprintln!("Unknown flag: -{c}");
+        } else if let Some(short_flags) = arg.strip_prefix('-') {
+            for c in short_flags.chars() {
+                match c {
+                    'c' => flags.compact = true,
+                    'm' => flags.color = false,
+                    'e' => action = "everything",
+                    'r' => action = "dump",
+                    'd' => action = "debug",
+                    #[cfg(x86_cpu)]
+                    'f' => {
+                        file_path = args.next();
+                        if file_path.is_none() {
+                            eprintln!("Error: '-f' flag requires a path");
                             help();
                             return;
                         }
                     }
+                    'v' => flags.verbose = true,
+                    'V' => action = "version",
+                    'h' => action = "help",
+                    _ => {
+                        eprintln!("Unknown flag: -{c}");
+                        help();
+                        return;
+                    }
                 }
             }
-            _ => {
-                eprintln!("Unknown command: {arg}");
-                help();
-                return;
-            }
+        } else {
+            eprintln!("Unknown command: {arg}");
+            help();
+            return;
         }
     }
 
@@ -139,17 +141,7 @@ fn main() {
         }
         #[cfg(x86_cpu)]
         "dump" => {
-            use rustid::x86::{dump::dump_cpu, topology::Topology};
-
-            let mut output = String::new();
-            let topo = Topology::detect();
-
-            let logical_cores = topo.threads.count as usize;
-            for i in 0..logical_cores {
-                dump_cpu(&mut output, i);
-            }
-
-            print!("{output}");
+            print!("{}", rustid::x86::dump::dump_all_cpus());
         }
         "help" => help(),
         "version" => {}

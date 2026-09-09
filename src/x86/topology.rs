@@ -1,5 +1,7 @@
 use super::constants::*;
-use super::{cpuid_data_source, is_valid_leaf, vendor_str, x86_cpuid_count};
+#[cfg(not(dos_real))]
+use super::x86_cpuid_count;
+use super::{cpuid_data_source, is_valid_leaf, vendor_str};
 pub use crate::common::Topology;
 use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::x86::{cpuid_cores_per_package, cpuid_threads_per_package};
@@ -391,25 +393,33 @@ impl Topology {
     }
 
     pub(crate) fn detect_domains() -> DomainList {
-        let d: DomainList = Vec::new();
-
-        if !is_valid_leaf(LEAF_0B) {
-            return d;
+        #[cfg(dos_real)]
+        {
+            Vec::new()
         }
+        #[cfg(not(dos_real))]
+        {
+            let d: DomainList = Vec::new();
 
-        let v2_leaf = match &*vendor_str() {
-            VENDOR_INTEL => LEAF_1F,
-            VENDOR_AMD => EXT_LEAF_26,
-            _ => 0,
-        };
+            if !is_valid_leaf(LEAF_0B) {
+                return d;
+            }
 
-        if v2_leaf > 0 && is_valid_leaf(v2_leaf) {
-            Self::detect_domains_leaf(v2_leaf)
-        } else {
-            Self::detect_domains_leaf(LEAF_0B)
+            let v2_leaf = match &*vendor_str() {
+                VENDOR_INTEL => LEAF_1F,
+                VENDOR_AMD => EXT_LEAF_26,
+                _ => 0,
+            };
+
+            if v2_leaf > 0 && is_valid_leaf(v2_leaf) {
+                Self::detect_domains_leaf(v2_leaf)
+            } else {
+                Self::detect_domains_leaf(LEAF_0B)
+            }
         }
     }
 
+    #[cfg(not(dos_real))]
     fn detect_domains_leaf(leaf: u32) -> DomainList {
         let mut d: DomainList = Vec::new();
 
@@ -429,54 +439,40 @@ impl Topology {
                 break;
             }
 
-            match leaf {
+            let kind = match leaf {
                 // Topology v1
-                LEAF_0B => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                LEAF_0B => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    _ => TopologyType::Invalid,
+                },
                 // Intel Topology V2
-                LEAF_1F => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            3 => TopologyType::Module,
-                            4 => TopologyType::Tile,
-                            5 => TopologyType::Die,
-                            6 => TopologyType::Socket,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                LEAF_1F => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    3 => TopologyType::Module,
+                    4 => TopologyType::Tile,
+                    5 => TopologyType::Die,
+                    6 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
                 // AMD Topology V2
-                EXT_LEAF_26 => {
-                    d.push(TopologyDomain {
-                        level,
-                        kind: match domain_type {
-                            1 => TopologyType::Thread,
-                            2 => TopologyType::Core,
-                            3 => TopologyType::Die,
-                            4 => TopologyType::Socket,
-                            _ => TopologyType::Invalid,
-                        },
-                        count: domain_lcpus,
-                        shift,
-                    });
-                }
+                EXT_LEAF_26 => match domain_type {
+                    1 => TopologyType::Thread,
+                    2 => TopologyType::Core,
+                    3 => TopologyType::Die,
+                    4 => TopologyType::Socket,
+                    _ => TopologyType::Invalid,
+                },
                 _ => return d,
-            }
+            };
+
+            d.push(TopologyDomain {
+                level,
+                kind,
+                count: domain_lcpus,
+                shift,
+            });
         }
 
         d
