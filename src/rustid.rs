@@ -139,17 +139,7 @@ fn main() {
         }
         #[cfg(x86_cpu)]
         "dump" => {
-            use rustid::x86::{dump::dump_cpu, topology::Topology};
-
-            let mut output = String::new();
-            let topo = Topology::detect();
-
-            let logical_cores = topo.threads.count as usize;
-            for i in 0..logical_cores {
-                dump_cpu(&mut output, i);
-            }
-
-            print!("{output}");
+            print!("{}", rustid::x86::dump::dump_all_cpus());
         }
         "help" => help(),
         "version" => {}

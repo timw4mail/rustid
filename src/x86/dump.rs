@@ -130,3 +130,15 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
         }
     }
 }
+
+/// Dumps CPUID registers across all logical CPU threads into a String.
+#[must_use]
+pub fn dump_all_cpus() -> alloc::string::String {
+    let mut output = alloc::string::String::new();
+    let topo = super::topology::Topology::detect();
+    let logical_cores = topo.threads.count as usize;
+    for i in 0..logical_cores {
+        dump_cpu(&mut output, i);
+    }
+    output
+}
