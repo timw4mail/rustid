@@ -5,11 +5,13 @@ This directory contains application resources and icons for Haiku OS.
 ## Files
 
 - `rustid.rdef`: Haiku Resource Definition script containing:
-  - Application signature (`application/x-vnd.rustid`)
+  - Application signature (`application/x-vnd.rustid-gui`)
   - Application flags (`B_SINGLE_LAUNCH`)
   - Version information
-  - Standard 32x32 BeOS/Haiku bitmap icon (`large_icon`, B_CMAP8)
-  - Mini 16x16 BeOS/Haiku bitmap icon (`mini_icon`, B_CMAP8)
+  - Native Vector Icon (`vector_icon`, HVIF)
+  - Standard 32x32 BeOS/Haiku bitmap icon (`large_icon`, B_CMAP8 fallback)
+  - Mini 16x16 BeOS/Haiku bitmap icon (`mini_icon`, B_CMAP8 fallback)
+- `rustid.hvif`: Haiku Vector Icon Format binary icon
 - `rustid_16.png`: 16×16 PNG icon
 - `rustid_32.png`: 32×32 PNG icon
 - `rustid_64.png`: 64×64 PNG icon
@@ -29,10 +31,8 @@ mimeset -f target/dist/rustid_haiku
 ```
 
 ### 3. Vector Icon (HVIF):
-To create Haiku's native Vector Icon Format (`.hvif`), you can:
-- Open `rustid_128.png` in **SVGear** (available via HaikuDepot) and trace/export as `rustid.hvif`.
-- Or use **Icon-O-Matic** on Haiku to save `rustid.hvif`.
-- Then attach it to the binary:
-  ```sh
-  addattr -f rustid.hvif -t icon BEOS:ICON target/dist/rustid_haiku
-  ```
+The native Vector Icon Format (`.hvif`) is compiled directly into the `.rsrc` from `rustid.rdef`.
+You can also attach `rustid.hvif` directly to any binary:
+```sh
+addattr -f assets/haiku/rustid.hvif -t icon BEOS:ICON target/dist/rustid_haiku
+```

@@ -6,7 +6,7 @@
 - **Native Haiku GUI Application**:
   - Added Haiku graphical interface
 - **Application Icons Across Platforms**:
-  - Added multi-resolution application icons for Windows (`assets/rustid.ico`, `assets/logo.ico`), macOS (`assets/rustid.icns`, `assets/logo.icns`), Haiku (`assets/haiku/rustid.rdef`, `assets/haiku/rustid_16.png`, `32.png`, `64.png`, `128.png`), and PNG source logo (`assets/logo.png`)
+  - Added multi-resolution application icons for Windows (`assets/rustid.ico`), macOS (`assets/rustid.icns`), Vector SVG (`assets/rustid.svg`), Haiku (`assets/haiku/rustid.rdef`, `assets/haiku/rustid.hvif`, `assets/haiku/rustid_16.png`, `32.png`, `64.png`, `128.png`), and PNG source artwork (`assets/rustid.png`)
   - Added Haiku resource definition (`assets/haiku/rustid.rdef`) and build recipe support to compile and embed icon/signature resources using Haiku `rc`, `xres`, and `mimeset` (`Makefile`, `justfile`, `assets/haiku/README.md`)
 - **Windows GUI Icon & Resource Embedding**:
   - Added Windows resource file (`build-config/rustid.rc`) embedding application icon as Resource ID 1 (`IDI_APPLICATION`)
