@@ -246,72 +246,6 @@ fn build_haiku_gui(out_dir: String) {
     println!("cargo:rerun-if-changed=src/gui/haiku/bridge/haiku_bridge.h");
 }
 
-fn build_linux_gui(out_dir: String) {
-    let cc = var("CC").unwrap_or_else(|_| "cc".to_string());
-    let ar = var("AR").unwrap_or_else(|_| "ar".to_string());
-    let pkg_config = var("PKG_CONFIG").unwrap_or_else(|_| "pkg-config".to_string());
-
-    let cflags_output = Command::new(&pkg_config)
-        .args(["--cflags", "gtk+-3.0"])
-        .output();
-    let libs_output = Command::new(&pkg_config)
-        .args(["--libs", "gtk+-3.0"])
-        .output();
-
-    let cflags = match cflags_output {
-        Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).to_string(),
-        _ => {
-            println!("cargo:warning=pkg-config failed to query gtk+-3.0 cflags.");
-            "".to_string()
-        }
-    };
-
-    let obj_file = format!("{}/gtk_bridge.o", out_dir);
-    let lib_file = format!("{}/librustid_linux_bridge.a", out_dir);
-
-    let mut cmd = Command::new(&cc);
-    cmd.args(["-c", "-O2"]);
-    for flag in cflags.split_whitespace() {
-        if !flag.is_empty() {
-            cmd.arg(flag);
-        }
-    }
-    cmd.args(["src/gui/linux/bridge/gtk_bridge.c", "-o", &obj_file]);
-
-    let compile_status = cmd.status();
-
-    if let Ok(status) = compile_status
-        && status.success()
-    {
-        let _ = Command::new(&ar)
-            .args(["crus", &lib_file, &obj_file])
-            .status();
-        println!("cargo:rustc-link-search=native={}", out_dir);
-        println!("cargo:rustc-link-lib=static=rustid_linux_bridge");
-
-        if let Ok(out) = libs_output
-            && out.status.success()
-        {
-            let libs_str = String::from_utf8_lossy(&out.stdout);
-            for token in libs_str.split_whitespace() {
-                if let Some(lib_dir) = token.strip_prefix("-L") {
-                    println!("cargo:rustc-link-search=native={}", lib_dir);
-                } else if let Some(lib_name) = token.strip_prefix("-l") {
-                    println!("cargo:rustc-link-lib={}", lib_name);
-                }
-            }
-        } else {
-            println!("cargo:rustc-link-lib=gtk-3");
-            println!("cargo:rustc-link-lib=gdk-3");
-            println!("cargo:rustc-link-lib=gobject-2.0");
-            println!("cargo:rustc-link-lib=glib-2.0");
-        }
-    }
-
-    println!("cargo:rerun-if-changed=src/gui/linux/bridge/gtk_bridge.c");
-    println!("cargo:rerun-if-changed=src/gui/linux/bridge/gtk_bridge.h");
-}
-
 fn build_windows_gui(out_dir: String) {
     let manifest_dir = var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
     let arch = var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
@@ -435,7 +369,6 @@ fn main() {
         match var("CARGO_CFG_TARGET_OS").unwrap_or_default().as_str() {
             "haiku" => build_haiku_gui(out_dir),
             "windows" => build_windows_gui(out_dir),
-            "linux" => build_linux_gui(out_dir),
             _ => (),
         }
     }

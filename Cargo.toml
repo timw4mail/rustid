@@ -54,6 +54,9 @@ name = "efi"
 required-features = ["efi-build"]
 path = "src/bin/efi.rs"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = { version = "0.19", optional = true }
+
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(dos)', 'cfg(dos32a)', 'cfg(uefi)', 'cfg(nostd_os)'] }
 
@@ -66,4 +69,4 @@ debug = []
 dos-build = []
 dos32a-build = []
 efi-build = []
-gui = []
+gui = ["dep:gtk"]
