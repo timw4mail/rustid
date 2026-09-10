@@ -20,7 +20,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-haiku-gui check-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-haiku-gui build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86 check-ci
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-haiku-gui check-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-haiku-gui build-linux-gui build-appimage appimage build-arm64 build-ppc build-mac build-mac-arm build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86 check-ci
 
 # Lists the available actions
 default:
@@ -235,6 +235,12 @@ build-linux-gui:
 	cargo build --features gui --bin gui --release
 	@mkdir -p target/dist
 	@cp target/release/gui target/dist/rustid-gui 2>/dev/null || true
+
+# Build Linux AppImage application
+build-appimage:
+	bash build-config/build-appimage.sh
+
+appimage: build-appimage
 
 # Build for linux arm64
 build-arm64: _cargo_cross

@@ -48,6 +48,11 @@ jobs:
           just build-windows-gui
           zip -j rustid-windows.zip target/dist/rustid_x86_32.exe target/dist/rustid_x86_64.exe target/dist/rustid_arm64.exe
 
+      - name: Build Linux AppImage
+        run: |
+          sudo apt-get install -y libgtk-3-dev
+          just build-appimage
+
       - name: Upload DOS artifact
         uses: actions/upload-artifact@v6
         with:
@@ -66,6 +71,12 @@ jobs:
           name: rustid-windows
           path: rustid-windows.zip
 
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rustid-appimage
+          path: target/dist/rustid-*.AppImage
+
       - name: Extract changelog entry
         id: changelog
         run: |
@@ -77,13 +88,26 @@ jobs:
         run: |
           RELEASE_TITLE=$(cat release_title.txt)
           TAG="${{ github.ref_name }}"
+          APPIMAGE=$(ls target/dist/rustid-*.AppImage | head -n 1)
+          APPIMAGE_NAME=$(basename "$APPIMAGE")
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists, updating..."
             gh release edit "$TAG" --title "$RELEASE_TITLE" --notes-file release_notes.md
-            gh release upload "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' --clobber
+            gh release upload "$TAG" \
+              './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' \
+              './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' \
+              './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' \
+              "$APPIMAGE#Linux AppImage ($APPIMAGE_NAME)" \
+              --clobber
           else
             echo "Creating release $TAG..."
-            gh release create "$TAG" './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' --title "$RELEASE_TITLE" --notes-file release_notes.md
+            gh release create "$TAG" \
+              './rustid-dos.zip#DOS Binaries (rustid-dos.zip)' \
+              './rustid-efi.zip#EFI Binaries (rustid-efi.zip)' \
+              './rustid-windows.zip#Windows Binaries (rustid-windows.zip)' \
+              "$APPIMAGE#Linux AppImage ($APPIMAGE_NAME)" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release_notes.md
           fi
           rm -f release_notes.md release_title.txt
 

@@ -214,6 +214,15 @@ build-linux-gui:
 	@mkdir -p target/dist
 	@cp target/release/gui target/dist/rustid-gui 2>/dev/null || true
 
+# Build Linux AppImage application
+[linux, unix]
+build-appimage:
+	bash build-config/build-appimage.sh
+
+# Build Linux AppImage application
+[linux, unix]
+appimage: build-appimage
+
 # Build for linux arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
