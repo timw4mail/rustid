@@ -95,8 +95,12 @@ check-windows-gui: check-windows-gui-32 check-windows-gui-x64 check-windows-gui-
 check-haiku-gui:
 	cargo check --features gui
 
+# Compile check for Linux GUI
+check-linux-gui:
+	cargo check --features gui --bin gui
+
 # Compile check for all GUI targets
-check-gui: check-windows-gui check-haiku-gui
+check-gui: check-windows-gui check-haiku-gui check-linux-gui
 
 # Compile check for CI targets and platforms
 check-ci: check check-efi check-dos check-riscv check-android check-486 check-windows-gui check-arm64
@@ -203,6 +207,12 @@ build-haiku-gui:
 		(command -v mimeset >/dev/null 2>&1 && mimeset -f target/dist/rustid_haiku 2>/dev/null || true); \
 		echo "Attached Haiku icon and resources to rustid_haiku"; \
 	fi
+
+# Build Linux GUI application
+build-linux-gui:
+	cargo build --features gui --bin gui --release
+	@mkdir -p target/dist
+	@cp target/release/gui target/dist/rustid-gui 2>/dev/null || true
 
 # Build for linux arm64
 build-arm64: _cargo_cross

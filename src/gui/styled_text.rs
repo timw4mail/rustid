@@ -1,4 +1,4 @@
-//! Plain report formatting and styled text run generation for Haiku's BTextView.
+//! Plain report formatting and styled text run generation for GUI frontends.
 
 pub use crate::gui::common::GuiTheme;
 

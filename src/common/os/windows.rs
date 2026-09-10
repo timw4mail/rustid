@@ -1261,7 +1261,7 @@ Model=To be filled by O.E.M.
         buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
 
         assert_eq!(
-            parse_smbios_buffer(&buf, "test").and_then(|s| s.display_name()),
+            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
             Some("MacBook4,1".to_string())
         );
     }
@@ -1289,7 +1289,7 @@ Model=To be filled by O.E.M.
         buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
 
         assert_eq!(
-            parse_smbios_buffer(&buf, "test").and_then(|s| s.display_name()),
+            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
             Some("LENOVO ThinkPad T480".to_string())
         );
     }
