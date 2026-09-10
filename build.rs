@@ -363,13 +363,14 @@ fn main() {
         riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") }
     }
 
-    if var("CARGO_FEATURE_GUI").is_ok()
-        && let Ok(out_dir) = var("OUT_DIR")
-    {
-        match var("CARGO_CFG_TARGET_OS").unwrap_or_default().as_str() {
-            "haiku" => build_haiku_gui(out_dir),
-            "windows" => build_windows_gui(out_dir),
-            _ => (),
+    if var("CARGO_FEATURE_GUI").is_ok() {
+        println!("cargo:rerun-if-changed=assets/rustid.png");
+        if let Ok(out_dir) = var("OUT_DIR") {
+            match var("CARGO_CFG_TARGET_OS").unwrap_or_default().as_str() {
+                "haiku" => build_haiku_gui(out_dir),
+                "windows" => build_windows_gui(out_dir),
+                _ => (),
+            }
         }
     }
 }

@@ -23,14 +23,37 @@ pub fn show_alert(parent: Option<&Window>, title: &str, message: &str) {
     dialog.close();
 }
 
+use gtk::gdk_pixbuf::{InterpType, Pixbuf, PixbufLoader};
+
+pub fn get_app_icon() -> Option<Pixbuf> {
+    let loader = PixbufLoader::new();
+    let bytes = include_bytes!("../../../assets/rustid.png");
+    loader.write(bytes).ok()?;
+    loader.close().ok()?;
+    loader.pixbuf()
+}
+
 pub fn show_about_dialog(parent: Option<&Window>) {
-    let about_text = format!(
-        "Rustid v{}\nMulti-architecture CPU detection tool\nRunning on {}-{}",
-        env!("CARGO_PKG_VERSION"),
-        std::env::consts::ARCH,
-        std::env::consts::OS
-    );
-    show_alert(parent, "About Rustid", &about_text);
+    let dialog = gtk::AboutDialog::new();
+    if let Some(parent) = parent {
+        dialog.set_transient_for(Some(parent));
+        dialog.set_modal(true);
+    }
+    dialog.set_program_name("Rustid");
+    dialog.set_version(Some(env!("CARGO_PKG_VERSION")));
+    dialog.set_comments(Some("Multi-architecture CPU detection tool"));
+    dialog.set_website(Some("https://git.timshomepage.net/timw4mail/rustid.git"));
+    dialog.set_website_label(Some("Project Repository"));
+    dialog.set_authors(&["Timothy J. Warren <tim@timshome.page>"]);
+    if let Some(icon) = get_app_icon() {
+        if let Some(logo) = icon.scale_simple(96, 96, InterpType::Hyper) {
+            dialog.set_logo(Some(&logo));
+        } else {
+            dialog.set_logo(Some(&icon));
+        }
+    }
+    dialog.run();
+    dialog.close();
 }
 
 #[cfg(x86_cpu)]

@@ -137,6 +137,11 @@ pub fn run() {
     window.set_default_size(820, 640);
     window.set_size_request(580, 380);
 
+    if let Some(icon) = get_app_icon() {
+        Window::set_default_icon(&icon);
+        window.set_icon(Some(&icon));
+    }
+
     let accel_group = AccelGroup::new();
     window.add_accel_group(&accel_group);
 
