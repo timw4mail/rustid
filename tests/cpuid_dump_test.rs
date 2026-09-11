@@ -1027,6 +1027,46 @@ cpuid_testsuite!(
 );
 
 cpuid_testsuite!(
+    intel_core_3_304,
+    "dump/IntelCore_3_304.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_INTEL);
+            assert!(is_intel());
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 6, 13, 5, 1));
+        }
+
+        test brand_string {
+            assert_brand_contains("Intel(R) Core(TM) 3 304");
+        }
+
+        test topology {
+            assert_topology(1, 5, 5);
+        }
+
+        test hybrid_cores {
+            let cpu = Cpu::detect();
+            assert!(cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 2);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::CougarCove);
+            assert_eq!(cpu.cores[0].name.as_deref(), Some("Cougar Cove"));
+            assert_eq!(cpu.cores[0].count, 1);
+            assert_eq!(cpu.cores[0].threads, 1);
+
+            assert_eq!(cpu.cores[1].kind, CoreType::Efficiency);
+            assert_eq!(cpu.cores[1].micro_arch, MicroArch::Darkmont);
+            assert_eq!(cpu.cores[1].name.as_deref(), Some("Darkmont"));
+            assert_eq!(cpu.cores[1].count, 4);
+            assert_eq!(cpu.cores[1].threads, 4);
+        }
+    }
+);
+
+cpuid_testsuite!(
     intel_eeepc,
     "dump/eeepc.txt",
     {
@@ -1240,6 +1280,31 @@ fn test_cpu_from_dump_hybrid_12700h() {
     assert_eq!(cpu.topology.sockets.count, 1);
     assert_eq!(cpu.topology.cores.count, 10);
     assert_eq!(cpu.topology.threads.count, 20);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
+fn test_cpu_from_dump_hybrid_wildcat_lake() {
+    let path = raw_path("dump/IntelCore_3_304.txt");
+    let cpu = Cpu::from_dump_file(path);
+    assert_eq!(cpu.system, None);
+    assert!(cpu.is_hybrid());
+    assert_eq!(cpu.cores.len(), 2);
+    assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+    assert_eq!(cpu.cores[0].micro_arch, MicroArch::CougarCove);
+    assert_eq!(cpu.cores[0].name.as_deref(), Some("Cougar Cove"));
+    assert_eq!(cpu.cores[0].count, 1);
+    assert_eq!(cpu.cores[0].threads, 1);
+
+    assert_eq!(cpu.cores[1].kind, CoreType::Efficiency);
+    assert_eq!(cpu.cores[1].micro_arch, MicroArch::Darkmont);
+    assert_eq!(cpu.cores[1].name.as_deref(), Some("Darkmont"));
+    assert_eq!(cpu.cores[1].count, 4);
+    assert_eq!(cpu.cores[1].threads, 4);
+
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 5);
+    assert_eq!(cpu.topology.threads.count, 5);
     assert!(!cpu.topology.speed.measured);
 }
 
