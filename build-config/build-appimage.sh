@@ -79,6 +79,26 @@ exec "${HERE}/usr/bin/rustid-gui" "$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 
+# Normalize architecture names for AppImage tooling
+ARCH="$(uname -m)"
+case "$ARCH" in
+    x86_64|amd64)
+        TOOL_ARCH="x86_64"
+        ;;
+    aarch64|arm64)
+        TOOL_ARCH="aarch64"
+        ;;
+    i386|i486|i586|i686)
+        TOOL_ARCH="i686"
+        ;;
+    armv7*|armv6*|armhf)
+        TOOL_ARCH="armhf"
+        ;;
+    *)
+        TOOL_ARCH="$ARCH"
+        ;;
+esac
+
 # Find or download appimagetool
 APPIMAGETOOL=""
 if command -v appimagetool >/dev/null 2>&1; then
@@ -87,25 +107,45 @@ if command -v appimagetool >/dev/null 2>&1; then
 else
     CACHE_DIR="${APPIMAGETOOL_CACHE_DIR:-$HOME/.cache/appimagetool}"
     mkdir -p "$CACHE_DIR"
-    CACHED_TOOL="$CACHE_DIR/appimagetool-${ARCH}.AppImage"
+    CACHED_TOOL="$CACHE_DIR/appimagetool-${TOOL_ARCH}.AppImage"
 
-    if [ ! -f "$CACHED_TOOL" ]; then
-        echo "Downloading appimagetool for ${ARCH}..."
-        TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${ARCH}.AppImage"
-        if ! curl -fsSL "$TOOL_URL" -o "$CACHED_TOOL"; then
-            # Fallback URL
-            ALT_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${ARCH}.AppImage"
-            echo "Retrying download from alternate source: $ALT_URL..."
-            curl -fsSL "$ALT_URL" -o "$CACHED_TOOL"
+    # Download if not cached or if cached file is empty/corrupt
+    if [ ! -s "$CACHED_TOOL" ]; then
+        rm -f "$CACHED_TOOL"
+        echo "Downloading appimagetool for ${TOOL_ARCH}..."
+        TEMP_FILE="$CACHE_DIR/appimagetool-${TOOL_ARCH}.tmp.$$"
+
+        URLS=(
+            "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${TOOL_ARCH}.AppImage"
+            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${TOOL_ARCH}.AppImage"
+        )
+
+        DOWNLOAD_SUCCESS=0
+        for url in "${URLS[@]}"; do
+            echo "Attempting download from: $url..."
+            if curl -fL --retry 3 --connect-timeout 15 "$url" -o "$TEMP_FILE"; then
+                if [ -s "$TEMP_FILE" ]; then
+                    chmod +x "$TEMP_FILE"
+                    mv "$TEMP_FILE" "$CACHED_TOOL"
+                    DOWNLOAD_SUCCESS=1
+                    break
+                fi
+            fi
+            rm -f "$TEMP_FILE"
+        done
+
+        if [ "$DOWNLOAD_SUCCESS" -ne 1 ]; then
+            echo "Error: Failed to download appimagetool for ${TOOL_ARCH}." >&2
+            echo "Please install appimagetool or place it at: $CACHED_TOOL" >&2
+            exit 1
         fi
-        chmod +x "$CACHED_TOOL"
     fi
     APPIMAGETOOL="$CACHED_TOOL"
     echo "Using cached appimagetool at: $APPIMAGETOOL"
 fi
 
 echo "Generating AppImage: $OUTPUT_APPIMAGE..."
-export ARCH="$ARCH"
+export ARCH="$TOOL_ARCH"
 export APPIMAGE_EXTRACT_AND_RUN=1
 
 # Remove previous artifact if exists
