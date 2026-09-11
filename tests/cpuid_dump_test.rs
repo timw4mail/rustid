@@ -241,7 +241,7 @@ macro_rules! cpuid_testsuite {
 
 cpuid_testsuite!(
     tm5700,
-    "dump/tm5700.txt",
+    "dump/Transmeta_Crusoe_TM5700.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_TRANSMETA);
@@ -285,7 +285,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     ppro,
-    "dump/p6x2.txt",
+    "dump/Intel_Pentium_Pro.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -319,7 +319,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     m3_8100y,
-    "dump/m3-8100y.txt",
+    "dump/Intel_Core_M3_8100Y.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -414,7 +414,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     e5_2407,
-    "dump/e5-2407.txt",
+    "dump/Intel_Xeon_E5_2407.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -486,7 +486,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     amd_7950x3d,
-    "dump/7950x3d.txt",
+    "dump/Amd_Ryzen_9_7950X3D.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_AMD);
@@ -522,7 +522,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     amd_5900xt,
-    "dump/5900XT.txt",
+    "dump/Amd_Ryzen_9_5900XT.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_AMD);
@@ -623,7 +623,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     amd_2700u,
-    "dump/2700U.txt",
+    "dump/Amd_Ryzen_7_2700U.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_AMD);
@@ -650,7 +650,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     zhaoxin_kx5640,
-    "dump/kx5640.txt",
+    "dump/Zhaoxin_KaiXian_KX5640.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_CENTAUR);
@@ -736,7 +736,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     via_c7d,
-    "dump/c7d.txt",
+    "dump/Via_C7_D.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_CENTAUR);
@@ -800,7 +800,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     olpc,
-    "dump/olpc.txt",
+    "dump/Via_C7_M_Olpc.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_CENTAUR);
@@ -832,7 +832,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     idt_w2b,
-    "dump/W2B-DUMP.TXT",
+    "dump/Idt_Winchip_2B.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_CENTAUR);
@@ -862,7 +862,7 @@ cpuid_testsuite!(
 #[cfg(target_arch = "x86")]
 cpuid_testsuite!(
     vortex86dx3,
-    "dump/vortex86dx3.txt",
+    "dump/Dmp_Vortex86DX3.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_DMP);
@@ -919,7 +919,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     via_edenx2,
-    "dump/edenx2.txt",
+    "dump/Via_Eden_X2.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_CENTAUR);
@@ -972,7 +972,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     intel_12700h,
-    "dump/12700H.txt",
+    "dump/Intel_Core_I7_12700H.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -1028,7 +1028,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     intel_core_3_304,
-    "dump/IntelCore_3_304.txt",
+    "dump/Intel_Core_3_304.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -1068,7 +1068,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     intel_eeepc,
-    "dump/eeepc.txt",
+    "dump/Intel_Celeron_M_353.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -1104,7 +1104,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     p4_northwood,
-    "dump/P4Northwood.txt",
+    "dump/Intel_Pentium_4_Northwood.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -1142,7 +1142,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     intel_n3540,
-    "dump/N3540.txt",
+    "dump/Intel_Pentium_N3540.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_INTEL);
@@ -1175,7 +1175,7 @@ cpuid_testsuite!(
 
 cpuid_testsuite!(
     sis550,
-    "dump/sis550.TXT",
+    "dump/Sis_550.txt",
     {
         test vendor_detection {
             assert_vendor(VENDOR_SIS);
@@ -1244,7 +1244,7 @@ fn test_all_vendor_strings() {
 
 #[test]
 fn test_cpu_from_dump_file_helper() {
-    let path = raw_path("dump/eeepc.txt");
+    let path = raw_path("dump/Intel_Celeron_M_353.txt");
     let cpu = Cpu::from_dump_file(path);
     assert_eq!(cpu.system, None);
     assert!(cpu.display_model_string().contains("Celeron"));
@@ -1256,7 +1256,7 @@ fn test_cpu_from_dump_file_helper() {
 
 #[test]
 fn test_cpu_from_dump_str_helper() {
-    let raw = include_str!("cpuid/dump/eeepc.txt");
+    let raw = include_str!("cpuid/dump/Intel_Celeron_M_353.txt");
     let cpu = Cpu::from_dump_str(raw);
     assert_eq!(cpu.system, None);
     assert!(cpu.display_model_string().contains("Celeron"));
@@ -1268,7 +1268,7 @@ fn test_cpu_from_dump_str_helper() {
 
 #[test]
 fn test_cpu_from_dump_hybrid_12700h() {
-    let path = raw_path("dump/12700H.txt");
+    let path = raw_path("dump/Intel_Core_I7_12700H.txt");
     let cpu = Cpu::from_dump_file(path);
     assert_eq!(cpu.system, None);
     assert!(cpu.is_hybrid());
@@ -1285,7 +1285,7 @@ fn test_cpu_from_dump_hybrid_12700h() {
 
 #[test]
 fn test_cpu_from_dump_hybrid_wildcat_lake() {
-    let path = raw_path("dump/IntelCore_3_304.txt");
+    let path = raw_path("dump/Intel_Core_3_304.txt");
     let cpu = Cpu::from_dump_file(path);
     assert_eq!(cpu.system, None);
     assert!(cpu.is_hybrid());
@@ -1310,7 +1310,7 @@ fn test_cpu_from_dump_hybrid_wildcat_lake() {
 
 #[test]
 fn test_pure_cpuid_detect_never_populates_os_data() {
-    let path = raw_path("dump/7950x3d.txt");
+    let path = raw_path("dump/Amd_Ryzen_9_7950X3D.txt");
     let cpu = Cpu::from_dump_file(path);
     assert_eq!(cpu.system, None);
     assert_eq!(cpu.vendor, "AMD");
@@ -1328,20 +1328,20 @@ fn test_pure_cpuid_detect_never_populates_os_data() {
 #[test]
 fn test_sequential_multiple_dumps_loading() {
     // 1. Load multi-context hybrid dump (20 threads)
-    set_file_cpuid_provider("dump/12700H.txt");
+    set_file_cpuid_provider("dump/Intel_Core_I7_12700H.txt");
     let cpu1 = Cpu::detect();
     assert!(cpu1.is_hybrid());
     assert_eq!(cpu1.topology.threads.count, 20);
 
     // 2. Immediately load single-context SiS 550 dump
-    set_file_cpuid_provider("dump/sis550.TXT");
+    set_file_cpuid_provider("dump/Sis_550.txt");
     let cpu2 = Cpu::detect();
     assert_eq!(cpu2.vendor, "SiS");
     assert!(cpu2.display_model_string().contains("SiS 550"));
     assert_eq!(cpu2.topology.threads.count, 1);
 
     // 3. Immediately load Pentium Pro dump
-    set_file_cpuid_provider("dump/p6x2.txt");
+    set_file_cpuid_provider("dump/Intel_Pentium_Pro.txt");
     let cpu3 = Cpu::detect();
     assert_eq!(cpu3.vendor, "Intel");
     assert!(cpu3.display_model_string().contains("Pentium Pro"));
