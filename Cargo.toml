@@ -11,15 +11,15 @@ default-run = "rustid"
 [dependencies]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.6"
-objc2-core-foundation = { version = "0.3", features = ["objc2"] }
-objc2-foundation = { version = "0.3", features = ["NSArray", "NSAttributedString", "NSDictionary", "NSString", "NSURL", "NSValue", "NSGeometry", "NSRange", "NSProcessInfo", "NSNotification", "NSObject", "NSData", "NSBundle", "NSFileManager", "NSUserDefaults"] }
+objc2 = { version = "0.6", optional = true }
+objc2-core-foundation = { version = "0.3", features = ["objc2"], optional = true }
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSAttributedString", "NSDictionary", "NSString", "NSURL", "NSValue", "NSGeometry", "NSRange", "NSProcessInfo", "NSNotification", "NSObject", "NSData", "NSBundle", "NSFileManager", "NSUserDefaults"], optional = true }
 objc2-app-kit = { version = "0.3", features = [
     "NSApplication", "NSWindow", "NSView", "NSTextView", "NSText", "NSScrollView",
     "NSMenu", "NSMenuItem", "NSAppearance", "NSFont", "NSAlert", "NSPasteboard",
     "NSOpenPanel", "NSSavePanel", "NSColor", "NSImage", "NSResponder", "NSWorkspace",
     "NSButton", "NSButtonCell", "NSCell", "NSControl", "NSAttributedString",
-] }
+], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62.2", default-features = false, features = [
@@ -79,4 +79,10 @@ debug = []
 dos-build = []
 dos32a-build = []
 efi-build = []
-gui = ["dep:gtk"]
+gui = [
+    "dep:gtk",
+    "dep:objc2",
+    "dep:objc2-core-foundation",
+    "dep:objc2-foundation",
+    "dep:objc2-app-kit",
+]

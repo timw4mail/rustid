@@ -5,7 +5,7 @@ pub mod styled_text;
 #[cfg(target_os = "windows")]
 pub mod windows;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "gui"))]
 pub mod macos;
 
 #[cfg(any(target_os = "haiku", test))]

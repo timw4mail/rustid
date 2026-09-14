@@ -22,7 +22,6 @@ use objc2_foundation::{
 
 use crate::Cpu;
 use crate::common::CliFlags;
-use crate::common::TCpuDisplay;
 use crate::common::cpu::TDetect;
 use crate::gui::common::{self, ReportSource, ViewMode};
 use render::render_report;

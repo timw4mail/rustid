@@ -87,9 +87,9 @@ proprietary SDK requirement, the standard `cargo-xcross` Docker images are
 
 ## Building
 
-The only thing required beyond the toolchain is Cargo's own declared macOS
-dependencies (`objc2`, `objc2-foundation`, `objc2-app-kit`), which are
-activated automatically on macOS targets.
+The macOS GUI dependencies (`objc2`, `objc2-core-foundation`, `objc2-foundation`,
+`objc2-app-kit`) are declared as optional and are only activated when building
+with the `gui` feature. The CLI binary has no Objective-C runtime dependencies.
 
 **Recommended: one-shot bundle build.** The `build-mac-gui` recipe (see
 `justfile`) drives `build-config/build-macos.sh`, which builds both slices,
@@ -110,16 +110,16 @@ cargo build --target x86_64-apple-darwin --release
 cargo build --target aarch64-apple-darwin --release
 ```
 
-**GUI (`rustid-gui`, both slices):**
+**GUI (`gui`, both slices):**
 ```bash
-cargo build --target x86_64-apple-darwin --features gui --bin rustid-gui --release
-cargo build --target aarch64-apple-darwin --features gui --bin rustid-gui --release
+cargo build --target x86_64-apple-darwin --features gui --bin gui --release
+cargo build --target aarch64-apple-darwin --features gui --bin gui --release
 ```
 
 Type-checking (no SDK/linker required) works with plain `cargo check`:
 ```bash
-cargo check --target aarch64-apple-darwin --features gui --bin rustid-gui
-cargo check --target x86_64-apple-darwin --features gui --bin rustid-gui
+cargo check --target aarch64-apple-darwin --features gui --bin gui
+cargo check --target x86_64-apple-darwin --features gui --bin gui
 ```
 
 ### Combine into a universal binary
