@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>net.timshomepage.rustid</id>
+  <name>Rustid</name>
+  <summary>Multi-architecture CPU detection tool</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="net.timshomepage">
+    <name>Timothy J. Warren</name>
+  </developer>
+  <description>
+    <p>A utility to identify the name, microarchitecture, and capabilities of the current CPU.</p>
+  </description>
+  <url type="homepage">https://github.com/timw4mail/rustid.git</url>
+  <launchable type="desktop-id">rustid.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>rustid-gui</binary>
+  </provides>
+</component>

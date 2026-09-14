@@ -1,543 +1,74 @@
 # Changelog
 
-## [2.2.0] — Native Haiku GUI application, cross-platform application icons, and Windows resource embedding
+For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
+
+## [2.2.0] — Linux GTK & Haiku GUI applications, Intel Wildcat Lake support, and cross-platform application icons
 
 ### Added
-- **Native Haiku GUI Application**:
-  - Added Haiku graphical interface
-- **Application Icons Across Platforms**:
-  - Added multi-resolution application icons for Windows (`assets/rustid.ico`), macOS (`assets/rustid.icns`), Vector SVG (`assets/rustid.svg`), Haiku (`assets/haiku/rustid.rdef`, `assets/haiku/rustid.hvif`, `assets/haiku/rustid_16.png`, `32.png`, `64.png`, `128.png`), and PNG source artwork (`assets/rustid.png`)
-  - Added Haiku resource definition (`assets/haiku/rustid.rdef`) and build recipe support to compile and embed icon/signature resources using Haiku `rc`, `xres`, and `mimeset` (`Makefile`, `justfile`, `assets/haiku/README.md`)
-- **Windows GUI Icon & Resource Embedding**:
-  - Added Windows resource file (`build-config/rustid.rc`) embedding application icon as Resource ID 1 (`IDI_APPLICATION`)
-  - Added architecture-specific multi-resolution Windows icon variants with bold white serif silkscreen text: `assets/windows/rustid_x86.{ico,png}` (`"x86"`), `assets/windows/rustid_x64.{ico,png}` (`"x64"`), and `assets/windows/rustid_arm64.{ico,png}` (`"arm64"`)
-  - Updated `build.rs` to dynamically route icon resources based on `CARGO_CFG_TARGET_ARCH` and integrated automated `windres` / `rc` resource compilation across MinGW x86, x86_64, ARM64, and ARM targets (`build.rs`)
-  - Updated Win32 GUI window creation to load and assign application icons via `LoadIconW` / `LoadIconA` and `WM_SETICON` (`ICON_BIG` and `ICON_SMALL`) supporting both modern Windows and Windows 9x ANSI paths (`src/gui/windows/window.rs`)
-  - Added `WINDRES` toolchain environment variables in Windows 32-bit and ARM64 GUI build scripts (`build-config/build-windows-gui-32.{sh,ps1}`, `build-config/build-windows-gui-arm64.{sh,ps1}`)
-
-## [2.1.1] — Binary/bin restructuring, DOS topology & compact-mode fixes, and aligned Windows system name detection
-
-### Added
-- **DOS `/COMPACT` Flag**: Added `/C` / `/COMPACT` flag support to the 32-bit DOS extender binary (`rustid.exe`) and removed the DOS-specific `newline()` override so DOS output respects the `compact` flag like the CLI and UEFI targets instead of always rendering compact (`src/dos_rustid.rs`, `src/common/display.rs`)
-- **Additional Architecture Check Recipes**: Added `check-arm64`, `check-ppc`, and `check-ppc64` compile-check recipes to `Makefile` and `justfile`, wired into `check-all` (`Makefile`, `justfile`)
-- **Repeatable i486 musl Build**: Added dedicated `build-config/build-486-musl.sh` script that downloads/uses the musl.cc `i486-linux-musl-cross` toolchain, replacing the fragile inline cargo-cross invocation for `build-486-musl` (`build-config/build-486-musl.sh`, `Makefile`, `justfile`)
-- **Bay Trail Test Fixture**: Added Intel Bay Trail N3540 CPUID dump test fixture with core/thread/topology assertions (`tests/cpuid/dump/N3540.txt`, `tests/cpuid_dump_test.rs`)
+- **Linux GTK GUI & AppImage**: Added native Linux GTK3 graphical interface and standalone AppImage packaging (`build-config/build-appimage.sh`, `Makefile`, `justfile`)
+- **Native Haiku GUI**: Added native Haiku graphical application with styled output and system theme synchronization (`src/gui/haiku/*`)
+- **Intel Wildcat Lake Support**: Added hybrid CPU detection for Intel Wildcat Lake (e.g., Core 3 304) resolving Cougar Cove and Darkmont cores (`src/x86/vendor/intel.rs`)
+- **Cross-Platform Application Icons**: Added application icons for Windows (with architecture badges for x86/x64/arm64), macOS, Linux, and Haiku (`assets/*`)
 
 ### Changed
-- **Unified DOS Binaries**: Combined the separate real-mode (`rust86`) and DOS-extender (`dos_rustid`) cargo binaries into a single `dos_rustid` binary that produces both `rust86.exe` and `rustid.exe` depending on the target (`src/dos_rustid.rs`, `Cargo.toml`, `Makefile`, `justfile`)
-- **Cargo Binary Restructure**: Moved binary sources into `src/bin/` and renamed them for consistency: `rustid-gui` → `gui`, `dos_rustid` → `dos`, `efi_rustid` → `efi`, with all build scripts, workflows, and docs updated (`src/bin/dos.rs`, `src/bin/efi.rs`, `src/bin/gui.rs`, `Cargo.toml`, `Makefile`, `justfile`, `build-config/*`)
-- **Windows GUI Submodule Layout**: Moved the Windows GUI implementation into a `src/gui/windows/` submodule, gating it behind `target_os = "windows"` (`src/gui/mod.rs`, `src/gui/windows/mod.rs`)
-- **CI Check Split**: Separated PowerPC compile checks from GitHub Actions CI; added a `check-ci` recipe covering CI targets while `check-all` additionally runs PowerPC checks (`.github/workflows/push.yml`, `Makefile`, `justfile`)
-- **Topology Detection Robustness**: CPUID Leaf B/19/1F topology domains now drive package core, thread, and threads-per-core counts via a new `Topology::domains_summary` helper (with an added `shift` field per domain), and SMT width is computed from the APIC topology domain shift to avoid undercounting (e.g. on Bay Trail) (`src/x86/topology.rs`, `src/x86/fns.rs`, `src/x86/display.rs`)
+- **CPUID Dump & Example Fixture Naming**: Standardized CPUID test dumps and output example filenames using consistent underscore-separated naming (e.g., `Amd_Ryzen_7_2700U.txt`, `Intel_Core_I7_12700H.txt`)
+- **Changelog Split**: Split historical changelog entries prior to version 2.0.0 into [`CHANGELOG-1.0.md`](./CHANGELOG-1.0.md)
+- **Changelog Streamline**: Cut down verbosity of changelog to user-visible changes to improve readability and relevance
+
+## [2.1.1] — Binary restructuring, DOS topology and compact-mode fixes, and Windows system name detection
+
+### Added
+- **DOS Compact Mode**: Added `/C` / `/COMPACT` flag support to 32-bit DOS extender binary (`rustid.exe`) (`src/bin/dos.rs`, `src/common/display.rs`)
+- **Bay Trail Test Fixture**: Added Intel Bay Trail N3540 CPUID dump test fixture and assertions (`tests/cpuid/dump/Intel_Pentium_N3540.txt`, `tests/cpuid_dump_test.rs`)
+
+### Changed
+- **Binary Source Restructuring**: Reorganized cargo binary sources under `src/bin/` (`gui`, `dos`, `efi`) (`src/bin/*`, `Cargo.toml`)
+- **Topology Detection Robustness**: Improved SMT width and package core/thread calculations from CPUID Leaf B/19/1F APIC topology domains (`src/x86/topology.rs`, `src/x86/display.rs`)
 
 ### Fixed
-- **Bay Trail Core/Thread Count in DOS**: Corrected MP Table handling so MP Table sockets are combined with CPUID cores/threads-per-package rather than trusting the MP Table's total core/thread values, fixing spurious core/thread counts on Bay Trail processors (e.g. N3540) (`src/x86/dos/mod.rs`, `src/x86/topology.rs`)
-- **ARM, PowerPC, and macOS Build Errors**: Fixed cross-target compile errors by switching ARM and PowerPC runtime cache detection to `Cache::detect_os()` and correcting the macOS system name lookup fallback (`src/arm/os/mod.rs`, `src/ppc/cpu.rs`, `src/common/os/macos.rs`)
-- **Windows System Name Detection Order & Apple Model Handling**: Aligned Windows SMBIOS table and Registry parsing order with Linux sysfs detection (`Family` -> `Product Name` -> `BaseBoard`). Extracted SMBIOS Type 1 `Family` string and prioritized it before `Product Name`, while prioritizing Apple hardware model identifiers across SMBIOS Type 0 (BIOS version `MB41...`), Type 1, and Registry keys ahead of non-standard vendor family fields (e.g. `4 4 A  `) so Apple Mac hardware running Windows maps cleanly to its consumer name (`src/common/os/windows.rs`, `src/common/os/common.rs`).
-- **Cross-Platform System Name Vendor Prefixing**: Added centralized `combine_vendor_and_model` and `is_apple_model_name` helpers to consistently attach hardware manufacturer/vendor names to system and motherboard model names across Linux, Windows, EFI, and BSD detection while preserving Apple hardware model identifiers (e.g. `MacBook4,1`, `Mac14,2`) for downstream consumer marketing name formatting (`src/common/os/common.rs`, `src/common/os/linux.rs`, `src/common/os/windows.rs`, `src/x86/efi/smbios.rs`, `src/common/os/bsd.rs`).
-- **Multi-Dump Sequential Loading Bug**: Fixed an issue where loading multi-core / hybrid CPUID dump files left the thread-local CPU context index pointing to a high index, causing subsequent dump file loads with fewer CPU contexts to fail CPUID queries and fall back to Generic 386/486 (`src/x86/provider.rs`, `src/x86/cpu.rs`, `tests/cpuid_dump_test.rs`).
-- **DOS Console Color and Monochrome Output Fix**: Resolved console corruption in 32-bit DOS (`rustid.exe`) by bypassing VRAM when `/M` or `/MONO` is passed or stdout is redirected, writing clean plain text via standard DOS `INT 21h, AH=40h`. Hardened direct VRAM color writing by clamping dimensions to safe bounds (`80x25`), eliminating volatile reads from contended UMA framebuffers (defaulting to standard attribute `0x07`), and tracking cursor coordinates directly via the BIOS Data Area (`src/x86/dos/mod.rs`, `src/dos_rustid.rs`).
+- **DOS Console Output**: Fixed console output corruption and redirection in 32-bit DOS, adding clean fallback text output when `/M` / `/MONO` is used or stdout is redirected (`src/x86/dos/mod.rs`, `src/bin/dos.rs`)
+- **System and Model Name Detection**: Aligned Windows SMBIOS table and Registry parsing with Linux sysfs detection, improving Apple Mac hardware identification under Windows and consistent vendor prefixing across platforms (`src/common/os/windows.rs`, `src/common/os/common.rs`)
+- **Bay Trail Core and Thread Counts**: Fixed spurious core/thread counts on Intel Bay Trail CPUs in DOS (`src/x86/dos/mod.rs`)
+- **Sequential Dump Loading**: Fixed issue where loading multi-core dumps affected subsequent dump parsing (`src/x86/provider.rs`)
+- **Cross-Platform Build Fixes**: Resolved compile errors across ARM, PowerPC, and macOS targets (`src/arm/os/mod.rs`, `src/ppc/cpu.rs`, `src/common/os/macos.rs`)
 
-## [2.1.0] — Native Windows GUI with Windows 9x backwards compatibility, unified topology model, multi-socket display, NetBurst Gallatin detection, and common deduplication
+## [2.1.0] — Native Windows GUI with Windows 9x backwards compatibility, unified topology model, and multi-socket display
 
 ### Added
-- **Native Windows GUI Application (`rustid-gui`)**:
-  - Added a dedicated Win32 GUI binary built under the `gui` Cargo feature (`src/rustid_gui.rs`, `src/gui/mod.rs`)
-  - There are 3 builds: x86_32, x86_64, and arm64
-- **Universal Windows Compatibility (Windows 95 through Windows 11)**:
-  - Runtime Unicode vs. ANSI API detection (`IS_UNICODE`); automatically falls back to ANSI window registration (`RegisterClassExA`) and window creation (`CreateWindowExA`) on Windows 95/98/ME
-  - Dynamic RichEdit version fallback chain: RichEdit 5.0 (`RichEdit50W`) -> RichEdit 2.0/3.0 (`RichEdit20W`/`RichEdit20A`) -> RichEdit 1.0 (`RICHEDIT` via `riched32.dll`) -> standard multiline `EDIT` control
-  - Status bar (`msctls_statusbar32`) with 3-part layout (Model/OS, Data Source/Dump, View Mode/Settings) and ANSI compatibility
-  - File dialog dual-mode support (`OPENFILENAMEW` vs `OPENFILENAMEA`) for loading and saving CPUID dumps across all Windows generations
-- **32-bit Windows Cross-Compilation Pipeline**:
-  - Added `i586-pc-windows-gnu` custom JSON target specification (`build-config/i586-pc-windows-gnu.json`) targeting i586 architecture and Windows subsystem 4.0
-  - Added build automation scripts (`build-config/build-windows-gui-32.sh`, `build-config/build-windows-gui-32.ps1`) and recipes in `Makefile` and `justfile` (`build-windows-gui-32`, `build-windows-gui-64`, `build-windows-7-64`)
-  - Configured MinGW linker flags (`-Wl,--major-os-version,4 -Wl,--minor-os-version,0 -Wl,--major-subsystem-version,4 -Wl,--minor-subsystem-version,0`) for native execution on Windows 95, 98, ME, NT 4.0, 2000, XP, Vista, 7, 8, 10, and 11
-- **NetBurst Northwood vs. Gallatin Disambiguation via L3 Cache**: Added `disambiguate_0f_02h` to distinguish Intel NetBurst Pentium 4 (Northwood, without L3 cache) from Pentium 4 Extreme Edition / Xeon MP (Gallatin, with L3 cache) using live L3 cache detection (`Cache::has_l3()`) and model name fallback (`src/x86/vendor/intel.rs`, `src/common/cache.rs`)
-- **L3 Cache Helper Method**: Added `Cache::has_l3(&self) -> bool` method to easily check whether an L3 cache level is present and non-zero (`src/common/cache.rs`)
-- **DOS Colored Console Display**: Added driverless VGA text mode ANSI color rendering for 32-bit protected mode DOS (`dos32a` build, `rustid.exe`), matching output on CLI and UEFI targets; enabled `color: true` by default, added `/M` / `/MONO` flag support for monochrome output, and automatically stripped color escape sequences when output redirection to a file is detected (`src/dos_rustid.rs`, `src/x86/dos/mod.rs`)
-- **Unified CPU Topology on Common Struct**: Extracted the `Topology` struct (`sockets`, `dies`, `cores`, `threads`, `speed`, `cache`) into `src/common/topology.rs` and placed `topology: Topology` directly on the shared `Cpu<E, M>` generic object across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`) (`src/common/cpu.rs`, `src/common/topology.rs`)
-- **Multi-Socket Display Support**: Added physical socket count formatting across all architectures (`x86`, `ARM`, `RISC-V`, `PowerPC`); outputs `Topology: <N> sockets, <C> cores, <T> threads` whenever physical socket count is greater than 1 or in verbose mode (`src/common/display.rs`)
-- **Sysfs Socket Detection**: Added physical package ID parsing from `/sys/devices/system/cpu/cpu*/topology/physical_package_id` and `/proc/cpuinfo` `physical id` to automatically detect multi-socket systems on Linux and Android (`src/common/os/linux_sysfs.rs`)
-- **Single-Core SMT Display**: `display_topology_line` now explicitly displays thread count for single-core hyperthreaded CPUs (e.g. `1 core (2 threads)`) (`src/common/display.rs`)
-- **Centralized Linux & Android Sysfs Module**: Extracted sysfs cache tree traversal (`read_sysfs_cpu_cache`, `read_sysfs_cache_per_type`), `lscpu -C` cache fallback parser, and topology reader (`detect_sysfs_topology`) into a shared `linux_sysfs` module compiled under `#[cfg(any(target_os = "linux", target_os = "android"))]` (`src/common/os/linux_sysfs.rs`)
-- **Common Device-Tree, Frequency, and OS Helpers**: Added pure `core`/`no_std` safe integer frequency parser `parse_frequency_mhz`, devicetree helpers (`read_devicetree_string`, `read_devicetree_u64`, `get_devicetree_compatible`, `format_compatible_pair`), CPU governor/status parsers (`parse_governor_from_str`, `parse_status_from_str`), and thread affinity iterator `for_each_logical_core` (`src/common/os/common.rs`)
-- **Cross-Compilation CI & Target Checks**: Added `check-all` recipe to `justfile` and `Makefile` with auto-installation of missing `rustup` targets, and integrated target compilation checks in GitHub Actions CI covering `x86_64-unknown-uefi`, `i586-unknown-none` (DOS), `aarch64-linux-android`, `powerpc-unknown-linux-gnu`, `riscv64gc-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `aarch64-pc-windows-msvc` (`.github/workflows/push.yml`, `justfile`, `Makefile`)
-- **Release Workflow Binary Packaging**: Added Windows GUI binary builds to release workflow artifact generation (`.github/workflows/release.yml`)
-- **ELF to LE Converter Section Handling**: Extended `elf2le` tool to match dotted ELF section names like `.rodata.*`, `.data.*`, and `.bss.*` for DOS32A protected-mode binaries (`tools/elf2le/src/main.rs`)
-- **Xeon & Pentium 4 Test Fixtures**: Added dual-socket Intel Xeon E5-2470 test fixture (`examples/xeon-e5-2470.txt`) and Intel Pentium 4 Northwood CPUID dump and tests (`tests/cpuid/dump/P4Northwood.txt`, `tests/cpuid_dump_test.rs`)
-- **Easter Egg String Validation**: Added `Cpu::is_valid_easter_egg()` to validate candidate easter egg strings, filtering out empty, too-short, control-character-containing, non-alphanumeric, and repetitive strings (`src/x86/cpu.rs`)
+- **Native Windows GUI**: Added standalone Win32 GUI application (`gui`) supporting Windows 95 through Windows 11 with dynamic ANSI/Unicode and RichEdit fallbacks, status bar, and dump file loading (`src/gui/windows/*`)
+- **Windows Cross-Compilation**: Added build scripts and toolchain configurations for 32-bit x86, x86_64, and ARM64 Windows GUI targets (`build-config/*`, `Makefile`, `justfile`)
+- **DOS Color Output**: Added text-mode color rendering for 32-bit DOS (`rustid.exe`) with `/M` / `/MONO` monochrome flag support (`src/bin/dos.rs`, `src/x86/dos/mod.rs`)
+- **Multi-Socket & Topology Display**: Added multi-socket system detection and formatting across all architectures, including sysfs package detection on Linux/Android and single-core SMT thread formatting (`src/common/topology.rs`, `src/common/display.rs`, `src/common/os/linux_sysfs.rs`)
+- **NetBurst Northwood vs. Gallatin Detection**: Disambiguated Pentium 4 from Pentium 4 Extreme Edition / Xeon MP using L3 cache presence (`src/x86/vendor/intel.rs`, `src/common/cache.rs`)
+- **Test Fixtures**: Added dual-socket Intel Xeon E5-2470 and Pentium 4 Northwood test fixtures (`examples/Intel_Xeon_E5_2470_V2.txt`, `tests/cpuid/dump/Intel_Pentium_4_Northwood.txt`)
 
 ### Changed
-- **Deduplicated Linux & Android OS Detection**: Replaced separate `src/arm/os/android.rs` (345 lines) with unified `src/arm/os/linux.rs` guarded by `#[cfg(linux_os)]`, and consolidated duplicated sysfs and `/proc/cpuinfo` parsing logic across Linux and Android into `src/common/os/common.rs` and `src/common/os/linux_sysfs.rs` (`src/common/os/linux.rs`, `src/common/os/android.rs`)
-- **Separated CPUID Discovery from OS Enrichment**: Clarified separation between pure CPUID detection and live OS hardware enrichment (`enrich_cpu`) across DOS, EFI, and OS targets (`src/x86/cpu.rs`, `src/x86/os/mod.rs`, `src/x86/efi/mod.rs`, `src/x86/dos/mod.rs`)
-- **Architecture Module Alignment**: Refactored ARM, RISC-V, and PowerPC modules to follow consistent structure, shared generic CPU types, and unified display patterns (`src/arm/cpu.rs`, `src/riscv/cpu.rs`, `src/ppc/cpu.rs`, `src/ppc/micro_arch.rs`)
-- **Release Workflow Cleanup**: Configured release workflow to clean untracked/dirty files before crates.io packaging and publishing (`.github/workflows/release.yml`)
+- **Consolidated Linux & Android OS Detection**: Unified sysfs traversal, cache discovery, and hardware enrichment across Linux and Android into shared modules (`src/common/os/*`)
+- **Architecture Module Alignment**: Structured ARM, RISC-V, and PowerPC modules around shared generic CPU types and unified display patterns (`src/common/cpu.rs`, `src/arm/*`, `src/riscv/*`, `src/ppc/*`)
 
 ### Fixed
-- **Windows System Model & Legacy SMBIOS Detection**: Added direct SMBIOS table extraction via `GetSystemFirmwareTable('RSMB')` (matching Windows System Information `msinfo32`'s "System Model") and fallback `mssmbios` registry cache decoding (`HKLM\SYSTEM\CurrentControlSet\Services\mssmbios\Data\SMBiosData` on Windows 2000 / XP); added fallback detection paths for older Windows versions (Windows 95/98/ME, NT 4.0, 2000, XP) supporting `HKLM\SYSTEM\CurrentControlSet\Control\SystemInformation`, `OEMInformation`, `oeminfo.ini`, and Apple Mac model identification (`src/common/os/windows.rs`, `src/common/os/common.rs`)
-- **Windows 2000 & Legacy Multi-Socket Detection**: Added fallback socket, core, and thread counting for legacy Windows (Windows NT 4.0 / 2000 / XP / Server 2003 / Vista) where `GetLogicalProcessorInformationEx` is unsupported, using dynamic `GetLogicalProcessorInformation` (GLPI), `GetSystemInfo` (`dwNumberOfProcessors`), CPUID threads-per-package calculation, and `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor` subkey enumeration (`src/common/os/windows.rs`)
-- **EFI Target Display Imports**: Fixed missing imports in x86 display module when building for UEFI targets (`src/x86/display.rs`)
-- **PowerPC Clock Speed Detection**: Fixed clock speed reporting on Linux PowerPC (e.g. PowerBook G4 / PowerBook5,2) by prioritizing `/proc/cpuinfo` `clock: <N>MHz`, sysfs `cpufreq`, and CPU node devicetree clock (`/proc/device-tree/cpus/*/clock-frequency`) over root bus frequency (`/proc/device-tree/clock-frequency`, which reports the 166.66 MHz FSB bus clock) (`src/ppc/cpu.rs`)
-- **DOS Multi-Socket MP Table Detection**: Corrected DOS Intel MP Table topology calculation: MP Table entries represent logical processors (APIC IDs) rather than physical sockets, resolving false multi-socket reports on multi-core processors (e.g. Core 2 Quad previously reporting 4 sockets, 16 cores, 16 threads) (`src/x86/dos/mod.rs`, `src/x86/dos/mp.rs`)
-- **Cross-Platform Thread Affinity**: Unified logical core affinity switching loop in ARM Linux, Windows, and BSD to use `for_each_logical_core` (`src/arm/os/mod.rs`, `src/common/os/common.rs`)
-- **Android Target Build**: Resolved compile errors and missing imports when targeting `aarch64-linux-android` (`src/common/os/android.rs`)
+- **Legacy Windows SMBIOS & Multi-Socket Detection**: Added fallback SMBIOS table parsing and multi-socket detection for Windows 95 through XP (`src/common/os/windows.rs`)
+- **PowerPC Clock Speed Detection**: Fixed CPU clock speed reporting on Linux PowerPC systems (`src/ppc/cpu.rs`)
+- **DOS Multi-Socket Detection**: Corrected MP Table topology parsing to prevent false multi-socket reports on multi-core processors (`src/x86/dos/mod.rs`)
+- **Cross-Platform Build Fixes**: Resolved build and import issues on EFI, Android, and Haiku targets (`src/x86/display.rs`, `src/common/os/haiku.rs`, `src/common/os/android.rs`)
 
-## [2.0.0] — Add missing Intel and AMD cpu mappings, fix edge cases, and more
+## [2.0.0] — Comprehensive Intel/AMD microarchitecture expansion, ARM SoC detection, UEFI SMBIOS support, and output redesign
 
 ### Added
-- Comprehensive Intel microarchitecture expansion covering Intel Family 6, Family 18 (Nova Lake), and Family 19 (Diamond Rapids) CPUID signatures across desktop, mobile, server, and embedded lineups: Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Bartlett Lake, Twin Lake, Granite Rapids, Sierra Forest, Grand Ridge, Clearwater Forest, Sapphire Rapids, Emerald Rapids, Cooper Lake, Rocket Lake, Cannon Lake, Amber Lake, Whiskey Lake, Comet Lake, Knights Mill, Wildcat Lake, Nova Lake, and Diamond Rapids (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
-- Stepping- and brand-string-aware CPUID signature collision disambiguation for overlapping Intel CPU models:
-  - `06_55H`: Skylake-SP/X vs. Cascade Lake-SP/X vs. Cooper Lake
-  - `06_8EH`: Amber Lake-Y vs. Kaby Lake-U/R vs. Coffee Lake-U vs. Whiskey Lake-U vs. Comet Lake-U
-  - `06_9EH`: Kaby Lake-S/H/X vs. Coffee Lake-S/H vs. Coffee Lake-S/H Refresh
-  - `06_0FH` & `06_17H`: Core 2 Duo / Quad / Mobile (Conroe, Kentsfield, Merom, Wolfdale, Yorkfield, Penryn) vs. Enterprise Xeon server equivalents (Woodcrest, Clovertown, Tigerton, Wolfdale-DP, Harpertown)
-  - `06_2DH`, `06_3EH`, `06_3FH`, `06_4FH`: HEDT Extreme (`-E`) vs. Multi-Socket Enterprise Xeon (`-EP`/`-EN`/`-EX`) for Sandy Bridge, Ivy Bridge, Haswell, and Broadwell
-  - `06_8FH`: Sapphire Rapids-SP vs. Sapphire Rapids-WS vs. Xeon Max (HBM)
-  - `06_B7H` / `06_BFH`: Raptor Lake 13th Gen vs. 14th Gen Refresh vs. Core Series 1 / Series 2
-  - `06_BEH`: Alder Lake-N vs. Twin Lake-N
-- Comprehensive AMD microarchitecture expansion covering AMD Family 15h, 17h, 19h, and 1Ah generations across desktop, mobile, server (EPYC), and workstation (Threadripper) lineups: K5, K6, K7, K8, K10/K10.5, Bobcat, Jaguar, Puma, Bulldozer, Piledriver, Steamroller, Excavator, Zen 1, Zen+, Zen 2, Zen 3, Zen 3+, Zen 4, Zen 4c, Zen 5, and Zen 5c (`src/x86/vendor/amd.rs`, `src/x86/micro_arch.rs`)
-- Stepping-, model-number-, and brand-string-aware CPUID signature collision disambiguation for overlapping AMD CPU models (`src/x86/vendor/amd.rs`):
-  - Summit Ridge vs. Pinnacle Ridge vs. Whitehaven vs. Colfax vs. Naples vs. Raven Ridge vs. Picasso vs. Banded Kestrel vs. Dali vs. Pollock
-  - Matisse vs. Rome vs. Castle Peak vs. Renoir vs. Lucienne vs. Van Gogh vs. Mendocino
-  - Vermeer vs. Vermeer-X (3D V-Cache) vs. Milan vs. Milan-X vs. Chagall vs. Cezanne vs. Barcelo / Barcelo-R vs. Rembrandt / Rembrandt-R
-  - Raphael vs. Raphael-X (3D V-Cache) vs. Dragon Range vs. Genoa vs. Genoa-X vs. Bergamo vs. Siena vs. Storm Peak vs. Phoenix vs. Phoenix 2 vs. Hawk Point
-  - Granite Ridge vs. Turin vs. Turin Dense vs. Strix Point vs. Strix Halo vs. Krackan Point
-  - Legacy AMD CPU model disambiguation across K5, K6, K7 Athlon/Duron, K8 Opteron/Athlon 64/X2, K10/K10.5 Phenom/Athlon II/Opteron, and Bulldozer/Piledriver/Steamroller/Excavator families
-- New `MicroArch` enum variants: `MicroArch::Zen3Plus`, `MicroArch::Zen4C`, and `MicroArch::Zen5C` (`src/x86/micro_arch.rs`)
-- Hybrid core type and server core resolution for Raptor Lake, Meteor Lake, Arrow Lake, Lunar Lake, Panther Lake, Sapphire Rapids, Emerald Rapids, Granite Rapids, Sierra Forest, Grand Ridge, and Clearwater Forest (`src/x86/vendor/intel.rs`)
-- Manufacturing process node constants for Intel and AMD fabrication nodes (`INTEL_7`, `INTEL_4`, `INTEL_3`, `INTEL_20A`, `INTEL_18A`, `N10SF`, `TSMC_3`, `TSMC_4`, `TSMC_5`, `TSMC_6`, `TSMC_7`, `GF_12`, `GF_14`, `GF_28_SHP`, `TSMC_28_SHP`, `GF_32_SOI`, `GF_45_SOI`, `TSMC_40`, `TSMC_65`, `IBM_65_SOI`, `IBM_90_SOI`, `IBM_130_SOI`) (`src/common/constants.rs`, `src/x86/vendor/amd.rs`, `src/x86/vendor/intel.rs`)
-- Technical citations and source documentation referencing Intel SDM Vol 4 Table 2-1, Intel specification updates, Linux `intel-family.h`, `libcpuid`, and instlatx64 dumps (`src/x86/vendor/intel.rs`)
-- Power-gated ARM core discovery via sysfs topology (`/sys/devices/system/cpu/possible`, `/sys/devices/system/cpu/present`, `/sys/devices/system/cpu/cpu*/topology`) on Linux and Android, allowing accurate detection of offline/gated big and little cores (`src/arm/os/mod.rs`, `src/arm/os/linux.rs`, `src/arm/os/android.rs`)
-- Android system information and ARM core detection via Android system properties (`__system_property_get` / `getprop`) and sysfs (`src/common/os/android.rs`, `src/arm/os/android.rs`)
-- Windows topology (sockets, cores, threads) and multi-level cache detection (L1, L2, L3) via `GetLogicalProcessorInformationEx` (`src/common/os/windows.rs`)
-- Windows ARM SoC and model detection for Qualcomm Snapdragon processors (Snapdragon X Elite, Snapdragon 8cx Gen 3) (`src/arm/os/windows.rs`)
-- Expanded ARM implementer and microarchitecture database covering Apple Silicon, Qualcomm Oryon/Kryo, Samsung Exynos, Fujitsu A64FX, ARM Neoverse/Cortex, Phytium, Ampere, Nvidia, and SiPearl (`src/arm/brand.rs`, `src/arm/micro_arch.rs`)
-- SMBIOS 2.x/3.x table parser for EFI, enabling system name and CPU speed detection on UEFI firmware (`src/x86/efi/smbios.rs`)
-- OS-level cache detection with share-count fallback merging for ARM, PPC, RISC-V, and x86 (`src/common/cache.rs`)
-- Asymmetric 3D V-Cache display support for dual-CCD AMD Ryzen processors with single-CCD 3D V-Cache (e.g. Ryzen 7950X3D) (`src/x86/cache.rs`, `src/x86/display.rs`)
-- Additional Mac model mappings across ARM, x86_64, and PowerPC (`src/common/display.rs`)
-- Example output fixture for Apple MacBook Neo (`examples/macbook-neo.txt`)
-- Automated changelog extraction script and crates.io publishing support in release workflow (`.github/scripts/extract_changelog.py`, `.github/workflows/release.yml`)
-- Additional x86 integration tests and CPUID dump test fixtures (Intel Core i7-12700H, Intel Celeron Eee PC, VIA EdenX2) (`tests/cpuid/dump/edenx2.txt`, `tests/cpuid_dump_test.rs`)
-- `check-win-arm` target check command in `justfile`
+- **Intel Microarchitecture Expansion**: Added comprehensive detection and signature disambiguation for modern and legacy Intel processors (Meteor Lake, Arrow Lake, Lunar Lake, Raptor Lake, Alder Lake, Sapphire Rapids, Emerald Rapids, Granite Rapids, Sierra Forest, Core 2, Xeon, and Pentium families) (`src/x86/vendor/intel.rs`, `src/x86/micro_arch.rs`)
+- **AMD Microarchitecture Expansion**: Added comprehensive detection for Zen 1 through Zen 5/5c (Ryzen, Threadripper, EPYC), legacy K5 through K10, Bulldozer families, and asymmetric 3D V-Cache display (`src/x86/vendor/amd.rs`, `src/x86/micro_arch.rs`, `src/x86/cache.rs`)
+- **ARM SoC and Core Detection**: Added detection for Apple Silicon, Qualcomm Snapdragon (Oryon/Kryo), Samsung Exynos, and ARM Cortex/Neoverse cores across macOS, Linux, Android, and Windows ARM64 (`src/arm/*`)
+- **UEFI SMBIOS & System Detection**: Added SMBIOS 2.x/3.x table parsing to EFI target for system model and clock speed detection (`src/x86/efi/smbios.rs`)
+- **OS-Level Cache & Topology Detection**: Added cross-platform OS cache detection and multi-level topology resolution across x86, ARM, PowerPC, and RISC-V (`src/common/cache.rs`, `src/common/os/*`)
+- **Test Suite Modernization**: Added macro-driven CPUID dump test suite and test fixtures (`tests/cpuid_dump_test.rs`, `tests/cpuid/dump/*`)
 
 ### Changed
-- Refined EFI socket count and thread count calculation in `src/x86/count.rs` to compute physical package count accurately against logical processors from MP Services without overcounting individual cores in legacy SMBIOS tables or undercounting multi-socket servers
-- Overhauled ARM output formatting and structure to mirror x86 output styling, eliminate redundant printing of shared vendor/SoC metadata across core types, group clusters cleanly, and label sub-cores with "Name" (`src/arm/display.rs`)
-- Hoisted shared ARM CPU codenames to the top-level CPU header section when all core clusters belong to the same SoC/chip, avoiding repetitive per-core-type codename lines (`src/arm/display.rs`)
-- Moved raw Mac model identifier display (e.g. `[MacBookAir10,1]`) to verbose mode (`-v`/`--verbose`), keeping default output clean with friendly marketing names (`src/common/display.rs`)
-- Enabled verbose mode by default for EFI binaries (`src/efi_rustid.rs`)
-- Real-mode DOS binary (`rust86.exe`) refactored and merged with real-mode debug binary, eliminating the separate debug executable while significantly reducing binary footprint and adding simple CLI argument handling (`src/rust86.rs`, `src/x86/dos/args.rs`)
-- Overhauled integration test suite with `make_tests!` macro, eliminating repetitive test boilerplate across CPUID fixtures (`tests/cpuid_dump_test.rs`)
-- Topology display now consistently shows sockets, cores, and threads across EFI, DOS, and standard OS builds, and restored core/thread count formatting for homogeneous x86 CPUs (`src/x86/display.rs`)
-- EFI QEMU runner forces text mode so output is visible in `run-efi-32` and `run-efi-64` (`src/x86/efi/display.rs`)
-- Improved x86 cache count detection with additional fallback paths (`src/common/cache.rs`, `src/x86/cache.rs`)
-- Improved robustness of CPU topology counts on EFI via MP Services and SMBIOS data (`src/x86/efi/mp.rs`, `src/x86/efi/smbios.rs`)
-- Simplified Centaur / VIA feature extraction and CPU identification logic (`src/x86/vendor/centaur.rs`)
-- Restored fallback CPU speed measurement for DOS environments lacking TSC support (`src/x86/dos/speed.rs`, `src/x86/topology.rs`)
+- **Output Formatting Alignment**: Aligned ARM and PowerPC display formatting with x86 layout, grouped multi-cluster cores, and formatted friendly Apple Mac marketing names (`src/arm/display.rs`, `src/common/display.rs`)
+- **Real-Mode DOS Binary Optimization**: Streamlined real-mode DOS binary (`rust86.exe`) footprint and added CLI argument support (`src/bin/dos.rs`, `src/x86/dos/*`)
+- **EFI Display**: Defaulted EFI builds to verbose display mode with forced text-mode console rendering (`src/bin/efi.rs`, `src/x86/efi/display.rs`)
 
 ### Fixed
-- Fixed Alder Lake E-core identification in `Intel::core_micro_arch` (previously reported as `Goldmont`, now correctly identified as `Gracemont`) (`src/x86/vendor/intel.rs`)
-- Fixed socket count detection on multi-socket Apple EFI / UEFI hardware (such as Xserve1,1 and MacPro1,1) where socket count was erroneously clamped to 1 or inflated by per-core SMBIOS entries (`src/x86/count.rs`, `src/x86/efi/mp.rs`)
-- Fixed legacy SMBIOS 2.4 processor table parsing where CPU status `0x01` (Enabled without bit 6 set) was treated as unpopulated (`src/x86/efi/smbios.rs`)
-- Corrected L2 cache count detection for VIA Eden / Nano X2 dual-core processors (`src/x86/cache.rs`)
-- Improved behavior and error handling for Cyrix CPUs running in DOS (`src/x86/vendor/cyrix.rs`)
-- Fixed compile gating breaking real-mode DOS builds and resolved DOS compilation warnings (`src/common/cache.rs`, `src/x86/display.rs`)
-- Fixed compiler warnings on macOS ARM target builds (`src/arm/os/macos.rs`, `src/arm/os/mod.rs`)
-- Fixed socket count calculation on Haiku OS where total logical CPU count from `sysinfo` was erroneously treated as physical sockets, causing inflated core/thread counts on multi-core processors like VIA Nano X2 (`src/common/os/haiku.rs`, `src/x86/display.rs`)
-- Fixed unified L1 cache size formatting in `src/common/display.rs` where raw byte sizes (e.g. 16384 bytes) were displayed as KB without unit conversion
-- Fixed cache descriptor fallback and error handling in `src/x86/cache.rs` where invalid CPUID Leaf 2 register flags stopped descriptor scanning, empty cache objects failed `Cache::default()` inequality checks resulting in spurious unified 0 KB L1 cache output on VIA Nano processors, and chained fallback detection across deterministic parameters and extended leaves
-- Fixed false-positive Centaur / VIA PadLock security feature detection on IDT WinChip processors where CPUID leaf `0xC0000001` mirrors standard extended features rather than PadLock flags (`src/x86/vendor/centaur.rs`)
-- Fixed missing compile guards for Android target compilation (`src/arm/features.rs`, `src/arm/mod.rs`, `src/arm/os/mod.rs`)
-- Fixed test suite failures on Haiku OS targets (`src/x86/cpu.rs`, `src/x86/micro_arch.rs`)
-- Fixed PowerPC build compile error (`src/common/cache.rs`)
-
-## [1.9.0] — EFI/UEFI support, compact display, and VIA features
-
-### Added
-- EFI/UEFI application support for 32-bit and 64-bit x86 firmware (`just build-efi`, `just run-efi-64`, `just run-efi-32`)
-- EFI MP Services for core/thread/socket topology detection on UEFI systems
-- Graphical display mode with custom font rendering for EFI
-- Colored EFI output via ANSI escape sequences
-- Compact display mode that removes extra newlines between sections (`c` / `compact` flag)
-- Centaur/VIA feature list now shown in DOS32A extended builds
-- i486 Linux musl build target (`just build-486-musl`)
-
-### Changed
-- Separated DOS argument parsing and speed detection into dedicated submodules (`src/x86/dos/args.rs`, `src/x86/dos/speed.rs`)
-- Moved MP Table detection under DOS sub-module (`src/x86/dos/mp.rs`)
-- EFI binaries placed in their own target directory (`target/efi-disk/`)
-- Cleaned up legacy CPU socket count detection code
-- Updated README platform support tables with EFI column
-
-## [1.8.0] — DOS32A protected-mode support and cross-architecture cleanup
-
-### Added
-- DOS32A DOS Extender support for 32-bit protected-mode DOS binaries (`rustid.exe` built with DOS32A) - this allows showing more information, adding program arguments, and removes the 64K size limitation of the original real-mode dos binaries
-- Custom `elf2le` tool to convert ELF binaries to Linear Executable (LE) format for DOS32A
-- Automatic fallback to real-mode DOS binary for pre-CPUID CPUs requiring CPU reset identification
-- Platform support details and tables added to README
-
-### Changed
-- Renamed internal `cpuid` module to `x86` for cross-architecture consistency
-- Extracted display/formatting logic from CPU detection in ARM and PowerPC modules
-- Reorganized binary targets, link scripts, and target specs into `build-config/` directory
-- Aligned DOS extender formatting, panic handling, and trace display with real-mode DOS version
-
-### Fixed
-- Patched DOS32A binary to suppress startup banner and warnings
-- An issue where Intel/Zhaoxin CPUs with multiple cores may show the core count as socket count, and multiply the core count by the spurious socket count
-
-## [1.7.0] — RISC-V support and improved system name detection
-
-### Added
- - Initial Risc V (64bit) support
- - IvyBridge-EN (EP) CPU mapping
- - Xeon E5-2407 CPUID dump for testing
-
-### Changed
- - Improved Linux system name detection (more sources, whitespace cleanup, empty string handling)
- - Expanded filtering of generic firmware strings (e.g. "System Product Name", "Default string") when detecting the Linux system name
- - Linux system name folds in the hypervisor vendor for VMs (e.g. "QEMU Standard PC ...") and falls back to board identity when the product string is a placeholder
-
- ### Fixed
- - System name no longer returns empty strings
- - System name lookup skips placeholder strings instead of misreporting them
-
-## [1.6.0] — ARM Mac model detection and cross-platform Mac model lookup
-
-### Added
-- System/device model detection from Linux devicetree `compatible` string
-- Mac model lookup table and mappings (ARM and x86_64)
-- PowerPC Mac model mappings
-- Expanded PowerPC model coverage and improved mappings
-- PVR value display in hex for PowerPC debug output
-- More unit tests
-- Android and OpenBSD build support
-
-### Changed
-- Centralized OS-specific information gathering for ARM into shared module
-- Refactored System/SoC properties onto the main CPU object
-- Moved raw MIDR values into `Midr` sub-struct with updated debug display
-- Extracted Mac model table for cross-architecture reuse
-- Improved formatting of ARM SoC data
-
-### Fixed
-- Crash from missing values in `lscpu` output
-- System formatting and string filtering for Mac model detection
-- PowerPC system display (correct property reference, code errors, missing borrow)
-
-## [1.5.0] — ARM core types, BSD support, and feature trait unification
-
-### Added
-- SoC/device model name shown in ARM output when available from `/proc/cpuinfo`
-- `CpuArch::brand_arch()` factory method to deduplicate x86 vendor micro-arch lookup closures
-- Shared `get_proc_cpuinfo_data()` helper that parses `/proc/cpuinfo` into structured key-value maps
-- ARM core type groups separated by a blank line in output for readability
-- BSD support for ARM (NetBSD, FreeBSD, OpenBSD) via new `src/arm/os/bsd.rs` module with MIDR detection through sysctl and inline asm fallback
-- System/device model field (`CpuArch::system`) displayed as "System" line, sourced from `hw.model` (NetBSD), `hw.fdt.model` (FreeBSD), or `/proc/cpuinfo Model` (Linux), separate from the SoC model line
-- `TArmFeatures` trait providing a uniform interface for OS-specific ARM feature detection, implemented across Linux, macOS, Windows, and BSD modules
-- Shared `populate_detected_features()` helper eliminating duplicated feature-map construction in each OS module
-- ARM1176JZF-S (Raspberry Pi 1) microarchitecture variant and `MicroArch::Arm1176` variant
-- Raspberry Pi codename annotations in ARM core entries (Pi 2/3/4/5)
-- FreeBSD SoC detection via `hw.fdt.compatible` sysctl
-- `specres` feature flag to the ARM miscellaneous feature list
-- Named MIDR bit-field offset constants (`IMPLEMENTER_OFFSET`, `PART_OFFSET`, `VARIANT_OFFSET`, `ARCHITECTURE_OFFSET`, `REVISION_MASK`)
-
-### Changed
-- Restructured ARM module into OS-specific submodules (`src/arm/os/{apple,linux,windows}.rs`) with shared core detection in `os/mod.rs`
-- Renamed `src/arm/os/apple.rs` → `macos.rs` for consistency
-- Rewrote ARM Linux feature detection to parse `/proc/cpuinfo` instead of `libc` system calls; removed `libc` dependency
-- Simplified ARM CPU model/part lookup tables from verbose `match` arms to concise tuple arrays
-- Replaced raw line-by-line `/proc/cpuinfo` parsing with shared structured parser across ARM, PPC, and x86 topology detection
-- Replaced hardcoded cache lookup tables for ARM and PPC micro-architectures with runtime OS cache detection
-- Simplified x86 vendor micro-arch closures (AMD, Intel, Centaur, Cyrix) via shared `CpuArch::brand_arch()`
-- Intel CPU vendor module now implements the `TMicroArch` trait, matching other vendors
-- PPC clock speed parsing uses shared `get_proc_cpuinfo_data()` instead of raw string parsing
-- ARM 32-bit Linux MIDR detection reads from sysfs instead of inline `mrc p15` assembly to avoid SIGILL on older CPUs
-- Migrated all OS-specific ARM feature functions from standalone `has_*()` to `TArmFeatures` trait implementations
-- Sysctl parser accepts `=` as a delimiter alongside `:` for NetBSD compatibility
-- Output labels refined: "Brand" → "Implementer"; split "SoC/System" into distinct "System" and "SoC" lines
-- Updated G4 PowerPC codenames (Apollo 6/7, Max, V'ger) for accuracy
-
-### Fixed
-- Corrected hex literal formatting in Apple CPU part matching (e.g., `0x32` → `0x032`) to ensure correct M3/M4 detection
-- Fixed PPC clock speed parsing from `cpu MHz` lines
-- Corrected ARM Cortex-A72 mapping (previously misidentified as Cortex-A65)
-- Corrected PPC G4 codename labels for 7447, 7455, 7457 variants
-- Eliminated double blank line in ARM output when a core type has no cache information
-
-## [1.4.0] — Hybrid x86 core type details
-
-### Added
-- Support for showing core type details for hybrid x86 cpus
-- More detailed documentation for DOS version (DOS.md)
-- Data source properties to debug output
-
-### Changed
-- Updated cpuid dump feature to dump information from each thread, rather than the same output for each thread
-- Optimized allocations and memory usage for DOS version
-
-### Fixed
-- Corrected ARM cpu mapping for Cortex-A76 (found in Raspberry Pi 5)
-
-## [1.3.0] — Hypervisor detection and cache improvements
-
-### Added
-- Hypervisor vendor string in debug output
-
-### Changed
-- Added ability to get cache types for different core types on linux arm
-
-### Fixed
-- Fixed detection of KVM hypervisor
-- Fixed crash when `lscpu -C` produces no output
-- Fix crash for Cyrix cpus in dos due to excessive memory allocations
-- Fix other memory allocation crash for dos
-
-## [1.2.0] — Verbose mode and x86 display refactoring
-
-### Added
-- Verbose flag added to cli options
-- Extended signature line to verbose mode
-- Re-added "Features" label to x86 CPU output
-- Show APIC and MMX+ extensions in x86 feature list
-- Show 3dnow prefetch in x86 feature list
-- test-dos command to Makefile and Justfile
-
-### Changed
-- Separated dos binaries from non-dos binary
-- Refactored x86 display table to use common display module, reducing code duplication
-- Further deduplicated output formatting code across architectures
-- Refactored ARM display of different core types
-- Removed unused DOS module
-
-### Fixed
-- Updated Centaur feature flag detection (IDT, Via, Zhaoxin) based on CPU datasheets
-- Read hypervisor vendor string in the correct byte order
-- Improved core and thread count detection for AMD cpus
-
-## [1.1.0] — Hypervisor info, categorized features, and Makefile
-
-### Added
-- Makefile for users who prefer it over Just or in environments that don't support just
-- Detection of hypervisor information (when current OS is virtualized)
-- Checks for NX-bit and Virtualization features
-- Expanded AX512 feature list
-- CPU feature list categorized by type
-- Direct conversion of raw ELF binary to DOS MZ EXE binary (instead of using rust-objcopy)
-- Feature section for Centaur cpu instructions
-
-### Changed
-- Display of CPU feature list for ARM
-- Updated non-x86 formatting to match x86 style
-- Restored functionality of CPU reset signature detection (for dos)
-- Updated README to focus on binary usage
-- Updated README to reflect binaries and cargo install
-- Improved output for cpu dumps when displaying dumps on x86_64 for x86 cpus
-- Allow color output on Windows
-
-## [1.0.0] — Zen5 support, color output, and reorganized test data
-
-### Added
-- Zen5 CPU support
-- SiS model string support
-- Mac arm64 example
-- Process node values for Vortex86 mappings
-- Color output for PowerPC and ARM
-- Helper to identify source CPU ID data
-- Ability to combine CLI flags (debug command can get info from CPUID dump)
-- Haiku socket detection and MpTable implementation
-- Reorganized test data files
-
-### Changed
-- Removed custom string format macro
-- Removed type wrappers, using native Rust types with DOS allocator
-- Enabled alloc types for DOS (String, Vec)
-- Updated release build config to reference .exe files
-- Restored Intel Brand Table lookup for DOS (replaced Unicode registered trademark with (R))
-- Refactored ARM and PPC formatting into common module
-- Adjusted CLI parsing for all architectures
-- Improved speed measurements for CPUs without TSC instruction
-- Updated most of the examples
-- Updated M1 Apple chip cache mapping
-- Minor code cleanups
-
-### Fixed
-- 386 compatibility for DOS build
-- Display of SiS CPU easter egg
-- Fixed Haiku socket detection
-- Removed wildly inaccurate speed measurement for some Cyrix CPUs
-- Tweaked display of cleaned-up model strings
-
-## [0.11.4] — Brand ID lookup, multi-core ARM, and CPUID dump rendering
-
-### Added
-- OS and CPU Architecture in version string
-- AMD Elan processor mapping
-- Intel brand ID lookup table (DOS build excluded due to space constraints)
-- License file
-- Multiple core type support for ARM processors
-- DOS binary size test to verify 64K limit
-- Option to render output from raw CPUID dump files
-
-### Changed
-- Use key names instead of blind indexes for lscpu cache information
-- Move Speed struct to common module
-- Use fewer String objects in PPC module
-- Relabel "Cores" display to "Topology"
-- Streamline MP table lookup for DOS
-- Improved information display for PowerPC
-- Optimize DOS binary size further
-- Favor AMD-style cache lookup for Centaur CPUs with fallback
-- Improve accuracy of CPUID dump display
-
-### Fixed
-- Fix cache detection for PPC
-- Fix detection of cache share-count using correct bit mask
-- Fix entry for Geode LX
-- Fix PPC display code
-- Show L3 cache count for multiple sockets
-- Fix string truncation bug in DOS, increase fixed string sizes for multi-byte characters
-
-## [0.10.1] — AMD 5x86 synthetic model and improved Cyrix detection
-
-### Added
-- Synthetic model name for AMD 5x86
-
-### Changed
-- Made DOS speed measurements more accurate
-- Made Cyrix brand list more specific depending on cpu model
-- Improved Cyrix and K6 detection
-- Improved Cyrix detection without CPUID
-- Updated 486 Linux build configuration
-- Excluded core_affinity crate from x86 targets
-- Improved robustness of cache info detection from extended leaves 5 and 6
-- De-duplicated ARM formatting logic
-
-### Fixed
-- Don't show enable cpuid message for 5x86 chips that don't support it
-
-## [0.9.5] — Apple Silicon codenames, AES/SHA flags, and cache associativity
-
-### Added
-- Intel N100 CPU mapping
-- Intel Haswell-EP CPU mapping
-- AMD K10 Dual-Core Athlon mapping
-- AMD FX-9590 example
-- RapidCAD example
-- AES, VAES, and SHA flag checks
-- Additional feature classes for 686 class processors with SSE and SSE2
-- Qualcomm CPU mappings
-- Codenames for more Apple Silicon CPUs
-- More integration tests with cache, core, and thread count validation
-- Additional output examples (2PPRO, Crusoe, U5S)
-
-### Changed
-- Improved AMD cache associativity detection
-- Improved detection of 386 and 486 socket Cyrix CPUs
-- Improved detection of 486 CPUs
-- Improved formatting of Apple Silicon CPUs on macOS
-- Various output formatting tweaks
-- Added rough speed detection for DOS
-- Refactored string handling with new String wrapper type
-- Reduced code duplication in topology detection
-- Updated Cyrix MII example
-
-### Fixed
-- Fix Windsor CPU mapping
-- Fix core count for AMD CPUs before Bulldozer
-- Fix mapping of Brisbane
-- Differentiate between 3 and 4 core Phenom 1 chips
-- Fix M1 CPU mapping
-
-### Removed
-- Removed Windows code for getting MP tables (packages won't run on old CPUs)
-- Removed arm-only dependency from x86/x86_64 Windows builds
-
-## [0.8.6] — Apple Silicon detection and Transmeta support
-
-### Added
-- Apple Silicon detection with core codenames and cache info
-- Qualcomm CPU mappings
-- PowerPC speed/cache information
-- More ARM core mappings
-- Transmeta CPU support
-- Integration tests using raw CPUID dumps
-- More Zhaoxin CPU support
-- Raw CPUID dump folder for testing/debugging
-
-### Changed
-- Refactored ARM detection to prepare for multiple core types
-- Refactored vendor-specific micro-arch mapping into vendor sub-modules
-- Simplified Linux multi-socket detection via /proc/cpuinfo
-
-## [0.7.6] — Socket count detection and example output
-
-### Added
-- Examples folder with output from real systems
-- Another CPU example
-- AMD cache display fix (K5/K6)
-- Socket count detection for Linux
-- Socket count display in DOS (when > 1)
-
-### Changed
-- Refactored mp module to split implementations by OS
-- Re-wrapped __cpuid function in unsafe block for compatibility with older Rust versions
-
-## [0.7.0] — Core/thread count display and cache multiplier
-
-### Added
-- Core/thread count display for DOS
-- Extended topology iteration code
-- Cache multiplier display based on CPID cache share count
-
-### Fixed
-- Intel core/thread count detection
-
-## [0.6.2] — Cache associativity and AMD core detection
-
-### Added
-- Cyrix-specific matching for fallback cache lookup
-- Associativity to cache output
-- Cores/threads for AMD CPUs
-- Old-style cache lookup for Intel CPUs
-
-### Fixed
-- Logic for determining if Intel cache fallback works
-
-## [0.5.1] — Architecture line and cache information display
-
-### Added
-- Architecture line to output (i386/i686/x86_64_v1/etc)
-- Cache information display
-- More CPU models
-
-### Changed
-- Reformatted Cyrix-specific block
-
-
-## [0.4.0] — ARM, PowerPC, and clock speed support
-
-### Added
-- Experimental ARM CPU support
-- Experimental PowerPC (PPC) functionality
-- CPU clock speed display
-- Core 2 Quad detection
-- Topology/cache/speed information lookup
-- Intel overdrive processor detection
-- UMC 486 mappings
-- More CPU mappings and easter eggs
-
-### Changed
-- Removed ufmt dependency
-- Improved formatting of output
-
-## [0.3.9] — Initial release
-
-### Added
-- Initial release
-- x86/x64 CPU detection
-- Brand and microarchitecture mapping
-- DOS support
+- **Intel Hybrid E-Core Detection**: Corrected Alder Lake E-core identification from Goldmont to Gracemont (`src/x86/vendor/intel.rs`)
+- **Socket and Topology Calculation**: Fixed multi-socket counting bugs on Apple EFI hardware, Haiku OS, and DOS MP Table systems (`src/x86/count.rs`, `src/common/os/haiku.rs`, `src/x86/dos/mp.rs`)
+- **Centaur / VIA Feature Detection**: Fixed false-positive PadLock security feature detection on IDT WinChip and corrected VIA Eden/Nano cache detection (`src/x86/vendor/centaur.rs`, `src/x86/cache.rs`)
+- **Cross-Platform Cache Formatting & Gating**: Fixed unified L1 cache size formatting and resolved compilation warnings on macOS ARM, Android, DOS, and PowerPC (`src/common/display.rs`, `src/arm/*`, `src/ppc/*`)

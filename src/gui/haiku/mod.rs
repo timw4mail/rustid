@@ -6,7 +6,7 @@ pub mod dialogs;
 pub mod ffi;
 pub mod menu;
 pub mod state;
-pub mod styled_text;
+pub use crate::gui::styled_text;
 #[cfg(target_os = "haiku")]
 pub mod window;
 

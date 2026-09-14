@@ -649,8 +649,12 @@ impl Intel {
                 MicroArch::Skymont
             }
 
-            (MicroArch::PantherLake, CoreType::Performance) => MicroArch::CougarCove,
-            (MicroArch::PantherLake, CoreType::Efficiency) => MicroArch::Darkmont,
+            (MicroArch::PantherLake | MicroArch::WildcatLake, CoreType::Performance) => {
+                MicroArch::CougarCove
+            }
+            (MicroArch::PantherLake | MicroArch::WildcatLake, CoreType::Efficiency) => {
+                MicroArch::Darkmont
+            }
 
             (MicroArch::SapphireRapids, _) => MicroArch::GoldenCove,
             (MicroArch::EmeraldRapids, _) => MicroArch::RaptorCove,
@@ -956,6 +960,12 @@ mod test {
         assert_eq!(arch_dmr.micro_arch, MicroArch::DiamondRapids);
         assert_eq!(arch_dmr.code_name, "Diamond Rapids-X");
 
+        // Wildcat Lake (06_D5H)
+        let sig_wcl = crate::x86::micro_arch::tests::dummy_signature(6, 5, 0, 13, 1);
+        let arch_wcl = Intel::micro_arch("Intel Core 3 304", sig_wcl);
+        assert_eq!(arch_wcl.micro_arch, MicroArch::WildcatLake);
+        assert_eq!(arch_wcl.code_name, "Wildcat Lake");
+
         // NetBurst: Gallatin (0F_02H) via model string fallback
         let sig_p4_0f02 = crate::x86::micro_arch::tests::dummy_signature(15, 2, 0, 0, 9);
         let arch_gallatin_ee = Intel::micro_arch(
@@ -1033,6 +1043,16 @@ mod test {
         );
         assert_eq!(
             Intel::core_micro_arch(MicroArch::PantherLake, CoreType::Performance),
+            MicroArch::CougarCove
+        );
+
+        // Wildcat Lake
+        assert_eq!(
+            Intel::core_micro_arch(MicroArch::WildcatLake, CoreType::Efficiency),
+            MicroArch::Darkmont
+        );
+        assert_eq!(
+            Intel::core_micro_arch(MicroArch::WildcatLake, CoreType::Performance),
             MicroArch::CougarCove
         );
     }

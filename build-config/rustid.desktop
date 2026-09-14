@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Rustid
+GenericName=CPU Identification Tool
+Comment=Multi-architecture CPU detection tool
+Exec=rustid-gui
+Icon=rustid
+Terminal=false
+Categories=System;HardwareSettings;
+Keywords=cpu;cpuid;processor;hardware;benchmark;
+StartupNotify=true
+StartupWMClass=rustid-gui
