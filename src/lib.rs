@@ -81,6 +81,11 @@ pub mod riscv;
 #[cfg(riscv_cpu)]
 pub use riscv::Cpu;
 
+#[cfg(any(m68k_cpu, test))]
+pub mod m68k;
+#[cfg(m68k_cpu)]
+pub use m68k::cpu::Cpu;
+
 #[cfg(dos_os)]
 pub use x86::dos::*;
 

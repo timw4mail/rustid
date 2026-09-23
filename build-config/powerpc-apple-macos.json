@@ -1,0 +1,21 @@
+{
+  "arch": "powerpc",
+  "cpu": "ppc",
+  "crt-static-default": true,
+  "crt-static-respected": true,
+  "data-layout": "E-m:e-p:32:32-Fn32-i64:64-n32",
+  "dynamic-linking": false,
+  "executables": true,
+  "has-rpath": false,
+  "has-thread-local": false,
+  "llvm-target": "powerpc-unknown-none",
+  "max-atomic-width": 32,
+  "os": "none",
+  "panic-strategy": "abort",
+  "position-independent-executables": false,
+  "relocation-model": "static",
+  "target-c-int-width": 32,
+  "target-endian": "big",
+  "target-pointer-width": 32,
+  "vendor": "apple"
+}

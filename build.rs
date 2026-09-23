@@ -338,6 +338,36 @@ fn build_windows_gui(out_dir: String) {
     println!("cargo:rerun-if-changed=assets/windows/rustid_arm64.ico");
 }
 
+fn build_classic_mac_gui(out_dir: String) {
+    let cc = var("CC").unwrap_or_else(|_| "powerpc-apple-macos-gcc".to_string());
+    let ar = var("AR").unwrap_or_else(|_| "powerpc-apple-macos-ar".to_string());
+    let obj_file = format!("{}/mac_bridge.o", out_dir);
+    let lib_file = format!("{}/librustid_mac_bridge.a", out_dir);
+
+    let compile_status = Command::new(&cc)
+        .args([
+            "-c",
+            "-O2",
+            "src/gui/classic_mac/bridge/mac_bridge.c",
+            "-o",
+            &obj_file,
+        ])
+        .status();
+
+    if let Ok(status) = compile_status
+        && status.success()
+    {
+        let _ = Command::new(&ar)
+            .args(["crus", &lib_file, &obj_file])
+            .status();
+        println!("cargo:rustc-link-search=native={}", out_dir);
+        println!("cargo:rustc-link-lib=static=rustid_mac_bridge");
+    }
+
+    println!("cargo:rerun-if-changed=src/gui/classic_mac/bridge/mac_bridge.c");
+    println!("cargo:rerun-if-changed=src/gui/classic_mac/bridge/mac_bridge.h");
+}
+
 fn main() {
     // Setup cfg aliases
     cfg_aliases! {
@@ -355,12 +385,14 @@ fn main() {
         linux_os: { any(target_os = "android", target_os = "linux") },
         unix_os: { any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd") },
         windows_os: { target_os = "windows" },
+        classic_macos: { any(target_os = "macos_classic", all(target_vendor = "apple", target_os = "none")) },
 
         // CPU Architectures
         x86_cpu: { any(target_arch = "x86", target_arch = "x86_64") },
         arm_cpu: { any(target_arch = "arm", target_arch = "aarch64", target_arch = "arm64ec") },
         ppc_cpu: { any(target_arch = "powerpc", target_arch = "powerpc64") },
-        riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") }
+        riscv_cpu: { any(target_arch = "riscv32", target_arch = "riscv64") },
+        m68k_cpu: { target_arch = "m68k" }
     }
 
     if var("CARGO_FEATURE_GUI").is_ok() {
@@ -369,6 +401,7 @@ fn main() {
             match var("CARGO_CFG_TARGET_OS").unwrap_or_default().as_str() {
                 "haiku" => build_haiku_gui(out_dir),
                 "windows" => build_windows_gui(out_dir),
+                "macos_classic" => build_classic_mac_gui(out_dir),
                 _ => (),
             }
         }
