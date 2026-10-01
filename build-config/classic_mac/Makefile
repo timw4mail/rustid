@@ -21,9 +21,9 @@ REZ_FLAGS     = $(REZ_INCLUDES) \
                 -D VERSION_MAJOR_BCD=$(VERSION_MAJOR_BCD) \
                 -D VERSION_MINOR_BCD=$(VERSION_MINOR_BCD)
 
-CFLAGS   = -O2 -Wall -I../../src/gui/classic_mac/bridge -DRUSTID_VERSION=\"$(VERSION)\"
-SRC_C    = ../../src/gui/classic_mac/bridge/mac_bridge.c \
-           ../../src/gui/classic_mac/bridge/classic_mac_engine.c
+CFLAGS   = -O2 -Wall -I../../ports/classic_mac -DRUSTID_VERSION=\"$(VERSION)\"
+SRC_C    = ../../ports/classic_mac/mac_bridge.c \
+           ../../ports/classic_mac/classic_mac_engine.c
 R_SRC    = rustid.r
 R_DEPS   = rustid.r rustid_icons.r
 
