@@ -1,6 +1,7 @@
 /* Classic Macintosh Resource Definition for rustid */
 
 #include "MacTypes.r"
+#include "Multiverse.r"
 
 /* Menu Bar */
 resource 'MBAR' (128, "MenuBar", purgeable) {
@@ -81,9 +82,9 @@ resource 'WIND' (128, "MainWindow", purgeable) {
 
 /* MultiFinder / Memory Configuration */
 resource 'SIZE' (-1) {
-    dontSaveScreen,
+    reserved,
     acceptSuspendResumeEvents,
-    enableOptionSwitch,
+    reserved,
     canBackground,
     multiFinderAware,
     backgroundAndForeground,
@@ -91,28 +92,38 @@ resource 'SIZE' (-1) {
     ignoreChildDiedEvents,
     is32BitCompatible,
     isHighLevelEventAware,
-    onlyLocalHLEs,
+    onlyLocalHLEvents,
     notStationeryAware,
     dontUseTextEditServices,
+    notDisplayManagerAware,
     reserved,
     reserved,
-    reserved,
-    1024 * 1024,      /* 1024 KB Minimum Size */
-    2048 * 1024       /* 2048 KB Preferred Size */
+    2048 * 1024,      /* Preferred Size: 2048 KB */
+    1024 * 1024       /* Minimum Size: 1024 KB */
 };
 
 /* Application Version */
+#ifndef VERSION_MAJOR_BCD
+#define VERSION_MAJOR_BCD 0x02
+#endif
+#ifndef VERSION_MINOR_BCD
+#define VERSION_MINOR_BCD 0x30
+#endif
+#ifndef RUSTID_VERSION_STR
+#define RUSTID_VERSION_STR "2.3.0"
+#endif
+
 resource 'vers' (1) {
-    0x02, 0x20, release, 0x00,
+    VERSION_MAJOR_BCD, VERSION_MINOR_BCD, release, 0x00,
     verUS,
-    "2.2.0",
-    "Rustid 2.2.0 (Classic Mac OS 68k & PPC)"
+    RUSTID_VERSION_STR,
+    "Rustid " RUSTID_VERSION_STR " (Classic Mac OS 68k & PPC)"
 };
 
 resource 'vers' (2) {
-    0x02, 0x20, release, 0x00,
+    VERSION_MAJOR_BCD, VERSION_MINOR_BCD, release, 0x00,
     verUS,
-    "2.2.0",
+    RUSTID_VERSION_STR,
     "Rustid CPU Identification Utility"
 };
 
@@ -131,3 +142,17 @@ resource 'FREF' (128) {
     0,
     ""
 };
+
+/* Code Fragment Resource (enables native PowerPC execution for PPC and Fat binaries) */
+#if defined(TARGET_PPC) || defined(TARGET_FAT)
+#include "CodeFragments.r"
+
+resource 'cfrg' (0) {
+    {
+        kPowerPCCFragArch, kIsCompleteCFrag, kNoVersionNum, kNoVersionNum,
+        kDefaultStackSize, kNoAppSubFolder,
+        kApplicationCFrag, kDataForkCFragLocator, kZeroOffset, kCFragGoesToEOF,
+        "rustid"
+    }
+};
+#endif

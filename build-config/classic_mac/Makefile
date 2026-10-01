@@ -5,26 +5,58 @@ CC_PPC   ?= powerpc-apple-macos-gcc
 REZ      ?= Rez
 MAKEPEF  ?= MakePEF
 
-CFLAGS   = -O2 -Wall -I../../src/gui/classic_mac/bridge
-SRC_68K  = ../../src/gui/classic_mac/bridge/mac_bridge.c ../../src/gui/classic_mac/bridge/classic_mac_engine.c
+# Extract version from Cargo.toml
+VERSION           ?= $(shell sed -n 's/^version = "\(.*\)"/\1/p' ../../Cargo.toml | head -n 1)
+VERSION_MAJOR     ?= $(shell echo $(VERSION) | cut -d. -f1)
+VERSION_MINOR     ?= $(shell echo $(VERSION) | cut -d. -f2)
+VERSION_PATCH     ?= $(shell echo $(VERSION) | cut -d. -f3)
+VERSION_MAJOR_BCD ?= 0x0$(VERSION_MAJOR)
+VERSION_MINOR_BCD ?= 0x$(VERSION_MINOR)$(VERSION_PATCH)
+
+# Locate the toolchain root relative to the compiler that is in PATH
+RETRO68_ROOT ?= $(shell dirname $$(dirname $$(which $(CC_68K))))
+REZ_INCLUDES  = -I$(RETRO68_ROOT)/RIncludes
+REZ_FLAGS     = $(REZ_INCLUDES) \
+                -D RUSTID_VERSION_STR="\"$(VERSION)\"" \
+                -D VERSION_MAJOR_BCD=$(VERSION_MAJOR_BCD) \
+                -D VERSION_MINOR_BCD=$(VERSION_MINOR_BCD)
+
+CFLAGS   = -O2 -Wall -I../../src/gui/classic_mac/bridge -DRUSTID_VERSION=\"$(VERSION)\"
+SRC_C    = ../../src/gui/classic_mac/bridge/mac_bridge.c \
+           ../../src/gui/classic_mac/bridge/classic_mac_engine.c
 R_SRC    = rustid.r
 
 OUT_DIR  ?= ../../target/classic_mac
 
-all: directories $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin
+all: directories $(OUT_DIR)/rustid_fat.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin
 
 directories:
 	@mkdir -p $(OUT_DIR)
 
-# 68k Binary (System 6 - 8.1)
-$(OUT_DIR)/rustid_68k.bin: $(SRC_68K) $(R_SRC)
-	$(CC_68K) $(CFLAGS) -o $(OUT_DIR)/rustid_68k $(SRC_68K)
-	$(REZ) -o $(OUT_DIR)/rustid_68k.bin $(R_SRC) --append $(OUT_DIR)/rustid_68k
+# Universal Fat Binary (System 6 through Mac OS 9: native 68k + native PowerPC)
+$(OUT_DIR)/rustid_fat.bin: $(OUT_DIR)/rustid_68k $(OUT_DIR)/rustid_ppc.pef $(R_SRC)
+	$(REZ) $(REZ_FLAGS) -DTARGET_FAT -o $(OUT_DIR)/rustid_fat.bin $(R_SRC) \
+		--copy $(OUT_DIR)/rustid_68k --data $(OUT_DIR)/rustid_ppc.pef \
+		--cc $(OUT_DIR)/rustid_fat.dsk -t APPL -c RsId
 
-# PowerPC PEF Binary (System 7.1.2 - Mac OS 9.2.2)
-$(OUT_DIR)/rustid_ppc.bin: $(SRC_68K) $(R_SRC)
-	$(CC_PPC) $(CFLAGS) -o $(OUT_DIR)/rustid_ppc $(SRC_68K)
-	$(REZ) -o $(OUT_DIR)/rustid_ppc.bin $(R_SRC) --append $(OUT_DIR)/rustid_ppc
+# 68k Raw Executable
+$(OUT_DIR)/rustid_68k: $(SRC_C)
+	$(CC_68K) $(CFLAGS) -o $(OUT_DIR)/rustid_68k $(SRC_C)
+
+# 68k Standalone Binary (System 6 – 8.1)
+$(OUT_DIR)/rustid_68k.bin: $(OUT_DIR)/rustid_68k $(R_SRC)
+	$(REZ) $(REZ_FLAGS) -o $(OUT_DIR)/rustid_68k.bin $(R_SRC) \
+		--copy $(OUT_DIR)/rustid_68k --cc $(OUT_DIR)/rustid_68k.dsk -t APPL -c RsId
+
+# PowerPC PEF Executable
+$(OUT_DIR)/rustid_ppc.pef: $(SRC_C)
+	$(CC_PPC) $(CFLAGS) -o $(OUT_DIR)/rustid_ppc.xcoff $(SRC_C)
+	$(MAKEPEF) $(OUT_DIR)/rustid_ppc.xcoff -o $(OUT_DIR)/rustid_ppc.pef
+
+# PowerPC Standalone Binary (System 7.1.2 – Mac OS 9.2.2)
+$(OUT_DIR)/rustid_ppc.bin: $(OUT_DIR)/rustid_ppc.pef $(R_SRC)
+	$(REZ) $(REZ_FLAGS) -DTARGET_PPC -o $(OUT_DIR)/rustid_ppc.bin $(R_SRC) \
+		--data $(OUT_DIR)/rustid_ppc.pef --cc $(OUT_DIR)/rustid_ppc.dsk -t APPL -c RsId
 
 clean:
 	rm -rf $(OUT_DIR)

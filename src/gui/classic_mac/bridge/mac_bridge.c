@@ -3,6 +3,10 @@
 
 #include "mac_bridge.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
 
 #include <Types.h>
@@ -13,18 +17,35 @@
 #include <Menus.h>
 #include <TextEdit.h>
 #include <Dialogs.h>
+#if __has_include(<Scrap.h>)
 #include <Scrap.h>
+#endif
 #include <StandardFile.h>
 #include <Gestalt.h>
 #include <ToolUtils.h>
 #include <Memory.h>
 #include <OSUtils.h>
 
+#ifndef monaco
+#ifdef kFontIDMonaco
+#define monaco kFontIDMonaco
+#else
+#define monaco 4
+#endif
+#endif
+
+#ifdef HiWord
+#undef HiWord
+#endif
+#define HiWord(a) ((short)(((uint32_t)(a) >> 16) & 0xFFFF))
+
+#ifdef LoWord
+#undef LoWord
+#endif
+#define LoWord(a) ((short)((uint32_t)(a) & 0xFFFF))
+
 #else
 // Stubs for non-Mac host compilation / unit tests
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 typedef void* WindowPtr;
 typedef void* TEHandle;
@@ -96,16 +117,14 @@ static void DrawStatusBar(WindowPtr win) {
     Rect statusRect = bounds;
     statusRect.top = statusRect.bottom - 20;
 
-    RGBColor bg, borderDark, borderLight, textColor;
+    RGBColor bg, borderDark, textColor;
     if (g_dark_theme) {
         bg.red = 0x1A1A; bg.green = 0x1B1B; bg.blue = 0x2626;
         borderDark.red = 0x0F0F; borderDark.green = 0x1010; borderDark.blue = 0x1616;
-        borderLight.red = 0x3232; borderLight.green = 0x3434; borderLight.blue = 0x4646;
         textColor.red = 0xD4D4; textColor.green = 0xD4D4; textColor.blue = 0xD4D4;
     } else {
         bg.red = 0xDDDD; bg.green = 0xDDDD; bg.blue = 0xDDDD;
         borderDark.red = 0x8888; borderDark.green = 0x8888; borderDark.blue = 0x8888;
-        borderLight.red = 0xFFFF; borderLight.green = 0xFFFF; borderLight.blue = 0xFFFF;
         textColor.red = 0x0000; textColor.green = 0x0000; textColor.blue = 0x0000;
     }
 
@@ -277,10 +296,24 @@ void mac_gui_set_callbacks(CmdCallback on_cmd, FileCallback on_file, QuitCallbac
 
 void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, uint32_t run_count, CRgbColor bg_color) {
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-    if (!g_te || !g_window) return;
+    if (!g_te || !g_window || !text) return;
 
     SetPort(g_window);
-    TESetText(text, length, g_te);
+
+    // Classic Macintosh TextEdit only recognizes carriage returns ('\r' / 0x0D)
+    // as line breaks. Line feeds ('\n' / 0x0A) are ignored or drawn as glyphs.
+    // Replace '\n' with '\r' (1:1 byte substitution so run offsets remain aligned).
+    char* mac_text = (char*)malloc(length + 1);
+    if (mac_text) {
+        for (uint32_t i = 0; i < length; i++) {
+            mac_text[i] = (text[i] == '\n') ? '\r' : text[i];
+        }
+        mac_text[length] = '\0';
+        TESetText((Ptr)mac_text, length, g_te);
+        free(mac_text);
+    } else {
+        TESetText((Ptr)text, length, g_te);
+    }
 
     // Apply color/bold runs
     for (uint32_t i = 0; i < run_count; i++) {
@@ -358,7 +391,7 @@ void mac_gui_save_file_dialog(const char* default_filename) {
     if (len > 0) memcpy(&pName[1], default_filename, len);
 
     StandardFileReply reply;
-    StandardPutFile("\pSave CPU Report As:", pName, &reply);
+    StandardPutFile((ConstStringPtr)"\pSave CPU Report As:", pName, &reply);
     if (reply.sfGood && g_file_cb) {
         char path[256] = {0};
         memcpy(path, &reply.sfFile.name[1], reply.sfFile.name[0]);
@@ -374,7 +407,7 @@ void mac_gui_copy_clipboard(const char* text) {
     if (!text) return;
     long len = strlen(text);
     ZeroScrap();
-    PutScrap(len, 'TEXT', text);
+    PutScrap(len, 'TEXT', (Ptr)text);
 #else
     (void)text;
 #endif
@@ -388,8 +421,11 @@ void mac_gui_show_alert(const char* title, const char* message) {
 
     size_t mLen = strlen(message); if (mLen > 255) mLen = 255;
     pMsg[0] = (unsigned char)mLen; memcpy(&pMsg[1], message, mLen);
+    for (size_t i = 1; i <= mLen; i++) {
+        if (pMsg[i] == '\n') pMsg[i] = '\r';
+    }
 
-    ParamText(pTitle, pMsg, "\p", "\p");
+    ParamText(pTitle, pMsg, (ConstStringPtr)"\p", (ConstStringPtr)"\p");
     Alert(128, nil);
 #else
     (void)title; (void)message;
