@@ -2,6 +2,8 @@
 
 #include "MacTypes.r"
 #include "Multiverse.r"
+#include "Icons.r"
+#include "rustid_icons.r"
 
 /* Menu Bar */
 resource 'MBAR' (128, "MenuBar", purgeable) {
@@ -144,17 +146,27 @@ resource 'vers' (2) {
     "Rustid CPU Identification Utility"
 };
 
-/* Bundle and File References */
-resource 'BNDL' (128) {
-    'RSID',
-    0,
-    {
-        'FREF', { 0, 128 };
-        'ICN#', { 0, 128 };
-    };
+/* Application Signature */
+type 'RsId' as 'STR ';
+resource 'RsId' (0, purgeable) {
+    "Rustid " RUSTID_VERSION_STR
 };
 
-resource 'FREF' (128) {
+/* Bundle and File References */
+resource 'BNDL' (128, purgeable) {
+    'RsId',
+    0,
+    {
+        'ICN#', {
+            0, 128
+        },
+        'FREF', {
+            0, 128
+        }
+    }
+};
+
+resource 'FREF' (128, purgeable) {
     'APPL',
     0,
     ""

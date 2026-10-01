@@ -25,26 +25,27 @@ CFLAGS   = -O2 -Wall -I../../src/gui/classic_mac/bridge -DRUSTID_VERSION=\"$(VER
 SRC_C    = ../../src/gui/classic_mac/bridge/mac_bridge.c \
            ../../src/gui/classic_mac/bridge/classic_mac_engine.c
 R_SRC    = rustid.r
+R_DEPS   = rustid.r rustid_icons.r
 
 OUT_DIR  ?= ../../target/classic_mac
 
-all: directories $(OUT_DIR)/rustid_fat.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin
+all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin
 
 directories:
 	@mkdir -p $(OUT_DIR)
 
 # Universal Fat Binary (System 6 through Mac OS 9: native 68k + native PowerPC)
-$(OUT_DIR)/rustid_fat.bin: $(OUT_DIR)/rustid_68k $(OUT_DIR)/rustid_ppc.pef $(R_SRC)
-	$(REZ) $(REZ_FLAGS) -DTARGET_FAT -o $(OUT_DIR)/rustid_fat.bin $(R_SRC) \
+$(OUT_DIR)/rustid.bin: $(OUT_DIR)/rustid_68k $(OUT_DIR)/rustid_ppc.pef $(R_DEPS)
+	$(REZ) $(REZ_FLAGS) -DTARGET_FAT -o $(OUT_DIR)/rustid.bin $(R_SRC) \
 		--copy $(OUT_DIR)/rustid_68k --data $(OUT_DIR)/rustid_ppc.pef \
-		--cc $(OUT_DIR)/rustid_fat.dsk -t APPL -c RsId
+		--cc $(OUT_DIR)/rustid.dsk -t APPL -c RsId
 
 # 68k Raw Executable
 $(OUT_DIR)/rustid_68k: $(SRC_C)
 	$(CC_68K) $(CFLAGS) -o $(OUT_DIR)/rustid_68k $(SRC_C)
 
 # 68k Standalone Binary (System 6 – 8.1)
-$(OUT_DIR)/rustid_68k.bin: $(OUT_DIR)/rustid_68k $(R_SRC)
+$(OUT_DIR)/rustid_68k.bin: $(OUT_DIR)/rustid_68k $(R_DEPS)
 	$(REZ) $(REZ_FLAGS) -o $(OUT_DIR)/rustid_68k.bin $(R_SRC) \
 		--copy $(OUT_DIR)/rustid_68k --cc $(OUT_DIR)/rustid_68k.dsk -t APPL -c RsId
 
@@ -54,7 +55,7 @@ $(OUT_DIR)/rustid_ppc.pef: $(SRC_C)
 	$(MAKEPEF) $(OUT_DIR)/rustid_ppc.xcoff -o $(OUT_DIR)/rustid_ppc.pef
 
 # PowerPC Standalone Binary (System 7.1.2 – Mac OS 9.2.2)
-$(OUT_DIR)/rustid_ppc.bin: $(OUT_DIR)/rustid_ppc.pef $(R_SRC)
+$(OUT_DIR)/rustid_ppc.bin: $(OUT_DIR)/rustid_ppc.pef $(R_DEPS)
 	$(REZ) $(REZ_FLAGS) -DTARGET_PPC -o $(OUT_DIR)/rustid_ppc.bin $(R_SRC) \
 		--data $(OUT_DIR)/rustid_ppc.pef --cc $(OUT_DIR)/rustid_ppc.dsk -t APPL -c RsId
 
