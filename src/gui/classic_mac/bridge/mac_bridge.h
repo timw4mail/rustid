@@ -21,6 +21,20 @@ typedef struct {
     bool bold;
 } CTextRun;
 
+enum {
+    CMD_FILE_REFRESH    = 101,
+    CMD_FILE_EXIT       = 102,
+    CMD_FILE_COPY       = 103,
+
+    CMD_MODE_STANDARD   = 201,
+    CMD_MODE_DEBUG      = 202,
+    CMD_MODE_EVERYTHING = 203,
+
+    CMD_OPT_COLOR       = 301,
+
+    CMD_HELP_ABOUT      = 401
+};
+
 typedef void (*CmdCallback)(uint32_t cmd_id);
 typedef void (*FileCallback)(const char* path, bool is_save);
 typedef void (*QuitCallback)(void);

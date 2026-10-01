@@ -138,7 +138,7 @@ impl CpuArch {
                 _ => Self::new("PowerPC 750FX", MicroArch::Ppc750, "G3", 0x203, Some(N180)),
             },
 
-            // PowerPC 7400 (G4)
+            // PowerPC 7400 / 7410 (G4)
             0x000C => match revision {
                 0x0309 => Self::new(
                     "PowerPC 7410",
@@ -149,9 +149,22 @@ impl CpuArch {
                 ),
                 _ => Self::new("PowerPC 7400", MicroArch::Ppc7400, "Max", 0x308, Some(N220)),
             },
+            0x800C => Self::new(
+                "PowerPC 7410",
+                MicroArch::Ppc7410,
+                "Nitro",
+                0x309,
+                Some(N180),
+            ),
 
             // PowerPC 7450 / 7455 / 7457 / 7447 / 7447A / 7460 (G4)
-            0x8000 => Self::new("PowerPC 7450", MicroArch::Ppc7450, "Max", 0x351, Some(N180)),
+            0x8000 => Self::new(
+                "PowerPC 7450",
+                MicroArch::Ppc7450,
+                "Vger",
+                0x351,
+                Some(N180),
+            ),
             0x8001 => Self::new(
                 "PowerPC 7455",
                 MicroArch::Ppc7455,
@@ -275,9 +288,15 @@ mod tests {
         assert_eq!(cpu.marketing_name, "PowerPC 7410");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc7410);
 
+        let cpu = CpuArch::find(0x800C_1104);
+        assert_eq!(cpu.marketing_name, "PowerPC 7410");
+        assert_eq!(cpu.micro_arch, MicroArch::Ppc7410);
+        assert_eq!(cpu.code_name, "Nitro");
+
         let cpu = CpuArch::find(0x8000_0351);
         assert_eq!(cpu.marketing_name, "PowerPC 7450");
         assert_eq!(cpu.micro_arch, MicroArch::Ppc7450);
+        assert_eq!(cpu.code_name, "Vger");
 
         let cpu = CpuArch::find(0x8001_0352);
         assert_eq!(cpu.marketing_name, "PowerPC 7455");

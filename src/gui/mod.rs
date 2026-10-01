@@ -8,8 +8,6 @@ pub mod windows;
 #[cfg(any(target_os = "haiku", test))]
 pub mod haiku;
 
-#[cfg(any(classic_macos, test))]
-pub mod classic_mac;
 
 #[cfg(all(target_os = "linux", feature = "gui"))]
 pub mod linux;

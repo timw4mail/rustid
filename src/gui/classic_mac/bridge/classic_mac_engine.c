@@ -45,21 +45,14 @@
 enum {
     VIEW_STANDARD   = 201,
     VIEW_DEBUG      = 202,
-    VIEW_EVERYTHING = 203,
-    VIEW_DUMP       = 204
+    VIEW_EVERYTHING = 203
 };
 
-static const CRgbColor PALETTE_LIGHT_BG __attribute__((unused)) = {255, 255, 255};
-static const CRgbColor PALETTE_LIGHT_LABEL     = {9, 134, 88};
-static const CRgbColor PALETTE_LIGHT_SUBLABEL  = {4, 81, 165};
-static const CRgbColor PALETTE_LIGHT_BODY      = {30, 30, 30};
-static const CRgbColor PALETTE_LIGHT_HIGHLIGHT = {163, 21, 21};
-
-static const CRgbColor PALETTE_DARK_BG __attribute__((unused)) = {26, 27, 38};
-static const CRgbColor PALETTE_DARK_LABEL     = {115, 218, 202};
-static const CRgbColor PALETTE_DARK_SUBLABEL  = {125, 207, 255};
-static const CRgbColor PALETTE_DARK_BODY      = {212, 212, 212};
-static const CRgbColor PALETTE_DARK_HIGHLIGHT = {255, 158, 100};
+static const CRgbColor PALETTE_BG        = {255, 255, 255};
+static const CRgbColor PALETTE_LABEL     = {9, 134, 88};
+static const CRgbColor PALETTE_SUBLABEL  = {4, 81, 165};
+static const CRgbColor PALETTE_BODY      = {30, 30, 30};
+static const CRgbColor PALETTE_HIGHLIGHT = {163, 21, 21};
 
 typedef struct {
     uint32_t cpu_type;  // 1=68000, 2=68010, 3=68020, 4=68030, 5=68040, 6=68060
@@ -73,10 +66,10 @@ static MacModelSpec GetMacModelSpec(long mach_id) {
     MacModelSpec spec = {0, 0, 0, 0, 0};
     switch (mach_id) {
         case 1:  // 128K
-        case 2:  // 512K
+        case 2:  // 512K / 512Ke
         case 4:  // Plus
         case 5:  // SE
-        case 14: // Classic
+        case 17: // Classic
             spec.cpu_type = 1; spec.clock_mhz = 8; spec.bus_mhz = 8; break;
         case 3:  // XL (Lisa)
             spec.cpu_type = 1; spec.clock_mhz = 5; spec.bus_mhz = 5; break;
@@ -85,103 +78,122 @@ static MacModelSpec GetMacModelSpec(long mach_id) {
         case 7:  // Mac IIx
             spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.fpu_type = 2; spec.mmu_type = 3; break;
         case 8:  // Mac IIcx
-            spec.cpu_type = 4; spec.clock_mhz = 24; spec.bus_mhz = 24; spec.fpu_type = 2; spec.mmu_type = 3; break;
+            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.fpu_type = 2; spec.mmu_type = 3; break;
         case 9:  // SE/30
             spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.fpu_type = 2; spec.mmu_type = 3; break;
         case 10: // Portable
             spec.cpu_type = 1; spec.clock_mhz = 16; spec.bus_mhz = 16; break;
         case 11: // IIci
             spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 2; spec.mmu_type = 3; break;
-        case 12: // IIfx
-        case 13:
+        case 13: // IIfx
             spec.cpu_type = 4; spec.clock_mhz = 40; spec.bus_mhz = 40; spec.fpu_type = 2; spec.mmu_type = 3; break;
-        case 15: // IIsi
-        case 18:
+        case 18: // IIsi
             spec.cpu_type = 4; spec.clock_mhz = 20; spec.bus_mhz = 20; spec.mmu_type = 3; break;
-        case 17: // LC
+        case 19: // LC
             spec.cpu_type = 3; spec.clock_mhz = 16; spec.bus_mhz = 16; break;
-        case 19: // PB 170
+        case 20: // Quadra 900
+            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 3; spec.mmu_type = 4; break;
+        case 21: // PB 170
             spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 2; spec.mmu_type = 3; break;
-        case 20: // Quadra 700
+        case 22: // Quadra 700
             spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 21: // Classic II
+        case 23: // Classic II
             spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
-        case 22: // PB 100
+        case 24: // PB 100
             spec.cpu_type = 1; spec.clock_mhz = 16; spec.bus_mhz = 16; break;
-        case 23: // PB 140
+        case 25: // PB 140
             spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
-        case 24: // Quadra 950
+        case 26: // Quadra 950
             spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 25: // LC III
+        case 27: // LC III / Performa 450
             spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
-        case 26: // PB 160
+        case 29: // PB Duo 210
             spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
-        case 27: // PB 180
-        case 34: // PB 180c
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
-        case 28: // PB Duo 210
-            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
-        case 29: // PB Duo 230
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
-        case 30: // PB Duo 250
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
-        case 32: // PB 165c
-        case 38: // PB 165
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
-        case 33: // Centris 650
-        case 37: // Quadra 650
-            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 35: // PB Duo 270c
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
-        case 36: // Quadra 800
-            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 39: // Color Classic
-            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
-        case 40: // Centris 610
-            spec.cpu_type = 5; spec.clock_mhz = 20; spec.bus_mhz = 20; spec.mmu_type = 4; break;
-        case 41: // Quadra 610
-            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 42: // PB 145
-            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
-        case 43: // LC II
-            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
-        case 44: // PB 520 / 540
+        case 30: // Centris 650
             spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 4; break;
-        case 45: // Quadra 605 / LC 475
-            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 4; break;
-        case 48: // Macintosh TV
+        case 32: // PB Duo 230
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
+        case 33: // PB 180
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 34: // PB 160
+            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
+        case 35: // Quadra 800
+            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
+        case 36: // Quadra 650
+            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
+        case 37: // LC II
+            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
+        case 38: // PB Duo 250
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
+        case 44: // IIvi
+            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
+        case 45: // IIvm / Performa 600
             spec.cpu_type = 4; spec.clock_mhz = 32; spec.bus_mhz = 32; spec.mmu_type = 3; break;
-        case 49: // LC 520
-            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
-        case 50: // LC 550
-            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
-        case 52: // Quadra 660AV
+        case 48: // IIvx
+            spec.cpu_type = 4; spec.clock_mhz = 32; spec.bus_mhz = 32; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 49: // Color Classic
+            spec.cpu_type = 4; spec.clock_mhz = 16; spec.bus_mhz = 16; spec.mmu_type = 3; break;
+        case 50: // PB 165c
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 52: // Centris 610
+            spec.cpu_type = 5; spec.clock_mhz = 20; spec.bus_mhz = 20; spec.mmu_type = 4; break;
+        case 53: // Quadra 610
             spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 53: // Quadra 840AV
+        case 54: // PB 145
+            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
+        case 56: // LC 520
+            spec.cpu_type = 4; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 3; break;
+        case 60: // Centris 660AV / Quadra 660AV
+            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.fpu_type = 3; spec.mmu_type = 4; break;
+        case 71: // PB 180c
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 72: // PB 520 / 540
+            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 4; break;
+        case 77: // PB Duo 270c
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 78: // Quadra 840AV
             spec.cpu_type = 5; spec.clock_mhz = 40; spec.bus_mhz = 40; spec.fpu_type = 3; spec.mmu_type = 4; break;
-        case 60: // LC 575
+        case 80: // Performa 550 / LC 550
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 2; spec.mmu_type = 3; break;
+        case 84: // PB 165
+            spec.cpu_type = 4; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 3; break;
+        case 85: // PB 190
             spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 4; break;
-        case 61: // Quadra 630 / LC 580
+        case 88: // Macintosh TV
+            spec.cpu_type = 4; spec.clock_mhz = 32; spec.bus_mhz = 32; spec.mmu_type = 3; break;
+        case 89: // LC 475
+            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 4; break;
+        case 92: // LC 575
+            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.fpu_type = 3; spec.mmu_type = 4; break;
+        case 94: // Quadra 605
+            spec.cpu_type = 5; spec.clock_mhz = 25; spec.bus_mhz = 25; spec.mmu_type = 4; break;
+        case 98: // Quadra 630
             spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 4; break;
-        case 70: // Power Mac 6100
+        case 99: // LC 580
+            spec.cpu_type = 5; spec.clock_mhz = 33; spec.bus_mhz = 33; spec.mmu_type = 4; break;
+        case 75: // Power Mac 6100/60
             spec.clock_mhz = 60; spec.bus_mhz = 30; break;
-        case 71: // Power Mac 7100
+        case 100: // Power Mac 6100/66
             spec.clock_mhz = 66; spec.bus_mhz = 33; break;
-        case 72: // Power Mac 8100
+        case 112: // Power Mac 7100/66
+            spec.clock_mhz = 66; spec.bus_mhz = 33; break;
+        case 47:  // Power Mac 7100/80
             spec.clock_mhz = 80; spec.bus_mhz = 40; break;
-        case 84: // Power Mac 7500
+        case 65:  // Power Mac 8100/80
+            spec.clock_mhz = 80; spec.bus_mhz = 40; break;
+        case 55:  // Power Mac 8100/100
+            spec.clock_mhz = 100; spec.bus_mhz = 33; break;
+        case 40:  // Power Mac 8100/110
+            spec.clock_mhz = 110; spec.bus_mhz = 37; break;
+        case 68:  // Power Mac 7500
             spec.clock_mhz = 100; spec.bus_mhz = 50; break;
-        case 85: // Power Mac 8500
+        case 69:  // Power Mac 8500
             spec.clock_mhz = 120; spec.bus_mhz = 40; break;
-        case 86: // Power Mac 9500
+        case 67:  // Power Mac 9500
             spec.clock_mhz = 132; spec.bus_mhz = 44; break;
-        case 120: // G3 Beige
+        case 510: // Power Mac G3
             spec.clock_mhz = 266; spec.bus_mhz = 66; break;
-        case 121: // G3 B&W
-            spec.clock_mhz = 350; spec.bus_mhz = 100; break;
-        case 406: // G4 Sawtooth
-            spec.clock_mhz = 450; spec.bus_mhz = 100; break;
-        case 414: // PB G4 Ti
+        case 406: // NewWorld Mac (PowerBook G4, iMac, etc.)
             spec.clock_mhz = 500; spec.bus_mhz = 100; break;
         default:
             break;
@@ -202,41 +214,62 @@ static const char* GetMacModelName(long mach_id) {
         case 9: return "Macintosh SE/30";
         case 10: return "Macintosh Portable";
         case 11: return "Macintosh IIci";
-        case 12: return "Macintosh IIfx";
-        case 14: return "Macintosh Classic";
-        case 15: return "Macintosh IIsi";
-        case 17: return "Macintosh LC";
-        case 18: return "Macintosh Quadra 900";
-        case 19: return "PowerBook 170";
-        case 20: return "Macintosh Quadra 700";
-        case 21: return "Macintosh Classic II";
-        case 22: return "PowerBook 100";
-        case 23: return "PowerBook 140";
-        case 24: return "Macintosh Quadra 950";
-        case 25: return "Macintosh LC III";
-        case 26: return "PowerBook 160";
-        case 27: return "PowerBook 180";
-        case 33: return "Macintosh Centris 650";
-        case 36: return "Macintosh Quadra 800";
-        case 37: return "Macintosh Quadra 650";
-        case 39: return "Macintosh Color Classic";
-        case 40: return "Macintosh Centris 610";
-        case 41: return "Macintosh Quadra 610";
-        case 45: return "Macintosh Quadra 605 / LC 475";
-        case 52: return "Macintosh Quadra 660AV";
-        case 53: return "Macintosh Quadra 840AV";
-        case 60: return "Macintosh LC 575";
-        case 61: return "Macintosh Quadra 630 / LC 580";
-        case 70: return "Power Macintosh 6100";
-        case 71: return "Power Macintosh 7100";
-        case 72: return "Power Macintosh 8100";
-        case 84: return "Power Macintosh 7500";
-        case 85: return "Power Macintosh 8500";
-        case 86: return "Power Macintosh 9500";
-        case 120: return "Power Macintosh G3 (Beige)";
-        case 121: return "Power Macintosh G3 (Blue & White)";
-        case 406: return "Power Macintosh G4 (Sawtooth)";
-        case 414: return "PowerBook G4 (Titanium)";
+        case 13: return "Macintosh IIfx";
+        case 17: return "Macintosh Classic";
+        case 18: return "Macintosh IIsi";
+        case 19: return "Macintosh LC";
+        case 20: return "Macintosh Quadra 900";
+        case 21: return "PowerBook 170";
+        case 22: return "Macintosh Quadra 700";
+        case 23: return "Macintosh Classic II";
+        case 24: return "PowerBook 100";
+        case 25: return "PowerBook 140";
+        case 26: return "Macintosh Quadra 950";
+        case 27: return "Macintosh LC III";
+        case 29: return "PowerBook Duo 210";
+        case 30: return "Macintosh Centris 650";
+        case 32: return "PowerBook Duo 230";
+        case 33: return "PowerBook 180";
+        case 34: return "PowerBook 160";
+        case 35: return "Macintosh Quadra 800";
+        case 36: return "Macintosh Quadra 650";
+        case 37: return "Macintosh LC II";
+        case 38: return "PowerBook Duo 250";
+        case 44: return "Macintosh IIvi";
+        case 45: return "Macintosh IIvm";
+        case 48: return "Macintosh IIvx";
+        case 49: return "Macintosh Color Classic";
+        case 50: return "PowerBook 165c";
+        case 52: return "Macintosh Centris 610";
+        case 53: return "Macintosh Quadra 610";
+        case 54: return "PowerBook 145";
+        case 56: return "Macintosh LC 520";
+        case 60: return "Macintosh Quadra 660AV";
+        case 71: return "PowerBook 180c";
+        case 72: return "PowerBook 520/540";
+        case 75: return "Power Macintosh 6100/60";
+        case 77: return "PowerBook Duo 270c";
+        case 78: return "Macintosh Quadra 840AV";
+        case 80: return "Macintosh LC 550";
+        case 84: return "PowerBook 165";
+        case 85: return "PowerBook 190";
+        case 88: return "Macintosh TV";
+        case 89: return "Macintosh LC 475";
+        case 92: return "Macintosh LC 575";
+        case 94: return "Macintosh Quadra 605";
+        case 98: return "Macintosh Quadra 630";
+        case 99: return "Macintosh LC 580";
+        case 100: return "Power Macintosh 6100/66";
+        case 112: return "Power Macintosh 7100/66";
+        case 47:  return "Power Macintosh 7100/80";
+        case 65:  return "Power Macintosh 8100/80";
+        case 55:  return "Power Macintosh 8100/100";
+        case 40:  return "Power Macintosh 8100/110";
+        case 68:  return "Power Macintosh 7500";
+        case 69:  return "Power Macintosh 8500";
+        case 67:  return "Power Macintosh 9500";
+        case 510: return "Power Macintosh G3";
+        case 406: return "Power Macintosh G4";
         default: return "Macintosh (Generic)";
     }
 }
@@ -272,6 +305,8 @@ static bool SafeGestalt(OSType selector, long* response) {
 }
 #endif
 
+
+
 void classic_mac_detect_cpu(MacCpuInfo* info) {
     memset(info, 0, sizeof(MacCpuInfo));
 
@@ -288,6 +323,26 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     }
 
     strncpy(info->system_name, GetMacModelName(mach_val), sizeof(info->system_name) - 1);
+
+    // Query gestaltUserVisibleMachineName ('mnam') for accurate human-readable model name
+    long mnam_ptr = 0;
+    if (SafeGestalt('mnam', &mnam_ptr) && mnam_ptr > 1024) {
+        const unsigned char* pstr = (const unsigned char*)mnam_ptr;
+        uint8_t len = pstr[0];
+        if (len > 0 && len < sizeof(info->system_name)) {
+            bool valid = true;
+            for (uint8_t i = 1; i <= len; i++) {
+                if (pstr[i] < 32 || pstr[i] > 254) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) {
+                memcpy(info->system_name, &pstr[1], len);
+                info->system_name[len] = '\0';
+            }
+        }
+    }
 
     short major = (short)((sysv_val >> 8) & 0xFF);
     short minor = (short)((sysv_val >> 4) & 0x0F);
@@ -325,16 +380,16 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
 
     info->is_powerpc = is_ppc;
 
-    // Clock and Bus speed with model spec fallbacks
+    // Clock and Bus speed with model spec fallbacks (rounded to nearest MHz)
     long clk_val = 0, bclk_val = 0;
     if (SafeGestalt(gestaltProcClkSpeed, &clk_val) && clk_val > 0) {
-        info->clock_mhz = (uint32_t)(clk_val / 1000000);
+        info->clock_mhz = (uint32_t)((clk_val + 500000) / 1000000);
     } else {
         info->clock_mhz = spec.clock_mhz;
     }
 
     if (SafeGestalt(gestaltBusClkSpeed, &bclk_val) && bclk_val > 0) {
-        info->bus_mhz = (uint32_t)(bclk_val / 1000000);
+        info->bus_mhz = (uint32_t)((bclk_val + 500000) / 1000000);
     } else {
         info->bus_mhz = spec.bus_mhz;
     }
@@ -398,10 +453,24 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
                 break;
             case 268:
             case 12:
-                strcpy(info->model, "PowerPC 7400 (G4)");
-                strcpy(info->microarch, "PowerPC 7400 (G4)");
-                strcpy(info->codename, "Max");
-                strcpy(info->process, "200nm");
+                if (strstr(info->system_name, "PowerBook G4") != NULL || mach_val == 414) {
+                    if (info->clock_mhz > 500) {
+                        strcpy(info->model, "PowerPC 7455 (G4)");
+                        strcpy(info->microarch, "PowerPC 7455 (G4)");
+                        strcpy(info->codename, "Apollo 6");
+                        strcpy(info->process, "150nm");
+                    } else {
+                        strcpy(info->model, "PowerPC 7410 (G4)");
+                        strcpy(info->microarch, "PowerPC 7410 (G4)");
+                        strcpy(info->codename, "Nitro");
+                        strcpy(info->process, "180nm");
+                    }
+                } else {
+                    strcpy(info->model, "PowerPC 7400 (G4)");
+                    strcpy(info->microarch, "PowerPC 7400 (G4)");
+                    strcpy(info->codename, "Max");
+                    strcpy(info->process, "200nm");
+                }
                 break;
             case 269:
             case 16:
@@ -513,20 +582,16 @@ void classic_mac_generate_report(
     const MacCpuInfo* info,
     uint32_t view_mode,
     bool color,
-    bool dark_theme,
-    bool verbose,
-    bool compact,
     char* out_buf,
     uint32_t out_buf_size,
     CTextRun* out_runs,
     uint32_t* out_run_count,
     uint32_t max_runs
 ) {
-    (void)verbose; (void)compact;
-    CRgbColor c_label = dark_theme ? PALETTE_DARK_LABEL : PALETTE_LIGHT_LABEL;
-    CRgbColor c_sublabel = dark_theme ? PALETTE_DARK_SUBLABEL : PALETTE_LIGHT_SUBLABEL;
-    CRgbColor c_body = dark_theme ? PALETTE_DARK_BODY : PALETTE_LIGHT_BODY;
-    CRgbColor c_highlight = dark_theme ? PALETTE_DARK_HIGHLIGHT : PALETTE_LIGHT_HIGHLIGHT;
+    CRgbColor c_label = PALETTE_LABEL;
+    CRgbColor c_sublabel = PALETTE_SUBLABEL;
+    CRgbColor c_body = PALETTE_BODY;
+    CRgbColor c_highlight = PALETTE_HIGHLIGHT;
 
     *out_run_count = 0;
     out_buf[0] = '\0';
@@ -596,7 +661,7 @@ void classic_mac_generate_report(
         if (info->microarch[0]) {
             APPEND_FIELD("MicroArch", info->microarch, c_body);
         }
-        if (info->codename[0]) {
+        if (info->codename[0] && info->is_powerpc) {
             APPEND_FIELD("Codename", info->codename, c_body);
         }
         if (info->process[0]) {
@@ -643,9 +708,6 @@ void classic_mac_generate_report(
 static MacCpuInfo s_cpu_info;
 static uint32_t s_view_mode = VIEW_STANDARD;
 static bool s_color = true;
-static bool s_dark_theme = false;
-static bool s_verbose = false;
-static bool s_compact = false;
 static char s_report_buf[8192];
 static CTextRun s_runs[256];
 static uint32_t s_run_count = 0;
@@ -656,9 +718,6 @@ static void render_view(void) {
         &s_cpu_info,
         s_view_mode,
         s_color,
-        s_dark_theme,
-        s_verbose,
-        s_compact,
         s_report_buf,
         sizeof(s_report_buf),
         s_runs,
@@ -666,53 +725,33 @@ static void render_view(void) {
         256
     );
 
-    CRgbColor bg_color = s_dark_theme ? PALETTE_DARK_BG : PALETTE_LIGHT_BG;
-    mac_gui_set_text(s_report_buf, strlen(s_report_buf), s_runs, s_run_count, bg_color);
+    mac_gui_set_text(s_report_buf, strlen(s_report_buf), s_runs, s_run_count, PALETTE_BG);
     mac_gui_set_status(s_cpu_info.system_name, s_cpu_info.model, s_cpu_info.os_version);
-    mac_gui_set_menu_checks(s_view_mode, s_color, s_dark_theme, s_verbose, s_compact);
+    mac_gui_set_menu_checks(s_view_mode, s_color, false, false, false);
 }
 
 static void on_command(uint32_t cmd_id) {
     switch (cmd_id) {
-        case 101: // CMD_FILE_OPEN
-            mac_gui_open_file_dialog();
-            break;
-        case 102: // CMD_FILE_EXPORT
-            mac_gui_save_file_dialog("CPU_Report.txt");
-            break;
-        case 103: // CMD_FILE_COPY
-            mac_gui_copy_clipboard(s_report_buf);
-            break;
-        case 104: // CMD_FILE_REFRESH
+        case CMD_FILE_REFRESH: // 101
             classic_mac_detect_cpu(&s_cpu_info);
             render_view();
             break;
-        case 105: // CMD_FILE_EXIT
+        case CMD_FILE_EXIT: // 102
             break;
-        case 201: // CMD_MODE_STANDARD
-        case 202: // CMD_MODE_DEBUG
-        case 203: // CMD_MODE_EVERYTHING
-        case 204: // CMD_MODE_DUMP
+        case CMD_FILE_COPY: // 103
+            mac_gui_copy_clipboard(s_report_buf);
+            break;
+        case CMD_MODE_STANDARD: // 201
+        case CMD_MODE_DEBUG: // 202
+        case CMD_MODE_EVERYTHING: // 203
             s_view_mode = cmd_id;
             render_view();
             break;
-        case 301: // CMD_OPT_COLOR
+        case CMD_OPT_COLOR: // 301
             s_color = !s_color;
             render_view();
             break;
-        case 302: // CMD_OPT_DARK_THEME
-            s_dark_theme = !s_dark_theme;
-            render_view();
-            break;
-        case 303: // CMD_OPT_VERBOSE
-            s_verbose = !s_verbose;
-            render_view();
-            break;
-        case 304: // CMD_OPT_COMPACT
-            s_compact = !s_compact;
-            render_view();
-            break;
-        case 401: // CMD_HELP_ABOUT
+        case CMD_HELP_ABOUT: // 401
             mac_gui_show_alert("About rustid", "rustid " RUSTID_VERSION " for Classic Macintosh\rCPU Identification Tool");
             break;
         default:

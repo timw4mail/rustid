@@ -27,8 +27,6 @@ resource 'MENU' (129, "File", preload) {
     enabled,
     "File",
     {
-        "Export Report...", noIcon, "E", noMark, plain;
-        "-", noIcon, noKey, noMark, plain;
         "Refresh", noIcon, "R", noMark, plain;
         "-", noIcon, noKey, noMark, plain;
         "Quit", noIcon, "Q", noMark, plain;
@@ -63,10 +61,29 @@ resource 'MENU' (131, "View", preload) {
         "Everything", noIcon, "3", noMark, plain;
         "-", noIcon, noKey, noMark, plain;
         "Colors", noIcon, noKey, check, plain;
-        "Dark Theme", noIcon, noKey, noMark, plain;
-        "Verbose", noIcon, noKey, noMark, plain;
-        "Compact", noIcon, noKey, noMark, plain;
     };
+};
+
+/* About Alert Dialog */
+resource 'ALRT' (128, "About", purgeable) {
+    { 100, 100, 220, 420 },
+    128,
+    {
+        OK, visible, silent;
+        OK, visible, silent;
+        OK, visible, silent;
+        OK, visible, silent;
+    },
+    alertPositionMainScreen
+};
+
+resource 'DITL' (128, "About", purgeable) {
+    {
+        { 85, 230, 105, 300 }, Button { enabled, "OK" };
+        { 15, 60, 35, 300 }, StaticText { disabled, "^0" };
+        { 40, 60, 75, 300 }, StaticText { disabled, "^1" };
+        { 15, 15, 47, 47 }, Icon { disabled, 128 };
+    }
 };
 
 /* Main Window Template */

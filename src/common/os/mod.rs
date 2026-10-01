@@ -28,8 +28,6 @@ pub mod haiku;
 #[cfg(windows_os)]
 pub mod windows;
 
-#[cfg(any(classic_macos, test))]
-pub mod classic_mac;
 
 #[cfg(linux_os)]
 pub mod linux_sysfs;

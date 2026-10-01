@@ -59,43 +59,18 @@ enum {
     MENU_FILE           = 129,
     MENU_EDIT           = 130,
     MENU_VIEW           = 131,
-    MENU_HELP           = 132,
 
     ITEM_ABOUT          = 1,
 
-    ITEM_OPEN           = 1,
-    ITEM_EXPORT         = 2,
-    ITEM_REFRESH        = 4,
-    ITEM_QUIT           = 6,
+    ITEM_REFRESH        = 1,
+    ITEM_QUIT           = 3,
 
     ITEM_COPY           = 4,
 
     ITEM_MODE_STD       = 1,
     ITEM_MODE_DBG       = 2,
     ITEM_MODE_ALL       = 3,
-    ITEM_MODE_DUMP      = 4,
-    ITEM_OPT_COLOR      = 6,
-    ITEM_OPT_DARK       = 7,
-    ITEM_OPT_VERBOSE    = 8,
-    ITEM_OPT_COMPACT    = 9,
-
-    CMD_FILE_OPEN       = 101,
-    CMD_FILE_EXPORT     = 102,
-    CMD_FILE_COPY       = 103,
-    CMD_FILE_REFRESH    = 104,
-    CMD_FILE_EXIT       = 105,
-
-    CMD_MODE_STANDARD   = 201,
-    CMD_MODE_DEBUG      = 202,
-    CMD_MODE_EVERYTHING = 203,
-    CMD_MODE_DUMP       = 204,
-
-    CMD_OPT_COLOR       = 301,
-    CMD_OPT_DARK_THEME  = 302,
-    CMD_OPT_VERBOSE     = 303,
-    CMD_OPT_COMPACT     = 304,
-
-    CMD_HELP_ABOUT      = 401
+    ITEM_OPT_COLOR      = 5
 };
 
 static CmdCallback g_cmd_cb = 0;
@@ -105,7 +80,6 @@ static QuitCallback g_quit_cb = 0;
 static WindowPtr g_window = 0;
 static TEHandle g_te = 0;
 static bool g_running = false;
-static bool g_dark_theme = false;
 static char g_status_part1[128] = {0};
 static char g_status_part2[128] = {0};
 static char g_status_part3[128] = {0};
@@ -118,15 +92,9 @@ static void DrawStatusBar(WindowPtr win) {
     statusRect.top = statusRect.bottom - 20;
 
     RGBColor bg, borderDark, textColor;
-    if (g_dark_theme) {
-        bg.red = 0x1A1A; bg.green = 0x1B1B; bg.blue = 0x2626;
-        borderDark.red = 0x0F0F; borderDark.green = 0x1010; borderDark.blue = 0x1616;
-        textColor.red = 0xD4D4; textColor.green = 0xD4D4; textColor.blue = 0xD4D4;
-    } else {
-        bg.red = 0xDDDD; bg.green = 0xDDDD; bg.blue = 0xDDDD;
-        borderDark.red = 0x8888; borderDark.green = 0x8888; borderDark.blue = 0x8888;
-        textColor.red = 0x0000; textColor.green = 0x0000; textColor.blue = 0x0000;
-    }
+    bg.red = 0xDDDD; bg.green = 0xDDDD; bg.blue = 0xDDDD;
+    borderDark.red = 0x8888; borderDark.green = 0x8888; borderDark.blue = 0x8888;
+    textColor.red = 0x0000; textColor.green = 0x0000; textColor.blue = 0x0000;
 
     RGBForeColor(&bg);
     PaintRect(&statusRect);
@@ -170,12 +138,6 @@ static void HandleMenuCommand(long menuResult) {
 
         case MENU_FILE:
             switch (menuItem) {
-                case ITEM_OPEN:
-                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_OPEN);
-                    break;
-                case ITEM_EXPORT:
-                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXPORT);
-                    break;
                 case ITEM_REFRESH:
                     if (g_cmd_cb) g_cmd_cb(CMD_FILE_REFRESH);
                     break;
@@ -203,20 +165,8 @@ static void HandleMenuCommand(long menuResult) {
                 case ITEM_MODE_ALL:
                     if (g_cmd_cb) g_cmd_cb(CMD_MODE_EVERYTHING);
                     break;
-                case ITEM_MODE_DUMP:
-                    if (g_cmd_cb) g_cmd_cb(CMD_MODE_DUMP);
-                    break;
                 case ITEM_OPT_COLOR:
                     if (g_cmd_cb) g_cmd_cb(CMD_OPT_COLOR);
-                    break;
-                case ITEM_OPT_DARK:
-                    if (g_cmd_cb) g_cmd_cb(CMD_OPT_DARK_THEME);
-                    break;
-                case ITEM_OPT_VERBOSE:
-                    if (g_cmd_cb) g_cmd_cb(CMD_OPT_VERBOSE);
-                    break;
-                case ITEM_OPT_COMPACT:
-                    if (g_cmd_cb) g_cmd_cb(CMD_OPT_COMPACT);
                     break;
             }
             break;
@@ -315,20 +265,32 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
         TESetText((Ptr)text, length, g_te);
     }
 
-    // Apply color/bold runs
-    for (uint32_t i = 0; i < run_count; i++) {
-        const CTextRun* r = &runs[i];
-        TESetSelect(r->offset, r->offset + r->length, g_te);
-
+    // Apply color/bold runs or reset to plain text if color is disabled
+    if (run_count == 0) {
+        TESetSelect(0, length, g_te);
         TextStyle style;
         style.tsFont = monaco;
         style.tsSize = 9;
-        style.tsFace = r->bold ? bold : normal;
-        style.tsColor.red = ((unsigned short)r->color.r) << 8;
-        style.tsColor.green = ((unsigned short)r->color.g) << 8;
-        style.tsColor.blue = ((unsigned short)r->color.b) << 8;
-
+        style.tsFace = normal;
+        style.tsColor.red = 0;
+        style.tsColor.green = 0;
+        style.tsColor.blue = 0;
         TESetStyle(doFont | doSize | doFace | doColor, &style, false, g_te);
+    } else {
+        for (uint32_t i = 0; i < run_count; i++) {
+            const CTextRun* r = &runs[i];
+            TESetSelect(r->offset, r->offset + r->length, g_te);
+
+            TextStyle style;
+            style.tsFont = monaco;
+            style.tsSize = 9;
+            style.tsFace = r->bold ? bold : normal;
+            style.tsColor.red = ((unsigned short)r->color.r) << 8;
+            style.tsColor.green = ((unsigned short)r->color.g) << 8;
+            style.tsColor.blue = ((unsigned short)r->color.b) << 8;
+
+            TESetStyle(doFont | doSize | doFace | doColor, &style, false, g_te);
+        }
     }
 
     TESetSelect(0, 0, g_te);
@@ -349,7 +311,7 @@ void mac_gui_set_status(const char* part1, const char* part2, const char* part3)
 }
 
 void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color, bool dark_theme, bool verbose, bool compact) {
-    g_dark_theme = dark_theme;
+    (void)dark_theme; (void)verbose; (void)compact;
 
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
     MenuHandle hView = GetMenuHandle(MENU_VIEW);
@@ -358,14 +320,9 @@ void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color, bool dark_theme, 
     CheckItem(hView, ITEM_MODE_STD, mode_cmd_id == CMD_MODE_STANDARD);
     CheckItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
     CheckItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
-    CheckItem(hView, ITEM_MODE_DUMP, mode_cmd_id == CMD_MODE_DUMP);
-
     CheckItem(hView, ITEM_OPT_COLOR, color);
-    CheckItem(hView, ITEM_OPT_DARK, dark_theme);
-    CheckItem(hView, ITEM_OPT_VERBOSE, verbose);
-    CheckItem(hView, ITEM_OPT_COMPACT, compact);
 #else
-    (void)mode_cmd_id; (void)color; (void)verbose; (void)compact;
+    (void)mode_cmd_id; (void)color;
 #endif
 }
 
