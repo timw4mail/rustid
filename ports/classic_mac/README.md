@@ -23,7 +23,9 @@ To bring `rustid`'s CPU and hardware identification capabilities to vintage Maci
 |:----------------------|:-----------|:-----------|:------|
 | **Motorola 68000 / 68020 / 68030** | System 6.0.8 | System 7.5.5 | Color QuickDraw supported if available; falls back cleanly to monochrome. |
 | **Motorola 68040 / 68LC040** | System 7.0 | Mac OS 8.1 | Full FPU/MMU discrimination. |
-| **PowerPC 601 / 603 / 604 / G3 / G4** | System 7.1.2 | Mac OS 9.2.2 | Runs as native CFM PEF code via the `cfrg` resource. |
+| **PowerPC 601 / 603 / 604 / G3 / G4** (Classic) | System 7.1.2 | Mac OS 9.2.2 | Runs as native CFM PEF code linked to `InterfaceLib`. Backward-compatible with vintage System 7 ROMs. |
+| **PowerPC G3 / G4 / G5** (Carbon CFM) | Mac OS 8.6 | Mac OS 9.2.2 | Standalone Carbon binary (`rustid_carbon.bin`) linked to `CarbonLib`. |
+| **PowerPC G3 / G4 / G5** (Mac OS X) | Mac OS X 10.0 | Mac OS X 10.5 | Native Aqua CFM application bundle (`Rustid.app`). Runs natively without launching Classic Environment. |
 
 ---
 
@@ -116,13 +118,34 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 | `rustid.dsk` | 800 KB HFS Disk | 68k & PowerPC | Raw floppy disk image containing `rustid` Universal Fat Binary. Ready to mount in emulators. |
 | `rustid_68k.bin` | MacBinary II | Motorola 680x0 | Standalone 68k binary optimized for 68000–68060 systems running System 6.0.8 – Mac OS 8.1. |
 | `rustid_68k.dsk` | 800 KB HFS Disk | Motorola 680x0 | Raw floppy disk image containing the 68k standalone binary. |
-| `rustid_ppc.bin` | MacBinary II | PowerPC | Standalone PowerPC PEF binary for System 7.1.2 – Mac OS 9.2.2. |
+| `rustid_ppc.bin` | MacBinary II | PowerPC | Standalone PowerPC PEF binary linked to `InterfaceLib` for System 7.1.2 – Mac OS 9.2.2. |
 | `rustid_ppc.dsk` | 800 KB HFS Disk | PowerPC | Raw floppy disk image containing the PowerPC standalone binary. |
+| `rustid_carbon.bin` | MacBinary II | PowerPC | Carbon CFM binary linked to `CarbonLib` with `'carb'` resource. Runs on Mac OS 8.6 – 9.2.2 with CarbonLib. |
+| `rustid_carbon.dsk` | 800 KB HFS Disk | PowerPC | Raw floppy disk image containing the Carbon standalone binary. |
+| `rustid.icns` | Apple ICNS | Universal | Universal icon containing Classic QuickDraw (`ICN#`, `icl8`, `ics#`, `ics8`), OS X 10.0–10.4 32-bit (`it32`/`t8mk`, etc.), and modern PNG chunks (`ic07`–`ic14`). |
+| `Rustid.app` | Hybrid Bundle | PowerPC (G3/G4/G5) | **Hybrid Application Bundle**. Double-clickable on Mac OS X Aqua (launches `Contents/MacOS/rustid` with Aqua icon). On Mac OS 9, displays custom app icon via `kHasCustomIcon` and contains double-clickable `Rustid` alongside `Contents/MacOSClassic/rustid`. |
+| `rustid_hybrid.dsk` | 14 MB HFS Disk | PowerPC & 68k | **Hybrid Multi-OS Disk Image**. Mounts natively in SheepShaver, Basilisk II, QEMU, real vintage Macs, and Mac OS X. Contains `Rustid.app` (with custom folder icon), `Rustid (Carbon)`, `Rustid (Classic PPC)`, and `Rustid (Universal Fat)` with intact HFS resource forks. |
+| `Rustid-osx-ppc.tar.gz` | Gzip Tar Archive | PowerPC (G3/G4/G5) | Compressed distribution archive of `Rustid.app` for Mac OS X PowerPC systems. |
 
-### File Formats Explained
+### File Formats & Dual-OS Compatibility Explained
 
-- **MacBinary II (`.bin`)**: Classic Mac OS files consist of two forks: a *Data Fork* and a *Resource Fork*, along with Finder metadata (File Type `APPL` and Creator `RsId`). Modern operating systems and filesystems (ext4, NTFS, FAT32) do not support resource forks. MacBinary packages both forks and metadata into a single byte stream. Transferring `.bin` files ensures the application icon and code resources are not stripped.
-- **Raw HFS Disk Image (`.dsk`)**: Standard 800 KB Macintosh HFS disk image. This can be mounted directly in emulators or written block-for-block to physical 3.5" DD floppy disks.
+- **Historical Hybrid Application Bundles (`.app`) on Mac OS 9 vs Mac OS X**:
+  - During the OS X transition era (used in commercial titles like *Super Collapse! II* and documented in Apple's *Inside Mac OS X: System Overview*), applications targeting both Mac OS 9 and Mac OS X were packaged in `.app` bundles:
+    - **Mac OS X Aqua**: The Finder recognizes the bundle directory, launches `Contents/MacOS/rustid`, and renders `Contents/Resources/rustid.icns`.
+    - **Mac OS 9 Finder**: Classic Mac OS has no native directory execution handler; it opens `.app` as a folder. Following the Apple/Super Collapse 2 convention:
+      1. An exact-named executable (`Rustid`) is placed directly at the bundle root alongside `Contents/`, equipped with full resource forks (`cfrg`, `carb`, `SIZE`, `BNDL`, `ICN#`) for immediate double-click launching.
+      2. The Classic CFM slice is also housed in `Contents/MacOSClassic/rustid` for `LaunchCFMApp` / Carbon compatibility.
+      3. The bundle folder itself receives custom application iconography in Mac OS 9 via an invisible `Icon\r` file (resource ID `-16455`) and the Finder's `kHasCustomIcon` (`0x0004`) catalog bit.
+- **Resource Fork Preservation**:
+  - Classic Mac OS CFM binaries require an intact resource fork containing `'cfrg'` (Code Fragment Configuration) and `'carb'` (Carbon) resources.
+  - If files are transferred over non-HFS filesystems (FAT32, ext4, standard tar archives, or emulator shared folders), the resource fork is detached, preventing Mac OS 9 from executing the binary.
+  - To guarantee 100% working execution on Mac OS 9:
+    1. Mount **`rustid_hybrid.dsk`** or **`rustid_carbon.dsk`** directly in your emulator or disk mounter (all resource forks are natively stored in HFS).
+    2. Alternatively, expand **`rustid_carbon.bin`** or **`Rustid.bin`** using **StuffIt Expander** on the Mac.
+- **CarbonLib vs InterfaceLib**:
+  - `Rustid (Carbon)` and `rustid_carbon.bin` link to `CarbonLib`. They require `CarbonLib` (v1.0.4 through v1.6) to be installed in `System Folder:Extensions` on Mac OS 8.6–9.2.2.
+  - `Rustid (Classic PPC)` and `rustid_ppc.bin` link to `InterfaceLib`. They run on any PowerPC Macintosh running System 7.1.2 through Mac OS 9.2.2 with **zero extensions required**.
+  - `Rustid (Universal Fat)` runs natively on both 68k and PowerPC without CarbonLib.
 
 ---
 
@@ -221,6 +244,23 @@ On systems where Open Firmware device-tree identifiers or modern Gestalt selecto
 - Output text is displayed in 9-point **Monaco** inside a Macintosh TextEdit (`TEHandle`) control.
 - Text lines use standard Classic Mac carriage returns (`\r` / `0x0D`). Line feeds (`\n`) are automatically converted on ingestion to preserve TextEdit line wrap and style offsets.
 - When colors are enabled, label titles are rendered in forest green, subcategories in steel blue, and alert values in crimson.
+
+### Resizable Window & Scrolling
+
+- **Clean Full-Window Layout**: The bottom status bar has been eliminated to maximize report viewing area. The TextEdit view extends the full height of the window.
+- **Native Vertical Scroll Bar (`scrollBarProc`)**:
+  - A standard 16-pixel Macintosh scroll bar control docks along the right margin of the window.
+  - **Thumb Dragging (`inThumb`)**: Smoothly drag the scroll box to scrub through the report.
+  - **Scroll Arrows (`inUpButton` / `inDownButton`)**: Click or hold to scroll line-by-line via continuous `TrackControl` tracking.
+  - **Page Scrolling (`inPageUp` / `inPageDown`)**: Click in the scroll track to jump one page up or down.
+  - **Automatic Hilite State**: The scroll bar automatically ghost-deactivates (`HiliteControl(255)`) when the entire report fits within the visible window and activates (`HiliteControl(0)`) with calculated bounds when content exceeds the view.
+- **Window Sizing & Zooming**: The main window uses `zoomDocProc`, featuring a native Macintosh size box (grow icon) in the bottom-right corner and a standard title-bar zoom box.
+  - **Grow Box (`inGrow`)**: Click and drag the bottom-right size box to freely resize the window (minimum bounds: 380x200). The vertical scroll bar automatically resizes to leave room for the 15x15 grow icon.
+  - **Zoom Box (`inZoomIn` / `inZoomOut`)**: Click the zoom box in the title bar to toggle between user size and full-screen maximization.
+  - Dynamic recalculation updates the TextEdit display (`viewRect` and `destRect`), reflows lines via `TECalText`, and recalculates scroll bar maximums.
+- **Keyboard Navigation**:
+  - `Up Arrow` / `Down Arrow`: Scroll vertically line-by-line, updating the scroll bar thumb in real time.
+  - `Page Up` / `Page Down`: Scroll by full pages, updating the scroll bar thumb in real time.
 
 ### Memory & MultiFinder Specification
 

@@ -80,43 +80,179 @@ static QuitCallback g_quit_cb = 0;
 static WindowPtr g_window = 0;
 static TEHandle g_te = 0;
 static bool g_running = false;
-static char g_status_part1[128] = {0};
-static char g_status_part2[128] = {0};
-static char g_status_part3[128] = {0};
 
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
 
-static void DrawStatusBar(WindowPtr win) {
-    Rect bounds = win->portRect;
-    Rect statusRect = bounds;
-    statusRect.top = statusRect.bottom - 20;
+#ifndef zoomDocProc
+#define zoomDocProc 8
+#endif
 
-    RGBColor bg, borderDark, textColor;
-    bg.red = 0xDDDD; bg.green = 0xDDDD; bg.blue = 0xDDDD;
-    borderDark.red = 0x8888; borderDark.green = 0x8888; borderDark.blue = 0x8888;
-    textColor.red = 0x0000; textColor.green = 0x0000; textColor.blue = 0x0000;
+#ifndef inZoomIn
+#define inZoomIn 7
+#endif
 
-    RGBForeColor(&bg);
-    PaintRect(&statusRect);
+#ifndef inZoomOut
+#define inZoomOut 8
+#endif
 
-    // Separator line
-    MoveTo(statusRect.left, statusRect.top);
-    RGBForeColor(&borderDark);
-    LineTo(statusRect.right, statusRect.top);
+#ifndef scrollBarProc
+#define scrollBarProc 16
+#endif
 
-    RGBForeColor(&textColor);
-    TextFont(monaco);
-    TextSize(9);
+#ifndef inUpButton
+#define inUpButton 20
+#endif
 
-    // Status text parts
-    MoveTo(statusRect.left + 5, statusRect.bottom - 5);
-    DrawText(g_status_part1, 0, strlen(g_status_part1));
+#ifndef inDownButton
+#define inDownButton 21
+#endif
 
-    MoveTo(statusRect.left + 260, statusRect.bottom - 5);
-    DrawText(g_status_part2, 0, strlen(g_status_part2));
+#ifndef inPageUp
+#define inPageUp 22
+#endif
 
-    MoveTo(statusRect.left + 420, statusRect.bottom - 5);
-    DrawText(g_status_part3, 0, strlen(g_status_part3));
+#ifndef inPageDown
+#define inPageDown 23
+#endif
+
+#ifndef inThumb
+#define inThumb 129
+#endif
+
+static ControlHandle g_scrollbar = 0;
+static ControlActionUPP g_scroll_action_upp = 0;
+
+static pascal void ScrollActionProc(ControlHandle theControl, short partCode) {
+    if (partCode == 0 || !g_te || !theControl) return;
+
+    short lineH = (*g_te)->lineHeight;
+    if (lineH <= 0) lineH = 12;
+
+    short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
+    short pageLines = (viewH / lineH) - 1;
+    if (pageLines < 1) pageLines = 1;
+
+    short deltaLines = 0;
+    switch (partCode) {
+        case inUpButton:
+            deltaLines = -1;
+            break;
+        case inDownButton:
+            deltaLines = 1;
+            break;
+        case inPageUp:
+            deltaLines = -pageLines;
+            break;
+        case inPageDown:
+            deltaLines = pageLines;
+            break;
+    }
+
+    if (deltaLines != 0) {
+        short oldVal = GetControlValue(theControl);
+        SetControlValue(theControl, oldVal + deltaLines);
+        short newVal = GetControlValue(theControl);
+        short actualDelta = oldVal - newVal;
+        if (actualDelta != 0) {
+            TEScroll(0, actualDelta * lineH, g_te);
+        }
+    }
+}
+
+static void DoScrollLines(short deltaLines) {
+    if (!g_scrollbar || !g_te || deltaLines == 0) return;
+    short oldVal = GetControlValue(g_scrollbar);
+    SetControlValue(g_scrollbar, oldVal + deltaLines);
+    short newVal = GetControlValue(g_scrollbar);
+    short actualDelta = oldVal - newVal;
+    if (actualDelta != 0) {
+        short lineH = (*g_te)->lineHeight;
+        if (lineH <= 0) lineH = 12;
+        TEScroll(0, actualDelta * lineH, g_te);
+    }
+}
+
+static void InvalWindow(WindowPtr win) {
+#if TARGET_API_MAC_CARBON
+    Rect r;
+    GetPortBounds(GetWindowPort(win), &r);
+    InvalWindowRect(win, &r);
+#else
+    InvalRect(&win->portRect);
+#endif
+}
+
+static void UpdateScrollbar(void) {
+    if (!g_scrollbar || !g_te || !g_window) return;
+
+    short lineH = (*g_te)->lineHeight;
+    if (lineH <= 0) lineH = 12;
+    short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
+    short visLines = viewH / lineH;
+    short totLines = (*g_te)->nLines;
+
+    short maxVal = (totLines > visLines) ? (totLines - visLines) : 0;
+
+    SetControlMinimum(g_scrollbar, 0);
+    SetControlMaximum(g_scrollbar, maxVal);
+
+    if (maxVal == 0) {
+        HiliteControl(g_scrollbar, 255);
+        SetControlValue(g_scrollbar, 0);
+    } else {
+        HiliteControl(g_scrollbar, 0);
+        short curLines = ((*g_te)->viewRect.top - (*g_te)->destRect.top) / lineH;
+        if (curLines < 0) curLines = 0;
+        if (curLines > maxVal) curLines = maxVal;
+        SetControlValue(g_scrollbar, curLines);
+    }
+}
+
+static void ResizeWindowContents(WindowPtr win) {
+    if (!win) return;
+    Rect bounds;
+#if TARGET_API_MAC_CARBON
+    SetPort(GetWindowPort(win));
+    GetPortBounds(GetWindowPort(win), &bounds);
+#else
+    SetPort(win);
+    bounds = win->portRect;
+#endif
+
+    short width = bounds.right - bounds.left;
+    short height = bounds.bottom - bounds.top;
+
+    if (g_scrollbar) {
+        HideControl(g_scrollbar);
+        MoveControl(g_scrollbar, width - 15, -1);
+        SizeControl(g_scrollbar, 16, (height > 14) ? (height - 13) : 1);
+        ShowControl(g_scrollbar);
+    }
+
+    if (g_te) {
+        Rect teRect;
+        teRect.left = 10;
+        teRect.top = 10;
+        teRect.right = (width > 35) ? (width - 25) : 10;
+        teRect.bottom = (height > 25) ? (height - 15) : 10;
+
+        short oldScrolledLines = 0;
+        short lineH = (*g_te)->lineHeight;
+        if (lineH <= 0) lineH = 12;
+        if (lineH > 0) {
+            oldScrolledLines = ((*g_te)->viewRect.top - (*g_te)->destRect.top) / lineH;
+        }
+
+        (*g_te)->viewRect = teRect;
+        (*g_te)->destRect = teRect;
+        if (oldScrolledLines > 0) {
+            OffsetRect(&(*g_te)->destRect, 0, -oldScrolledLines * lineH);
+        }
+        TECalText(g_te);
+    }
+
+    UpdateScrollbar();
+    InvalWindow(win);
 }
 
 static void HandleMenuCommand(long menuResult) {
@@ -129,11 +265,14 @@ static void HandleMenuCommand(long menuResult) {
         case MENU_APPLE:
             if (menuItem == ITEM_ABOUT) {
                 if (g_cmd_cb) g_cmd_cb(CMD_HELP_ABOUT);
-            } else {
+            }
+#if !TARGET_API_MAC_CARBON
+            else {
                 Str255 deskName;
                 GetMenuItemText(GetMenuHandle(MENU_APPLE), menuItem, deskName);
                 OpenDeskAcc(deskName);
             }
+#endif
             break;
 
         case MENU_FILE:
@@ -179,26 +318,37 @@ static void HandleMenuCommand(long menuResult) {
 
 bool mac_gui_init(const char* title, short width, short height) {
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+#if !TARGET_API_MAC_CARBON
     InitGraf(&qd.thePort);
     InitFonts();
     InitWindows();
     InitMenus();
     TEInit();
     InitDialogs(nil);
+#endif
     InitCursor();
 
     // Menu Bar Setup
     Handle menuBar = GetNewMBar(128);
     if (menuBar) {
         SetMenuBar(menuBar);
+#if !TARGET_API_MAC_CARBON
         AppendResMenu(GetMenuHandle(MENU_APPLE), 'DRVR');
+#endif
         DrawMenuBar();
     }
 
     // Window Setup
     Rect bounds;
+#if TARGET_API_MAC_CARBON
+    BitMap screenBits;
+    GetQDGlobalsScreenBits(&screenBits);
+    short screenW = screenBits.bounds.right - screenBits.bounds.left;
+    short screenH = screenBits.bounds.bottom - screenBits.bounds.top;
+#else
     short screenW = qd.screenBits.bounds.right - qd.screenBits.bounds.left;
     short screenH = qd.screenBits.bounds.bottom - qd.screenBits.bounds.top;
+#endif
 
     bounds.left = (screenW - width) / 2;
     bounds.top = (screenH - height) / 2;
@@ -212,24 +362,38 @@ bool mac_gui_init(const char* title, short width, short height) {
     pTitle[0] = (unsigned char)len;
     memcpy(&pTitle[1], title, len);
 
-    g_window = NewCWindow(nil, &bounds, pTitle, true, documentProc, (WindowPtr)-1L, true, 0);
+    g_window = NewCWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
     if (!g_window) {
-        g_window = NewWindow(nil, &bounds, pTitle, true, documentProc, (WindowPtr)-1L, true, 0);
+        g_window = NewWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
     }
     if (!g_window) return false;
 
+#if TARGET_API_MAC_CARBON
+    SetPort(GetWindowPort(g_window));
+#else
     SetPort(g_window);
+#endif
 
-    Rect teRect = bounds;
+    Rect teRect;
     teRect.left = 10;
     teRect.top = 10;
-    teRect.right = width - 10;
-    teRect.bottom = height - 30;
+    teRect.right = (width > 35) ? (width - 25) : 10;
+    teRect.bottom = (height > 25) ? (height - 15) : 10;
 
     g_te = TEStyleNew(&teRect, &teRect);
     if (!g_te) {
         g_te = TENew(&teRect, &teRect);
     }
+
+    Rect sRect;
+    sRect.top = -1;
+    sRect.left = width - 15;
+    sRect.bottom = (height > 14) ? (height - 13) : 1;
+    sRect.right = width + 1;
+
+    g_scrollbar = NewControl(g_window, &sRect, (ConstStringPtr)"\p", true, 0, 0, 0, scrollBarProc, 0);
+    g_scroll_action_upp = NewControlActionUPP(ScrollActionProc);
+    UpdateScrollbar();
 
     return true;
 #else
@@ -248,7 +412,11 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
     if (!g_te || !g_window || !text) return;
 
+#if TARGET_API_MAC_CARBON
+    SetPort(GetWindowPort(g_window));
+#else
     SetPort(g_window);
+#endif
 
     // Classic Macintosh TextEdit only recognizes carriage returns ('\r' / 0x0D)
     // as line breaks. Line feeds ('\n' / 0x0A) are ignored or drawn as glyphs.
@@ -294,20 +462,15 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
     }
 
     TESetSelect(0, 0, g_te);
-    InvalRect(&g_window->portRect);
+    UpdateScrollbar();
+    InvalWindow(g_window);
 #else
     (void)text; (void)length; (void)runs; (void)run_count; (void)bg_color;
 #endif
 }
 
 void mac_gui_set_status(const char* part1, const char* part2, const char* part3) {
-    if (part1) strncpy(g_status_part1, part1, sizeof(g_status_part1) - 1);
-    if (part2) strncpy(g_status_part2, part2, sizeof(g_status_part2) - 1);
-    if (part3) strncpy(g_status_part3, part3, sizeof(g_status_part3) - 1);
-
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-    if (g_window) InvalRect(&g_window->portRect);
-#endif
+    (void)part1; (void)part2; (void)part3;
 }
 
 void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color) {
@@ -315,17 +478,24 @@ void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color) {
     MenuHandle hView = GetMenuHandle(MENU_VIEW);
     if (!hView) return;
 
+#if TARGET_API_MAC_CARBON
+    CheckMenuItem(hView, ITEM_MODE_STD, mode_cmd_id == CMD_MODE_STANDARD);
+    CheckMenuItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
+    CheckMenuItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
+    CheckMenuItem(hView, ITEM_OPT_COLOR, color);
+#else
     CheckItem(hView, ITEM_MODE_STD, mode_cmd_id == CMD_MODE_STANDARD);
     CheckItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
     CheckItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
     CheckItem(hView, ITEM_OPT_COLOR, color);
+#endif
 #else
     (void)mode_cmd_id; (void)color;
 #endif
 }
 
 void mac_gui_open_file_dialog(void) {
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+#if !TARGET_API_MAC_CARBON && (defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__))
     SFTypeList types = {'TEXT', 'ttxt', 0, 0};
     StandardFileReply reply;
     StandardGetFile(nil, 2, types, &reply);
@@ -338,7 +508,7 @@ void mac_gui_open_file_dialog(void) {
 }
 
 void mac_gui_save_file_dialog(const char* default_filename) {
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+#if !TARGET_API_MAC_CARBON && (defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__))
     Str255 pName;
     size_t len = default_filename ? strlen(default_filename) : 0;
     if (len > 255) len = 255;
@@ -357,8 +527,23 @@ void mac_gui_save_file_dialog(const char* default_filename) {
 #endif
 }
 
+#if TARGET_API_MAC_CARBON
+typedef struct OpaqueScrapRef* ScrapRef;
+int32_t ClearCurrentScrap(void);
+int32_t GetCurrentScrap(ScrapRef *scrap);
+int32_t PutScrapFlavor(ScrapRef scrap, uint32_t flavorType, uint32_t flavorFlags, long byteCount, const void *flavorData);
+#endif
+
 void mac_gui_copy_clipboard(const char* text) {
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+#if TARGET_API_MAC_CARBON
+    if (!text) return;
+    long len = strlen(text);
+    ScrapRef scrap = NULL;
+    ClearCurrentScrap();
+    if (GetCurrentScrap(&scrap) == 0 && scrap) {
+        PutScrapFlavor(scrap, 'TEXT', 0, len, text);
+    }
+#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
     if (!text) return;
     long len = strlen(text);
     ZeroScrap();
@@ -402,12 +587,82 @@ void mac_gui_run(void) {
                         case inMenuBar:
                             HandleMenuCommand(MenuSelect(event.where));
                             break;
+#if !TARGET_API_MAC_CARBON
                         case inSysWindow:
                             SystemClick(&event, whichWindow);
                             break;
-                        case inDrag:
-                            DragWindow(whichWindow, event.where, &qd.screenBits.bounds);
+#endif
+                        case inDrag: {
+                            Rect dragBounds;
+#if TARGET_API_MAC_CARBON
+                            BitMap sb;
+                            GetQDGlobalsScreenBits(&sb);
+                            dragBounds = sb.bounds;
+#else
+                            dragBounds = qd.screenBits.bounds;
+#endif
+                            DragWindow(whichWindow, event.where, &dragBounds);
                             break;
+                        }
+                        case inGrow: {
+                            Rect sizeLimits;
+                            sizeLimits.top = 200;      // Minimum height
+                            sizeLimits.left = 380;     // Minimum width
+#if TARGET_API_MAC_CARBON
+                            BitMap sb;
+                            GetQDGlobalsScreenBits(&sb);
+                            sizeLimits.bottom = sb.bounds.bottom - sb.bounds.top;
+                            sizeLimits.right = sb.bounds.right - sb.bounds.left;
+#else
+                            sizeLimits.bottom = qd.screenBits.bounds.bottom - qd.screenBits.bounds.top;
+                            sizeLimits.right = qd.screenBits.bounds.right - qd.screenBits.bounds.left;
+#endif
+                            long newSize = GrowWindow(whichWindow, event.where, &sizeLimits);
+                            if (newSize != 0) {
+                                short newWidth = LoWord(newSize);
+                                short newHeight = HiWord(newSize);
+                                SizeWindow(whichWindow, newWidth, newHeight, true);
+                                ResizeWindowContents(whichWindow);
+                            }
+                            break;
+                        }
+                        case inZoomIn:
+                        case inZoomOut:
+                            if (TrackBox(whichWindow, event.where, part)) {
+                                ZoomWindow(whichWindow, part, (whichWindow == FrontWindow()));
+                                ResizeWindowContents(whichWindow);
+                            }
+                            break;
+                        case inContent: {
+                            if (whichWindow != FrontWindow()) {
+                                SelectWindow(whichWindow);
+                            } else {
+                                Point localPt = event.where;
+                                GlobalToLocal(&localPt);
+                                ControlHandle whichControl = nil;
+                                short controlPart = FindControl(localPt, whichWindow, &whichControl);
+                                if (controlPart != 0 && whichControl == g_scrollbar) {
+                                    if (controlPart == inThumb) {
+                                        short oldVal = GetControlValue(g_scrollbar);
+                                        short part = TrackControl(g_scrollbar, localPt, nil);
+                                        if (part != 0) {
+                                            short newVal = GetControlValue(g_scrollbar);
+                                            short delta = oldVal - newVal;
+                                            if (delta != 0 && g_te) {
+                                                short lineH = (*g_te)->lineHeight;
+                                                if (lineH <= 0) lineH = 12;
+                                                TEScroll(0, delta * lineH, g_te);
+                                            }
+                                        }
+                                    } else {
+                                        TrackControl(g_scrollbar, localPt, g_scroll_action_upp);
+                                    }
+                                } else if (g_te) {
+                                    TEClick(localPt, (event.modifiers & shiftKey) != 0, g_te);
+                                }
+                            }
+                            break;
+                        }
                         case inGoAway:
                             if (TrackGoAway(whichWindow, event.where)) {
                                 g_running = false;
@@ -421,16 +676,42 @@ void mac_gui_run(void) {
                     char key = event.message & charCodeMask;
                     if (event.modifiers & cmdKey) {
                         HandleMenuCommand(MenuKey(key));
+                    } else if (g_te) {
+                        short lineH = (*g_te)->lineHeight;
+                        if (lineH <= 0) lineH = 12;
+                        if (key == 0x1E) { // Up Arrow
+                            DoScrollLines(-1);
+                        } else if (key == 0x1F) { // Down Arrow
+                            DoScrollLines(1);
+                        } else if (key == 0x0B) { // Page Up
+                            short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
+                            short pageLines = (viewH / lineH) - 1;
+                            if (pageLines < 1) pageLines = 1;
+                            DoScrollLines(-pageLines);
+                        } else if (key == 0x0C) { // Page Down
+                            short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
+                            short pageLines = (viewH / lineH) - 1;
+                            if (pageLines < 1) pageLines = 1;
+                            DoScrollLines(pageLines);
+                        }
                     }
                     break;
                 }
                 case updateEvt: {
                     WindowPtr updateWin = (WindowPtr)event.message;
                     BeginUpdate(updateWin);
+                    Rect portRect;
+#if TARGET_API_MAC_CARBON
+                    SetPort(GetWindowPort(updateWin));
+                    GetPortBounds(GetWindowPort(updateWin), &portRect);
+#else
                     SetPort(updateWin);
-                    EraseRect(&updateWin->portRect);
-                    if (g_te) TEUpdate(&updateWin->portRect, g_te);
-                    DrawStatusBar(updateWin);
+                    portRect = updateWin->portRect;
+#endif
+                    EraseRect(&portRect);
+                    if (g_te) TEUpdate(&portRect, g_te);
+                    DrawControls(updateWin);
+                    DrawGrowIcon(updateWin);
                     EndUpdate(updateWin);
                     break;
                 }

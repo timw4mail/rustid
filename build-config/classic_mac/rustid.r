@@ -91,7 +91,7 @@ resource 'DITL' (128, "About", purgeable) {
 /* Main Window Template */
 resource 'WIND' (128, "MainWindow", purgeable) {
     { 60, 40, 420, 580 },
-    documentProc,
+    zoomDocProc,
     invisible,
     goAway,
     0x0,
@@ -172,8 +172,8 @@ resource 'FREF' (128, purgeable) {
     ""
 };
 
-/* Code Fragment Resource (enables native PowerPC execution for PPC and Fat binaries) */
-#if defined(TARGET_PPC) || defined(TARGET_FAT)
+/* Code Fragment Resource (enables native PowerPC execution for PPC, Carbon, and Fat binaries) */
+#if defined(TARGET_PPC) || defined(TARGET_FAT) || defined(TARGET_CARBON)
 #include "CodeFragments.r"
 
 resource 'cfrg' (0) {
@@ -183,5 +183,14 @@ resource 'cfrg' (0) {
         kApplicationCFrag, kDataForkCFragLocator, kZeroOffset, kCFragGoesToEOF,
         "rustid"
     }
+};
+#endif
+
+/* Carbon Application Resource (identifies native Carbon app for Mac OS X LaunchServices & CarbonLib) */
+#if defined(TARGET_CARBON)
+type 'carb' {
+};
+
+resource 'carb' (0) {
 };
 #endif

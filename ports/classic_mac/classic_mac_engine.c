@@ -712,18 +712,39 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
         }
     }
 
-    short major = (short)((sysv_val >> 8) & 0xFF);
-    short minor = (short)((sysv_val >> 4) & 0x0F);
-    short patch = (short)(sysv_val & 0x0F);
-    const char* pfx = (major < 8) ? "System" : "Mac OS";
-    if (major > 0) {
-        if (patch == 0) {
-            snprintf(info->os_version, sizeof(info->os_version), "%s %d.%d", pfx, major, minor);
+    if (sysv_val >= 0x1000) {
+        long osx_maj = 0, osx_min = 0, osx_bug = 0;
+        if (SafeGestalt('sys1', &osx_maj) && osx_maj > 0) {
+            SafeGestalt('sys2', &osx_min);
+            SafeGestalt('sys3', &osx_bug);
+            if (osx_bug == 0) {
+                snprintf(info->os_version, sizeof(info->os_version), "Mac OS X %ld.%ld", osx_maj, osx_min);
+            } else {
+                snprintf(info->os_version, sizeof(info->os_version), "Mac OS X %ld.%ld.%ld", osx_maj, osx_min, osx_bug);
+            }
         } else {
-            snprintf(info->os_version, sizeof(info->os_version), "%s %d.%d.%d", pfx, major, minor, patch);
+            short minor = (short)((sysv_val >> 4) & 0x0F);
+            short patch = (short)(sysv_val & 0x0F);
+            if (patch == 0) {
+                snprintf(info->os_version, sizeof(info->os_version), "Mac OS X 10.%d", minor);
+            } else {
+                snprintf(info->os_version, sizeof(info->os_version), "Mac OS X 10.%d.%d", minor, patch);
+            }
         }
     } else {
-        strcpy(info->os_version, "System Software");
+        short major = (short)((sysv_val >> 8) & 0xFF);
+        short minor = (short)((sysv_val >> 4) & 0x0F);
+        short patch = (short)(sysv_val & 0x0F);
+        const char* pfx = (major < 8) ? "System" : "Mac OS";
+        if (major > 0) {
+            if (patch == 0) {
+                snprintf(info->os_version, sizeof(info->os_version), "%s %d.%d", pfx, major, minor);
+            } else {
+                snprintf(info->os_version, sizeof(info->os_version), "%s %d.%d.%d", pfx, major, minor, patch);
+            }
+        } else {
+            strcpy(info->os_version, "System Software");
+        }
     }
 
     // Determine system architecture: 68k vs PowerPC
@@ -860,6 +881,24 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
                 strcpy(info->microarch, "PowerPC 7450 (G4)");
                 strcpy(info->codename, "Vger");
                 strcpy(info->process, "180nm");
+                break;
+            case 270:
+                strcpy(info->model, "PowerPC 970 (G5)");
+                strcpy(info->microarch, "PowerPC 970 (G5)");
+                strcpy(info->codename, "GP");
+                strcpy(info->process, "130nm");
+                break;
+            case 275:
+                strcpy(info->model, "PowerPC 970FX (G5)");
+                strcpy(info->microarch, "PowerPC 970FX (G5)");
+                strcpy(info->codename, "GP-Plus");
+                strcpy(info->process, "90nm");
+                break;
+            case 276:
+                strcpy(info->model, "PowerPC 970MP (G5)");
+                strcpy(info->microarch, "PowerPC 970MP (G5)");
+                strcpy(info->codename, "Antares");
+                strcpy(info->process, "90nm");
                 break;
             default:
                 strcpy(info->model, "PowerPC (Generic)");
