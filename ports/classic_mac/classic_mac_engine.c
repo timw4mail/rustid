@@ -3,6 +3,7 @@
 
 #include "classic_mac_engine.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef RUSTID_VERSION
@@ -12,6 +13,9 @@
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
 #include <Gestalt.h>
 #include <Types.h>
+#if defined(__powerpc__) || defined(__ppc__)
+#include <Multiverse.h>
+#endif
 
 #ifndef gestaltProcessorType
 #define gestaltProcessorType 'proc'
@@ -48,7 +52,7 @@ enum {
     VIEW_EVERYTHING = 203
 };
 
-static const CRgbColor PALETTE_BG        = {255, 255, 255};
+static const CRgbColor PALETTE_BG __attribute__((unused)) = {255, 255, 255};
 static const CRgbColor PALETTE_LABEL     = {9, 134, 88};
 static const CRgbColor PALETTE_SUBLABEL  = {4, 81, 165};
 static const CRgbColor PALETTE_BODY      = {30, 30, 30};
@@ -62,8 +66,347 @@ typedef struct {
     uint32_t mmu_type;  // 0=None, 1=AMU, 2=68851, 3=68030, 4=68040
 } MacModelSpec;
 
-static MacModelSpec GetMacModelSpec(long mach_id) {
+typedef struct {
+    const char* id;
+    const char* name;
+} MacModelIdMap;
+
+static const MacModelIdMap kMacModelIdTable[] = {
+    // Power Macintosh / Power Mac (G3, G4, G5)
+    {"PowerMac1,1", "Power Macintosh G3 (Blue and White)"},
+    {"PowerMac1,2", "Power Mac G4 (PCI Graphics)"},
+    {"PowerMac2,1", "iMac (Slot Loading)"},
+    {"PowerMac2,2", "iMac (Summer 2000)"},
+    {"PowerMac3,1", "Power Mac G4 (AGP Graphics)"},
+    {"PowerMac3,2", "Power Mac G4 (Uni-N)"},
+    {"PowerMac3,3", "Power Mac G4 (Gigabit Ethernet)"},
+    {"PowerMac3,4", "Power Mac G4 (Digital Audio)"},
+    {"PowerMac3,5", "Power Mac G4 (Quicksilver)"},
+    {"PowerMac3,6", "Power Mac G4 (FW 800 | Mirrored Drive Doors)"},
+    {"PowerMac4,1", "iMac (Early/Summer 2001)"},
+    {"PowerMac4,2", "iMac (15-inch Flat Panel)"},
+    {"PowerMac4,4", "eMac"},
+    {"PowerMac4,5", "iMac (17-inch Flat Panel)"},
+    {"PowerMac5,1", "Power Mac G4 Cube"},
+    {"PowerMac6,1", "iMac (15/17-inch Flat Panel, 1GHz/USB 2.0)"},
+    {"PowerMac6,3", "iMac (15/17/20-inch USB 2.0)"},
+    {"PowerMac6,4", "eMac (USB 2.0 | 2005)"},
+    {"PowerMac7,2", "Power Mac G5 (June 2003 | Early 2005)"},
+    {"PowerMac7,3", "Power Mac G5 (June 2004 | Early 2005)"},
+    {"PowerMac8,1", "iMac G5 (17/20-inch)"},
+    {"PowerMac8,2", "iMac G5 (Ambient Light Sensor)"},
+    {"PowerMac9,1", "Power Mac G5 (Late 2004)"},
+    {"PowerMac10,1", "Mac mini"},
+    {"PowerMac10,2", "Mac mini (Late 2005)"},
+    {"PowerMac11,2", "Power Mac G5 (Late 2005)"},
+    {"PowerMac12,1", "iMac G5 (17/20-inch iSight)"},
+
+    // PowerBook & iBook (G3, G4)
+    {"PowerBook1,1", "PowerBook G3 (Bronze Keyboard)"},
+    {"PowerBook2,1", "iBook"},
+    {"PowerBook2,2", "iBook (FireWire)"},
+    {"PowerBook3,1", "PowerBook (Firewire)"},
+    {"PowerBook3,2", "PowerBook G4 (Titanium)"},
+    {"PowerBook3,3", "PowerBook G4 (Gigabit Ethernet)"},
+    {"PowerBook3,4", "PowerBook G4 (DVI)"},
+    {"PowerBook3,5", "PowerBook G4 (1GHz/867MHz)"},
+    {"PowerBook4,1", "iBook (Dual USB | late 2001)"},
+    {"PowerBook4,2", "iBook (14.1 LCD)"},
+    {"PowerBook4,3", "iBook (14.1 LCD 16 VRAM | Opaque 16 VRAM | 32 VRAM)"},
+    {"PowerBook5,1", "PowerBook G4 (17-inch)"},
+    {"PowerBook5,2", "PowerBook G4 (15-inch FW 800)"},
+    {"PowerBook5,3", "PowerBook G4 (17-inch 1.33GHz)"},
+    {"PowerBook5,4", "PowerBook G4 (15-inch 1.5/1.33GHz)"},
+    {"PowerBook5,5", "PowerBook G4 (17-inch 1.5GHz)"},
+    {"PowerBook5,6", "PowerBook G4 (15-inch 1.66/1.5GHz)"},
+    {"PowerBook5,7", "PowerBook G4 (17-inch 1.67GHz)"},
+    {"PowerBook5,8", "PowerBook G4 (15-inch Double-Layer SD)"},
+    {"PowerBook5,9", "PowerBook G4 (17-inch Double-Layer SD)"},
+    {"PowerBook6,1", "PowerBook G4 (12-inch)"},
+    {"PowerBook6,2", "PowerBook G4 (12-inch DVI)"},
+    {"PowerBook6,3", "iBook G4"},
+    {"PowerBook6,4", "PowerBook G4 (12-inch 1.33GHz)"},
+    {"PowerBook6,5", "iBook G4 (2004)"},
+    {"PowerBook6,7", "iBook G4 (Mid 2005)"},
+    {"PowerBook6,8", "PowerBook G4 (12-inch 1.5GHz)"},
+
+    // iMac (Original) & Xserve
+    {"iMac,1", "iMac (Original, 5 Flavors)"},
+    {"RackMac1,1", "XServe"},
+    {"RackMac1,2", "XServe (Slot Load | Cluster Node)"},
+    {"RackMac3,1", "XServe G5"},
+
+    // OldWorld Open Firmware PCI models
+    {"AAPL,PowerMac G3", "Power Macintosh G3 (Beige)"},
+    {"AAPL,Gossamer", "Power Macintosh G3 (Beige)"},
+    {"AAPL,7200", "Power Macintosh 7200"},
+    {"AAPL,7300", "Power Macintosh 7300"},
+    {"AAPL,7500", "Power Macintosh 7500"},
+    {"AAPL,7600", "Power Macintosh 7600"},
+    {"AAPL,8500", "Power Macintosh 8500"},
+    {"AAPL,8600", "Power Macintosh 8600"},
+    {"AAPL,9500", "Power Macintosh 9500"},
+    {"AAPL,9600", "Power Macintosh 9600"},
+    {"AAPL,3400/240", "PowerBook 3400c"},
+    {"AAPL,e411", "PowerBook 3400c"},
+    {"AAPL,3500", "PowerBook G3"},
+
+    // Early Intel models
+    {"MacBook1,1", "MacBook (13-inch)"},
+    {"MacBookPro1,1", "MacBook Pro"},
+    {"MacBookPro1,2", "MacBook Pro (17-inch)"},
+    {"Macmini1,1", "Mac mini (Early/Late 2006)"},
+    {"MacPro1,1", "Mac Pro"},
+    {"iMac4,1", "iMac (Early 2006)"},
+    {"iMac4,2", "iMac (Mid 2006 17-inch)"},
+    {"Xserve1,1", "XServe (Late 2006)"}
+};
+
+const char* classic_mac_model_from_identifier(const char* identifier) {
+    if (!identifier || !identifier[0]) {
+        return NULL;
+    }
+    while (*identifier == ' ') identifier++;
+    if (strncmp(identifier, "Apple ", 6) == 0) {
+        identifier += 6;
+        while (*identifier == ' ') identifier++;
+    }
+
+    size_t count = sizeof(kMacModelIdTable) / sizeof(kMacModelIdTable[0]);
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(identifier, kMacModelIdTable[i].id) == 0) {
+            return kMacModelIdTable[i].name;
+        }
+    }
+    return NULL;
+}
+
+static __attribute__((unused)) bool IsAppleModelIdentifier(const char* s) {
+    if (!s || !s[0]) return false;
+    if (classic_mac_model_from_identifier(s) != NULL) {
+        return true;
+    }
+
+    static const char* const prefixes[] = {
+        "PowerMac",
+        "PowerBook",
+        "iMac",
+        "RackMac",
+        "Macmini",
+        "MacPro",
+        "MacBook",
+        "Mac"
+    };
+    for (size_t i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); i++) {
+        size_t plen = strlen(prefixes[i]);
+        if (strncmp(s, prefixes[i], plen) == 0) {
+            const char* rest = s + plen;
+            const char* comma = strchr(rest, ',');
+            if (comma && comma > rest && *(comma + 1) != '\0') {
+                return true;
+            }
+            if (strcmp(prefixes[i], "iMac") == 0 && *rest == ',' && *(rest + 1) != '\0') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+#if (defined(__powerpc__) || defined(__ppc__)) && (defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__))
+typedef struct RegEntryID {
+    uint8_t opaque[16];
+} RegEntryID;
+
+typedef uint32_t RegPropertyValueSize;
+typedef int32_t (*RegistryEntryIDInitProc)(RegEntryID *id);
+typedef int32_t (*RegistryCStrEntryLookupProc)(const RegEntryID *searchPointID, const char *pathName, RegEntryID *foundEntry);
+typedef int32_t (*RegistryPropertyGetProc)(const RegEntryID *entryID, const char *propertyName, void *propertyValue, RegPropertyValueSize *propertySize);
+typedef int32_t (*RegistryEntryIDDisposeProc)(RegEntryID *id);
+
+static void MakePStr(const char* cstr, unsigned char* pstr) {
+    size_t len = strlen(cstr);
+    if (len > 255) len = 255;
+    pstr[0] = (unsigned char)len;
+    memcpy(&pstr[1], cstr, len);
+}
+#endif
+
+bool classic_mac_probe_model_identifier(char* out_buf, size_t out_buf_size) {
+    if (!out_buf || out_buf_size == 0) return false;
+    out_buf[0] = '\0';
+
+#if (defined(__powerpc__) || defined(__ppc__)) && (defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__))
+    ConnectionID conn = NULL;
+    Ptr mainAddr = NULL;
+    Str255 errName;
+    unsigned char pLib[64];
+    MakePStr("NameRegistryLib", pLib);
+
+    OSErr err = GetSharedLibrary(pLib, kPowerPCArch, kReferenceCFrag, &conn, &mainAddr, errName);
+    if (err == noErr && conn != NULL) {
+        Ptr symLookup = NULL, symPropGet = NULL, symDispose = NULL, symInit = NULL;
+        SymClass symClass = 0;
+        unsigned char pSym[64];
+
+        MakePStr("RegistryCStrEntryLookup", pSym);
+        OSErr errLookup = FindSymbol(conn, pSym, &symLookup, &symClass);
+        MakePStr("RegistryPropertyGet", pSym);
+        OSErr errPropGet = FindSymbol(conn, pSym, &symPropGet, &symClass);
+        MakePStr("RegistryEntryIDDispose", pSym);
+        FindSymbol(conn, pSym, &symDispose, &symClass);
+        MakePStr("RegistryEntryIDInit", pSym);
+        FindSymbol(conn, pSym, &symInit, &symClass);
+
+        if (errLookup == noErr && errPropGet == noErr && symLookup && symPropGet) {
+            RegistryCStrEntryLookupProc pLookup = (RegistryCStrEntryLookupProc)symLookup;
+            RegistryPropertyGetProc pPropGet = (RegistryPropertyGetProc)symPropGet;
+            RegistryEntryIDDisposeProc pDispose = (RegistryEntryIDDisposeProc)symDispose;
+            RegistryEntryIDInitProc pInit = (RegistryEntryIDInitProc)symInit;
+
+            RegEntryID entry;
+            if (pInit) pInit(&entry);
+
+            static const char* const tree_paths[] = {
+                "Devices:device-tree",
+                ":Devices:device-tree",
+                "device-tree",
+                ":device-tree"
+            };
+
+            bool found_entry = false;
+            for (size_t i = 0; i < sizeof(tree_paths)/sizeof(tree_paths[0]); i++) {
+                if (pLookup(NULL, tree_paths[i], &entry) == 0) {
+                    found_entry = true;
+                    break;
+                }
+            }
+
+            if (found_entry) {
+                // First check "compatible" property: list of null-terminated strings
+                char comp_buf[512];
+                RegPropertyValueSize sz = sizeof(comp_buf) - 2;
+                if (pPropGet(&entry, "compatible", comp_buf, &sz) == 0 && sz > 0) {
+                    comp_buf[sz] = '\0';
+                    comp_buf[sz + 1] = '\0';
+                    uint32_t idx = 0;
+                    while (idx < sz) {
+                        const char* s = &comp_buf[idx];
+                        size_t slen = strlen(s);
+                        if (slen > 0) {
+                            if (classic_mac_model_from_identifier(s) != NULL) {
+                                strncpy(out_buf, s, out_buf_size - 1);
+                                out_buf[out_buf_size - 1] = '\0';
+                                break;
+                            }
+                            if (out_buf[0] == '\0' && IsAppleModelIdentifier(s)) {
+                                strncpy(out_buf, s, out_buf_size - 1);
+                                out_buf[out_buf_size - 1] = '\0';
+                            }
+                        }
+                        idx += (uint32_t)(slen + 1);
+                    }
+                }
+
+                // If not found in "compatible" or not in table, check "model" property
+                if (out_buf[0] == '\0' || classic_mac_model_from_identifier(out_buf) == NULL) {
+                    char model_buf[256];
+                    sz = sizeof(model_buf) - 1;
+                    if (pPropGet(&entry, "model", model_buf, &sz) == 0 && sz > 0) {
+                        model_buf[sz] = '\0';
+                        if (classic_mac_model_from_identifier(model_buf) != NULL) {
+                            strncpy(out_buf, model_buf, out_buf_size - 1);
+                            out_buf[out_buf_size - 1] = '\0';
+                        } else if (out_buf[0] == '\0' && IsAppleModelIdentifier(model_buf)) {
+                            strncpy(out_buf, model_buf, out_buf_size - 1);
+                            out_buf[out_buf_size - 1] = '\0';
+                        }
+                    }
+                }
+
+                if (pDispose) pDispose(&entry);
+            }
+        }
+        CloseConnection(&conn);
+    }
+#endif
+
+    // Fallback: check environment variable for testing/emulation
+    if (out_buf[0] == '\0') {
+        const char* env_id = getenv("RUSTID_MAC_MODEL_ID");
+        if (env_id && env_id[0]) {
+            strncpy(out_buf, env_id, out_buf_size - 1);
+            out_buf[out_buf_size - 1] = '\0';
+        }
+    }
+
+    return (out_buf[0] != '\0');
+}
+
+static MacModelSpec GetMacModelSpec(long mach_id, const char* model_id) {
     MacModelSpec spec = {0, 0, 0, 0, 0};
+
+    if (model_id && model_id[0]) {
+        if (strcmp(model_id, "PowerMac1,1") == 0) { spec.clock_mhz = 350; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac1,2") == 0) { spec.clock_mhz = 400; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac2,1") == 0) { spec.clock_mhz = 350; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac2,2") == 0) { spec.clock_mhz = 400; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac3,1") == 0) { spec.clock_mhz = 450; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac3,2") == 0) { spec.clock_mhz = 450; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac3,3") == 0) { spec.clock_mhz = 500; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac3,4") == 0) { spec.clock_mhz = 667; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerMac3,5") == 0) { spec.clock_mhz = 800; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerMac3,6") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac4,1") == 0) { spec.clock_mhz = 500; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac4,2") == 0) { spec.clock_mhz = 700; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac4,4") == 0) { spec.clock_mhz = 700; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac4,5") == 0) { spec.clock_mhz = 800; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac5,1") == 0) { spec.clock_mhz = 450; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerMac6,1") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac6,3") == 0) { spec.clock_mhz = 1250; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac6,4") == 0) { spec.clock_mhz = 1250; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac7,2") == 0) { spec.clock_mhz = 1600; spec.bus_mhz = 800; return spec; }
+        if (strcmp(model_id, "PowerMac7,3") == 0) { spec.clock_mhz = 1800; spec.bus_mhz = 900; return spec; }
+        if (strcmp(model_id, "PowerMac8,1") == 0) { spec.clock_mhz = 1600; spec.bus_mhz = 533; return spec; }
+        if (strcmp(model_id, "PowerMac8,2") == 0) { spec.clock_mhz = 1800; spec.bus_mhz = 600; return spec; }
+        if (strcmp(model_id, "PowerMac9,1") == 0) { spec.clock_mhz = 1800; spec.bus_mhz = 900; return spec; }
+        if (strcmp(model_id, "PowerMac10,1") == 0) { spec.clock_mhz = 1250; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac10,2") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerMac11,2") == 0) { spec.clock_mhz = 2000; spec.bus_mhz = 1000; return spec; }
+        if (strcmp(model_id, "PowerMac12,1") == 0) { spec.clock_mhz = 1900; spec.bus_mhz = 633; return spec; }
+        if (strcmp(model_id, "PowerBook1,1") == 0) { spec.clock_mhz = 333; spec.bus_mhz = 66; return spec; }
+        if (strcmp(model_id, "PowerBook2,1") == 0) { spec.clock_mhz = 300; spec.bus_mhz = 66; return spec; }
+        if (strcmp(model_id, "PowerBook2,2") == 0) { spec.clock_mhz = 366; spec.bus_mhz = 66; return spec; }
+        if (strcmp(model_id, "PowerBook3,1") == 0) { spec.clock_mhz = 400; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerBook3,2") == 0) { spec.clock_mhz = 400; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerBook3,3") == 0) { spec.clock_mhz = 550; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerBook3,4") == 0) { spec.clock_mhz = 667; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook3,5") == 0) { spec.clock_mhz = 867; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook4,1") == 0) { spec.clock_mhz = 500; spec.bus_mhz = 66; return spec; }
+        if (strcmp(model_id, "PowerBook4,2") == 0) { spec.clock_mhz = 600; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerBook4,3") == 0) { spec.clock_mhz = 800; spec.bus_mhz = 100; return spec; }
+        if (strcmp(model_id, "PowerBook5,1") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,2") == 0) { spec.clock_mhz = 1250; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,3") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,4") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,5") == 0) { spec.clock_mhz = 1500; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,6") == 0) { spec.clock_mhz = 1500; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,7") == 0) { spec.clock_mhz = 1670; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,8") == 0) { spec.clock_mhz = 1670; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook5,9") == 0) { spec.clock_mhz = 1670; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook6,1") == 0) { spec.clock_mhz = 867; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook6,2") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook6,3") == 0) { spec.clock_mhz = 800; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook6,4") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "PowerBook6,5") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook6,7") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "PowerBook6,8") == 0) { spec.clock_mhz = 1500; spec.bus_mhz = 167; return spec; }
+        if (strcmp(model_id, "iMac,1") == 0) { spec.clock_mhz = 233; spec.bus_mhz = 66; return spec; }
+        if (strcmp(model_id, "RackMac1,1") == 0) { spec.clock_mhz = 1000; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "RackMac1,2") == 0) { spec.clock_mhz = 1330; spec.bus_mhz = 133; return spec; }
+        if (strcmp(model_id, "RackMac3,1") == 0) { spec.clock_mhz = 2000; spec.bus_mhz = 1000; return spec; }
+    }
+
     switch (mach_id) {
         case 1:  // 128K
         case 2:  // 512K / 512Ke
@@ -316,31 +659,56 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     SafeGestalt(gestaltSystemVersion, &sysv_val);
     SafeGestalt(gestaltPhysicalRAMSize, &ram_val);
 
-    MacModelSpec spec = GetMacModelSpec(mach_val);
+    // 1. Probe Open Firmware / Name Registry for model identifier string (e.g. "PowerMac1,1")
+    bool has_model_id = classic_mac_probe_model_identifier(info->model_id, sizeof(info->model_id));
+
+    // 2. Query hardware specification (clocks, bus) with model_id fallback
+    MacModelSpec spec = GetMacModelSpec(mach_val, has_model_id ? info->model_id : NULL);
 
     if (ram_val > 0) {
         info->ram_mb = (uint32_t)(ram_val / (1024 * 1024));
     }
 
-    strncpy(info->system_name, GetMacModelName(mach_val), sizeof(info->system_name) - 1);
+    // 3. Resolve system model name: prefer model identifier string if it exists
+    const char* id_model_name = has_model_id ? classic_mac_model_from_identifier(info->model_id) : NULL;
+    if (id_model_name != NULL) {
+        snprintf(info->system_name, sizeof(info->system_name), "%s", id_model_name);
+    } else {
+        // Fall back to Gestalt machine type
+        snprintf(info->system_name, sizeof(info->system_name), "%s", GetMacModelName(mach_val));
 
-    // Query gestaltUserVisibleMachineName ('mnam') for accurate human-readable model name
-    long mnam_ptr = 0;
-    if (SafeGestalt('mnam', &mnam_ptr) && mnam_ptr > 1024) {
-        const unsigned char* pstr = (const unsigned char*)mnam_ptr;
-        uint8_t len = pstr[0];
-        if (len > 0 && len < sizeof(info->system_name)) {
-            bool valid = true;
-            for (uint8_t i = 1; i <= len; i++) {
-                if (pstr[i] < 32 || pstr[i] > 254) {
-                    valid = false;
-                    break;
+        // Query gestaltUserVisibleMachineName ('mnam') for accurate human-readable model name
+        long mnam_ptr = 0;
+        if (SafeGestalt('mnam', &mnam_ptr) && mnam_ptr > 1024) {
+            const unsigned char* pstr = (const unsigned char*)mnam_ptr;
+            uint8_t len = pstr[0];
+            if (len > 0 && len < sizeof(info->system_name)) {
+                bool valid = true;
+                for (uint8_t i = 1; i <= len; i++) {
+                    if (pstr[i] < 32 || pstr[i] > 254) {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid) {
+                    char mnam_buf[64];
+                    memcpy(mnam_buf, &pstr[1], len);
+                    mnam_buf[len] = '\0';
+                    const char* from_mnam = classic_mac_model_from_identifier(mnam_buf);
+                    if (from_mnam) {
+                        snprintf(info->system_name, sizeof(info->system_name), "%s", from_mnam);
+                        if (!has_model_id) {
+                            snprintf(info->model_id, sizeof(info->model_id), "%.*s", (int)sizeof(info->model_id) - 1, mnam_buf);
+                            has_model_id = true;
+                        }
+                    } else {
+                        snprintf(info->system_name, sizeof(info->system_name), "%s", mnam_buf);
+                    }
                 }
             }
-            if (valid) {
-                memcpy(info->system_name, &pstr[1], len);
-                info->system_name[len] = '\0';
-            }
+        } else if (has_model_id && (info->system_name[0] == '\0' || strcmp(info->system_name, "Macintosh (Generic)") == 0)) {
+            // Identifier string exists but is not in our dictionary and Gestalt was generic
+            snprintf(info->system_name, sizeof(info->system_name), "%s", info->model_id);
         }
     }
 
@@ -453,7 +821,9 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
                 break;
             case 268:
             case 12:
-                if (strstr(info->system_name, "PowerBook G4") != NULL || mach_val == 414) {
+                if (strstr(info->system_name, "PowerBook G4") != NULL ||
+                    (info->model_id[0] && strncmp(info->model_id, "PowerBook", 9) == 0) ||
+                    mach_val == 414) {
                     if (info->clock_mhz > 500) {
                         strcpy(info->model, "PowerPC 7455 (G4)");
                         strcpy(info->microarch, "PowerPC 7455 (G4)");
@@ -465,6 +835,18 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
                         strcpy(info->codename, "Nitro");
                         strcpy(info->process, "180nm");
                     }
+                } else if (info->model_id[0] && (strcmp(info->model_id, "PowerMac3,5") == 0 ||
+                                                strcmp(info->model_id, "PowerMac3,6") == 0 ||
+                                                info->clock_mhz > 700)) {
+                    strcpy(info->model, "PowerPC 7455 (G4)");
+                    strcpy(info->microarch, "PowerPC 7455 (G4)");
+                    strcpy(info->codename, "Apollo 6");
+                    strcpy(info->process, "150nm");
+                } else if (info->model_id[0] && strcmp(info->model_id, "PowerMac3,4") == 0) {
+                    strcpy(info->model, "PowerPC 7450 (G4)");
+                    strcpy(info->microarch, "PowerPC 7450 (G4)");
+                    strcpy(info->codename, "Vger");
+                    strcpy(info->process, "180nm");
                 } else {
                     strcpy(info->model, "PowerPC 7400 (G4)");
                     strcpy(info->microarch, "PowerPC 7400 (G4)");
@@ -575,6 +957,22 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     strcpy(info->system_name, "Macintosh SE/30");
     strcpy(info->os_version, "System 7.5.5");
     info->is_powerpc = false;
+
+    // Allow testing model_id resolution via RUSTID_MAC_MODEL_ID environment variable
+    if (classic_mac_probe_model_identifier(info->model_id, sizeof(info->model_id))) {
+        const char* id_name = classic_mac_model_from_identifier(info->model_id);
+        if (id_name) {
+            strncpy(info->system_name, id_name, sizeof(info->system_name) - 1);
+        } else {
+            strncpy(info->system_name, info->model_id, sizeof(info->system_name) - 1);
+        }
+        MacModelSpec spec = GetMacModelSpec(0, info->model_id);
+        if (spec.clock_mhz > 0) info->clock_mhz = spec.clock_mhz;
+        if (spec.bus_mhz > 0) info->bus_mhz = spec.bus_mhz;
+    } else {
+        (void)GetMacModelName(0);
+        (void)GetMacModelSpec(0, NULL);
+    }
 #endif
 }
 
@@ -593,7 +991,7 @@ void classic_mac_generate_report(
     CRgbColor c_body = PALETTE_BODY;
     CRgbColor c_highlight = PALETTE_HIGHLIGHT;
 
-    *out_run_count = 0;
+    if (out_run_count) *out_run_count = 0;
     out_buf[0] = '\0';
 
     uint32_t offset = 0;
@@ -602,7 +1000,7 @@ void classic_mac_generate_report(
         size_t len = strlen(str); \
         if (offset + len < out_buf_size) { \
             strcat(out_buf, str); \
-            if (color && *out_run_count < max_runs) { \
+            if (color && out_runs && out_run_count && *out_run_count < max_runs) { \
                 out_runs[*out_run_count].offset = offset; \
                 out_runs[*out_run_count].length = (uint32_t)len; \
                 out_runs[*out_run_count].color = clr; \
@@ -622,7 +1020,7 @@ void classic_mac_generate_report(
         size_t val_len = strlen(val_buf); \
         if (offset + lbl_len + val_len < out_buf_size) { \
             strcat(out_buf, lbl_buf); \
-            if (color && *out_run_count < max_runs) { \
+            if (color && out_runs && out_run_count && *out_run_count < max_runs) { \
                 out_runs[*out_run_count].offset = offset; \
                 out_runs[*out_run_count].length = (uint32_t)lbl_len; \
                 out_runs[*out_run_count].color = c_label; \
@@ -631,7 +1029,7 @@ void classic_mac_generate_report(
             } \
             offset += (uint32_t)lbl_len; \
             strcat(out_buf, val_buf); \
-            if (color && *out_run_count < max_runs) { \
+            if (color && out_runs && out_run_count && *out_run_count < max_runs) { \
                 out_runs[*out_run_count].offset = offset; \
                 out_runs[*out_run_count].length = (uint32_t)val_len; \
                 out_runs[*out_run_count].color = val_clr; \
@@ -658,7 +1056,7 @@ void classic_mac_generate_report(
         if (info->model[0]) {
             APPEND_FIELD("Model", info->model, c_highlight);
         }
-        if (info->microarch[0]) {
+        if (info->microarch[0] && !info->is_powerpc) {
             APPEND_FIELD("MicroArch", info->microarch, c_body);
         }
         if (info->codename[0] && info->is_powerpc) {
@@ -698,6 +1096,9 @@ void classic_mac_generate_report(
         APPEND_FIELD("Arch", arch_str, c_body);
         APPEND_FIELD("Target", "Classic Macintosh Toolbox", c_body);
         APPEND_FIELD("Gestalt", "Active", c_body);
+        if (info->model_id[0]) {
+            APPEND_FIELD("Model ID", info->model_id, c_body);
+        }
     }
 
     #undef APPEND_HEADER

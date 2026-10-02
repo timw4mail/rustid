@@ -178,9 +178,26 @@ Hardware detection relies on the Macintosh Toolbox `Gestalt` Manager. To maintai
 - `gestaltSystemVersion` (`'sysv'`): Decodes system software version (e.g., System 7.1, System 7.5.5, Mac OS 8.6, Mac OS 9.2.2).
 - `gestaltUserVisibleMachineName` (`'mnam'`): Reads the localized Pascal string for the official Apple marketing name.
 
+### Open Firmware Device-Tree & Model Identifier Probing
+
+On PCI and NewWorld PowerPC Macs (introduced starting with the Bondi Blue iMac in 1998 through the G4 and G5 era), Apple changed how hardware is reported:
+- The Gestalt machine type (`gestaltMachineType` / `'mach'`) returns a generic ID of `406` (`gestaltPowerMacNewWorld`) across nearly all NewWorld hardware.
+- Gestalt alone cannot distinguish an iMac G3 from a Power Mac G4 Cube, a Titanium PowerBook G4, or a dual-processor Mirrored Drive Doors G4.
+
+To solve this, `rustid` dynamically probes the Open Firmware device tree for the hardware model identifier:
+1. **Dynamic Name Registry Binding**: Queries the Code Fragment Manager (CFM) via `GetSharedLibrary("NameRegistryLib")` and resolves `RegistryCStrEntryLookup` and `RegistryPropertyGet`.
+   - *Zero NuBus or 68k Breakage*: By loading dynamically rather than hard-linking against `libNameRegistryLib.a`, `rustid` avoids PEF load errors (`cfragNoLibraryErr`) on early NuBus PowerPC Macs (such as the Power Macintosh 6100, 7100, and 8100) and 680x0 machines where the Name Registry is absent.
+2. **Device Tree Node Traversal**: Looks up the root `"Devices:device-tree"` node and inspects the `"compatible"` property (a sequence of null-terminated C strings) followed by `"model"`.
+3. **Model Identifier Resolution**: Matches model identifier strings (e.g. `PowerMac1,1`, `PowerMac3,6`, `PowerBook3,2`, `iMac,1`, `RackMac1,1`, or OldWorld PCI entries like `AAPL,PowerMac G3` and `AAPL,7500`) against a comprehensive internal hardware catalog.
+4. **Hardware Specification Tuning**: Provides factory clock speeds, bus frequencies (such as 66 MHz, 100 MHz, 133 MHz, and 167 MHz system buses), and specific G4 CPU revisions (distinguishing MPC7400, MPC7410, MPC7450, and MPC7455) for identified models.
+5. **Detection Hierarchy**:
+   - Device Tree Model Identifier (via Name Registry)
+   - Localized Gestalt Machine Name (`gestaltUserVisibleMachineName` / `'mnam'`)
+   - Classic Gestalt Machine ID (`gestaltMachineType` / `'mach'`)
+
 ### Model Specification Fallback Table
 
-On early System 6 and 7 versions where `'pclk'`, `'bclk'`, or `'mnam'` are not populated by the system ROM, the engine uses a built-in hardware lookup table keyed by `gestaltMachineType`. This table maps over 50 classic Macintosh models to their factory CPU family, clock speed, bus speed, and standard coprocessor configuration.
+On systems where Open Firmware device-tree identifiers or modern Gestalt selectors (`'pclk'`, `'bclk'`, `'mnam'`) are not available, the engine uses a built-in hardware lookup table. This table maps both numeric `gestaltMachineType` codes and Open Firmware identifier strings to their factory CPU family, core clock speed, bus speed, and standard coprocessor configuration.
 
 ---
 
