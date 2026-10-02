@@ -17,6 +17,7 @@ This application is developed using *some* AI, mostly related to:
 - **DOS Compatibility:** Compiles to a set of binaries that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 - **UEFI Compatibility:** Compiles to a standalone UEFI application (32-bit and 64-bit x86)
 - **Native GUI Support:** Lightweight Win32 GUI application for Windows and native Haiku Interface Kit application (`rustid-gui`) for Haiku OS.
+- **Classic Macintosh Port:** Standalone native C port using the Macintosh Toolbox for System 6 through Mac OS 9.2.2 (68k and PowerPC). See [Classic Mac Port](ports/classic_mac/README.md).
 
 ## Platform Support
 
@@ -73,6 +74,9 @@ Copy the EFI binaries from the Github release (`BOOTX64.EFI` for 64-bit, `BOOTIA
 - Rust (`cargo` needs to be installed)
 - For most environments, `cargo install rustid` will add `rustid` to your path
 - Rust on Windows can be slightly more complicated, see [this guide](https://rust-lang.github.io/rustup/installation/windows-msvc.html) for steps to install the MSVC compiler and libraries.
+
+### Installing (Classic Mac OS)
+See the [Classic Mac Port documentation](ports/classic_mac/README.md) for details on running the Universal Fat binary or standalone 68k / PowerPC binaries on vintage hardware or emulators.
 
 ## Usage
 - For binaries, just run `rustid`, for more commands run `rustid --help`.

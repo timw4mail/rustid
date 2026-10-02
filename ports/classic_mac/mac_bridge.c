@@ -310,9 +310,7 @@ void mac_gui_set_status(const char* part1, const char* part2, const char* part3)
 #endif
 }
 
-void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color, bool dark_theme, bool verbose, bool compact) {
-    (void)dark_theme; (void)verbose; (void)compact;
-
+void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color) {
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
     MenuHandle hView = GetMenuHandle(MENU_VIEW);
     if (!hView) return;

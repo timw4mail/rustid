@@ -618,7 +618,7 @@ void classic_mac_generate_report(
         snprintf(lbl_buf, sizeof(lbl_buf), "%14s: ", label); \
         size_t lbl_len = strlen(lbl_buf); \
         char val_buf[256]; \
-        snprintf(val_buf, sizeof(val_buf), "%s\r", val_str); \
+        snprintf(val_buf, sizeof(val_buf), "%s\r\r", val_str); \
         size_t val_len = strlen(val_buf); \
         if (offset + lbl_len + val_len < out_buf_size) { \
             strcat(out_buf, lbl_buf); \
@@ -692,9 +692,9 @@ void classic_mac_generate_report(
 
     if (view_mode == VIEW_DEBUG || view_mode == VIEW_EVERYTHING) {
         if (view_mode == VIEW_EVERYTHING) {
-            APPEND_HEADER("\r--------------------\r\r", c_sublabel);
+            APPEND_HEADER("--------------------\r\r", c_sublabel);
         }
-        APPEND_HEADER("Debug Information:\r", c_sublabel);
+        APPEND_HEADER("Debug Information:\r\r", c_sublabel);
         APPEND_FIELD("Arch", arch_str, c_body);
         APPEND_FIELD("Target", "Classic Macintosh Toolbox", c_body);
         APPEND_FIELD("Gestalt", "Active", c_body);
@@ -727,7 +727,7 @@ static void render_view(void) {
 
     mac_gui_set_text(s_report_buf, strlen(s_report_buf), s_runs, s_run_count, PALETTE_BG);
     mac_gui_set_status(s_cpu_info.system_name, s_cpu_info.model, s_cpu_info.os_version);
-    mac_gui_set_menu_checks(s_view_mode, s_color, false, false, false);
+    mac_gui_set_menu_checks(s_view_mode, s_color);
 }
 
 static void on_command(uint32_t cmd_id) {
