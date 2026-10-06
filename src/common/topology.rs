@@ -168,6 +168,8 @@ pub enum DataSource {
     MpTable,
     /// value from SMBIOS / DMI table with structure description
     Smbios(&'static str),
+    /// value from Macintosh Gestalt API
+    Gestalt(&'static str),
     /// value from sysctl tool with sysctl name
     Sysctrl(&'static str),
     /// value from system call

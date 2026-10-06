@@ -13,8 +13,8 @@ echo "Building Linux GUI binary (${ARCH})..."
 cargo build --features gui --bin gui --release
 
 # Staging AppDir
-APPDIR="target/appimage/AppDir"
-DIST_DIR="target/dist"
+APPDIR="$REPO_ROOT/target/appimage/AppDir"
+DIST_DIR="$REPO_ROOT/target/dist"
 OUTPUT_APPIMAGE="$DIST_DIR/rustid-${ARCH}.AppImage"
 
 echo "Preparing AppDir layout at $APPDIR..."
