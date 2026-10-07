@@ -1082,7 +1082,7 @@ void classic_mac_generate_report(
     // Header banner
     const char* arch_str = info->is_powerpc ? "powerpc" : "m68k";
     char banner[256];
-    snprintf(banner, sizeof(banner), "--------------- Rustid %s (%s-macos_classic) ---------------\r\r", RUSTID_VERSION, arch_str);
+    snprintf(banner, sizeof(banner), "--------- Rustid %s (%s-macos_classic) ---------\r\r", RUSTID_VERSION, arch_str);
     APPEND_HEADER(banner, c_sublabel);
 
     if (view_mode == VIEW_STANDARD || view_mode == VIEW_EVERYTHING) {

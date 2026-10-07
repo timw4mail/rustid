@@ -124,7 +124,8 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 | `rustid_carbon.dsk` | 800 KB HFS Disk | PowerPC | Raw floppy disk image containing the Carbon standalone binary. |
 | `rustid.icns` | Apple ICNS | Universal | Universal icon containing Classic QuickDraw (`ICN#`, `icl8`, `ics#`, `ics8`), OS X 10.0–10.4 32-bit (`it32`/`t8mk`, etc.), and modern PNG chunks (`ic07`–`ic14`). |
 | `Rustid.app` | Hybrid Bundle | PowerPC (G3/G4/G5) | **Hybrid Application Bundle**. Double-clickable on Mac OS X Aqua (launches `Contents/MacOS/rustid` with Aqua icon). On Mac OS 9, displays custom app icon via `kHasCustomIcon` and contains double-clickable `Rustid` alongside `Contents/MacOSClassic/rustid`. |
-| `rustid_hybrid.dsk` | 14 MB HFS Disk | PowerPC & 68k | **Hybrid Multi-OS Disk Image**. Mounts natively in SheepShaver, Basilisk II, QEMU, real vintage Macs, and Mac OS X. Contains `Rustid.app` (with custom folder icon), `Rustid (Carbon)`, `Rustid (Classic PPC)`, and `Rustid (Universal Fat)` with intact HFS resource forks. |
+| `rustid_hybrid.dmg` | 14 MB Apple Disk Image | PowerPC & 68k | **Native Mac OS X Apple Disk Image (`.dmg`)**. Mounts natively on OS X (10.0 Cheetah through 10.5 Leopard) via `DiskImageMounter.app` on double-click. Contains `Rustid.app` (with custom folder icon), `Rustid (Carbon)`, `Rustid (Classic PPC)`, and `Rustid (Universal Fat)` with intact HFS resource forks. |
+| `rustid_hybrid.dsk` | 14 MB HFS Disk | PowerPC & 68k | **Classic Emulator Multi-OS Disk Image**. Mounts directly in SheepShaver, Basilisk II, QEMU, Floppy Emu, and SCSI devices. Identical content to `rustid_hybrid.dmg`. |
 | `Rustid-osx-ppc.tar.gz` | Gzip Tar Archive | PowerPC (G3/G4/G5) | Compressed distribution archive of `Rustid.app` for Mac OS X PowerPC systems. |
 
 ### File Formats & Dual-OS Compatibility Explained
@@ -136,11 +137,14 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
       1. An exact-named executable (`Rustid`) is placed directly at the bundle root alongside `Contents/`, equipped with full resource forks (`cfrg`, `carb`, `SIZE`, `BNDL`, `ICN#`) for immediate double-click launching.
       2. The Classic CFM slice is also housed in `Contents/MacOSClassic/rustid` for `LaunchCFMApp` / Carbon compatibility.
       3. The bundle folder itself receives custom application iconography in Mac OS 9 via an invisible `Icon\r` file (resource ID `-16455`) and the Finder's `kHasCustomIcon` (`0x0004`) catalog bit.
+- **Apple Disk Image (`.dmg`) vs Legacy Emulator Images (`.dsk`)**:
+  - **Mac OS X**: `.dmg` (Apple Disk Image) is the native disk image format registered to `/System/Library/CoreServices/DiskImageMounter.app` and `hdiutil`. Double-clicking `rustid_hybrid.dmg` mounts the volume directly onto the desktop. Mac OS X does not associate `.dsk` files with any application by default.
+  - **Classic Emulators**: Software emulators (SheepShaver, Basilisk II, Mini vMac) and hardware emulators (Floppy Emu, BlueSCSI) typically expect `.dsk` or `.img` files. Both `rustid_hybrid.dmg` and `rustid_hybrid.dsk` are provided with identical sector layouts.
 - **Resource Fork Preservation**:
   - Classic Mac OS CFM binaries require an intact resource fork containing `'cfrg'` (Code Fragment Configuration) and `'carb'` (Carbon) resources.
   - If files are transferred over non-HFS filesystems (FAT32, ext4, standard tar archives, or emulator shared folders), the resource fork is detached, preventing Mac OS 9 from executing the binary.
   - To guarantee 100% working execution on Mac OS 9:
-    1. Mount **`rustid_hybrid.dsk`** or **`rustid_carbon.dsk`** directly in your emulator or disk mounter (all resource forks are natively stored in HFS).
+    1. Mount **`rustid_hybrid.dmg`** / **`rustid_hybrid.dsk`** or **`rustid_carbon.dsk`** directly in your emulator or disk mounter (all resource forks are natively stored in HFS).
     2. Alternatively, expand **`rustid_carbon.bin`** or **`Rustid.bin`** using **StuffIt Expander** on the Mac.
 - **CarbonLib vs InterfaceLib**:
   - `Rustid (Carbon)` and `rustid_carbon.bin` link to `CarbonLib`. They require `CarbonLib` (v1.0.4 through v1.6) to be installed in `System Folder:Extensions` on Mac OS 8.6–9.2.2.
@@ -151,18 +155,26 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 
 ## Running and Testing
 
-### 1. In Emulators
+### 1. On Mac OS X (PowerPC 10.0 Cheetah – 10.5 Leopard)
 
+- **Native Apple Disk Image (`.dmg`)**:
+  - Double-click **`target/classic_mac/rustid_hybrid.dmg`** in Finder. Mac OS X's native `DiskImageMounter.app` mounts the volume `Rustid Hybrid` to your desktop.
+  - Drag `Rustid.app` into `/Applications` or run it directly. It executes with native Aqua styling, Carbon window controls, and Aqua application icon.
+- **Tarball Archive**:
+  - Alternatively, extract **`target/classic_mac/Rustid-osx-ppc.tar.gz`** using Archive Utility or `tar -xzf`.
+
+### 2. In Classic Emulators
+
+- **SheepShaver** (PowerPC emulation):
+  - Add `target/classic_mac/rustid_hybrid.dmg` (or `rustid_hybrid.dsk` / `rustid.dsk`) to your SheepShaver volumes list.
+  - Boot into System 7.5.3 – Mac OS 9.0.4.
 - **Basilisk II** (68k emulation):
   - Add `target/classic_mac/rustid.dsk` or `target/classic_mac/rustid_68k.dsk` to the volumes list in the Basilisk II GUI / `~/.basilisk_ii_prefs`.
   - Boot into System 7 or Mac OS 8. The `rustid` disk will appear on the desktop.
-- **SheepShaver** (PowerPC emulation):
-  - Add `target/classic_mac/rustid.dsk` or `target/classic_mac/rustid_ppc.dsk` to your SheepShaver volumes list.
-  - Boot into System 7.5.3 – Mac OS 9.0.4.
 - **Infinite Mac** (Web-based emulation):
   - Drag and drop `rustid.bin` or `rustid.dsk` directly into an [Infinite Mac](https://infinitemac.org) browser window.
 
-### 2. On Real Vintage Hardware
+### 3. On Real Vintage Hardware
 
 To copy `rustid` to physical Macintosh hardware:
 

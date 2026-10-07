@@ -30,11 +30,11 @@ R_DEPS        = rustid.r rustid_icons.r
 
 OUT_DIR       ?= ../../target/classic_mac
 
-all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin $(OUT_DIR)/rustid_carbon.bin $(OUT_DIR)/Rustid.app $(OUT_DIR)/rustid_hybrid.dsk $(OUT_DIR)/Rustid-osx-ppc.tar.gz
+all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin $(OUT_DIR)/rustid_carbon.bin $(OUT_DIR)/Rustid.app $(OUT_DIR)/rustid_hybrid.dmg $(OUT_DIR)/rustid_hybrid.dsk $(OUT_DIR)/Rustid-osx-ppc.tar.gz
 
 classic: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/rustid_68k.bin $(OUT_DIR)/rustid_ppc.bin
 carbon: directories $(OUT_DIR)/rustid_carbon.bin
-osx: directories $(OUT_DIR)/Rustid.app $(OUT_DIR)/rustid_hybrid.dsk $(OUT_DIR)/Rustid-osx-ppc.tar.gz
+osx: directories $(OUT_DIR)/Rustid.app $(OUT_DIR)/rustid_hybrid.dmg $(OUT_DIR)/rustid_hybrid.dsk $(OUT_DIR)/Rustid-osx-ppc.tar.gz
 
 directories:
 	@mkdir -p $(OUT_DIR)
@@ -117,10 +117,11 @@ $(OUT_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid_carbon.bin
 	echo -n "APPLRsId" > $(OUT_DIR)/Rustid.app/Contents/PkgInfo
 
 # Hybrid HFS Disk Image (contains Rustid.app with custom icon, and standalone Classic applications)
-$(OUT_DIR)/rustid_hybrid.dsk: $(OUT_DIR)/Rustid.app $(OUT_DIR)/folder_icon.bin $(OUT_DIR)/rustid_carbon.bin $(OUT_DIR)/rustid_ppc.bin $(OUT_DIR)/rustid.bin
-	dd if=/dev/zero of=$(OUT_DIR)/rustid_hybrid.dsk bs=1M count=14 status=none
-	$(RETRO68_ROOT)/bin/hformat -l "Rustid Hybrid" $(OUT_DIR)/rustid_hybrid.dsk
-	$(RETRO68_ROOT)/bin/hmount $(OUT_DIR)/rustid_hybrid.dsk
+# .dmg is the native Apple Disk Image format on Mac OS X (mounted natively by DiskImageMounter.app)
+$(OUT_DIR)/rustid_hybrid.dmg: $(OUT_DIR)/Rustid.app $(OUT_DIR)/folder_icon.bin $(OUT_DIR)/rustid_carbon.bin $(OUT_DIR)/rustid_ppc.bin $(OUT_DIR)/rustid.bin
+	dd if=/dev/zero of=$(OUT_DIR)/rustid_hybrid.dmg bs=1M count=14 status=none
+	$(RETRO68_ROOT)/bin/hformat -l "Rustid Hybrid" $(OUT_DIR)/rustid_hybrid.dmg
+	$(RETRO68_ROOT)/bin/hmount $(OUT_DIR)/rustid_hybrid.dmg
 	$(RETRO68_ROOT)/bin/hcopy -m $(OUT_DIR)/rustid_carbon.bin ":Rustid (Carbon)"
 	$(RETRO68_ROOT)/bin/hcopy -m $(OUT_DIR)/rustid_ppc.bin ":Rustid (Classic PPC)"
 	$(RETRO68_ROOT)/bin/hcopy -m $(OUT_DIR)/rustid.bin ":Rustid (Universal Fat)"
@@ -138,7 +139,11 @@ $(OUT_DIR)/rustid_hybrid.dsk: $(OUT_DIR)/Rustid.app $(OUT_DIR)/folder_icon.bin $
 	$(RETRO68_ROOT)/bin/hcopy $(OUT_DIR)/Rustid.app/Contents/Resources/rustid.rsrc ":Rustid.app:Contents:Resources:rustid.rsrc"
 	$(RETRO68_ROOT)/bin/hcopy -m $(OUT_DIR)/rustid_carbon.bin ":Rustid.app:Contents:MacOSClassic:rustid"
 	$(RETRO68_ROOT)/bin/humount
-	python3 setup_bundle_icon.py set-flag $(OUT_DIR)/rustid_hybrid.dsk "Rustid.app"
+	python3 setup_bundle_icon.py set-flag $(OUT_DIR)/rustid_hybrid.dmg "Rustid.app"
+
+# Classic emulators (SheepShaver, Basilisk II, Floppy Emu) expecting .dsk format
+$(OUT_DIR)/rustid_hybrid.dsk: $(OUT_DIR)/rustid_hybrid.dmg
+	cp -f $(OUT_DIR)/rustid_hybrid.dmg $(OUT_DIR)/rustid_hybrid.dsk
 
 # Mac OS X Compressed Distribution Archive
 $(OUT_DIR)/Rustid-osx-ppc.tar.gz: $(OUT_DIR)/Rustid.app
