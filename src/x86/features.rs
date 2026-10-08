@@ -400,7 +400,7 @@ pub fn get_feature_list() -> BTreeMap<&'static str, String> {
         ("3DNow!", has_3dnow),
         ("3DNow!+", has_3dnow_plus),
         ("3DNow!-Prefetch", has_3dnow_prefetch),
-        ("HT", has_ht),
+        ("HTT", has_ht),
         ("APIC", has_apic),
         ("AMD64", has_amd64),
     ];

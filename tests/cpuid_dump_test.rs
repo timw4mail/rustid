@@ -649,6 +649,136 @@ cpuid_testsuite!(
 );
 
 cpuid_testsuite!(
+    amd_athlon_6400,
+    "dump/Amd_Athlon(tm)_64_X2_6400+.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
+            assert!(is_amd());
+            assert!(!is_intel());
+        }
+
+        test brand_string {
+            assert_brand_eq("AMD Athlon(tm) 64 X2 Dual Core Processor 6400+");
+            assert_brand_contains("6400+");
+            assert_brand_contains("Athlon(tm) 64 X2");
+            assert_eq!(
+                Cpu::raw_model_string(),
+                "AMD Athlon(tm) 64 X2 Dual Core Processor 6400+"
+            );
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 15, 4, 3, 3));
+            let sig = CpuSignature::detect();
+            assert_eq!(sig.display_family, 15);
+            assert_eq!(sig.display_model, 67);
+            assert_eq!(sig.stepping, 3);
+        }
+
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x1);
+            assert_eq!(super::max_extended_leaf(), 0x80000018);
+        }
+
+        test topology {
+            assert_topology_full(1, 1, 2, 2);
+        }
+
+        test feature_class {
+            let fc = FeatureClass::detect();
+            assert_eq!(fc, FeatureClass::x86_64_v1);
+            assert_eq!(fc.to_str(), "x86_64-v1");
+        }
+
+        test cache_detection {
+            use rustid::common::cache::CacheType;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(
+                cache.l1.size(),
+                131_072,
+                "L1 cache should be 128KB total (64KB data + 64KB instruction)"
+            );
+            assert!(cache.l1.is_split(), "L1 cache should be split");
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.share_count(), 1);
+                assert_eq!(l2.size(), 1_048_576, "L2 should be 1MB (1024KB)");
+                assert_eq!(l2.assoc(), 16, "L2 should be 16-way");
+            }
+            assert!(cache.l3.is_none(), "K8 Athlon 64 X2 should have no L3 cache");
+        }
+
+        test cache_assoc {
+            use rustid::common::cache::Level1Cache;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 65_536, "L1 data cache should be 64KB");
+                    assert_eq!(data.assoc(), 2, "L1 data cache should be 2-way");
+                    assert_eq!(instruction.size(), 65_536, "L1 instruction cache should be 64KB");
+                    assert_eq!(instruction.assoc(), 2, "L1 instruction cache should be 2-way");
+                }
+                _ => panic!("Expected split L1 cache"),
+            }
+        }
+
+        test cache_counts {
+            let cpu = Cpu::detect();
+            assert_cache_counts(&cpu, (2, "2x "), (2, "2x "), Some((2, "2x ")), None);
+        }
+
+        test features {
+            assert!(has_fpu());
+            assert!(has_tsc());
+            assert!(has_cx8());
+            assert!(has_cx16());
+            assert!(has_cmov());
+            assert!(has_mmx());
+            assert!(has_mmx_plus());
+            assert!(has_3dnow());
+            assert!(has_3dnow_plus());
+            assert!(!has_3dnow_prefetch());
+            assert!(has_ht());
+            assert!(has_apic());
+            assert!(has_amd64());
+            assert!(has_nx());
+            assert!(has_amdv());
+            assert!(has_virtualization());
+            assert!(has_sse());
+            assert!(has_sse2());
+            assert!(has_sse3());
+            assert!(!has_ssse3());
+            assert!(!has_sse41());
+            assert!(!has_sse42());
+            assert!(!has_sse4a());
+            assert!(!has_avx());
+            assert!(!has_avx2());
+            assert!(!has_fma());
+            assert!(!has_f16c());
+            assert!(!has_aes());
+            assert!(!has_popcnt());
+        }
+
+        test single_cluster_core {
+            let cpu = Cpu::detect();
+            assert!(!cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 1);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::K8);
+            assert_eq!(cpu.cores[0].name.as_deref(), Some("Windsor"));
+            assert_eq!(cpu.cores[0].count, 2);
+            assert_eq!(cpu.cores[0].threads, 2);
+            assert_eq!(cpu.extra.arch.micro_arch, MicroArch::K8);
+            assert_eq!(cpu.extra.arch.code_name, "Windsor");
+            assert_eq!(cpu.extra.arch.technology, Some("90nm"));
+        }
+    }
+);
+
+cpuid_testsuite!(
     zhaoxin_kx5640,
     "dump/Zhaoxin_KaiXian_KX5640.txt",
     {
@@ -1326,6 +1456,38 @@ fn test_pure_cpuid_detect_never_populates_os_data() {
 }
 
 #[test]
+fn test_cpu_from_dump_file_athlon() {
+    let path = raw_path("dump/Amd_Athlon(tm)_64_X2_6400+.txt");
+    let cpu = Cpu::from_dump_file(path);
+    assert_eq!(cpu.system, None);
+    assert_eq!(cpu.vendor, "AMD");
+    assert_eq!(
+        cpu.display_model_string(),
+        "AMD Athlon(tm) 64 X2 Dual Core Processor 6400+"
+    );
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 2);
+    assert_eq!(cpu.topology.threads.count, 2);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
+fn test_cpu_from_dump_str_athlon() {
+    let raw = include_str!("cpuid/dump/Amd_Athlon(tm)_64_X2_6400+.txt");
+    let cpu = Cpu::from_dump_str(raw);
+    assert_eq!(cpu.system, None);
+    assert_eq!(cpu.vendor, "AMD");
+    assert_eq!(
+        cpu.display_model_string(),
+        "AMD Athlon(tm) 64 X2 Dual Core Processor 6400+"
+    );
+    assert_eq!(cpu.topology.sockets.count, 1);
+    assert_eq!(cpu.topology.cores.count, 2);
+    assert_eq!(cpu.topology.threads.count, 2);
+    assert!(!cpu.topology.speed.measured);
+}
+
+#[test]
 fn test_sequential_multiple_dumps_loading() {
     // 1. Load multi-context hybrid dump (20 threads)
     set_file_cpuid_provider("dump/Intel_Core_I7_12700H.txt");
@@ -1346,6 +1508,13 @@ fn test_sequential_multiple_dumps_loading() {
     assert_eq!(cpu3.vendor, "Intel");
     assert!(cpu3.display_model_string().contains("Pentium Pro"));
     assert_eq!(cpu3.topology.threads.count, 1);
+
+    // 4. Immediately load Athlon 64 X2 dump
+    set_file_cpuid_provider("dump/Amd_Athlon(tm)_64_X2_6400+.txt");
+    let cpu4 = Cpu::detect();
+    assert_eq!(cpu4.vendor, "AMD");
+    assert!(cpu4.display_model_string().contains("6400+"));
+    assert_eq!(cpu4.topology.threads.count, 2);
 
     reset_cpuid_provider();
 }
