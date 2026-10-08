@@ -125,9 +125,7 @@ static ControlActionUPP g_scroll_action_upp = 0;
 static pascal void ScrollActionProc(ControlHandle theControl, short partCode) {
     if (partCode == 0 || !g_te || !theControl) return;
 
-    short lineH = (*g_te)->lineHeight;
-    if (lineH <= 0) lineH = 12;
-
+    short lineH = 12;
     short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
     short pageLines = (viewH / lineH) - 1;
     if (pageLines < 1) pageLines = 1;
@@ -152,9 +150,11 @@ static pascal void ScrollActionProc(ControlHandle theControl, short partCode) {
         short oldVal = GetControlValue(theControl);
         SetControlValue(theControl, oldVal + deltaLines);
         short newVal = GetControlValue(theControl);
-        short actualDelta = oldVal - newVal;
-        if (actualDelta != 0) {
-            TEScroll(0, actualDelta * lineH, g_te);
+        short targetDestTop = (*g_te)->viewRect.top - (newVal * lineH);
+        short currentDestTop = (*g_te)->destRect.top;
+        short scrollDelta = targetDestTop - currentDestTop;
+        if (scrollDelta != 0) {
+            TEScroll(0, scrollDelta, g_te);
         }
     }
 }
@@ -164,11 +164,12 @@ static void DoScrollLines(short deltaLines) {
     short oldVal = GetControlValue(g_scrollbar);
     SetControlValue(g_scrollbar, oldVal + deltaLines);
     short newVal = GetControlValue(g_scrollbar);
-    short actualDelta = oldVal - newVal;
-    if (actualDelta != 0) {
-        short lineH = (*g_te)->lineHeight;
-        if (lineH <= 0) lineH = 12;
-        TEScroll(0, actualDelta * lineH, g_te);
+    short lineH = 12;
+    short targetDestTop = (*g_te)->viewRect.top - (newVal * lineH);
+    short currentDestTop = (*g_te)->destRect.top;
+    short scrollDelta = targetDestTop - currentDestTop;
+    if (scrollDelta != 0) {
+        TEScroll(0, scrollDelta, g_te);
     }
 }
 
@@ -185,8 +186,7 @@ static void InvalWindow(WindowPtr win) {
 static void UpdateScrollbar(void) {
     if (!g_scrollbar || !g_te || !g_window) return;
 
-    short lineH = (*g_te)->lineHeight;
-    if (lineH <= 0) lineH = 12;
+    short lineH = 12;
     short viewH = (*g_te)->viewRect.bottom - (*g_te)->viewRect.top;
     short visLines = viewH / lineH;
     short totLines = (*g_te)->nLines;
@@ -199,12 +199,23 @@ static void UpdateScrollbar(void) {
     if (maxVal == 0) {
         HiliteControl(g_scrollbar, 255);
         SetControlValue(g_scrollbar, 0);
+        short scrollDelta = (*g_te)->viewRect.top - (*g_te)->destRect.top;
+        if (scrollDelta != 0) {
+            TEScroll(0, scrollDelta, g_te);
+        }
     } else {
         HiliteControl(g_scrollbar, 0);
         short curLines = ((*g_te)->viewRect.top - (*g_te)->destRect.top) / lineH;
         if (curLines < 0) curLines = 0;
         if (curLines > maxVal) curLines = maxVal;
         SetControlValue(g_scrollbar, curLines);
+
+        short targetDestTop = (*g_te)->viewRect.top - (curLines * lineH);
+        short currentDestTop = (*g_te)->destRect.top;
+        short scrollDelta = targetDestTop - currentDestTop;
+        if (scrollDelta != 0) {
+            TEScroll(0, scrollDelta, g_te);
+        }
     }
 }
 
@@ -236,18 +247,18 @@ static void ResizeWindowContents(WindowPtr win) {
         teRect.right = (width > 35) ? (width - 25) : 10;
         teRect.bottom = (height > 25) ? (height - 15) : 10;
 
-        short oldScrolledLines = 0;
-        short lineH = (*g_te)->lineHeight;
-        if (lineH <= 0) lineH = 12;
-        if (lineH > 0) {
-            oldScrolledLines = ((*g_te)->viewRect.top - (*g_te)->destRect.top) / lineH;
-        }
+        short lineH = 12;
+        short curVal = g_scrollbar ? GetControlValue(g_scrollbar) : 0;
 
         (*g_te)->viewRect = teRect;
         (*g_te)->destRect = teRect;
-        if (oldScrolledLines > 0) {
-            OffsetRect(&(*g_te)->destRect, 0, -oldScrolledLines * lineH);
-        }
+        // Keep destRect wide so word wrap is disabled and fixed-column layout is preserved
+        (*g_te)->destRect.right = teRect.left + 4000;
+        (*g_te)->crOnly = -1;
+        (*g_te)->lineHeight = 12;
+        (*g_te)->fontAscent = 9;
+
+        OffsetRect(&(*g_te)->destRect, 0, -curVal * lineH);
         TECalText(g_te);
     }
 
@@ -374,15 +385,28 @@ bool mac_gui_init(const char* title, short width, short height) {
     SetPort(g_window);
 #endif
 
+    TextFont(monaco);
+    TextSize(9);
+    TextFace(normal);
+    TextMode(srcOr);
+
     Rect teRect;
     teRect.left = 10;
     teRect.top = 10;
     teRect.right = (width > 35) ? (width - 25) : 10;
     teRect.bottom = (height > 25) ? (height - 15) : 10;
 
-    g_te = TEStyleNew(&teRect, &teRect);
+    Rect destRect = teRect;
+    destRect.right = teRect.left + 4000;
+
+    g_te = TEStyleNew(&destRect, &teRect);
     if (!g_te) {
-        g_te = TENew(&teRect, &teRect);
+        g_te = TENew(&destRect, &teRect);
+    }
+    if (g_te) {
+        (*g_te)->crOnly = -1;
+        (*g_te)->lineHeight = 12;
+        (*g_te)->fontAscent = 9;
     }
 
     Rect sRect;
@@ -418,7 +442,25 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
     SetPort(g_window);
 #endif
 
-    // Classic Macintosh TextEdit only recognizes carriage returns ('\r' / 0x0D)
+    TextFont(monaco);
+    TextSize(9);
+    TextFace(normal);
+    TextMode(srcOr);
+
+    // 1. Reset scroll offset back to top before replacing text
+    short scrollDelta = (*g_te)->viewRect.top - (*g_te)->destRect.top;
+    if (scrollDelta != 0) {
+        TEScroll(0, scrollDelta, g_te);
+    }
+    (*g_te)->destRect.top = (*g_te)->viewRect.top;
+    (*g_te)->destRect.bottom = (*g_te)->viewRect.bottom;
+    (*g_te)->destRect.left = (*g_te)->viewRect.left;
+    (*g_te)->destRect.right = (*g_te)->viewRect.left + 4000;
+    (*g_te)->crOnly = -1;
+    (*g_te)->lineHeight = 12;
+    (*g_te)->fontAscent = 9;
+
+    // 2. Classic Macintosh TextEdit only recognizes carriage returns ('\r' / 0x0D)
     // as line breaks. Line feeds ('\n' / 0x0A) are ignored or drawn as glyphs.
     // Replace '\n' with '\r' (1:1 byte substitution so run offsets remain aligned).
     char* mac_text = (char*)malloc(length + 1);
@@ -433,18 +475,19 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
         TESetText((Ptr)text, length, g_te);
     }
 
-    // Apply color/bold runs or reset to plain text if color is disabled
-    if (run_count == 0) {
-        TESetSelect(0, length, g_te);
-        TextStyle style;
-        style.tsFont = monaco;
-        style.tsSize = 9;
-        style.tsFace = normal;
-        style.tsColor.red = 0;
-        style.tsColor.green = 0;
-        style.tsColor.blue = 0;
-        TESetStyle(doFont | doSize | doFace | doColor, &style, false, g_te);
-    } else {
+    // 3. Reset entire text to default Monaco 9 style
+    TESetSelect(0, length, g_te);
+    TextStyle baseStyle;
+    baseStyle.tsFont = monaco;
+    baseStyle.tsSize = 9;
+    baseStyle.tsFace = normal;
+    baseStyle.tsColor.red = 0;
+    baseStyle.tsColor.green = 0;
+    baseStyle.tsColor.blue = 0;
+    TESetStyle(doFont | doSize | doFace | doColor, &baseStyle, false, g_te);
+
+    // 4. Apply color/bold runs
+    if (run_count > 0) {
         for (uint32_t i = 0; i < run_count; i++) {
             const CTextRun* r = &runs[i];
             TESetSelect(r->offset, r->offset + r->length, g_te);
@@ -461,7 +504,18 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
         }
     }
 
+    // 5. Finalize layout without word wrap
     TESetSelect(0, 0, g_te);
+    (*g_te)->crOnly = -1;
+    (*g_te)->destRect.right = (*g_te)->viewRect.left + 4000;
+    (*g_te)->lineHeight = 12;
+    (*g_te)->fontAscent = 9;
+    TECalText(g_te);
+
+    // 6. Reset scrollbar and update range
+    if (g_scrollbar) {
+        SetControlValue(g_scrollbar, 0);
+    }
     UpdateScrollbar();
     InvalWindow(g_window);
 #else
@@ -643,15 +697,15 @@ void mac_gui_run(void) {
                                 short controlPart = FindControl(localPt, whichWindow, &whichControl);
                                 if (controlPart != 0 && whichControl == g_scrollbar) {
                                     if (controlPart == inThumb) {
-                                        short oldVal = GetControlValue(g_scrollbar);
                                         short part = TrackControl(g_scrollbar, localPt, nil);
-                                        if (part != 0) {
+                                        if (part != 0 && g_te) {
                                             short newVal = GetControlValue(g_scrollbar);
-                                            short delta = oldVal - newVal;
-                                            if (delta != 0 && g_te) {
-                                                short lineH = (*g_te)->lineHeight;
-                                                if (lineH <= 0) lineH = 12;
-                                                TEScroll(0, delta * lineH, g_te);
+                                            short lineH = 12;
+                                            short targetDestTop = (*g_te)->viewRect.top - (newVal * lineH);
+                                            short currentDestTop = (*g_te)->destRect.top;
+                                            short scrollDelta = targetDestTop - currentDestTop;
+                                            if (scrollDelta != 0) {
+                                                TEScroll(0, scrollDelta, g_te);
                                             }
                                         }
                                     } else {
@@ -677,8 +731,7 @@ void mac_gui_run(void) {
                     if (event.modifiers & cmdKey) {
                         HandleMenuCommand(MenuKey(key));
                     } else if (g_te) {
-                        short lineH = (*g_te)->lineHeight;
-                        if (lineH <= 0) lineH = 12;
+                        short lineH = 12;
                         if (key == 0x1E) { // Up Arrow
                             DoScrollLines(-1);
                         } else if (key == 0x1F) { // Down Arrow
@@ -709,6 +762,10 @@ void mac_gui_run(void) {
                     portRect = updateWin->portRect;
 #endif
                     EraseRect(&portRect);
+                    TextFont(monaco);
+                    TextSize(9);
+                    TextFace(normal);
+                    TextMode(srcOr);
                     if (g_te) TEUpdate(&portRect, g_te);
                     DrawControls(updateWin);
                     DrawGrowIcon(updateWin);
