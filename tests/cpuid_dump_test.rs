@@ -779,6 +779,119 @@ cpuid_testsuite!(
 );
 
 cpuid_testsuite!(
+    amd_athlon_xpm_1700,
+    "dump/Amd_Athlon(tm)_XP-M_1700+.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
+            assert!(is_amd());
+            assert!(!is_intel());
+        }
+
+        test brand_string {
+            assert_brand_eq("mobile AMD Athlon(tm) XP-M 1700+");
+            assert_brand_contains("1700+");
+            assert_brand_contains("Athlon(tm) XP-M");
+            assert_eq!(
+                Cpu::raw_model_string(),
+                "mobile AMD Athlon(tm) XP-M 1700+"
+            );
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (0, 6, 0, 8, 1));
+            let sig = CpuSignature::detect();
+            assert_eq!(sig.display_family, 6);
+            assert_eq!(sig.display_model, 8);
+            assert_eq!(sig.stepping, 1);
+        }
+
+        test leaf_limits {
+            assert_eq!(super::max_leaf(), 0x1);
+            assert_eq!(super::max_extended_leaf(), 0x80000008);
+        }
+
+        test topology {
+            assert_topology(1, 1, 1);
+        }
+
+        test cache_detection {
+            use rustid::common::cache::CacheType;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            assert_eq!(
+                cache.l1.size(),
+                131_072,
+                "L1 cache should be 128KB total (64KB data + 64KB instruction)"
+            );
+            assert!(cache.l1.is_split(), "L1 cache should be split");
+            if let Some(l2) = cache.l2 {
+                assert_eq!(l2.kind(), CacheType::Unified);
+                assert_eq!(l2.share_count(), 1);
+                assert_eq!(l2.size(), 262_144, "L2 should be 256KB");
+                assert_eq!(l2.assoc(), 16, "L2 should be 16-way");
+            }
+            assert!(cache.l3.is_none(), "K7 Athlon XP-M should have no L3 cache");
+        }
+
+        test cache_assoc {
+            use rustid::common::cache::Level1Cache;
+            let cpu = Cpu::detect();
+            let cache = cpu.topology.cache.expect("Expected cache to be detected");
+            match cache.l1 {
+                Level1Cache::Split { data, instruction } => {
+                    assert_eq!(data.size(), 65_536, "L1 data cache should be 64KB");
+                    assert_eq!(data.assoc(), 2, "L1 data cache should be 2-way");
+                    assert_eq!(instruction.size(), 65_536, "L1 instruction cache should be 64KB");
+                    assert_eq!(instruction.assoc(), 2, "L1 instruction cache should be 2-way");
+                }
+                _ => panic!("Expected split L1 cache"),
+            }
+        }
+
+        test cache_counts {
+            let cpu = Cpu::detect();
+            assert_cache_counts(&cpu, (1, ""), (1, ""), Some((1, "")), None);
+        }
+
+        test features {
+            assert!(has_fpu());
+            assert!(has_tsc());
+            assert!(has_cx8());
+            assert!(has_cmov());
+            assert!(has_mmx());
+            assert!(has_mmx_plus());
+            assert!(has_3dnow());
+            assert!(has_3dnow_plus());
+            assert!(!has_3dnow_prefetch());
+            assert!(!has_ht());
+            assert!(!has_amd64());
+            assert!(!has_nx());
+            assert!(!has_amdv());
+            assert!(!has_virtualization());
+            assert!(has_sse());
+            assert!(!has_sse2());
+            assert!(!has_sse3());
+            assert!(!has_avx());
+        }
+
+        test single_cluster_core {
+            let cpu = Cpu::detect();
+            assert!(!cpu.is_hybrid());
+            assert_eq!(cpu.cores.len(), 1);
+            assert_eq!(cpu.cores[0].kind, CoreType::Performance);
+            assert_eq!(cpu.cores[0].micro_arch, MicroArch::K7);
+            assert_eq!(cpu.cores[0].name.as_deref(), Some("Thoroughbred"));
+            assert_eq!(cpu.cores[0].count, 1);
+            assert_eq!(cpu.cores[0].threads, 1);
+            assert_eq!(cpu.extra.arch.micro_arch, MicroArch::K7);
+            assert_eq!(cpu.extra.arch.code_name, "Thoroughbred");
+            assert_eq!(cpu.extra.arch.technology, Some("130nm"));
+        }
+    }
+);
+
+cpuid_testsuite!(
     zhaoxin_kx5640,
     "dump/Zhaoxin_KaiXian_KX5640.txt",
     {

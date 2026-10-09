@@ -353,6 +353,8 @@ impl Cpu {
             CpuBrand::detect()
         };
 
+        let model_lower = self.arch.model.to_ascii_lowercase();
+
         match brand {
             CpuBrand::AMD
                 // The Geode NX is special
@@ -360,6 +362,7 @@ impl Cpu {
                     && self.signature.family == 6
                     && self.signature.model == 8
                     && self.signature.stepping == 1
+                    && ! (model_lower.contains("mobile") || model_lower.contains("xp-m"))
                 => {
                     return String::from("AMD Geode NX");
                 }
