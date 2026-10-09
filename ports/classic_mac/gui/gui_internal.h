@@ -100,10 +100,9 @@ enum {
 
     ITEM_ABOUT          = 1,
 
-    ITEM_REFRESH        = 1,
-    ITEM_QUIT           = 3,
+    ITEM_QUIT           = 1,
 
-    ITEM_COPY           = 4,
+    ITEM_COPY           = 1,
 
     ITEM_MODE_STD       = 1,
     ITEM_MODE_DBG       = 2,

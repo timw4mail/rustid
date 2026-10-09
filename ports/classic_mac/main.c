@@ -29,16 +29,11 @@ static void render_view(void) {
     );
 
     mac_gui_set_text(s_report_buf, strlen(s_report_buf), s_runs, s_run_count, PALETTE_BG);
-    mac_gui_set_status(s_cpu_info.system_name, s_cpu_info.model, s_cpu_info.os_version);
     mac_gui_set_menu_checks(s_view_mode, s_color);
 }
 
 static void on_command(uint32_t cmd_id) {
     switch (cmd_id) {
-        case CMD_FILE_REFRESH: // 101
-            classic_mac_detect_cpu(&s_cpu_info);
-            render_view();
-            break;
         case CMD_FILE_EXIT: // 102
             break;
         case CMD_FILE_COPY: // 103

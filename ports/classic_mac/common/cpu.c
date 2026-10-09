@@ -186,33 +186,40 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     }
 #else
     // Fallback for host builds / tests
-    strcpy(info->model, "MC68030");
-    strcpy(info->microarch, "Motorola 68030");
-    strcpy(info->codename, "68030");
-    strcpy(info->process, "0.8\xb5m");
-    strcpy(info->fpu, "Motorola 68882");
-    strcpy(info->mmu, "Integrated 68030 MMU");
-    info->clock_mhz = 25;
-    info->bus_mhz = 25;
-    info->ram_mb = 8;
-    strcpy(info->system_name, "Macintosh SE/30");
-    strcpy(info->os_version, "System 7.5.5");
-    info->is_powerpc = false;
+    bool has_model_id = classic_mac_probe_model_identifier(info->model_id, sizeof(info->model_id));
+    long mach_val = 9; // Default SE/30
+    const char* mock_mach = getenv("RUSTID_MOCK_MACH");
+    if (mock_mach) mach_val = atol(mock_mach);
 
-    // Allow testing model_id resolution via RUSTID_MAC_MODEL_ID environment variable
-    if (classic_mac_probe_model_identifier(info->model_id, sizeof(info->model_id))) {
-        const char* id_name = classic_mac_model_from_identifier(info->model_id);
-        if (id_name) {
-            strncpy(info->system_name, id_name, sizeof(info->system_name) - 1);
-        } else {
-            strncpy(info->system_name, info->model_id, sizeof(info->system_name) - 1);
-        }
-        MacModelSpec spec = classic_mac_get_model_spec(0, info->model_id);
-        if (spec.clock_mhz > 0) info->clock_mhz = spec.clock_mhz;
-        if (spec.bus_mhz > 0) info->bus_mhz = spec.bus_mhz;
+    MacModelSpec spec = classic_mac_get_model_spec(mach_val, has_model_id ? info->model_id : NULL);
+
+    info->ram_mb = 8;
+    info->clock_mhz = spec.clock_mhz > 0 ? spec.clock_mhz : 25;
+    info->bus_mhz = spec.bus_mhz > 0 ? spec.bus_mhz : 25;
+    strcpy(info->os_version, "System 7.5.5");
+
+    const char* id_model_name = has_model_id ? classic_mac_model_from_identifier(info->model_id) : NULL;
+    if (id_model_name != NULL) {
+        snprintf(info->system_name, sizeof(info->system_name), "%s", id_model_name);
     } else {
-        (void)classic_mac_get_model_name(0);
-        (void)classic_mac_get_model_spec(0, NULL);
+        snprintf(info->system_name, sizeof(info->system_name), "%s", classic_mac_get_model_name(mach_val));
+    }
+
+    bool is_ppc = false;
+    if (has_model_id && (strncmp(info->model_id, "Power", 5) == 0 ||
+                         strncmp(info->model_id, "iMac", 4) == 0 ||
+                         strncmp(info->model_id, "AAPL", 4) == 0 ||
+                         strncmp(info->model_id, "RackMac", 7) == 0)) {
+        is_ppc = true;
+    }
+    const char* mock_ppc = getenv("RUSTID_MOCK_PPC");
+    if (mock_ppc) is_ppc = (atoi(mock_ppc) != 0);
+
+    info->is_powerpc = is_ppc;
+    if (info->is_powerpc) {
+        classic_mac_detect_ppc(info, &spec, mach_val);
+    } else {
+        classic_mac_detect_m68k(info, &spec);
     }
 #endif
 }

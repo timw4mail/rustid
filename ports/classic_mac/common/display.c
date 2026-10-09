@@ -1,4 +1,5 @@
 #include "common/display.h"
+#include "common/gestalt.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -132,7 +133,7 @@ void classic_mac_generate_report(
         APPEND_HEADER("Debug Information:\r\r", c_sublabel);
         APPEND_FIELD("Arch", arch_str, c_body);
         APPEND_FIELD("Target", "Classic Macintosh Toolbox", c_body);
-        APPEND_FIELD("Gestalt", "Active", c_body);
+        APPEND_FIELD("Gestalt", classic_mac_is_gestalt_available() ? "Active" : "Unavailable", c_body);
         if (info->model_id[0]) {
             APPEND_FIELD("Model ID", info->model_id, c_body);
         }

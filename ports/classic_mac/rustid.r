@@ -29,8 +29,6 @@ resource 'MENU' (129, "File", preload) {
     enabled,
     "File",
     {
-        "Refresh", noIcon, "R", noMark, plain;
-        "-", noIcon, noKey, noMark, plain;
         "Quit", noIcon, "Q", noMark, plain;
     };
 };
@@ -42,12 +40,7 @@ resource 'MENU' (130, "Edit", preload) {
     enabled,
     "Edit",
     {
-        "Undo", noIcon, "Z", noMark, plain;
-        "-", noIcon, noKey, noMark, plain;
-        "Cut", noIcon, "X", noMark, plain;
         "Copy", noIcon, "C", noMark, plain;
-        "Paste", noIcon, "V", noMark, plain;
-        "Clear", noIcon, noKey, noMark, plain;
     };
 };
 

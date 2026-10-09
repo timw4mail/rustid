@@ -108,7 +108,72 @@ int main(void) {
     classic_mac_generate_report(&info, 203 /* VIEW_EVERYTHING */, false, report, sizeof(report), NULL, NULL, 0);
     assert(strstr(report, "Model ID:") != NULL);
     assert(strstr(report, "PowerMac3,1") != NULL);
+    assert(strcmp(info.fpu, "Integrated FPU") == 0);
+    assert(strcmp(info.mmu, "Integrated MMU") == 0);
+    assert(strstr(report, "FPU:") != NULL);
+    assert(strstr(report, "MMU:") != NULL);
 
-    printf("All Classic Mac model identifier tests passed successfully!\n");
+    // 8. Test 68000 Mac SE (mach_id = 5): No FPU and No MMU
+    unsetenv("RUSTID_MAC_MODEL_ID");
+    setenv("RUSTID_MOCK_MACH", "5", 1);
+    memset(&info, 0, sizeof(info));
+    classic_mac_detect_cpu(&info);
+    assert(strcmp(info.model, "MC68000") == 0);
+    assert(strcmp(info.fpu, "None") == 0);
+    assert(strcmp(info.mmu, "None") == 0);
+    memset(report, 0, sizeof(report));
+    classic_mac_generate_report(&info, 201 /* VIEW_STANDARD */, false, report, sizeof(report), NULL, NULL, 0);
+    assert(strstr(report, "FPU:") == NULL);
+    assert(strstr(report, "MMU:") == NULL);
+
+    // 9. Test 68020 Mac LC (mach_id = 19): No FPU and No MMU
+    setenv("RUSTID_MOCK_MACH", "19", 1);
+    memset(&info, 0, sizeof(info));
+    classic_mac_detect_cpu(&info);
+    assert(strcmp(info.model, "MC68020") == 0);
+    assert(strcmp(info.fpu, "None") == 0);
+    assert(strcmp(info.mmu, "None") == 0);
+    memset(report, 0, sizeof(report));
+    classic_mac_generate_report(&info, 201 /* VIEW_STANDARD */, false, report, sizeof(report), NULL, NULL, 0);
+    assert(strstr(report, "FPU:") == NULL);
+    assert(strstr(report, "MMU:") == NULL);
+
+    // 10. Test 68030 Mac IIsi (mach_id = 18): No FPU, Integrated 68030 MMU
+    setenv("RUSTID_MOCK_MACH", "18", 1);
+    memset(&info, 0, sizeof(info));
+    classic_mac_detect_cpu(&info);
+    assert(strcmp(info.model, "MC68030") == 0);
+    assert(strcmp(info.fpu, "None") == 0);
+    assert(strcmp(info.mmu, "Integrated 68030 MMU") == 0);
+    memset(report, 0, sizeof(report));
+    classic_mac_generate_report(&info, 201 /* VIEW_STANDARD */, false, report, sizeof(report), NULL, NULL, 0);
+    assert(strstr(report, "FPU:") == NULL);
+    assert(strstr(report, "MMU:") != NULL);
+
+    // 11. Test 68LC040 Quadra 605 (mach_id = 94): No FPU, Integrated 68040 MMU, MC68LC040 CPU
+    setenv("RUSTID_MOCK_MACH", "94", 1);
+    memset(&info, 0, sizeof(info));
+    classic_mac_detect_cpu(&info);
+    assert(strcmp(info.model, "MC68LC040") == 0);
+    assert(strcmp(info.fpu, "None") == 0);
+    assert(strcmp(info.mmu, "Integrated 68040 MMU") == 0);
+    memset(report, 0, sizeof(report));
+    classic_mac_generate_report(&info, 201 /* VIEW_STANDARD */, false, report, sizeof(report), NULL, NULL, 0);
+    assert(strstr(report, "FPU:") == NULL);
+    assert(strstr(report, "MMU:") != NULL);
+
+    // 12. Test 68030 Mac SE/30 (mach_id = 9): 68882 FPU, Integrated 68030 MMU
+    setenv("RUSTID_MOCK_MACH", "9", 1);
+    memset(&info, 0, sizeof(info));
+    classic_mac_detect_cpu(&info);
+    assert(strcmp(info.model, "MC68030") == 0);
+    assert(strcmp(info.fpu, "Motorola 68882") == 0);
+    assert(strcmp(info.mmu, "Integrated 68030 MMU") == 0);
+    memset(report, 0, sizeof(report));
+    classic_mac_generate_report(&info, 201 /* VIEW_STANDARD */, false, report, sizeof(report), NULL, NULL, 0);
+    assert(strstr(report, "FPU:") != NULL);
+    assert(strstr(report, "MMU:") != NULL);
+
+    printf("All Classic Mac model identifier, FPU, and MMU tests passed successfully!\n");
     return 0;
 }

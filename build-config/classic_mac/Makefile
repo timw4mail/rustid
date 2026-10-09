@@ -15,26 +15,27 @@ VERSION_MINOR_BCD ?= 0x$(VERSION_MINOR)$(VERSION_PATCH)
 
 # Locate the toolchain root relative to the compiler that is in PATH
 RETRO68_ROOT ?= $(shell dirname $$(dirname $$(which $(CC_68K))))
-REZ_INCLUDES  = -I$(RETRO68_ROOT)/RIncludes
+PORT_DIR      = ../../ports/classic_mac
+REZ_INCLUDES  = -I$(RETRO68_ROOT)/RIncludes -I$(PORT_DIR)
 REZ_FLAGS     = $(REZ_INCLUDES) \
                 -D RUSTID_VERSION_STR="\"$(VERSION)\"" \
                 -D VERSION_MAJOR_BCD=$(VERSION_MAJOR_BCD) \
                 -D VERSION_MINOR_BCD=$(VERSION_MINOR_BCD)
 
-CFLAGS        = -O2 -Wall -I../../ports/classic_mac -DRUSTID_VERSION=\"$(VERSION)\"
+CFLAGS        = -O2 -Wall -I$(PORT_DIR) -DRUSTID_VERSION=\"$(VERSION)\"
 CFLAGS_CARBON = $(CFLAGS) -carbon -DTARGET_API_MAC_CARBON=1
-SRC_C         = ../../ports/classic_mac/common/gestalt.c \
-                ../../ports/classic_mac/common/display.c \
-                ../../ports/classic_mac/common/cpu.c \
-                ../../ports/classic_mac/models/models.c \
-                ../../ports/classic_mac/m68k/cpu.c \
-                ../../ports/classic_mac/ppc/cpu.c \
-                ../../ports/classic_mac/gui/window.c \
-                ../../ports/classic_mac/gui/menu.c \
-                ../../ports/classic_mac/gui/dialogs.c \
-                ../../ports/classic_mac/main.c
-R_SRC         = rustid.r
-R_DEPS        = rustid.r rustid_icons.r
+SRC_C         = $(PORT_DIR)/common/gestalt.c \
+                $(PORT_DIR)/common/display.c \
+                $(PORT_DIR)/common/cpu.c \
+                $(PORT_DIR)/models/models.c \
+                $(PORT_DIR)/m68k/cpu.c \
+                $(PORT_DIR)/ppc/cpu.c \
+                $(PORT_DIR)/gui/window.c \
+                $(PORT_DIR)/gui/menu.c \
+                $(PORT_DIR)/gui/dialogs.c \
+                $(PORT_DIR)/main.c
+R_SRC         = $(PORT_DIR)/rustid.r
+R_DEPS        = $(PORT_DIR)/rustid.r $(PORT_DIR)/rustid_icons.r
 
 OUT_DIR       ?= ../../target/classic_mac
 
@@ -83,12 +84,12 @@ $(OUT_DIR)/rustid_carbon.bin: $(OUT_DIR)/rustid_carbon.pef $(R_DEPS)
 		--data $(OUT_DIR)/rustid_carbon.pef --cc $(OUT_DIR)/rustid_carbon.dsk -t APPL -c RsId
 
 # Universal Icon File (.icns with Classic QuickDraw, OS X 10.0-10.4 32-bit, and modern PNGs)
-$(OUT_DIR)/rustid.icns: rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns generate_icns.py
-	python3 generate_icns.py rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns $(OUT_DIR)/rustid.icns
+$(OUT_DIR)/rustid.icns: $(PORT_DIR)/rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns generate_icns.py
+	python3 generate_icns.py $(PORT_DIR)/rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns $(OUT_DIR)/rustid.icns
 
 # Classic Mac OS Custom Folder Icon (MacBinary Icon\r with ID -16455)
-$(OUT_DIR)/folder_icon.bin: rustid_icons.r setup_bundle_icon.py
-	python3 setup_bundle_icon.py make-bin rustid_icons.r $(OUT_DIR)/folder_icon.bin
+$(OUT_DIR)/folder_icon.bin: $(PORT_DIR)/rustid_icons.r setup_bundle_icon.py
+	python3 setup_bundle_icon.py make-bin $(PORT_DIR)/rustid_icons.r $(OUT_DIR)/folder_icon.bin
 
 # Mac OS X & Classic Mac OS Hybrid Application Bundle (OS X 10.0–10.5 & Mac OS 9 Classic Environment)
 $(OUT_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid_carbon.bin $(OUT_DIR)/rustid.icns Info.plist

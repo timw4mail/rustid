@@ -22,9 +22,8 @@ typedef struct {
 } CTextRun;
 
 enum {
-    CMD_FILE_REFRESH    = 101,
-    CMD_FILE_EXIT       = 102,
-    CMD_FILE_COPY       = 103,
+    CMD_FILE_EXIT       = 101,
+    CMD_FILE_COPY       = 102,
 
     CMD_MODE_STANDARD   = 201,
     CMD_MODE_DEBUG      = 202,
@@ -42,7 +41,6 @@ typedef void (*QuitCallback)(void);
 bool mac_gui_init(const char* title, short width, short height);
 void mac_gui_set_callbacks(CmdCallback on_cmd, FileCallback on_file, QuitCallback on_quit);
 void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, uint32_t run_count, CRgbColor bg_color);
-void mac_gui_set_status(const char* part1, const char* part2, const char* part3);
 void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color);
 void mac_gui_open_file_dialog(void);
 void mac_gui_save_file_dialog(const char* default_filename);

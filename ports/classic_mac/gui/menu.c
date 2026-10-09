@@ -25,9 +25,6 @@ void HandleMenuCommand(long menuResult) {
 
         case MENU_FILE:
             switch (menuItem) {
-                case ITEM_REFRESH:
-                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_REFRESH);
-                    break;
                 case ITEM_QUIT:
                     if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXIT);
                     g_running = false;
@@ -37,7 +34,13 @@ void HandleMenuCommand(long menuResult) {
 
         case MENU_EDIT:
             if (menuItem == ITEM_COPY) {
+#if !TARGET_API_MAC_CARBON
+                if (!SystemEdit(2)) {
+                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_COPY);
+                }
+#else
                 if (g_cmd_cb) g_cmd_cb(CMD_FILE_COPY);
+#endif
             }
             break;
 

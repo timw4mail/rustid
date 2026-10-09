@@ -10,8 +10,21 @@ bool classic_mac_is_gestalt_available(void) {
 #if defined(__m68k__) || defined(__mc68000__)
     static short s_avail = -1;
     if (s_avail != -1) return (s_avail == 1);
-    ProcPtr gestaltAddr = GetOSTrapAddress(0xAD);
-    ProcPtr unimpAddr = GetToolTrapAddress(_Unimplemented);
+
+    SysEnvRec env;
+    if (SysEnvirons(curSysEnvVers, &env) == noErr) {
+        if (env.systemVersion < 0x0604) {
+            s_avail = 0;
+            return false;
+        }
+        if (env.systemVersion >= 0x0700) {
+            s_avail = 1;
+            return true;
+        }
+    }
+
+    ProcPtr gestaltAddr = NGetTrapAddress(0xA1AD, kOSTrapType);
+    ProcPtr unimpAddr = GetTrapAddress(_Unimplemented);
     s_avail = (gestaltAddr != unimpAddr && gestaltAddr != NULL) ? 1 : 0;
     return (s_avail == 1);
 #else
@@ -23,17 +36,10 @@ bool classic_mac_safe_gestalt(uint32_t selector, long* response) {
     if (response) *response = 0;
 #if defined(__m68k__) || defined(__mc68000__)
     if (!classic_mac_is_gestalt_available()) return false;
-    register unsigned long reg_d0 __asm__("d0") = selector;
-    register long reg_a0 __asm__("a0") = 0;
-    register short err __asm__("d0");
-    __asm__ volatile(
-        "dc.w 0xa1ad"
-        : "=d"(err), "=a"(reg_a0)
-        : "0"(reg_d0)
-        : "d1", "d2", "a1", "memory"
-    );
+    long val = 0;
+    OSErr err = Gestalt((OSType)selector, &val);
     if (err == 0) {
-        if (response) *response = reg_a0;
+        if (response) *response = val;
         return true;
     }
     return false;
