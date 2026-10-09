@@ -1,162 +1,20 @@
-//! Classic Macintosh C GUI Bridge for rustid.
-//! Targets Classic Mac OS (System 6 through 9) using the Macintosh Toolbox.
+#include "gui/gui_internal.h"
+#include "common/gestalt.h"
 
-#include "mac_bridge.h"
-#include "classic_mac_engine.h"
+CmdCallback g_cmd_cb = 0;
+FileCallback g_file_cb = 0;
+QuitCallback g_quit_cb = 0;
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+WindowPtr g_window = 0;
+TEHandle g_te = 0;
+#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+ControlHandle g_scrollbar = 0;
+ControlActionUPP g_scroll_action_upp = 0;
+#endif
+bool g_is_styled_te = false;
+bool g_running = false;
 
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-
-#include <Types.h>
-#include <Quickdraw.h>
-#include <Fonts.h>
-#include <Events.h>
-#include <Windows.h>
-#include <Menus.h>
-#include <TextEdit.h>
-#include <Dialogs.h>
-#if __has_include(<Scrap.h>)
-#include <Scrap.h>
-#endif
-#include <StandardFile.h>
-#include <Gestalt.h>
-#include <ToolUtils.h>
-#include <Memory.h>
-#include <OSUtils.h>
-
-#ifndef monaco
-#ifdef kFontIDMonaco
-#define monaco kFontIDMonaco
-#else
-#define monaco 4
-#endif
-#endif
-
-#ifdef HiWord
-#undef HiWord
-#endif
-#define HiWord(a) ((short)(((uint32_t)(a) >> 16) & 0xFFFF))
-
-#ifdef LoWord
-#undef LoWord
-#endif
-#define LoWord(a) ((short)((uint32_t)(a) & 0xFFFF))
-
-#else
-// Stubs for non-Mac host compilation / unit tests
-
-typedef void* WindowPtr;
-typedef void* TEHandle;
-typedef void* MenuHandle;
-typedef struct { short top, left, bottom, right; } Rect;
-typedef struct { unsigned short red, green, blue; } RGBColor;
-#endif
-
-enum {
-    MENU_APPLE          = 128,
-    MENU_FILE           = 129,
-    MENU_EDIT           = 130,
-    MENU_VIEW           = 131,
-
-    ITEM_ABOUT          = 1,
-
-    ITEM_REFRESH        = 1,
-    ITEM_QUIT           = 3,
-
-    ITEM_COPY           = 4,
-
-    ITEM_MODE_STD       = 1,
-    ITEM_MODE_DBG       = 2,
-    ITEM_MODE_ALL       = 3,
-    ITEM_OPT_COLOR      = 5
-};
-
-static CmdCallback g_cmd_cb = 0;
-static FileCallback g_file_cb = 0;
-static QuitCallback g_quit_cb = 0;
-
-static WindowPtr g_window = 0;
-static TEHandle g_te = 0;
-static bool g_is_styled_te = false;
-static bool g_running = false;
-
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-
-static bool HasColorQuickDraw(void) {
-#if TARGET_API_MAC_CARBON
-    return true;
-#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
-    long qd_ver = 0;
-    if (classic_mac_safe_gestalt('qd  ', &qd_ver) && qd_ver >= 256) {
-        return true;
-    }
-#if !TARGET_API_MAC_CARBON
-    SysEnvRec env;
-    if (SysEnvirons(curSysEnvVers, &env) == noErr) {
-        return env.hasColorQD;
-    }
-#endif
-    return false;
-#else
-    return false;
-#endif
-}
-
-static bool HasStyledTextEdit(void) {
-#if TARGET_API_MAC_CARBON
-    return true;
-#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
-    long te_ver = 0;
-    if (classic_mac_safe_gestalt('te  ', &te_ver) && te_ver >= 2) {
-        return true;
-    }
-    return false;
-#else
-    return false;
-#endif
-}
-
-#ifndef zoomDocProc
-#define zoomDocProc 8
-#endif
-
-#ifndef inZoomIn
-#define inZoomIn 7
-#endif
-
-#ifndef inZoomOut
-#define inZoomOut 8
-#endif
-
-#ifndef scrollBarProc
-#define scrollBarProc 16
-#endif
-
-#ifndef inUpButton
-#define inUpButton 20
-#endif
-
-#ifndef inDownButton
-#define inDownButton 21
-#endif
-
-#ifndef inPageUp
-#define inPageUp 22
-#endif
-
-#ifndef inPageDown
-#define inPageDown 23
-#endif
-
-#ifndef inThumb
-#define inThumb 129
-#endif
-
-static ControlHandle g_scrollbar = 0;
-static ControlActionUPP g_scroll_action_upp = 0;
 
 static pascal void ScrollActionProc(ControlHandle theControl, short partCode) {
     if (partCode == 0 || !g_te || !theControl) return;
@@ -195,7 +53,7 @@ static pascal void ScrollActionProc(ControlHandle theControl, short partCode) {
     }
 }
 
-static void DoScrollLines(short deltaLines) {
+void DoScrollLines(short deltaLines) {
     if (!g_scrollbar || !g_te || deltaLines == 0) return;
     short oldVal = GetControlValue(g_scrollbar);
     SetControlValue(g_scrollbar, oldVal + deltaLines);
@@ -209,7 +67,7 @@ static void DoScrollLines(short deltaLines) {
     }
 }
 
-static void InvalWindow(WindowPtr win) {
+void InvalWindow(WindowPtr win) {
 #if TARGET_API_MAC_CARBON
     Rect r;
     GetPortBounds(GetWindowPort(win), &r);
@@ -219,7 +77,7 @@ static void InvalWindow(WindowPtr win) {
 #endif
 }
 
-static void UpdateScrollbar(void) {
+void UpdateScrollbar(void) {
     if (!g_scrollbar || !g_te || !g_window) return;
 
     short lineH = 12;
@@ -255,7 +113,7 @@ static void UpdateScrollbar(void) {
     }
 }
 
-static void ResizeWindowContents(WindowPtr win) {
+void ResizeWindowContents(WindowPtr win) {
     if (!win) return;
     Rect bounds;
 #if TARGET_API_MAC_CARBON
@@ -300,65 +158,6 @@ static void ResizeWindowContents(WindowPtr win) {
 
     UpdateScrollbar();
     InvalWindow(win);
-}
-
-static void HandleMenuCommand(long menuResult) {
-    short menuID = HiWord(menuResult);
-    short menuItem = LoWord(menuResult);
-
-    if (menuID == 0) return;
-
-    switch (menuID) {
-        case MENU_APPLE:
-            if (menuItem == ITEM_ABOUT) {
-                if (g_cmd_cb) g_cmd_cb(CMD_HELP_ABOUT);
-            }
-#if !TARGET_API_MAC_CARBON
-            else {
-                Str255 deskName;
-                GetMenuItemText(GetMenuHandle(MENU_APPLE), menuItem, deskName);
-                OpenDeskAcc(deskName);
-            }
-#endif
-            break;
-
-        case MENU_FILE:
-            switch (menuItem) {
-                case ITEM_REFRESH:
-                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_REFRESH);
-                    break;
-                case ITEM_QUIT:
-                    if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXIT);
-                    g_running = false;
-                    break;
-            }
-            break;
-
-        case MENU_EDIT:
-            if (menuItem == ITEM_COPY) {
-                if (g_cmd_cb) g_cmd_cb(CMD_FILE_COPY);
-            }
-            break;
-
-        case MENU_VIEW:
-            switch (menuItem) {
-                case ITEM_MODE_STD:
-                    if (g_cmd_cb) g_cmd_cb(CMD_MODE_STANDARD);
-                    break;
-                case ITEM_MODE_DBG:
-                    if (g_cmd_cb) g_cmd_cb(CMD_MODE_DEBUG);
-                    break;
-                case ITEM_MODE_ALL:
-                    if (g_cmd_cb) g_cmd_cb(CMD_MODE_EVERYTHING);
-                    break;
-                case ITEM_OPT_COLOR:
-                    if (g_cmd_cb) g_cmd_cb(CMD_OPT_COLOR);
-                    break;
-            }
-            break;
-    }
-
-    HiliteMenu(0);
 }
 
 #endif
@@ -411,7 +210,7 @@ bool mac_gui_init(const char* title, short width, short height) {
     pTitle[0] = (unsigned char)len;
     memcpy(&pTitle[1], title, len);
 
-    bool has_color_qd = HasColorQuickDraw();
+    bool has_color_qd = classic_mac_has_color_qd();
     if (has_color_qd) {
         g_window = NewCWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
     }
@@ -443,7 +242,7 @@ bool mac_gui_init(const char* title, short width, short height) {
     Rect destRect = teRect;
     destRect.right = teRect.left + 4000;
 
-    g_is_styled_te = HasStyledTextEdit();
+    g_is_styled_te = classic_mac_has_styled_te();
     if (g_is_styled_te) {
         g_te = TEStyleNew(&destRect, &teRect);
     }
@@ -575,108 +374,6 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
 
 void mac_gui_set_status(const char* part1, const char* part2, const char* part3) {
     (void)part1; (void)part2; (void)part3;
-}
-
-void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color) {
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-    MenuHandle hView = GetMenuHandle(MENU_VIEW);
-    if (!hView) return;
-
-#if TARGET_API_MAC_CARBON
-    CheckMenuItem(hView, ITEM_MODE_STD, mode_cmd_id == CMD_MODE_STANDARD);
-    CheckMenuItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
-    CheckMenuItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
-    CheckMenuItem(hView, ITEM_OPT_COLOR, color);
-#else
-    CheckItem(hView, ITEM_MODE_STD, mode_cmd_id == CMD_MODE_STANDARD);
-    CheckItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
-    CheckItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
-    CheckItem(hView, ITEM_OPT_COLOR, color);
-    if (!HasColorQuickDraw() || !g_is_styled_te) {
-        DisableItem(hView, ITEM_OPT_COLOR);
-    }
-#endif
-#else
-    (void)mode_cmd_id; (void)color;
-#endif
-}
-
-void mac_gui_open_file_dialog(void) {
-#if !TARGET_API_MAC_CARBON && (defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__))
-    SFTypeList types = {'TEXT', 'ttxt', 0, 0};
-    StandardFileReply reply;
-    StandardGetFile(nil, 2, types, &reply);
-    if (reply.sfGood && g_file_cb) {
-        char path[256] = {0};
-        memcpy(path, &reply.sfFile.name[1], reply.sfFile.name[0]);
-        g_file_cb(path, false);
-    }
-#endif
-}
-
-void mac_gui_save_file_dialog(const char* default_filename) {
-#if !TARGET_API_MAC_CARBON && (defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__))
-    Str255 pName;
-    size_t len = default_filename ? strlen(default_filename) : 0;
-    if (len > 255) len = 255;
-    pName[0] = (unsigned char)len;
-    if (len > 0) memcpy(&pName[1], default_filename, len);
-
-    StandardFileReply reply;
-    StandardPutFile((ConstStringPtr)"\pSave CPU Report As:", pName, &reply);
-    if (reply.sfGood && g_file_cb) {
-        char path[256] = {0};
-        memcpy(path, &reply.sfFile.name[1], reply.sfFile.name[0]);
-        g_file_cb(path, true);
-    }
-#else
-    (void)default_filename;
-#endif
-}
-
-#if TARGET_API_MAC_CARBON
-typedef struct OpaqueScrapRef* ScrapRef;
-int32_t ClearCurrentScrap(void);
-int32_t GetCurrentScrap(ScrapRef *scrap);
-int32_t PutScrapFlavor(ScrapRef scrap, uint32_t flavorType, uint32_t flavorFlags, long byteCount, const void *flavorData);
-#endif
-
-void mac_gui_copy_clipboard(const char* text) {
-#if TARGET_API_MAC_CARBON
-    if (!text) return;
-    long len = strlen(text);
-    ScrapRef scrap = NULL;
-    ClearCurrentScrap();
-    if (GetCurrentScrap(&scrap) == 0 && scrap) {
-        PutScrapFlavor(scrap, 'TEXT', 0, len, text);
-    }
-#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
-    if (!text) return;
-    long len = strlen(text);
-    ZeroScrap();
-    PutScrap(len, 'TEXT', (Ptr)text);
-#else
-    (void)text;
-#endif
-}
-
-void mac_gui_show_alert(const char* title, const char* message) {
-#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-    Str255 pTitle, pMsg;
-    size_t tLen = strlen(title); if (tLen > 255) tLen = 255;
-    pTitle[0] = (unsigned char)tLen; memcpy(&pTitle[1], title, tLen);
-
-    size_t mLen = strlen(message); if (mLen > 255) mLen = 255;
-    pMsg[0] = (unsigned char)mLen; memcpy(&pMsg[1], message, mLen);
-    for (size_t i = 1; i <= mLen; i++) {
-        if (pMsg[i] == '\n') pMsg[i] = '\r';
-    }
-
-    ParamText(pTitle, pMsg, (ConstStringPtr)"\p", (ConstStringPtr)"\p");
-    Alert(128, nil);
-#else
-    (void)title; (void)message;
-#endif
 }
 
 void mac_gui_run(void) {

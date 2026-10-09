@@ -23,8 +23,16 @@ REZ_FLAGS     = $(REZ_INCLUDES) \
 
 CFLAGS        = -O2 -Wall -I../../ports/classic_mac -DRUSTID_VERSION=\"$(VERSION)\"
 CFLAGS_CARBON = $(CFLAGS) -carbon -DTARGET_API_MAC_CARBON=1
-SRC_C         = ../../ports/classic_mac/mac_bridge.c \
-                ../../ports/classic_mac/classic_mac_engine.c
+SRC_C         = ../../ports/classic_mac/common/gestalt.c \
+                ../../ports/classic_mac/common/display.c \
+                ../../ports/classic_mac/common/cpu.c \
+                ../../ports/classic_mac/models/models.c \
+                ../../ports/classic_mac/m68k/cpu.c \
+                ../../ports/classic_mac/ppc/cpu.c \
+                ../../ports/classic_mac/gui/window.c \
+                ../../ports/classic_mac/gui/menu.c \
+                ../../ports/classic_mac/gui/dialogs.c \
+                ../../ports/classic_mac/main.c
 R_SRC         = rustid.r
 R_DEPS        = rustid.r rustid_icons.r
 
@@ -152,4 +160,10 @@ $(OUT_DIR)/Rustid-osx-ppc.tar.gz: $(OUT_DIR)/Rustid.app
 clean:
 	rm -rf $(OUT_DIR)
 
-.PHONY: all classic carbon osx directories clean
+TEST_SRCS = $(filter-out ../../ports/classic_mac/main.c,$(SRC_C)) ../../ports/classic_mac/test_classic_mac.c
+
+test: directories
+	gcc -O2 -Wall -Werror -DNO_STANDALONE_MAIN -I../../ports/classic_mac -o $(OUT_DIR)/test_classic_mac $(TEST_SRCS)
+	$(OUT_DIR)/test_classic_mac
+
+.PHONY: all classic carbon osx directories clean test

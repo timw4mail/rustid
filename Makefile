@@ -266,6 +266,10 @@ build-mac-arm: _cargo_cross
 build-classic-mac:
 	@export PATH="$${RETRO68_PREFIX:-$(HOME)/code/Retro68-build/toolchain}/bin:$$PATH" && $(MAKE) -C build-config/classic_mac
 
+# Run tests for Classic Mac port (uses host gcc)
+test-classic-mac:
+	$(MAKE) -C build-config/classic_mac test
+
 # Build for 32-bit Linux (should work on 486-class cpus)
 build-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi

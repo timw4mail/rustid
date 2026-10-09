@@ -33,26 +33,49 @@ To bring `rustid`'s CPU and hardware identification capabilities to vintage Maci
 
 ```text
 ports/classic_mac/
-├── classic_mac_engine.c    # Core CPU detection, Gestalt probing, specs table, and main()
-├── classic_mac_engine.h    # Engine data structures and function prototypes
-├── mac_bridge.c            # Macintosh Toolbox UI, event loop, TextEdit formatting, menus
-├── mac_bridge.h            # GUI bridge API and command ID constants
-└── README.md               # This documentation
+├── main.c                   # Main entry point & view orchestration
+├── classic_mac_engine.h     # Primary umbrella header
+├── mac_bridge.h             # Forwarding header to gui/gui.h
+├── test_classic_mac.c       # Unit test suite for model ID & report generation
+├── common/
+│   ├── cpu.c / .h           # Top-level CPU detection coordinator
+│   ├── display.c / .h       # Report text layout, syntax styling, CTextRun generation
+│   └── gestalt.c / .h       # Low-level Gestalt traps, SysEnvirons, capability probes
+├── models/
+│   └── models.c / .h        # Mac model catalog, OF string matching, hardware clock/bus specs
+├── m68k/
+│   └── cpu.c / .h           # 68000–68060, FPU, MMU detection
+├── ppc/
+│   └── cpu.c / .h           # PowerPC 601–G5, PVR, Open Firmware device-tree probing
+├── gui/
+│   ├── gui.h                # GUI bridge public API definitions
+│   ├── gui_internal.h       # Shared GUI state, prototypes, and Toolbox includes
+│   ├── window.c             # Window lifecycle, TextEdit setup, scrolling, resizing
+│   ├── menu.c               # Menu bar, command routing, checkmarks
+│   └── dialogs.c            # About alert, clipboard (Scrap Manager), file dialogs
+└── README.md                # This documentation
 
 build-config/classic_mac/
-├── Makefile                # Cross-compilation Makefile using Retro68
-├── rustid.r                # Toolbox resources (MBAR, MENU, WIND, ALRT, DITL, SIZE, BNDL, cfrg)
-└── rustid_icons.r          # Multi-resolution icon suite (ICN#, ics#, icl8, ics8, icl4, ics4, ICON)
+├── Makefile                 # Cross-compilation Makefile using Retro68
+├── rustid.r                 # Toolbox resources (MBAR, MENU, WIND, ALRT, DITL, SIZE, BNDL, cfrg)
+└── rustid_icons.r           # Multi-resolution icon suite (ICN#, ics#, icl8, ics8, icl4, ics4, ICON)
 ```
 
 ### Key Components
 
-- [`ports/classic_mac/classic_mac_engine.c`](file:///home/tim/code/rustid/ports/classic_mac/classic_mac_engine.c): Implements CPU identification, bus/clock frequency detection, Gestalt querying, model name lookup, memory sizing, and report generation matching the modern `rustid` output formats.
-- [`ports/classic_mac/mac_bridge.c`](file:///home/tim/code/rustid/ports/classic_mac/mac_bridge.c): Handles Macintosh Toolbox initialization, the main `WaitNextEvent` loop, window updates, TextEdit view rendering with styled color runs, clipboard export via Scrap Manager, and dialog handling.
-- [`build-config/classic_mac/rustid.r`](file:///home/tim/code/rustid/build-config/classic_mac/rustid.r): Defines Macintosh resources compiled with `Rez`. Includes application signature `'RsId'`, bundle `'BNDL'`, file reference `'FREF'`, MultiFinder memory configuration `'SIZE'`, version stamps `'vers'`, and Code Fragment resource `'cfrg'`.
-- [`build-config/classic_mac/rustid_icons.r`](file:///home/tim/code/rustid/build-config/classic_mac/rustid_icons.r): Contains complete multi-depth icon families:
-  - 32x32: 1-bit (`'ICN#'`), 4-bit 16-color (`'icl4'`), 8-bit 256-color (`'icl8'`), and dialog icon (`'ICON'`).
-  - 16x16: 1-bit small (`'ics#'`), 4-bit small (`'ics4'`), and 8-bit small (`'ics8'`).
+- **Application Controller ([`main.c`](file:///home/tim/code/rustid/ports/classic_mac/main.c))**: Manages the application lifecycle, view mode transitions, refresh commands, and event routing.
+- **Common Subsystems ([`common/`](file:///home/tim/code/rustid/ports/classic_mac/common/))**:
+  - `cpu.c / .h`: Coordinates machine type discovery, bus/clock speed calculation, OS version formatting, and architecture dispatch.
+  - `display.c / .h`: Report text generation and color text run generation matching the modern `rustid` output formats.
+  - `gestalt.c / .h`: Safe Gestalt inline assembly for 68k, CFM Gestalt for PPC/Carbon, and `SysEnvirons` fallbacks.
+- **Hardware Architecture Probers**:
+  - [`m68k/cpu.c / .h`](file:///home/tim/code/rustid/ports/classic_mac/m68k/cpu.c): 68000 through 68060 CPU, FPU (68881/68882/integrated), and MMU (AMU/68851/integrated) discrimination.
+  - [`ppc/cpu.c / .h`](file:///home/tim/code/rustid/ports/classic_mac/ppc/cpu.c): PowerPC 601 through G5 detection, codenames, process nodes, and model-assisted tuning.
+- **Mac Models & Name Registry ([`models/`](file:///home/tim/code/rustid/ports/classic_mac/models/))**: Comprehensive catalog of Macintosh hardware models and dynamic Name Registry device-tree traversal for Open Firmware identifiers (e.g., `PowerMac1,1`).
+- **GUI Bridge ([`gui/`](file:///home/tim/code/rustid/ports/classic_mac/gui/))**:
+  - `window.c`: Window initialization, compact Mac screen clamping, safe `NewCWindow` / `NewWindow`, `TEStyleNew` / `TENew`, and event loop.
+  - `menu.c`: Menu setup, command routing, and dynamic item disabling.
+  - `dialogs.c`: Scrap Manager clipboard export, Standard File dialogs, and Alerts.
 
 ---
 
@@ -104,6 +127,18 @@ To clean previous build artifacts:
 
 ```bash
 make -C build-config/classic_mac clean
+```
+
+### Running Port Unit Tests
+
+You can run the unit test suite on the host machine using standard host `gcc` (no Retro68 required):
+
+```bash
+just test-classic-mac
+# or
+make test-classic-mac
+# or
+make -C build-config/classic_mac test
 ```
 
 ---
