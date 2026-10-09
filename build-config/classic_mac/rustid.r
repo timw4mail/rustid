@@ -117,8 +117,8 @@ resource 'SIZE' (-1) {
     notDisplayManagerAware,
     reserved,
     reserved,
-    2048 * 1024,      /* Preferred Size: 2048 KB */
-    1024 * 1024       /* Minimum Size: 1024 KB */
+    1024 * 1024,      /* Preferred Size: 1024 KB */
+    384 * 1024        /* Minimum Size: 384 KB */
 };
 
 /* Application Version */

@@ -26,6 +26,7 @@ typedef struct {
 
 const char* classic_mac_model_from_identifier(const char* identifier);
 bool classic_mac_probe_model_identifier(char* out_buf, size_t out_buf_size);
+bool classic_mac_safe_gestalt(uint32_t selector, long* response);
 void classic_mac_detect_cpu(MacCpuInfo* info);
 void classic_mac_generate_report(
     const MacCpuInfo* info,

@@ -2,6 +2,7 @@
 //! Targets Classic Mac OS (System 6 through 9) using the Macintosh Toolbox.
 
 #include "mac_bridge.h"
+#include "classic_mac_engine.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,9 +80,44 @@ static QuitCallback g_quit_cb = 0;
 
 static WindowPtr g_window = 0;
 static TEHandle g_te = 0;
+static bool g_is_styled_te = false;
 static bool g_running = false;
 
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+
+static bool HasColorQuickDraw(void) {
+#if TARGET_API_MAC_CARBON
+    return true;
+#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
+    long qd_ver = 0;
+    if (classic_mac_safe_gestalt('qd  ', &qd_ver) && qd_ver >= 256) {
+        return true;
+    }
+#if !TARGET_API_MAC_CARBON
+    SysEnvRec env;
+    if (SysEnvirons(curSysEnvVers, &env) == noErr) {
+        return env.hasColorQD;
+    }
+#endif
+    return false;
+#else
+    return false;
+#endif
+}
+
+static bool HasStyledTextEdit(void) {
+#if TARGET_API_MAC_CARBON
+    return true;
+#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
+    long te_ver = 0;
+    if (classic_mac_safe_gestalt('te  ', &te_ver) && te_ver >= 2) {
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
 
 #ifndef zoomDocProc
 #define zoomDocProc 8
@@ -361,9 +397,11 @@ bool mac_gui_init(const char* title, short width, short height) {
     short screenH = qd.screenBits.bounds.bottom - qd.screenBits.bounds.top;
 #endif
 
+    if (screenW <= 512 && width > screenW - 24) width = screenW - 24;
+    if (screenH <= 342 && height > screenH - 54) height = screenH - 54;
+
     bounds.left = (screenW - width) / 2;
-    bounds.top = (screenH - height) / 2;
-    if (bounds.top < 40) bounds.top = 40;
+    bounds.top = (screenH <= 342) ? 26 : 40;
     bounds.right = bounds.left + width;
     bounds.bottom = bounds.top + height;
 
@@ -373,9 +411,15 @@ bool mac_gui_init(const char* title, short width, short height) {
     pTitle[0] = (unsigned char)len;
     memcpy(&pTitle[1], title, len);
 
-    g_window = NewCWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
+    bool has_color_qd = HasColorQuickDraw();
+    if (has_color_qd) {
+        g_window = NewCWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
+    }
     if (!g_window) {
         g_window = NewWindow(nil, &bounds, pTitle, true, zoomDocProc, (WindowPtr)-1L, true, 0);
+    }
+    if (!g_window) {
+        g_window = NewWindow(nil, &bounds, pTitle, true, documentProc, (WindowPtr)-1L, true, 0);
     }
     if (!g_window) return false;
 
@@ -399,9 +443,13 @@ bool mac_gui_init(const char* title, short width, short height) {
     Rect destRect = teRect;
     destRect.right = teRect.left + 4000;
 
-    g_te = TEStyleNew(&destRect, &teRect);
+    g_is_styled_te = HasStyledTextEdit();
+    if (g_is_styled_te) {
+        g_te = TEStyleNew(&destRect, &teRect);
+    }
     if (!g_te) {
         g_te = TENew(&destRect, &teRect);
+        g_is_styled_te = false;
     }
     if (g_te) {
         (*g_te)->crOnly = -1;
@@ -475,32 +523,34 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
         TESetText((Ptr)text, length, g_te);
     }
 
-    // 3. Reset entire text to default Monaco 9 style
-    TESetSelect(0, length, g_te);
-    TextStyle baseStyle;
-    baseStyle.tsFont = monaco;
-    baseStyle.tsSize = 9;
-    baseStyle.tsFace = normal;
-    baseStyle.tsColor.red = 0;
-    baseStyle.tsColor.green = 0;
-    baseStyle.tsColor.blue = 0;
-    TESetStyle(doFont | doSize | doFace | doColor, &baseStyle, false, g_te);
+    // 3. Apply style and color runs if Styled TextEdit is supported
+    if (g_is_styled_te) {
+        TESetSelect(0, length, g_te);
+        TextStyle baseStyle;
+        baseStyle.tsFont = monaco;
+        baseStyle.tsSize = 9;
+        baseStyle.tsFace = normal;
+        baseStyle.tsColor.red = 0;
+        baseStyle.tsColor.green = 0;
+        baseStyle.tsColor.blue = 0;
+        TESetStyle(doFont | doSize | doFace | doColor, &baseStyle, false, g_te);
 
-    // 4. Apply color/bold runs
-    if (run_count > 0) {
-        for (uint32_t i = 0; i < run_count; i++) {
-            const CTextRun* r = &runs[i];
-            TESetSelect(r->offset, r->offset + r->length, g_te);
+        // 4. Apply color/bold runs
+        if (run_count > 0) {
+            for (uint32_t i = 0; i < run_count; i++) {
+                const CTextRun* r = &runs[i];
+                TESetSelect(r->offset, r->offset + r->length, g_te);
 
-            TextStyle style;
-            style.tsFont = monaco;
-            style.tsSize = 9;
-            style.tsFace = r->bold ? bold : normal;
-            style.tsColor.red = ((unsigned short)r->color.r) << 8;
-            style.tsColor.green = ((unsigned short)r->color.g) << 8;
-            style.tsColor.blue = ((unsigned short)r->color.b) << 8;
+                TextStyle style;
+                style.tsFont = monaco;
+                style.tsSize = 9;
+                style.tsFace = r->bold ? bold : normal;
+                style.tsColor.red = ((unsigned short)r->color.r) << 8;
+                style.tsColor.green = ((unsigned short)r->color.g) << 8;
+                style.tsColor.blue = ((unsigned short)r->color.b) << 8;
 
-            TESetStyle(doFont | doSize | doFace | doColor, &style, false, g_te);
+                TESetStyle(doFont | doSize | doFace | doColor, &style, false, g_te);
+            }
         }
     }
 
@@ -542,6 +592,9 @@ void mac_gui_set_menu_checks(uint32_t mode_cmd_id, bool color) {
     CheckItem(hView, ITEM_MODE_DBG, mode_cmd_id == CMD_MODE_DEBUG);
     CheckItem(hView, ITEM_MODE_ALL, mode_cmd_id == CMD_MODE_EVERYTHING);
     CheckItem(hView, ITEM_OPT_COLOR, color);
+    if (!HasColorQuickDraw() || !g_is_styled_te) {
+        DisableItem(hView, ITEM_OPT_COLOR);
+    }
 #endif
 #else
     (void)mode_cmd_id; (void)color;

@@ -13,9 +13,8 @@
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
 #include <Gestalt.h>
 #include <Types.h>
-#if defined(__powerpc__) || defined(__ppc__)
 #include <Multiverse.h>
-#endif
+#include <OSUtils.h>
 
 #ifndef gestaltProcessorType
 #define gestaltProcessorType 'proc'
@@ -617,9 +616,23 @@ static const char* GetMacModelName(long mach_id) {
     }
 }
 
+#if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
+
 #if defined(__m68k__) || defined(__mc68000__)
-static bool SafeGestalt(OSType selector, long* response) {
+static bool IsGestaltAvailable(void) {
+    static short s_avail = -1;
+    if (s_avail != -1) return (s_avail == 1);
+    ProcPtr gestaltAddr = GetOSTrapAddress(0xAD);
+    ProcPtr unimpAddr = GetToolTrapAddress(_Unimplemented);
+    s_avail = (gestaltAddr != unimpAddr && gestaltAddr != NULL) ? 1 : 0;
+    return (s_avail == 1);
+}
+#endif
+
+bool classic_mac_safe_gestalt(uint32_t selector, long* response) {
     if (response) *response = 0;
+#if defined(__m68k__) || defined(__mc68000__)
+    if (!IsGestaltAvailable()) return false;
     register unsigned long reg_d0 __asm__("d0") = selector;
     register long reg_a0 __asm__("a0") = 0;
     register short err __asm__("d0");
@@ -634,18 +647,31 @@ static bool SafeGestalt(OSType selector, long* response) {
         return true;
     }
     return false;
-}
-#elif defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
-static bool SafeGestalt(OSType selector, long* response) {
-    if (response) *response = 0;
+#elif defined(TARGET_API_MAC_CARBON) || defined(__APPLE__) || defined(__MACOS__) || defined(__Retro68__)
     long val = 0;
-    OSErr err = Gestalt(selector, &val);
+    OSErr err = Gestalt((OSType)selector, &val);
     if (err == 0) {
         if (response) *response = val;
         return true;
     }
     return false;
+#else
+    (void)selector;
+    return false;
+#endif
 }
+
+#define SafeGestalt classic_mac_safe_gestalt
+
+#else
+
+bool classic_mac_safe_gestalt(uint32_t selector, long* response) {
+    (void)selector;
+    if (response) *response = 0;
+    return false;
+}
+#define SafeGestalt classic_mac_safe_gestalt
+
 #endif
 
 
@@ -658,6 +684,39 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     SafeGestalt(gestaltMachineType, &mach_val);
     SafeGestalt(gestaltSystemVersion, &sysv_val);
     SafeGestalt(gestaltPhysicalRAMSize, &ram_val);
+
+#if defined(__m68k__) || defined(__mc68000__)
+    SysEnvRec env;
+    bool has_env = (SysEnvirons(curSysEnvVers, &env) == noErr);
+    if (has_env) {
+        if (mach_val == 0) {
+            switch (env.machineType) {
+                case env512KE:   mach_val = 3; break;  // Mac 512Ke
+                case envMacPlus: mach_val = 4; break;  // Mac Plus
+                case envSE:      mach_val = 5; break;  // Mac SE
+                case envMacII:   mach_val = 6; break;  // Mac II
+                case 6:          mach_val = 7; break;  // Mac IIx
+                case 7:          mach_val = 8; break;  // Mac IIcx
+                case 8:          mach_val = 9; break;  // Mac SE/30
+                case 9:          mach_val = 10; break; // Mac IIci
+                case 11:         mach_val = 13; break; // Mac IIfx
+                case 13:         mach_val = 18; break; // Mac Classic
+                case 14:         mach_val = 19; break; // Mac IIsi
+                case 15:         mach_val = 22; break; // Mac LC
+                case 17:         mach_val = 20; break; // Mac Quadra 900
+                case 18:         mach_val = 23; break; // Mac Quadra 700
+                case 19:         mach_val = 25; break; // Mac Classic II
+                case 20:         mach_val = 24; break; // PowerBook 170
+                case 21:         mach_val = 21; break; // PowerBook 100
+                case 22:         mach_val = 25; break; // PowerBook 140
+                default:         mach_val = (env.machineType > 0) ? env.machineType : 0; break;
+            }
+        }
+        if (sysv_val == 0 && env.systemVersion > 0) {
+            sysv_val = env.systemVersion;
+        }
+    }
+#endif
 
     // 1. Probe Open Firmware / Name Registry for model identifier string (e.g. "PowerMac1,1")
     bool has_model_id = classic_mac_probe_model_identifier(info->model_id, sizeof(info->model_id));
@@ -909,13 +968,27 @@ void classic_mac_detect_cpu(MacCpuInfo* info) {
     } else {
         long fpu_val = 0, mmu_val = 0, cpu_val = 0;
         if (!SafeGestalt(gestaltFPUType, &fpu_val) || fpu_val == 0) {
-            fpu_val = spec.fpu_type;
+#if defined(__m68k__) || defined(__mc68000__)
+            if (has_env && !env.hasFPU) {
+                fpu_val = 0;
+            } else
+#endif
+            {
+                fpu_val = spec.fpu_type;
+            }
         }
         if (!SafeGestalt(gestaltMMUType, &mmu_val) || mmu_val == 0) {
             mmu_val = spec.mmu_type;
         }
         if (!SafeGestalt(gestaltProcessorType, &cpu_val) || cpu_val == 0) {
-            cpu_val = spec.cpu_type;
+#if defined(__m68k__) || defined(__mc68000__)
+            if (has_env && env.processor >= 1 && env.processor <= 5) {
+                cpu_val = env.processor;
+            } else
+#endif
+            {
+                cpu_val = spec.cpu_type;
+            }
         }
 
         switch (fpu_val) {
