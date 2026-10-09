@@ -2,14 +2,14 @@
 
 For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 
-## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), AMD K8 L2 cache improvements, and expanded CPUID test fixtures
+## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), AMD Athlon & cache improvements, and expanded CPUID test fixtures
 
 ### Added
 - **Classic Macintosh Port (68k & PowerPC)**: Added standalone C-based Classic Macintosh GUI application (`ports/classic_mac/*`, `build-config/classic_mac/*`) supporting System 6.0.8 through Mac OS 9.2.2 (as well as Mac OS X Carbon/Aqua) on Motorola 680x0 (68000–68060) and PowerPC (601–G5), featuring Gestalt hardware probing, resizable and scrollable windows, styled text rendering, clipboard copy, and universal fat binary packaging
 - **PowerPC Model & Microarchitecture Detection**: Added PowerPC 7410 (Nitro) PVR `0x800C` recognition and "Vger" codename designation for PowerPC 7450 in the Rust library (`src/ppc/micro_arch.rs`), alongside comprehensive vintage Mac PowerPC CPU and machine model tables in the Classic Mac engine (`ports/classic_mac/classic_mac_engine.c`)
 - **AMD Athlon 64 X2 6400+ CPUID Dump & Test Suite**: Added CPUID dump fixture and integration test suite covering signature, topology, per-core L1/L2 cache sizing & associativity, x86_64-v1 feature class, 3DNow!, and K8 Windsor core detection (`tests/cpuid/dump/Amd_Athlon(tm)_64_X2_6400+.txt`, `tests/cpuid_dump_test.rs`)
+- **Mobile AMD Athlon XP-M 1700+ CPUID Dump & Test Suite**: Added mobile Athlon XP-M CPUID dump fixture and integration test suite covering signature, topology, per-core split L1/L2 cache sizing & associativity, and K7 Thoroughbred core detection (`tests/cpuid/dump/Amd_Athlon(tm)_XP-M_1700+.txt`, `tests/cpuid_dump_test.rs`)
 - **Intel Core i7-2675QM CPUID Dump**: Added 2011 MacBook Pro Sandy Bridge CPUID dump test fixture (`tests/cpuid/dump/Intel_Core_i7_2675QM`)
-- **Classic Macintosh Application Icons**: Added multi-depth icon suite (1-bit, 4-bit, and 8-bit large and small icons, dialog icons, and modern `.icns`) for Classic Mac OS and Carbon OS X targets (`build-config/classic_mac/rustid_icons.r`, `build-config/classic_mac/generate_icns.py`, `build-config/classic_mac/setup_bundle_icon.py`)
 
 ### Changed
 - **AMD L2 Cache Share-Count Fallback**: Adjusted default L2 cache share count for AMD processors that omit explicit CPUID cache sharing information, ensuring dual-core K8 processors report dedicated per-core L2 caches (`src/common/cache.rs`)
@@ -17,8 +17,8 @@ For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 - **Feature Flag HTT Display**: Standardized Hyper-Threading / multi-threading feature flag label to `"HTT"` in feature listings (`src/x86/features.rs`)
 
 ### Fixed
+- **AMD Mobile Athlon vs. Geode NX Disambiguation**: Fixed false-positive detection where mobile Athlon XP-M processors sharing signature Family 6, Model 8, Stepping 1 with the AMD Geode NX were misidentified as Geode NX (`src/x86/cpu.rs`, `src/x86/vendor/amd.rs`)
 - **AppImage Build Script Paths**: Fixed AppImage packaging in `build-config/build-appimage.sh` by ensuring directory references resolve to absolute paths rather than relative paths
-- **Classic Mac Window Resizing & Scrolling**: Fixed window redraw, scrolling offset bounds, and control synchronization on classic Macintosh systems (`ports/classic_mac/mac_bridge.c`)
 
 ## [2.2.0] — Linux GTK & Haiku GUI applications, Intel Wildcat Lake support, and cross-platform application icons
 
