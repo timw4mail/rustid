@@ -29,8 +29,6 @@ resource 'MENU' (129, "File", preload) {
     enabled,
     "File",
     {
-        "Refresh", noIcon, "R", noMark, plain;
-        "-", noIcon, noKey, noMark, plain;
         "Quit", noIcon, "Q", noMark, plain;
     };
 };
@@ -42,12 +40,7 @@ resource 'MENU' (130, "Edit", preload) {
     enabled,
     "Edit",
     {
-        "Undo", noIcon, "Z", noMark, plain;
-        "-", noIcon, noKey, noMark, plain;
-        "Cut", noIcon, "X", noMark, plain;
         "Copy", noIcon, "C", noMark, plain;
-        "Paste", noIcon, "V", noMark, plain;
-        "Clear", noIcon, noKey, noMark, plain;
     };
 };
 
@@ -117,8 +110,8 @@ resource 'SIZE' (-1) {
     notDisplayManagerAware,
     reserved,
     reserved,
-    2048 * 1024,      /* Preferred Size: 2048 KB */
-    1024 * 1024       /* Minimum Size: 1024 KB */
+    1024 * 1024,      /* Preferred Size: 1024 KB */
+    384 * 1024        /* Minimum Size: 384 KB */
 };
 
 /* Application Version */

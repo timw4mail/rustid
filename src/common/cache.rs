@@ -322,7 +322,7 @@ impl Cache {
                 // "If L3, L2 = core-count" (per-core)
                 l2.share_count = smt_width;
             } else {
-                l2.share_count = threads_per_socket;
+                l2.share_count = 1;
             }
         }
 
@@ -464,7 +464,7 @@ mod tests {
         } else {
             panic!("Expected split cache");
         }
-        assert_eq!(c.l2.expect("L2 expected").share_count, 4); // L2 = per-socket (4 threads per socket)
+        assert_eq!(c.l2.expect("L2 expected").share_count, 1); // L2 = all-shared
     }
 
     #[test]

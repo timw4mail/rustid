@@ -103,8 +103,6 @@ impl Amd {
             (0, 6, 0, 8, _) => {
                 if m_lower.contains("applebred") {
                     brand_arch(MicroArch::K7, "Applebred", Some(N130))
-                } else if m_lower.contains("geode") {
-                    brand_arch(MicroArch::K7, "Geode NX", Some(N130))
                 } else if m_lower.contains("sempron") {
                     brand_arch(MicroArch::K7, "Thoroughbred (Sempron)", Some(N130))
                 } else {
