@@ -58,8 +58,7 @@ ports/classic_mac/
 
 build-config/classic_mac/
 ├── Makefile                 # Cross-compilation Makefile using Retro68
-├── Info.plist               # Mac OS X application bundle metadata
-└── generate_icns.py         # Universal .icns asset generator
+└── Info.plist               # Mac OS X application bundle metadata
 ```
 
 ### Key Components
@@ -153,8 +152,8 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 | `rustid.bin` | MacBinary II | 68k & PowerPC | **1. Universal Fat Binary (Classic Mac OS)**. Contains both 68k `CODE` and PowerPC PEF executable code. Runs natively on any Mac from System 6.0.8 to Mac OS 9.2.2. |
 | `rustid.dsk` | 800 KB HFS Disk | 68k & PowerPC | Raw floppy disk image containing the `rustid` Universal Fat Binary. Ready to mount in emulators or write to floppy. |
 | `Rustid.app` | Application Bundle | PowerPC (G3/G4/G5) | **2. Native Mac OS X Application Bundle**. Standard Aqua Carbon application bundle for Mac OS X (10.0 Cheetah through 10.5 Leopard). |
-| `Rustid-osx-ppc.tar.gz` | Gzip Tar Archive | PowerPC (G3/G4/G5) | Compressed distribution archive of `Rustid.app` for Mac OS X PowerPC systems. |
-| `rustid.icns` | Apple ICNS | Universal | Universal icon containing Classic QuickDraw (`ICN#`, `icl8`, `ics#`, `ics8`), OS X 10.0–10.4 32-bit (`it32`/`t8mk`, etc.), and modern PNG chunks (`ic07`–`ic14`). |
+| `Rustid-osx-ppc.zip` | Zip Archive | PowerPC (G3/G4/G5) | Compressed distribution archive of `Rustid.app` for Mac OS X PowerPC systems. |
+| `rustid.icns` | Apple ICNS | Mac OS X | Application icon containing native ARGB and PNG icon assets. |
 
 ---
 
@@ -162,7 +161,7 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 
 ### 1. On Mac OS X (PowerPC 10.0 Cheetah – 10.5 Leopard)
 
-- Extract **`target/classic_mac/Rustid-osx-ppc.tar.gz`** or copy **`target/classic_mac/Rustid.app`** directly to `/Applications`.
+- Extract **`target/classic_mac/Rustid-osx-ppc.zip`** or copy **`target/classic_mac/Rustid.app`** directly to `/Applications`.
 - Double-click `Rustid.app` to launch with native Aqua styling, Carbon window controls, and the high-resolution application icon.
 
 ### 2. In Classic Emulators
