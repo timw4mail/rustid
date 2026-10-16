@@ -15,6 +15,7 @@ For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 
 ### Fixed
 - **AMD Mobile Athlon vs. Geode NX Disambiguation**: Fixed false-positive detection where mobile Athlon XP-M processors sharing signature Family 6, Model 8, Stepping 1 with the AMD Geode NX were misidentified as Geode NX (`src/x86/cpu.rs`, `src/x86/vendor/amd.rs`)
+- **Windows 32 bit build**: Fixed errors with CI and local build caused by mismatch of SSE2 between the prebuilt standard library and the binary build config
 
 ## [2.2.0] — Linux GTK & Haiku GUI applications, Intel Wildcat Lake support, and cross-platform application icons
 
