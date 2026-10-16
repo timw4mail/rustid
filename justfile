@@ -9,11 +9,11 @@ base_check := if arch() == "powerpc" { "cargo +nightly check -Z build-std --all-
 
 [linux, unix]
 _cargo_cross:
-	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
+	@if ! command -v cross >/dev/null 2>&1; then cargo install cross; fi
 
 [windows]
 _cargo_cross:
-	@where cargo-cross >/dev/null 2>&1 || cargo install cargo-cross
+	@where cross >/dev/null 2>&1 || cargo install cross
 
 # Check code validity and style
 check:
@@ -61,17 +61,17 @@ check-486:
 # Compile check for linux arm64
 check-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross check --target aarch64-unknown-linux-gnu
+	cross check --target aarch64-unknown-linux-gnu
 
 # Compile check for linux powerpc
 check-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
-	cargo cross +nightly check --target powerpc-unknown-linux-gnu -Z build-std
+	cross +nightly check --target powerpc-unknown-linux-gnu -Z build-std
 
 # Compile check for linux powerpc64
 check-ppc64: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc64-unknown-linux-gnu; then rustup target add powerpc64-unknown-linux-gnu; fi
-	cargo cross +nightly check --target powerpc64-unknown-linux-gnu -Z build-std
+	cross +nightly check --target powerpc64-unknown-linux-gnu -Z build-std
 
 # Compile check for Windows GUI (64-bit x86 GNU)
 check-windows-gui-x64:
@@ -168,7 +168,7 @@ build-dos: build-dos32a build-dos-real
 # Build 64-bit Windows GUI using MinGW/GNU target
 build-windows-gui-x64: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin gui --release
+	cross build --target x86_64-pc-windows-gnu --features gui --bin gui --release
 	@mkdir -p target/dist
 	@cp target/x86_64-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
 
@@ -226,22 +226,22 @@ appimage: build-appimage
 # Build for linux arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross build --target aarch64-unknown-linux-gnu
+	cross build --target aarch64-unknown-linux-gnu
 
 # Build for linux powerpc
 build-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
-	cargo cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std
+	cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std
 
 # Build for x86 macs
 build-mac: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-apple-darwin; then rustup target add x86_64-apple-darwin; fi
-	cargo cross build --target x86_64-apple-darwin --release
+	cross build --target x86_64-apple-darwin --release
 
 # Build for arm Macs
 build-mac-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-apple-darwin; then rustup target add aarch64-apple-darwin; fi
-	cargo cross build --target aarch64-apple-darwin --release
+	cross build --target aarch64-apple-darwin --release
 
 # Build for Classic Mac OS (68k and PowerPC) via Retro68
 build-classic-mac:
@@ -346,19 +346,19 @@ test-all: test test-x86 test-arm
 [linux, unix]
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo cross test --target aarch64-unknown-linux-musl
+	cross test --target aarch64-unknown-linux-musl
 
 # Run Windows arm tests
 [windows]
 test-arm: _cargo_cross
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >/dev/null || rustup target add aarch64-pc-windows-msvc
-	cargo cross test --target aarch64-pc-windows-gnu
+	cross test --target aarch64-pc-windows-gnu
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 [linux, unix]
 test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo cross test --target i686-unknown-linux-musl
+	cross test --target i686-unknown-linux-musl
 
 # Run tests for 32-bit x86
 [windows]
