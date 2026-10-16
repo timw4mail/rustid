@@ -331,7 +331,6 @@ fn build_windows_gui(out_dir: String) {
     }
 
     println!("cargo:rerun-if-env-changed=WINDRES");
-    println!("cargo:rerun-if-changed=build-config/rustid.rc");
     println!("cargo:rerun-if-changed=assets/rustid.ico");
     println!("cargo:rerun-if-changed=assets/windows/rustid_x86.ico");
     println!("cargo:rerun-if-changed=assets/windows/rustid_x64.ico");

@@ -11,6 +11,5 @@ pub mod macos;
 #[cfg(any(target_os = "haiku", test))]
 pub mod haiku;
 
-
 #[cfg(all(target_os = "linux", feature = "gui"))]
 pub mod linux;

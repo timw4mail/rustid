@@ -8,7 +8,7 @@ A native, standalone Classic Macintosh port of **rustid** targeting Apple Macint
 
 Unlike modern platforms where `rustid` is compiled directly from Rust, the Classic Macintosh operating system has no LLVM or native `rustc` backend targeting the classic Macintosh Toolbox, 68k `CODE` resources, or PowerPC Code Fragment Manager (CFM) PEF binaries.
 
-To bring `rustid`'s CPU and hardware identification capabilities to vintage Macintosh hardware, this port is implemented as a clean, standalone C application located in [`ports/classic_mac/`](file:///home/tim/code/rustid/ports/classic_mac/). It provides:
+To bring `rustid`'s CPU and hardware identification capabilities to vintage Macintosh hardware, this port is implemented as a clean, standalone C application located in [`ports/classic_mac/`](file:///ports/classic_mac/). It provides:
 
 - **100% Native Macintosh Toolbox GUI**: Window Manager, Menu Manager, TextEdit with multi-color runs, Dialog Manager, and Scrap Manager (clipboard) support.
 - **Dual-Architecture Support**: Built for both **Motorola 680x0** (68000 through 68060) and **PowerPC** (601 through G4).
@@ -63,16 +63,16 @@ build-config/classic_mac/
 
 ### Key Components
 
-- **Application Controller ([`main.c`](file:///home/tim/code/rustid/ports/classic_mac/main.c))**: Manages the application lifecycle, view mode transitions, refresh commands, and event routing.
-- **Common Subsystems ([`common/`](file:///home/tim/code/rustid/ports/classic_mac/common/))**:
+- **Application Controller ([`main.c`](file:///ports/classic_mac/main.c))**: Manages the application lifecycle, view mode transitions, refresh commands, and event routing.
+- **Common Subsystems ([`common/`](file:///ports/classic_mac/common/))**:
   - `cpu.c / .h`: Coordinates machine type discovery, bus/clock speed calculation, OS version formatting, and architecture dispatch.
   - `display.c / .h`: Report text generation and color text run generation matching the modern `rustid` output formats.
   - `gestalt.c / .h`: Safe Gestalt inline assembly for 68k, CFM Gestalt for PPC/Carbon, and `SysEnvirons` fallbacks.
 - **Hardware Architecture Probers**:
-  - [`m68k/cpu.c / .h`](file:///home/tim/code/rustid/ports/classic_mac/m68k/cpu.c): 68000 through 68060 CPU, FPU (68881/68882/integrated), and MMU (AMU/68851/integrated) discrimination.
-  - [`ppc/cpu.c / .h`](file:///home/tim/code/rustid/ports/classic_mac/ppc/cpu.c): PowerPC 601 through G5 detection, codenames, process nodes, and model-assisted tuning.
-- **Mac Models & Name Registry ([`models/`](file:///home/tim/code/rustid/ports/classic_mac/models/))**: Comprehensive catalog of Macintosh hardware models and dynamic Name Registry device-tree traversal for Open Firmware identifiers (e.g., `PowerMac1,1`).
-- **GUI Bridge ([`gui/`](file:///home/tim/code/rustid/ports/classic_mac/gui/))**:
+  - [`m68k/cpu.c / .h`](file:///ports/classic_mac/m68k/cpu.c): 68000 through 68060 CPU, FPU (68881/68882/integrated), and MMU (AMU/68851/integrated) discrimination.
+  - [`ppc/cpu.c / .h`](file:///ports/classic_mac/ppc/cpu.c): PowerPC 601 through G5 detection, codenames, process nodes, and model-assisted tuning.
+- **Mac Models & Name Registry ([`models/`](file:///ports/classic_mac/models/))**: Comprehensive catalog of Macintosh hardware models and dynamic Name Registry device-tree traversal for Open Firmware identifiers (e.g., `PowerMac1,1`).
+- **GUI Bridge ([`gui/`](file:///ports/classic_mac/gui/))**:
   - `window.c`: Window initialization, compact Mac screen clamping, safe `NewCWindow` / `NewWindow`, `TEStyleNew` / `TENew`, and event loop.
   - `menu.c`: Menu setup, command routing, and dynamic item disabling.
   - `dialogs.c`: Scrap Manager clipboard export, Standard File dialogs, and Alerts.
@@ -145,7 +145,7 @@ make -C build-config/classic_mac test
 
 ## Build Output & Artifacts
 
-All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/rustid/target/classic_mac/):
+All built distributable binaries are output to [`target/dist/classic_mac/`](file:///target/dist/classic_mac/) (intermediate object/PEF files are staged in `target/classic_mac/`):
 
 | File | Type | Target Hardware | Description |
 |:-----|:-----|:----------------|:------------|
@@ -153,7 +153,6 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 | `rustid.dsk` | 800 KB HFS Disk | 68k & PowerPC | Raw floppy disk image containing the `rustid` Universal Fat Binary. Ready to mount in emulators or write to floppy. |
 | `Rustid.app` | Application Bundle | PowerPC (G3/G4/G5) | **2. Native Mac OS X Application Bundle**. Standard Aqua Carbon application bundle for Mac OS X (10.0 Cheetah through 10.5 Leopard). |
 | `Rustid-osx-ppc.zip` | Zip Archive | PowerPC (G3/G4/G5) | Compressed distribution archive of `Rustid.app` for Mac OS X PowerPC systems. |
-| `rustid.icns` | Apple ICNS | Mac OS X | Application icon containing native ARGB and PNG icon assets. |
 
 ---
 
@@ -161,16 +160,16 @@ All built binaries are output to [`target/classic_mac/`](file:///home/tim/code/r
 
 ### 1. On Mac OS X (PowerPC 10.0 Cheetah – 10.5 Leopard)
 
-- Extract **`target/classic_mac/Rustid-osx-ppc.zip`** or copy **`target/classic_mac/Rustid.app`** directly to `/Applications`.
+- Extract **`target/dist/classic_mac/Rustid-osx-ppc.zip`** or copy **`target/dist/classic_mac/Rustid.app`** directly to `/Applications`.
 - Double-click `Rustid.app` to launch with native Aqua styling, Carbon window controls, and the high-resolution application icon.
 
 ### 2. In Classic Emulators
 
 - **SheepShaver** (PowerPC emulation):
-  - Add `target/classic_mac/rustid.dsk` to your SheepShaver volumes list, or copy `rustid.bin` via a shared folder and decode with StuffIt Expander.
+  - Add `target/dist/classic_mac/rustid.dsk` to your SheepShaver volumes list, or copy `rustid.bin` via a shared folder and decode with StuffIt Expander.
   - Boot into System 7.5.3 – Mac OS 9.0.4.
 - **Basilisk II** (68k emulation):
-  - Add `target/classic_mac/rustid.dsk` to the volumes list in the Basilisk II GUI / `~/.basilisk_ii_prefs`.
+  - Add `target/dist/classic_mac/rustid.dsk` to the volumes list in the Basilisk II GUI / `~/.basilisk_ii_prefs`.
   - Boot into System 7 or Mac OS 8. The `rustid` disk will appear on the desktop.
 - **Infinite Mac** (Web-based emulation):
   - Drag and drop `rustid.bin` or `rustid.dsk` directly into an [Infinite Mac](https://infinitemac.org) browser window.
@@ -182,7 +181,7 @@ To copy `rustid` to physical Macintosh hardware:
 - **Floppy Disks**:
   Write the `.dsk` image to an 800 KB double-density disk using a USB floppy drive or Floppy Emu:
   ```bash
-  dd if=target/classic_mac/rustid.dsk of=/dev/sdX bs=84k status=progress
+  dd if=target/dist/classic_mac/rustid.dsk of=/dev/sdX bs=84k status=progress
   ```
 - **SCSI Solid-State Drives (BlueSCSI, SCSI2SD, RaSCSI / PiSCSI)**:
   Mount the SD card on your host and copy `rustid.bin` onto the drive, or mount `rustid.dsk` as an auxiliary SCSI LUN/drive image.

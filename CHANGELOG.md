@@ -2,23 +2,20 @@
 
 For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 
-## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), AMD Athlon & cache improvements, and expanded CPUID test fixtures
+## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), PowerPC detection, and AMD Athlon improvements
 
 ### Added
-- **Classic Macintosh Port (68k & PowerPC)**: Added standalone C-based Classic Macintosh GUI application (`ports/classic_mac/*`, `build-config/classic_mac/*`) supporting System 6.0.8 through Mac OS 9.2.2 (as well as Mac OS X Carbon/Aqua) on Motorola 680x0 (68000–68060) and PowerPC (601–G5), featuring Gestalt hardware probing, resizable and scrollable windows, styled text rendering, clipboard copy, and universal fat binary packaging
-- **PowerPC Model & Microarchitecture Detection**: Added PowerPC 7410 (Nitro) PVR `0x800C` recognition and "Vger" codename designation for PowerPC 7450 in the Rust library (`src/ppc/micro_arch.rs`), alongside comprehensive vintage Mac PowerPC CPU and machine model tables in the Classic Mac engine (`ports/classic_mac/classic_mac_engine.c`)
-- **AMD Athlon 64 X2 6400+ CPUID Dump & Test Suite**: Added CPUID dump fixture and integration test suite covering signature, topology, per-core L1/L2 cache sizing & associativity, x86_64-v1 feature class, 3DNow!, and K8 Windsor core detection (`tests/cpuid/dump/Amd_Athlon(tm)_64_X2_6400+.txt`, `tests/cpuid_dump_test.rs`)
-- **Mobile AMD Athlon XP-M 1700+ CPUID Dump & Test Suite**: Added mobile Athlon XP-M CPUID dump fixture and integration test suite covering signature, topology, per-core split L1/L2 cache sizing & associativity, and K7 Thoroughbred core detection (`tests/cpuid/dump/Amd_Athlon(tm)_XP-M_1700+.txt`, `tests/cpuid_dump_test.rs`)
-- **Intel Core i7-2675QM CPUID Dump**: Added 2011 MacBook Pro Sandy Bridge CPUID dump test fixture (`tests/cpuid/dump/Intel_Core_i7_2675QM`)
+- **Classic Macintosh Port (68k & PowerPC)**: Added standalone Classic Macintosh GUI application supporting System 6.0.8 through Mac OS 9.2.2 as well as Mac OS X (Aqua/Carbon) across Motorola 68000–68060 and PowerPC (601–G5), featuring hardware probing (CPU, FPU, MMU, bus/clock speeds, Mac model), resizable and scrollable windows, styled text rendering, clipboard copy, and universal fat binary packaging (`ports/classic_mac/*`)
+- **Mac OS X Application Bundle**: Added native PowerPC Mac OS X application bundle (`Rustid.app`) featuring native application icons (`.icns`), Aqua menu integration, Command-Q shortcut, and Dock quit handling (`build-config/classic_mac/*`)
+- **PowerPC Model & Microarchitecture Detection**: Added PowerPC 7410 (Nitro) PVR `0x800C` recognition and "Vger" codename designation for PowerPC 7450, alongside comprehensive vintage Mac machine model identification (`src/ppc/micro_arch.rs`, `ports/classic_mac/models/models.c`)
 
 ### Changed
-- **AMD L2 Cache Share-Count Fallback**: Adjusted default L2 cache share count for AMD processors that omit explicit CPUID cache sharing information, ensuring dual-core K8 processors report dedicated per-core L2 caches (`src/common/cache.rs`)
-- **Ports Directory Organization**: Reorganized non-Rust platform builds into dedicated `ports/` directory (`ports/classic_mac/*`, `build-config/classic_mac/Makefile`)
+- **AMD L2 Cache Share-Count Fallback**: Adjusted default L2 cache share count for AMD processors omitting explicit CPUID cache sharing data, ensuring dual-core K8 processors report dedicated per-core L2 caches (`src/common/cache.rs`)
 - **Feature Flag HTT Display**: Standardized Hyper-Threading / multi-threading feature flag label to `"HTT"` in feature listings (`src/x86/features.rs`)
 
 ### Fixed
 - **AMD Mobile Athlon vs. Geode NX Disambiguation**: Fixed false-positive detection where mobile Athlon XP-M processors sharing signature Family 6, Model 8, Stepping 1 with the AMD Geode NX were misidentified as Geode NX (`src/x86/cpu.rs`, `src/x86/vendor/amd.rs`)
-- **AppImage Build Script Paths**: Fixed AppImage packaging in `build-config/build-appimage.sh` by ensuring directory references resolve to absolute paths rather than relative paths
+- **Windows 32 bit build**: Fixed errors with CI and local build caused by mismatch of SSE2 between the prebuilt standard library and the binary build config
 
 ## [2.2.0] — Linux GTK & Haiku GUI applications, Intel Wildcat Lake support, and cross-platform application icons
 

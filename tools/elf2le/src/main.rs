@@ -343,5 +343,52 @@ fn main() -> Result<()> {
         file_buf.len()
     );
 
+    if let Some(bound_exe_path) = args.get(3).map(String::as_str) {
+        let stub_path = args
+            .get(4)
+            .map(String::as_str)
+            .unwrap_or("tools/dos32a/dos32a.exe");
+        let mut stub_file = File::open(stub_path)?;
+        let mut raw_stub = Vec::new();
+        stub_file.read_to_end(&mut raw_stub)?;
+
+        if raw_stub.len() >= 0x60 && &raw_stub[0..2] == b"MZ" {
+            let mut stub = Vec::with_capacity(raw_stub.len() + 32);
+            stub.extend_from_slice(&raw_stub[..0x20]);
+            stub.extend_from_slice(&[0u8; 32]);
+            stub.extend_from_slice(&raw_stub[0x20..]);
+
+            let stub_len = stub.len() as u32;
+            let extra_bytes = (stub_len % 512) as u16;
+            let pages = stub_len.div_ceil(512) as u16;
+            let header_paragraphs = u16_le(&raw_stub, 8) + 2;
+
+            stub[2..4].copy_from_slice(&extra_bytes.to_le_bytes());
+            stub[4..6].copy_from_slice(&pages.to_le_bytes());
+            stub[8..10].copy_from_slice(&header_paragraphs.to_le_bytes());
+            stub[0x18..0x1A].copy_from_slice(&0x0040u16.to_le_bytes());
+            stub[0x3C..0x40].copy_from_slice(&stub_len.to_le_bytes());
+            // Suppress DOS/32A startup banner (matches sb /b behavior)
+            if stub.len() > 0x94 && &stub[0x80..0x84] == b"ID32" {
+                stub[0x94] &= !0x09;
+            }
+
+            let mut bound_buf = file_buf.clone();
+            let bound_data_offset = data_pages_offset as u32 + stub_len;
+            bound_buf[0x80..0x84].copy_from_slice(&bound_data_offset.to_le_bytes());
+
+            let mut bound_out = File::create(bound_exe_path)?;
+            bound_out.write_all(&stub)?;
+            bound_out.write_all(&bound_buf)?;
+            println!(
+                "elf2le: bound {} + {} -> {} ({} bytes)",
+                stub_path,
+                output_path,
+                bound_exe_path,
+                stub.len() + bound_buf.len()
+            );
+        }
+    }
+
     Ok(())
 }

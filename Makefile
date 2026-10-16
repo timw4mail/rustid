@@ -2,10 +2,22 @@
 ifeq ($(OS),Windows_NT)
 ARCH ?= $(PROCESSOR_ARCHITECTURE)
 NUM_CPUS ?= $(NUMBER_OF_PROCESSORS)
+DIST_OS := windows
+EXE_EXT := .exe
 else
 ARCH ?= $(shell uname -m)
 OS := $(shell uname -s)
 NUM_CPUS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
+ifeq ($(OS),Darwin)
+DIST_OS := mac
+EXE_EXT :=
+else ifeq ($(OS),Haiku)
+DIST_OS := haiku
+EXE_EXT :=
+else
+DIST_OS := linux
+EXE_EXT :=
+endif
 endif
 
 # Set base commands based on architecture
@@ -20,7 +32,7 @@ BASE_RUN := cargo run
 BASE_CHECK := cargo check --all-targets
 endif
 
-.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-haiku-gui check-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-haiku-gui build-linux-gui build-appimage appimage build-arm64 build-ppc build-mac build-mac-arm build-mac-gui build-classic-mac build-486 build-efi-64 build-efi-32 build-efi build-486-musl clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86 check-ci
+.PHONY: default check check-efi-64 check-efi-32 check-efi check-dos-real check-dos32a check-dos check-486 check-arm64 check-ppc check-ppc64 check-windows-gui-x64 check-windows-gui-32 check-windows-gui-arm64 check-windows-gui check-haiku-gui check-linux-gui check-gui check-all check-riscv check-android lint fix fmt quality build build-debug build-release _cargo_cross _build-dos-tools build-dos-real _build-dos32a-tools _build-dos32a-rustid build-dos32a build-dos build-windows-gui-x64 build-windows-gui-32 build-windows-gui-arm64 build-windows-gui build-haiku-gui build-linux-gui build-appimage appimage build-arm64 build-ppc build-mac build-mac-arm build-mac-gui build-classic-mac test-classic-mac build-486 build-486-musl build-efi-64 build-efi-32 build-efi clean clean-files run from-file run-dos test-dos run-efi-64 run-efi-32 test coverage test-all test-arm test-x86 check-ci
 
 # Lists the available actions
 default:
@@ -30,10 +42,10 @@ default:
 
 ifeq ($(OS),Windows_NT)
 _cargo_cross:
-	@where cargo-cross >/dev/null 2>&1 || cargo install cargo-cross
+	@where cross >/dev/null 2>&1 || cargo install cross
 else
 _cargo_cross:
-	@if ! command -v cargo-cross >/dev/null 2>&1; then cargo install cargo-cross; fi
+	@if ! command -v cross >/dev/null 2>&1; then cargo install cross; fi
 endif
 
 # Check code validity and style
@@ -55,7 +67,7 @@ check-efi: check-efi-64 check-efi-32
 
 # Compile check for DOS (real-mode EXE)
 check-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x -C panic=immediate-abort -Z unstable-options" cargo +nightly check -Zjson-target-spec -Z build-std=core,alloc --target build-config/i486-dos.json --release --features dos-build --bin dos
 
 # Compile check for DOS/32A (protected-mode LE)
 check-dos32a: _build-dos32a-tools
@@ -74,25 +86,25 @@ check-android:
 	@if ! rustup target list --installed | grep -q aarch64-linux-android; then rustup target add aarch64-linux-android; fi
 	cargo check --target aarch64-linux-android
 
-# Compile check for 32-bit Linux 486
+# Compile check for 32-bit Linux 486 (musl)
 check-486:
 	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
-	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
+	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-unknown-linux-musl.json --release
 
 # Compile check for linux arm64
 check-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross check --target aarch64-unknown-linux-gnu
+	cross check --target aarch64-unknown-linux-gnu
 
 # Compile check for linux powerpc
 check-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
-	cargo cross +nightly check --target powerpc-unknown-linux-gnu -Z build-std
+	cross +nightly check --target powerpc-unknown-linux-gnu -Z build-std
 
 # Compile check for linux powerpc64
 check-ppc64: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc64-unknown-linux-gnu; then rustup target add powerpc64-unknown-linux-gnu; fi
-	cargo cross +nightly check --target powerpc64-unknown-linux-gnu -Z build-std
+	cross +nightly check --target powerpc64-unknown-linux-gnu -Z build-std
 
 # Compile check for Windows GUI (64-bit x86 GNU)
 check-windows-gui-x64:
@@ -101,8 +113,11 @@ check-windows-gui-x64:
 
 # Compile check for Windows GUI (32-bit x86 GNU)
 check-windows-gui-32:
-	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
-	cargo check --target i686-pc-windows-gnu --features gui --bin gui
+ifeq ($(OS),Windows_NT)
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1 check
+else
+	bash build-config/build-windows-gui-32.sh check
+endif
 
 # Compile check for Windows GUI (ARM64 GNU)
 check-windows-gui-arm64:
@@ -147,14 +162,20 @@ quality: fmt check lint
 # Build the app
 build:
 	cargo build
+	@mkdir -p target/dist/$(DIST_OS)
+	@cp target/debug/rustid$(EXE_EXT) target/dist/$(DIST_OS)/rustid$(EXE_EXT) 2>/dev/null || true
 
 # Build debug app
 build-debug:
-	cargo build --features debug --bin debug
+	cargo build --features debug --bin rustid
+	@mkdir -p target/dist/$(DIST_OS)
+	@cp target/debug/rustid$(EXE_EXT) target/dist/$(DIST_OS)/rustid-debug$(EXE_EXT) 2>/dev/null || true
 
 # Do an optimized, release build for the current platform
 build-release:
 	cargo build --release
+	@mkdir -p target/dist/$(DIST_OS)
+	@cp target/release/rustid$(EXE_EXT) target/dist/$(DIST_OS)/rustid$(EXE_EXT) 2>/dev/null || true
 
 _build-dos-tools:
 	# Fetch required tools (if they aren't already installed)
@@ -162,8 +183,9 @@ _build-dos-tools:
 
 # Build for DOS (EXE format)
 build-dos-real: _build-dos-tools
-	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos.json --release --features dos-build --bin dos
-	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos rust86.exe
+	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-exe.x -C panic=immediate-abort -Z unstable-options" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc --target build-config/i486-dos.json --release --features dos-build --bin dos
+	@mkdir -p target/dist/dos
+	@cargo run --manifest-path tools/make_exe/Cargo.toml --quiet -- ./target/i486-dos/release/dos target/dist/dos/rust86.exe
 	@cargo test --test dos_binary_size_test --features dos-build
 
 _build-dos32a-tools:
@@ -172,16 +194,19 @@ _build-dos32a-tools:
 
 _build-dos32a-rustid: _build-dos32a-tools
 	@RUSTFLAGS="-C link-arg=-Tbuild-config/link-dos32a.x -C link-arg=--emit-relocs -C strip=none" cargo +nightly build -Zjson-target-spec -Z build-std=core,alloc,panic_abort --target build-config/i486-dos32a.json --features="dos32a-build" --bin dos --release
-	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos rustid.le
+	@mkdir -p target/dos target/dist/dos
+	@rm -f target/dos/rustid.le target/dos/rustid.exe target/dos/RUSTID.EXE
+	@cp tools/dos32a/dos32a.exe tools/dos32a/sb.exe target/dos/
+	@cargo run --manifest-path tools/elf2le/Cargo.toml --quiet -- ./target/i486-dos32a/release/dos target/dos/rustid.le target/dist/dos/rustid.exe
 	@if command -v dosbox-x >/dev/null 2>&1; then \
-		dosbox-x -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; \
+		(cd target/dos && dosbox-x -conf ../../tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1) || true; \
 	elif [ -f "C:/DOSBox-X/dosbox-x.exe" ]; then \
-		"C:/DOSBox-X/dosbox-x.exe" -conf ./tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "COPY tools\dos32a\dos32a.exe ." -c "tools\dos32a\sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1 || true; \
+		(cd target/dos && "C:/DOSBox-X/dosbox-x.exe" -conf ../../tools/dosbox-x.conf -fastlaunch -silent -exit -c "MOUNT C ." -c "C:" -c "sb.exe /b /o /bnrustid.exe rustid.le" >/dev/null 2>&1) || true; \
 	fi
-	@if [ -f RUSTID.EXE ]; then mv RUSTID.EXE rustid.exe; fi
+	@if [ -f target/dos/RUSTID.EXE ]; then mv target/dos/RUSTID.EXE target/dist/dos/rustid.exe; elif [ -f target/dos/rustid.exe ]; then mv target/dos/rustid.exe target/dist/dos/rustid.exe; fi
 
 # Build for DOS/32A (LE format bound executable)
-build-dos32a: clean-files _build-dos32a-tools _build-dos32a-rustid
+build-dos32a: _build-dos32a-tools _build-dos32a-rustid
 
 # Build all dos binaries
 build-dos: build-dos32a build-dos-real
@@ -189,17 +214,17 @@ build-dos: build-dos32a build-dos-real
 # Build 64-bit Windows GUI using MinGW/GNU target (cross-compilable from Linux)
 build-windows-gui-x64: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-pc-windows-gnu; then rustup target add x86_64-pc-windows-gnu; fi
-	cargo cross build --target x86_64-pc-windows-gnu --features gui --bin gui --release
+	cross build --target x86_64-pc-windows-gnu --features gui --bin gui --release
 ifeq ($(OS),Windows_NT)
-	@if not exist "target\dist" mkdir "target\dist"
-	@if exist "target\x86_64-pc-windows-gnu\release\gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\gui.exe" "target\dist\rustid_x86_64.exe" >/dev/null 2>&1
+	@if not exist "target\dist\windows" mkdir "target\dist\windows"
+	@if exist "target\x86_64-pc-windows-gnu\release\gui.exe" copy /Y "target\x86_64-pc-windows-gnu\release\gui.exe" "target\dist\windows\rustid_x86_64.exe" >/dev/null 2>&1
 else
-	@mkdir -p target/dist
-	@cp target/x86_64-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_64.exe 2>/dev/null || true
+	@mkdir -p target/dist/windows
+	@cp target/x86_64-pc-windows-gnu/release/gui.exe target/dist/windows/rustid_x86_64.exe 2>/dev/null || true
 endif
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
-build-windows-gui-32: _cargo_cross
+build-windows-gui-32:
 ifeq ($(OS),Windows_NT)
 	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
 else
@@ -220,21 +245,21 @@ build-windows-gui: build-windows-gui-32 build-windows-gui-x64 build-windows-gui-
 # Build Haiku GUI application
 build-haiku-gui:
 	cargo build --features gui --bin gui --release
-	@mkdir -p target/dist
-	@cp target/release/gui target/dist/rustid_haiku 2>/dev/null || true
+	@mkdir -p target/dist/haiku
+	@cp target/release/gui target/dist/haiku/rustid_haiku 2>/dev/null || true
 	@if command -v rc >/dev/null 2>&1 && command -v xres >/dev/null 2>&1; then \
-		rc -o target/dist/rustid.rsrc assets/haiku/rustid.rdef && \
-		xres -o target/dist/rustid_haiku target/dist/rustid.rsrc && \
-		xres -o target/release/gui target/dist/rustid.rsrc 2>/dev/null || true; \
-		(command -v mimeset >/dev/null 2>&1 && mimeset -f target/dist/rustid_haiku 2>/dev/null || true); \
+		rc -o target/release/rustid.rsrc assets/haiku/rustid.rdef && \
+		xres -o target/dist/haiku/rustid_haiku target/release/rustid.rsrc && \
+		xres -o target/release/gui target/release/rustid.rsrc 2>/dev/null || true; \
+		(command -v mimeset >/dev/null 2>&1 && mimeset -f target/dist/haiku/rustid_haiku 2>/dev/null || true); \
 		echo "Attached Haiku icon and resources to rustid_haiku"; \
 	fi
 
 # Build Linux GUI application
 build-linux-gui:
 	cargo build --features gui --bin gui --release
-	@mkdir -p target/dist
-	@cp target/release/gui target/dist/rustid-gui 2>/dev/null || true
+	@mkdir -p target/dist/linux
+	@cp target/release/gui target/dist/linux/rustid-gui 2>/dev/null || true
 
 # Build Linux AppImage application
 build-appimage:
@@ -245,77 +270,75 @@ appimage: build-appimage
 # Build for linux arm64
 build-arm64: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cargo cross build --target aarch64-unknown-linux-gnu
+	cross build --target aarch64-unknown-linux-gnu --release
+	@mkdir -p target/dist/linux
+	@cp target/aarch64-unknown-linux-gnu/release/rustid target/dist/linux/rustid_arm64 2>/dev/null || true
 
 # Build for linux powerpc
 build-ppc: _cargo_cross
 	@if ! rustup target list --installed | grep -q powerpc-unknown-linux-gnu; then rustup target add powerpc-unknown-linux-gnu; fi
-	cargo cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std
+	cross +nightly build --target powerpc-unknown-linux-gnu -Z build-std --release
+	@mkdir -p target/dist/linux
+	@cp target/powerpc-unknown-linux-gnu/release/rustid target/dist/linux/rustid_ppc 2>/dev/null || true
 
 # Build for x86 macs
 build-mac: _cargo_cross
 	@if ! rustup target list --installed | grep -q x86_64-apple-darwin; then rustup target add x86_64-apple-darwin; fi
-	cargo cross build --target x86_64-apple-darwin --release
+	cross build --target x86_64-apple-darwin --release
+	@mkdir -p target/dist/mac
+	@cp target/x86_64-apple-darwin/release/rustid target/dist/mac/rustid_x86_64 2>/dev/null || true
 
 # Build for arm Macs
 build-mac-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-apple-darwin; then rustup target add aarch64-apple-darwin; fi
-	cargo cross build --target aarch64-apple-darwin --release
+	cross build --target aarch64-apple-darwin --release
+	@mkdir -p target/dist/mac
+	@cp target/aarch64-apple-darwin/release/rustid target/dist/mac/rustid_arm64 2>/dev/null || true
 
-<<<<<<< HEAD
 # Build the macOS GUI as a universal binary packaged into Rustid.app (rustid-macos.zip)
 build-mac-gui:
 	bash build-config/build-macos.sh
-=======
+
 # Build for Classic Mac OS (68k and PowerPC) via Retro68
 build-classic-mac:
 	@export PATH="$${RETRO68_PREFIX:-$(HOME)/code/Retro68-build/toolchain}/bin:$$PATH" && $(MAKE) -C build-config/classic_mac
->>>>>>> origin/develop
 
 # Run tests for Classic Mac port (uses host gcc)
 test-classic-mac:
 	$(MAKE) -C build-config/classic_mac test
 
-# Build for 32-bit Linux (should work on 486-class cpus)
-build-486:
-	@if ! rustup component list --installed --toolchain nightly | grep -q rust-src; then rustup component add rust-src --toolchain nightly; fi
-	cargo +nightly build -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-linux.json --release
+# Build for 32-bit Linux musl (works on 486-class cpus)
+build-486: _cargo_cross
+	bash build-config/build-486-musl.sh
+
+# Alias for build-486
+build-486-musl: build-486
 
 # Build 64-bit x86 EFI application
 build-efi-64:
 	@if ! rustup target list --installed | grep -q x86_64-unknown-uefi; then rustup target add x86_64-unknown-uefi; fi
 	cargo build --target x86_64-unknown-uefi --features efi-build --bin efi --release
-	@mkdir -p target/efi-disk/EFI/BOOT
-	@cp target/x86_64-unknown-uefi/release/efi.efi target/efi-disk/EFI/BOOT/BOOTX64.EFI
+	@mkdir -p target/dist/efi/EFI/BOOT
+	@cp target/x86_64-unknown-uefi/release/efi.efi target/dist/efi/EFI/BOOT/BOOTX64.EFI
 
 # Build 32-bit x86 EFI application
 build-efi-32:
 	@if ! rustup target list --installed | grep -q i686-unknown-uefi; then rustup target add i686-unknown-uefi; fi
 	cargo build --target i686-unknown-uefi --features efi-build --bin efi --release
-	@mkdir -p target/efi-disk/EFI/BOOT
-	@cp target/i686-unknown-uefi/release/efi.efi target/efi-disk/EFI/BOOT/BOOTIA32.EFI
+	@mkdir -p target/dist/efi/EFI/BOOT
+	@cp target/i686-unknown-uefi/release/efi.efi target/dist/efi/EFI/BOOT/BOOTIA32.EFI
 
 # Build both 32-bit and 64-bit EFI binaries
 build-efi: build-efi-64 build-efi-32
-
-# Build for 32-bit Linux musl (works on 486-class cpus)
-build-486-musl: _cargo_cross
-	bash build-config/build-486-musl.sh
 
 # Remove build files
 clean: clean-files
 	@cargo clean
 
-# Remove various artifacts in root
+# Remove various stray artifacts in root and target/dist
 clean-files:
-	@rm -f *.com
-	@rm -f *.exe
-	@rm -f *.EXE
-	@rm -f *.le
-	@rm -f *.lx
-	@rm -f *.LX
-	@rm -f *.bin
-	@rm -f *.log
+	@rm -f *.com *.exe *.EXE *.le *.lx *.LX *.bin *.log
+	@rm -rf target/dist target/dos
 
 # Build and run the app
 run:
@@ -329,26 +352,28 @@ ifeq ($(OS),Windows_NT)
 
 # Run the dos build in DOSBox-X
 run-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" .  -fastlaunch -conf ./tools/dosbox-x.conf rustid.exe
+	cd target/dist/dos && "C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -conf ../../../tools/dosbox-x.conf rustid.exe
 
 # Run the dos build in DOSBox-x, and return the output to a file
 test-dos: build-dos
-	"C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ./tools/dosbox-x.conf -time-limit 2 rustid.exe
+	cd target/dist/dos && "C:\DOSBox-X\dosbox-x.exe" . -fastlaunch -console -log-con -conf ../../../tools/dosbox-x.conf -time-limit 2 rustid.exe
 else
 # Run the dos build in DOSBox-X
 run-dos: build-dos
-	dosbox-x . -fastlaunch rustid.exe
+	cd target/dist/dos && dosbox-x . -fastlaunch rustid.exe
 
 # Run the dos build in DOSBox-x, and return the output to a file
 test-dos: build-dos
-	dosbox-x . -fastlaunch -conf ./tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
+	cd target/dist/dos && dosbox-x . -fastlaunch -conf ../../../tools/dosbox-x.conf -time-limit 2 -log-con rustid.exe
 
 # Run 64-bit EFI build in QEMU
 run-efi-64: build-efi-64
+	@mkdir -p target/efi-disk && cp -r target/dist/efi/EFI target/efi-disk/
 	@CODE=$$(find /usr/share /usr/lib -name "*OVMF_CODE*.fd" -o -name "*ovmf_code*.fd" 2>/dev/null | grep -v 32 | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); VARS=$$(find /usr/share /usr/lib -name "*OVMF_VARS*.fd" -o -name "*ovmf_vars*.fd" 2>/dev/null | grep -v 32 | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); SINGLE=$$(find /usr/share /usr/lib -name "OVMF.fd" -o -name "ovmf.fd" 2>/dev/null | head -n1); if [ -n "$$CODE" ] && [ -n "$$VARS" ]; then cp "$$VARS" target/OVMF64_VARS.fd && qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file="$$CODE" -drive if=pflash,format=raw,file=target/OVMF64_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$$SINGLE" ]; then qemu-system-x86_64 -bios "$$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF firmware not found"; exit 1; fi
 
 # Run 32-bit EFI build in QEMU
 run-efi-32: build-efi-32
+	@mkdir -p target/efi-disk && cp -r target/dist/efi/EFI target/efi-disk/
 	@CODE=$$(find /usr/share /usr/lib -name "*OVMF32_CODE*.fd" -o -name "*ovmf32_code*.fd" 2>/dev/null | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); VARS=$$(find /usr/share /usr/lib -name "*OVMF32_VARS*.fd" -o -name "*ovmf32_vars*.fd" 2>/dev/null | grep -v -E "secboot|snakeoil|\.ms\." | head -n1); SINGLE=$$(find /usr/share /usr/lib -name "*OVMF32.fd" -o -name "*ovmf32.fd" 2>/dev/null | head -n1); if [ -n "$$CODE" ] && [ -n "$$VARS" ]; then cp "$$VARS" target/OVMF32_VARS.fd && qemu-system-i386 -drive if=pflash,format=raw,readonly=on,file="$$CODE" -drive if=pflash,format=raw,file=target/OVMF32_VARS.fd -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; elif [ -n "$$SINGLE" ]; then qemu-system-i386 -bios "$$SINGLE" -drive file=fat:rw:target/efi-disk,format=raw -nographic -net none -no-reboot; else echo "OVMF32 firmware not found. On Debian/Ubuntu, install with: sudo apt install ovmf-ia32"; exit 1; fi
 endif
 
@@ -367,7 +392,7 @@ ifeq ($(OS),Windows_NT)
 # Run Windows arm tests
 test-arm: _cargo_cross
 	@rustup target list --installed | findstr /c:"aarch64-pc-windows-msvc" >/dev/null || rustup target add aarch64-pc-windows-msvc
-	cargo cross test --target aarch64-pc-windows-gnu
+	cross test --target aarch64-pc-windows-gnu
 
 # Run tests for 32-bit x86
 test-x86:
@@ -377,10 +402,10 @@ else
 # Run linux aarch64 tests
 test-arm: _cargo_cross
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-musl; then rustup target add aarch64-unknown-linux-musl; fi
-	cargo cross test --target aarch64-unknown-linux-musl
+	cross test --target aarch64-unknown-linux-musl
 
 # Run tests for 32-bit x86 (musl target - no system dependencies)
 test-x86: _cargo_cross
 	@if ! rustup target list --installed | grep -q i686-unknown-linux-musl; then rustup target add i686-unknown-linux-musl; fi
-	cargo cross test --target i686-unknown-linux-musl
+	cross test --target i686-unknown-linux-musl
 endif
