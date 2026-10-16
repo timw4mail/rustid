@@ -91,6 +91,20 @@ bool classic_mac_has_styled_te(void) {
 #endif
 }
 
+bool classic_mac_has_apple_events(void) {
+#if TARGET_API_MAC_CARBON
+    return true;
+#elif defined(__APPLE__) || defined(__MACOS__) || defined(macintosh) || defined(__Retro68__)
+    long evnt_val = 0;
+    if (classic_mac_safe_gestalt('evnt', &evnt_val) && (evnt_val & 1) != 0) {
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
 #else
 
 bool classic_mac_is_gestalt_available(void) {
@@ -108,6 +122,10 @@ bool classic_mac_has_color_qd(void) {
 }
 
 bool classic_mac_has_styled_te(void) {
+    return false;
+}
+
+bool classic_mac_has_apple_events(void) {
     return false;
 }
 

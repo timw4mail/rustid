@@ -10,6 +10,20 @@ TEHandle g_te = 0;
 #if defined(__APPLE__) || defined(__MACOS__) || defined(TARGET_API_MAC_CARBON) || defined(macintosh) || defined(__Retro68__)
 ControlHandle g_scrollbar = 0;
 ControlActionUPP g_scroll_action_upp = 0;
+static AEEventHandlerUPP g_quit_upp = 0;
+static AEEventHandlerUPP g_open_app_upp = 0;
+
+static pascal OSErr HandleQuitAppleEvent(const AppleEvent *evt, AppleEvent *reply, int32_t refcon) {
+    (void)evt; (void)reply; (void)refcon;
+    if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXIT);
+    g_running = false;
+    return noErr;
+}
+
+static pascal OSErr HandleOpenAppAppleEvent(const AppleEvent *evt, AppleEvent *reply, int32_t refcon) {
+    (void)evt; (void)reply; (void)refcon;
+    return noErr;
+}
 #endif
 bool g_is_styled_te = false;
 bool g_running = false;
@@ -111,6 +125,7 @@ void UpdateScrollbar(void) {
             TEScroll(0, scrollDelta, g_te);
         }
     }
+    Draw1Control(g_scrollbar);
 }
 
 void ResizeWindowContents(WindowPtr win) {
@@ -148,9 +163,12 @@ void ResizeWindowContents(WindowPtr win) {
         (*g_te)->destRect = teRect;
         // Keep destRect wide so word wrap is disabled and fixed-column layout is preserved
         (*g_te)->destRect.right = teRect.left + 4000;
+        (*g_te)->destRect.bottom = teRect.top + 32000;
         (*g_te)->crOnly = -1;
-        (*g_te)->lineHeight = 12;
-        (*g_te)->fontAscent = 9;
+        if (!g_is_styled_te) {
+            (*g_te)->lineHeight = 12;
+            (*g_te)->fontAscent = 9;
+        }
 
         OffsetRect(&(*g_te)->destRect, 0, -curVal * lineH);
         TECalText(g_te);
@@ -241,6 +259,7 @@ bool mac_gui_init(const char* title, short width, short height) {
 
     Rect destRect = teRect;
     destRect.right = teRect.left + 4000;
+    destRect.bottom = destRect.top + 32000;
 
     g_is_styled_te = classic_mac_has_styled_te();
     if (g_is_styled_te) {
@@ -252,8 +271,10 @@ bool mac_gui_init(const char* title, short width, short height) {
     }
     if (g_te) {
         (*g_te)->crOnly = -1;
-        (*g_te)->lineHeight = 12;
-        (*g_te)->fontAscent = 9;
+        if (!g_is_styled_te) {
+            (*g_te)->lineHeight = 12;
+            (*g_te)->fontAscent = 9;
+        }
     }
 
     Rect sRect;
@@ -265,6 +286,17 @@ bool mac_gui_init(const char* title, short width, short height) {
     g_scrollbar = NewControl(g_window, &sRect, (ConstStringPtr)"\p", true, 0, 0, 0, scrollBarProc, 0);
     g_scroll_action_upp = NewControlActionUPP(ScrollActionProc);
     UpdateScrollbar();
+
+    if (classic_mac_has_apple_events()) {
+        g_quit_upp = NewAEEventHandlerUPP(HandleQuitAppleEvent);
+        if (g_quit_upp) {
+            AEInstallEventHandler(kCoreEventClass, kAEQuitApplication, g_quit_upp, 0, false);
+        }
+        g_open_app_upp = NewAEEventHandlerUPP(HandleOpenAppAppleEvent);
+        if (g_open_app_upp) {
+            AEInstallEventHandler(kCoreEventClass, kAEOpenApplication, g_open_app_upp, 0, false);
+        }
+    }
 
     return true;
 #else
@@ -294,18 +326,16 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
     TextFace(normal);
     TextMode(srcOr);
 
-    // 1. Reset scroll offset back to top before replacing text
-    short scrollDelta = (*g_te)->viewRect.top - (*g_te)->destRect.top;
-    if (scrollDelta != 0) {
-        TEScroll(0, scrollDelta, g_te);
-    }
+    // 1. Reset destination rectangle to top of viewRect with full scrollable height
     (*g_te)->destRect.top = (*g_te)->viewRect.top;
-    (*g_te)->destRect.bottom = (*g_te)->viewRect.bottom;
+    (*g_te)->destRect.bottom = (*g_te)->destRect.top + 32000;
     (*g_te)->destRect.left = (*g_te)->viewRect.left;
     (*g_te)->destRect.right = (*g_te)->viewRect.left + 4000;
     (*g_te)->crOnly = -1;
-    (*g_te)->lineHeight = 12;
-    (*g_te)->fontAscent = 9;
+    if (!g_is_styled_te) {
+        (*g_te)->lineHeight = 12;
+        (*g_te)->fontAscent = 9;
+    }
 
     // 2. Classic Macintosh TextEdit only recognizes carriage returns ('\r' / 0x0D)
     // as line breaks. Line feeds ('\n' / 0x0A) are ignored or drawn as glyphs.
@@ -355,10 +385,15 @@ void mac_gui_set_text(const char* text, uint32_t length, const CTextRun* runs, u
 
     // 5. Finalize layout without word wrap
     TESetSelect(0, 0, g_te);
-    (*g_te)->crOnly = -1;
+    (*g_te)->destRect.top = (*g_te)->viewRect.top;
+    (*g_te)->destRect.bottom = (*g_te)->destRect.top + 32000;
+    (*g_te)->destRect.left = (*g_te)->viewRect.left;
     (*g_te)->destRect.right = (*g_te)->viewRect.left + 4000;
-    (*g_te)->lineHeight = 12;
-    (*g_te)->fontAscent = 9;
+    (*g_te)->crOnly = -1;
+    if (!g_is_styled_te) {
+        (*g_te)->lineHeight = 12;
+        (*g_te)->fontAscent = 9;
+    }
     TECalText(g_te);
 
     // 6. Reset scrollbar and update range
@@ -384,6 +419,11 @@ void mac_gui_run(void) {
     while (g_running) {
         if (WaitNextEvent(everyEvent, &event, 6, nil)) {
             switch (event.what) {
+                case kHighLevelEvent:
+                    if (classic_mac_has_apple_events()) {
+                        AEProcessAppleEvent(&event);
+                    }
+                    break;
                 case mouseDown: {
                     WindowPtr whichWindow;
                     short part = FindWindow(event.where, &whichWindow);
@@ -469,6 +509,7 @@ void mac_gui_run(void) {
                         }
                         case inGoAway:
                             if (TrackGoAway(whichWindow, event.where)) {
+                                if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXIT);
                                 g_running = false;
                             }
                             break;
@@ -479,6 +520,11 @@ void mac_gui_run(void) {
                 case autoKey: {
                     char key = event.message & charCodeMask;
                     if (event.modifiers & cmdKey) {
+                        if (key == 'q' || key == 'Q') {
+                            if (g_cmd_cb) g_cmd_cb(CMD_FILE_EXIT);
+                            g_running = false;
+                            break;
+                        }
                         HandleMenuCommand(MenuKey(key));
                     } else if (g_te) {
                         short lineH = 12;
@@ -524,6 +570,17 @@ void mac_gui_run(void) {
                 }
             }
         }
+    }
+
+    if (g_quit_upp) {
+        AERemoveEventHandler(kCoreEventClass, kAEQuitApplication, g_quit_upp, false);
+        DisposeAEEventHandlerUPP(g_quit_upp);
+        g_quit_upp = 0;
+    }
+    if (g_open_app_upp) {
+        AERemoveEventHandler(kCoreEventClass, kAEOpenApplication, g_open_app_upp, false);
+        DisposeAEEventHandlerUPP(g_open_app_upp);
+        g_open_app_upp = 0;
     }
 
     if (g_quit_cb) g_quit_cb();
