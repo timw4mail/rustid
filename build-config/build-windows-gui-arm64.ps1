@@ -56,11 +56,11 @@ cargo build `
     --release
 
 if ($LASTEXITCODE -eq 0) {
-    if (-not (Test-Path "target\dist")) {
-        New-Item -ItemType Directory -Path "target\dist" | Out-Null
+    if (-not (Test-Path "target\dist\windows")) {
+        New-Item -ItemType Directory -Path "target\dist\windows" -Force | Out-Null
     }
     if (Test-Path "target\aarch64-pc-windows-gnullvm\release\gui.exe") {
-        Copy-Item "target\aarch64-pc-windows-gnullvm\release\gui.exe" "target\dist\rustid_arm64.exe" -Force
+        Copy-Item "target\aarch64-pc-windows-gnullvm\release\gui.exe" "target\dist\windows\rustid_arm64.exe" -Force
     }
 }
 

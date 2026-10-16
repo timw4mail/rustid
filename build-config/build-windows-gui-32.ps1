@@ -70,11 +70,11 @@ cargo +nightly $Action `
     --release
 
 if ($LASTEXITCODE -eq 0 -and $Action -eq "build") {
-    if (-not (Test-Path "target\dist")) {
-        New-Item -ItemType Directory -Path "target\dist" | Out-Null
+    if (-not (Test-Path "target\dist\windows")) {
+        New-Item -ItemType Directory -Path "target\dist\windows" -Force | Out-Null
     }
     if (Test-Path "target\i586-pc-windows-gnu\release\gui.exe") {
-        Copy-Item "target\i586-pc-windows-gnu\release\gui.exe" "target\dist\rustid_x86_32.exe" -Force
+        Copy-Item "target\i586-pc-windows-gnu\release\gui.exe" "target\dist\windows\rustid_x86_32.exe" -Force
     }
 }
 

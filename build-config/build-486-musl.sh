@@ -45,11 +45,15 @@ export CC_i486_unknown_linux_musl="i486-linux-musl-gcc"
 export AR_i486_unknown_linux_musl="i486-linux-musl-ar"
 export RUSTFLAGS="-L $musl_sysroot_lib -L $gcc_lib"
 
-cargo +nightly build \
+ACTION="${1:-build}"
+
+cargo +nightly "$ACTION" \
     -Z json-target-spec \
     -Z build-std=std,panic_abort,core,alloc \
     --target build-config/i486-unknown-linux-musl.json \
     --release
 
-mkdir -p target/dist
-cp target/i486-unknown-linux-musl/release/rustid target/dist/rustid_486 2>/dev/null || true
+if [ "$ACTION" = "build" ]; then
+    mkdir -p target/dist/linux
+    cp target/i486-unknown-linux-musl/release/rustid target/dist/linux/rustid_486 2>/dev/null || true
+fi

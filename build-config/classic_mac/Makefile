@@ -38,20 +38,21 @@ R_SRC         = $(PORT_DIR)/rustid.r
 R_DEPS        = $(PORT_DIR)/rustid.r $(PORT_DIR)/rustid_icons.r
 
 OUT_DIR       ?= ../../target/classic_mac
+DIST_DIR      ?= ../../target/dist/classic_mac
 
-all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.zip
+all: directories $(DIST_DIR)/rustid.bin $(DIST_DIR)/Rustid.app $(DIST_DIR)/Rustid-osx-ppc.zip
 
-classic: directories $(OUT_DIR)/rustid.bin
-osx: directories $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.zip
+classic: directories $(DIST_DIR)/rustid.bin
+osx: directories $(DIST_DIR)/Rustid.app $(DIST_DIR)/Rustid-osx-ppc.zip
 
 directories:
-	@mkdir -p $(OUT_DIR)
+	@mkdir -p $(OUT_DIR) $(DIST_DIR)
 
 # Universal Fat Binary (System 6 through Mac OS 9: native 68k + native PowerPC)
-$(OUT_DIR)/rustid.bin: $(OUT_DIR)/rustid_68k $(OUT_DIR)/rustid_ppc.pef $(R_DEPS)
-	$(REZ) $(REZ_FLAGS) -DTARGET_FAT -o $(OUT_DIR)/rustid.bin $(R_SRC) \
+$(DIST_DIR)/rustid.bin: $(OUT_DIR)/rustid_68k $(OUT_DIR)/rustid_ppc.pef $(R_DEPS)
+	$(REZ) $(REZ_FLAGS) -DTARGET_FAT -o $(DIST_DIR)/rustid.bin $(R_SRC) \
 		--copy $(OUT_DIR)/rustid_68k --data $(OUT_DIR)/rustid_ppc.pef \
-		--cc $(OUT_DIR)/rustid.dsk -t APPL -c RsId
+		--cc $(DIST_DIR)/rustid.dsk -t APPL -c RsId
 
 # 68k Raw Executable
 $(OUT_DIR)/rustid_68k: $(SRC_C)
@@ -72,30 +73,30 @@ $(OUT_DIR)/rustid.icns: ../../assets/rustid.icns
 	cp ../../assets/rustid.icns $(OUT_DIR)/rustid.icns
 
 # Mac OS X Application Bundle (PowerPC G3/G4/G5, OS X 10.0–10.5)
-$(OUT_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid.icns Info.plist $(R_DEPS)
-	@rm -rf $(OUT_DIR)/Rustid.app $(OUT_DIR)/.rsrc_tmp
-	@mkdir -p $(OUT_DIR)/Rustid.app/Contents/MacOS \
-		$(OUT_DIR)/Rustid.app/Contents/Resources \
+$(DIST_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid.icns Info.plist $(R_DEPS)
+	@rm -rf $(DIST_DIR)/Rustid.app $(OUT_DIR)/.rsrc_tmp
+	@mkdir -p $(DIST_DIR)/Rustid.app/Contents/MacOS \
+		$(DIST_DIR)/Rustid.app/Contents/Resources \
 		$(OUT_DIR)/.rsrc_tmp
 	# 1. Native Mac OS X Aqua executable
-	cp $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/Rustid.app/Contents/MacOS/rustid
-	chmod +x $(OUT_DIR)/Rustid.app/Contents/MacOS/rustid
+	cp $(OUT_DIR)/rustid_carbon.pef $(DIST_DIR)/Rustid.app/Contents/MacOS/rustid
+	chmod +x $(DIST_DIR)/Rustid.app/Contents/MacOS/rustid
 	# 2. Extract raw data-fork resource map and copy universal icon for OS X
 	$(REZ) $(REZ_FLAGS) -DTARGET_CARBON -o $(OUT_DIR)/.rsrc_tmp/dummy.bin $(R_SRC) \
 		--data $(OUT_DIR)/rustid_carbon.pef --cc $(OUT_DIR)/.rsrc_tmp/rustid -t APPL -c RsId
-	cp $(OUT_DIR)/.rsrc_tmp/.rsrc/rustid $(OUT_DIR)/Rustid.app/Contents/Resources/rustid.rsrc
-	cp $(OUT_DIR)/rustid.icns $(OUT_DIR)/Rustid.app/Contents/Resources/rustid.icns
+	cp $(OUT_DIR)/.rsrc_tmp/.rsrc/rustid $(DIST_DIR)/Rustid.app/Contents/Resources/rustid.rsrc
+	cp $(OUT_DIR)/rustid.icns $(DIST_DIR)/Rustid.app/Contents/Resources/rustid.icns
 	@rm -rf $(OUT_DIR)/.rsrc_tmp
 	# 3. Bundle manifests
-	cp Info.plist $(OUT_DIR)/Rustid.app/Contents/Info.plist
-	echo -n "APPLRsId" > $(OUT_DIR)/Rustid.app/Contents/PkgInfo
+	cp Info.plist $(DIST_DIR)/Rustid.app/Contents/Info.plist
+	echo -n "APPLRsId" > $(DIST_DIR)/Rustid.app/Contents/PkgInfo
 
 # Mac OS X Compressed Distribution Archive
-$(OUT_DIR)/Rustid-osx-ppc.zip: $(OUT_DIR)/Rustid.app
-	(cd $(OUT_DIR) && rm -f Rustid-osx-ppc.zip && zip -qr Rustid-osx-ppc.zip Rustid.app)
+$(DIST_DIR)/Rustid-osx-ppc.zip: $(DIST_DIR)/Rustid.app
+	(cd $(DIST_DIR) && rm -f Rustid-osx-ppc.zip && zip -qr Rustid-osx-ppc.zip Rustid.app)
 
 clean:
-	rm -rf $(OUT_DIR)
+	rm -rf $(OUT_DIR) $(DIST_DIR)
 
 TEST_SRCS = $(filter-out ../../ports/classic_mac/main.c,$(SRC_C)) ../../ports/classic_mac/test_classic_mac.c
 

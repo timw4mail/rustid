@@ -34,20 +34,20 @@ jobs:
 
       - name: Package DOS binaries
         run: |
-          zip rustid-dos.zip rustid.exe rust86.exe
+          zip -j rustid-dos.zip target/dist/dos/rustid.exe target/dist/dos/rust86.exe
 
       - name: Build EFI binaries
         run: just build-efi
 
       - name: Package EFI binaries
         run: |
-          (cd target/efi-disk && zip -r ../../rustid-efi.zip EFI)
+          (cd target/dist/efi && zip -r ../../../rustid-efi.zip EFI)
 
       - name: Build Windows GUI binaries
         run: |
           sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
           just build-windows-gui
-          zip -j rustid-windows.zip target/dist/rustid_x86_32.exe target/dist/rustid_x86_64.exe target/dist/rustid_arm64.exe
+          zip -j rustid-windows.zip target/dist/windows/rustid_x86_32.exe target/dist/windows/rustid_x86_64.exe target/dist/windows/rustid_arm64.exe
 
       - name: Build Linux AppImage
         run: |
@@ -76,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: rustid-appimage
-          path: target/dist/rustid-*.AppImage
+          path: target/dist/linux/rustid-*.AppImage
 
       - name: Extract changelog entry
         id: changelog
@@ -89,7 +89,7 @@ jobs:
         run: |
           RELEASE_TITLE=$(cat release_title.txt)
           TAG="${{ github.ref_name }}"
-          APPIMAGE=$(ls target/dist/rustid-*.AppImage | head -n 1)
+          APPIMAGE=$(ls target/dist/linux/rustid-*.AppImage | head -n 1)
           APPIMAGE_NAME=$(basename "$APPIMAGE")
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists, updating..."

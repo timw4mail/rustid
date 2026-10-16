@@ -42,7 +42,7 @@ This will:
 2. Build 16-bit real-mode binary and convert via `tools/make_exe` into `rust86.exe`
 3. Run the binary size test
 
-The resulting executables (`rustid.exe`, `rust86.exe`) appear in the project root.
+The resulting executables (`rustid.exe`, `rust86.exe`) appear in `target/dist/dos/`.
 
 ## Running
 

@@ -9,7 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-OUT_DIR="$REPO_ROOT/target/classic_mac"
+OUT_DIR="$REPO_ROOT/target/dist/classic_mac"
 
 TAG=""
 BUILD_FIRST=false
@@ -33,11 +33,11 @@ Options:
   -h, --help                Show this help message.
 
 Artifacts uploaded:
-  - target/classic_mac/rustid.bin
+  - target/dist/classic_mac/rustid.bin
       Classic Macintosh Fat Binary (System 6.0.8 - Mac OS 9.2.2)
-  - target/classic_mac/Rustid-osx-ppc.zip
+  - target/dist/classic_mac/Rustid-osx-ppc.zip
       Mac OS X PowerPC Application Bundle (Rustid.app)
-  - target/classic_mac/rustid.dsk
+  - target/dist/classic_mac/rustid.dsk
       Classic Macintosh 800K Floppy Disk Image (HFS)
 EOF
     exit 0

@@ -14,7 +14,7 @@ cargo build --features gui --bin gui --release
 
 # Staging AppDir
 APPDIR="$REPO_ROOT/target/appimage/AppDir"
-DIST_DIR="$REPO_ROOT/target/dist"
+DIST_DIR="$REPO_ROOT/target/dist/linux"
 OUTPUT_APPIMAGE="$DIST_DIR/rustid-${ARCH}.AppImage"
 
 echo "Preparing AppDir layout at $APPDIR..."
@@ -33,7 +33,8 @@ mkdir -p "$DIST_DIR"
 
 # Stage binary
 cp target/release/gui "$APPDIR/usr/bin/rustid-gui"
-chmod +x "$APPDIR/usr/bin/rustid-gui"
+cp target/release/gui "$DIST_DIR/rustid-gui"
+chmod +x "$APPDIR/usr/bin/rustid-gui" "$DIST_DIR/rustid-gui"
 
 # Stage desktop file
 cp build-config/rustid.desktop "$APPDIR/rustid.desktop"

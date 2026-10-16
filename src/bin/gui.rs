@@ -2,9 +2,7 @@
 
 #[cfg(not(any(windows_os, target_os = "haiku", target_os = "linux")))]
 fn main() {
-    eprintln!(
-        "rustid-gui is currently supported on Windows, Haiku, and Linux targets."
-    );
+    eprintln!("rustid-gui is currently supported on Windows, Haiku, and Linux targets.");
 }
 
 #[cfg(windows_os)]

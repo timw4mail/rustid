@@ -26,13 +26,13 @@ rc -o rustid.rsrc rustid.rdef
 
 ### 2. Merge .rsrc into the Application Binary (`xres`):
 ```sh
-xres -o target/dist/rustid_haiku rustid.rsrc
-mimeset -f target/dist/rustid_haiku
+xres -o target/dist/haiku/rustid_haiku rustid.rsrc
+mimeset -f target/dist/haiku/rustid_haiku
 ```
 
 ### 3. Vector Icon (HVIF):
 The native Vector Icon Format (`.hvif`) is compiled directly into the `.rsrc` from `rustid.rdef`.
 You can also attach `rustid.hvif` directly to any binary:
 ```sh
-addattr -f assets/haiku/rustid.hvif -t icon BEOS:ICON target/dist/rustid_haiku
+addattr -f assets/haiku/rustid.hvif -t icon BEOS:ICON target/dist/haiku/rustid_haiku
 ```

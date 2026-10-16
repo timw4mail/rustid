@@ -46,7 +46,7 @@ cargo build \
     --bin gui \
     --release
 
-mkdir -p target/dist
+mkdir -p target/dist/windows
 if [ -f target/aarch64-pc-windows-gnullvm/release/gui.exe ]; then
-    cp target/aarch64-pc-windows-gnullvm/release/gui.exe target/dist/rustid_arm64.exe
+    cp target/aarch64-pc-windows-gnullvm/release/gui.exe target/dist/windows/rustid_arm64.exe
 fi

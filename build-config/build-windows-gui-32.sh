@@ -92,7 +92,7 @@ cargo +nightly "$ACTION" \
     --release
 
 if [ "$ACTION" = "build" ]; then
-    mkdir -p target/dist
-    cp target/i586-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
+    mkdir -p target/dist/windows
+    cp target/i586-pc-windows-gnu/release/gui.exe target/dist/windows/rustid_x86_32.exe 2>/dev/null || true
 fi
 

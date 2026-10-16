@@ -25,11 +25,21 @@ pkgman install rust_bin
 
 ## Building
 
+All build recipes copy their final binaries into platform-specific subdirectories under `target/dist/`:
+- `target/dist/linux/` — Linux CLI, GUI, and AppImage binaries
+- `target/dist/windows/` — Windows GUI / CLI executables
+- `target/dist/mac/` — macOS CLI binaries
+- `target/dist/classic_mac/` — Classic Mac OS & Mac OS X PowerPC binaries/bundles
+- `target/dist/dos/` — DOS 32-bit extender and 16-bit real-mode binaries
+- `target/dist/efi/` — UEFI 32-bit and 64-bit boot binaries
+- `target/dist/haiku/` — Haiku GUI / CLI binaries
+
 **Standard Release Build:**
 ```bash
 just build-release
 # or: make build-release
 ```
+Produces `target/dist/<os>/rustid` (or `rustid.exe` on Windows).
 
 **Build for EFI / UEFI (x86 & x86_64):**
 ```bash
@@ -37,8 +47,8 @@ just build-efi
 # or: make build-efi
 ```
 This produces EFI binaries:
-- `target/efi-disk/EFI/BOOT/BOOTX64.EFI` (64-bit EFI)
-- `target/efi-disk/EFI/BOOT/BOOTIA32.EFI` (32-bit EFI)
+- `target/dist/efi/EFI/BOOT/BOOTX64.EFI` (64-bit EFI)
+- `target/dist/efi/EFI/BOOT/BOOTIA32.EFI` (32-bit EFI)
 
 Individual EFI Builds:
 - `just build-efi-64` — 64-bit x86_64 EFI binary
@@ -49,22 +59,23 @@ Individual EFI Builds:
 just build-dos
 # or: make build-dos
 ```
-This produces two binaries in the project root:
-- `rustid.exe` — 32-bit protected-mode DOS32A binary (`dos` cargo binary)
-- `rust86.exe` — 16-bit real-mode fallback binary with debug support (`rust86` cargo binary)
+This produces two binaries in `target/dist/dos/`:
+- `target/dist/dos/rustid.exe` — 32-bit protected-mode DOS32A binary
+- `target/dist/dos/rust86.exe` — 16-bit real-mode fallback binary with debug support
 
 **Individual DOS Builds:**
-- `just build-dos32a` — Build 32-bit DOS32A extender binary (`rustid.exe`)
-- `just build-dos-real` — Build 16-bit real-mode binary (`rust86.exe`)
+- `just build-dos32a` — Build 32-bit DOS32A extender binary (`target/dist/dos/rustid.exe`)
+- `just build-dos-real` — Build 16-bit real-mode binary (`target/dist/dos/rust86.exe`)
 
 **Cross-Compilation & Platform Builds:**
-- `just build-arm64` — Linux AArch64
-- `just build-ppc` — Linux PowerPC
-- `just build-486` — 32-bit x86 Linux (486-compatible target spec)
-- `just build-mac` / `just build-mac-arm` — macOS (x86_64 / AArch64)
-- `just build-windows` / `just build-windows-arm` / `just build-windows-gnu` — Windows CLI binaries
-- `just build-windows-gui` — Windows native GUI application (MSVC)
-- `just build-windows-gui-gnu` — Windows GUI application cross-compilable from Linux (MinGW/GNU)
+- `just build-arm64` — Linux AArch64 (`target/dist/linux/rustid_arm64`)
+- `just build-ppc` — Linux PowerPC (`target/dist/linux/rustid_ppc`)
+- `just build-486` — Static 32-bit x86 Linux musl for 486-class CPUs (`target/dist/linux/rustid_486`)
+- `just build-mac` / `just build-mac-arm` — macOS (`target/dist/mac/rustid_x86_64` / `rustid_arm64`)
+- `just build-classic-mac` — Classic Mac OS 68k/PPC & Mac OS X PPC (`target/dist/classic_mac/`)
+- `just build-windows-gui` — All Windows GUI applications (`target/dist/windows/rustid_x86_32.exe`, `rustid_x86_64.exe`, `rustid_arm64.exe`)
+- `just build-linux-gui` / `just build-appimage` — Linux GTK3 GUI & standalone AppImage (`target/dist/linux/rustid-gui`, `rustid-<arch>.AppImage`)
+- `just build-haiku-gui` — Haiku native GUI application (`target/dist/haiku/rustid_haiku`)
 
 ## Testing & Quality
 
