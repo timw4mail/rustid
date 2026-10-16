@@ -21,6 +21,12 @@
 #if __has_include(<Scrap.h>)
 #include <Scrap.h>
 #endif
+#if __has_include(<MixedMode.h>)
+#include <MixedMode.h>
+#endif
+#if __has_include(<AppleEvents.h>)
+#include <AppleEvents.h>
+#endif
 #include <StandardFile.h>
 #include <Gestalt.h>
 #include <ToolUtils.h>
@@ -88,6 +94,7 @@ typedef void* TEHandle;
 typedef void* MenuHandle;
 typedef void* ControlHandle;
 typedef void* ControlActionUPP;
+typedef void* AEEventHandlerUPP;
 typedef struct { short top, left, bottom, right; } Rect;
 typedef struct { unsigned short red, green, blue; } RGBColor;
 #endif

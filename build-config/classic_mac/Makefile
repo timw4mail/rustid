@@ -39,10 +39,10 @@ R_DEPS        = $(PORT_DIR)/rustid.r $(PORT_DIR)/rustid_icons.r
 
 OUT_DIR       ?= ../../target/classic_mac
 
-all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.tar.gz
+all: directories $(OUT_DIR)/rustid.bin $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.zip
 
 classic: directories $(OUT_DIR)/rustid.bin
-osx: directories $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.tar.gz
+osx: directories $(OUT_DIR)/Rustid.app $(OUT_DIR)/Rustid-osx-ppc.zip
 
 directories:
 	@mkdir -p $(OUT_DIR)
@@ -67,9 +67,9 @@ $(OUT_DIR)/rustid_carbon.pef: $(SRC_C)
 	$(CC_PPC) $(CFLAGS_CARBON) -o $(OUT_DIR)/rustid_carbon.xcoff $(SRC_C)
 	$(MAKEPEF) $(OUT_DIR)/rustid_carbon.xcoff -o $(OUT_DIR)/rustid_carbon.pef
 
-# Universal Icon File (.icns with Classic QuickDraw, OS X 10.0-10.4 32-bit, and modern PNGs)
-$(OUT_DIR)/rustid.icns: $(PORT_DIR)/rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns generate_icns.py
-	python3 generate_icns.py $(PORT_DIR)/rustid_icons.r ../../assets/rustid.png ../../assets/rustid.icns $(OUT_DIR)/rustid.icns
+# Application Icon (.icns directly from project assets)
+$(OUT_DIR)/rustid.icns: ../../assets/rustid.icns
+	cp ../../assets/rustid.icns $(OUT_DIR)/rustid.icns
 
 # Mac OS X Application Bundle (PowerPC G3/G4/G5, OS X 10.0–10.5)
 $(OUT_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid.icns Info.plist $(R_DEPS)
@@ -91,8 +91,8 @@ $(OUT_DIR)/Rustid.app: $(OUT_DIR)/rustid_carbon.pef $(OUT_DIR)/rustid.icns Info.
 	echo -n "APPLRsId" > $(OUT_DIR)/Rustid.app/Contents/PkgInfo
 
 # Mac OS X Compressed Distribution Archive
-$(OUT_DIR)/Rustid-osx-ppc.tar.gz: $(OUT_DIR)/Rustid.app
-	tar -C $(OUT_DIR) -czf $(OUT_DIR)/Rustid-osx-ppc.tar.gz Rustid.app
+$(OUT_DIR)/Rustid-osx-ppc.zip: $(OUT_DIR)/Rustid.app
+	(cd $(OUT_DIR) && rm -f Rustid-osx-ppc.zip && zip -qr Rustid-osx-ppc.zip Rustid.app)
 
 clean:
 	rm -rf $(OUT_DIR)

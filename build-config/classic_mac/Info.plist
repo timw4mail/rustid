@@ -13,7 +13,9 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>rustid</string>
+    <string>Rustid</string>
+    <key>CFBundleDisplayName</key>
+    <string>Rustid</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>

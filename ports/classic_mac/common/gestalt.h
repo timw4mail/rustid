@@ -64,6 +64,7 @@ bool classic_mac_safe_gestalt(uint32_t selector, long* response);
 bool classic_mac_is_gestalt_available(void);
 bool classic_mac_has_color_qd(void);
 bool classic_mac_has_styled_te(void);
+bool classic_mac_has_apple_events(void);
 
 #ifdef __cplusplus
 }
