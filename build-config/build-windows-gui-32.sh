@@ -25,48 +25,65 @@ search_base="${CROSS_COMPILER_DIR:-/tmp/rust-cross-compiler}"
 mkdir -p "$search_base"
 dest_dir="$search_base/i686-w64-mingw32-cross"
 
-if [ ! -d "$dest_dir/bin" ]; then
-    existing_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
-    if [ -n "$existing_dir" ] && [ -d "$existing_dir/bin" ]; then
-        dest_dir="$existing_dir"
+# In GitHub Actions or Debian/Ubuntu with sudo, install gcc-mingw-w64-i686 if not present
+if ! command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+    if [ -n "${GITHUB_ACTIONS:-}" ] && command -v apt-get >/dev/null 2>&1; then
+        echo "Installing MinGW-w64 via apt in GitHub Actions..."
+        sudo apt-get update -y && sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
+    elif command -v sudo >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+        sudo apt-get update -y && sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
     fi
 fi
 
-if [ ! -d "$dest_dir/bin" ]; then
-    if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
-        gcc_bin=$(command -v i686-w64-mingw32-gcc)
-        dest_dir="$(cd "$(dirname "$gcc_bin")/.." && pwd)"
+if ! command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+    # Check if previously downloaded in $search_base
+    if [ ! -d "$dest_dir/bin" ]; then
+        existing_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
+        if [ -n "$existing_dir" ] && [ -d "$existing_dir/bin" ]; then
+            dest_dir="$existing_dir"
+        fi
+    fi
+
+    if [ -d "$dest_dir/bin" ]; then
+        export PATH="$dest_dir/bin:$PATH"
     fi
 fi
 
-if [ ! -d "$dest_dir/bin" ]; then
-    echo "Downloading MinGW-w64 cross toolchain..."
+if ! command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+    echo "Downloading MinGW-w64 cross toolchain from musl.cc..."
     tar_url="https://musl.cc/i686-w64-mingw32-cross.tgz"
-    curl -fsSL "$tar_url" -o "$search_base/i686-w64-mingw32-cross.tgz"
-    echo "Extracting MinGW-w64 cross toolchain..."
-    tar -xf "$search_base/i686-w64-mingw32-cross.tgz" -C "$search_base"
-    rm -f "$search_base/i686-w64-mingw32-cross.tgz"
+    if curl -fsSL "$tar_url" -o "$search_base/i686-w64-mingw32-cross.tgz"; then
+        echo "Extracting MinGW-w64 cross toolchain..."
+        tar -xf "$search_base/i686-w64-mingw32-cross.tgz" -C "$search_base"
+        rm -f "$search_base/i686-w64-mingw32-cross.tgz"
+        if [ -d "$dest_dir/bin" ]; then
+            export PATH="$dest_dir/bin:$PATH"
+        fi
+    fi
 fi
 
-if [ ! -d "$dest_dir/bin" ]; then
-    echo "Could not find MinGW-w64 toolchain in $search_base." >&2
+if ! command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+    echo "Could not find i686-w64-mingw32-gcc. Please install gcc-mingw-w64-i686 or set CROSS_COMPILER_DIR." >&2
     exit 1
 fi
 
-mingw_bin="$dest_dir/bin"
-mingw_lib="$dest_dir/i686-w64-mingw32/lib"
-gcc_lib=$(find "$dest_dir/lib/gcc/i686-w64-mingw32" -maxdepth 1 -type d ! -path "*/i686-w64-mingw32" 2>/dev/null | sort -V | tail -1)
+GCC_CMD="i686-w64-mingw32-gcc"
+mingw_bin="$(dirname "$(command -v "$GCC_CMD")")"
+gcc_lib="$(dirname "$("$GCC_CMD" -print-file-name=libgcc.a)")"
+mingw_lib="$(dirname "$("$GCC_CMD" -print-file-name=libkernel32.a)")"
 
 echo "Using MinGW at: $mingw_bin"
 
 export PATH="$mingw_bin:$PATH"
-export CARGO_TARGET_I586_PC_WINDOWS_GNU_LINKER="i686-w64-mingw32-gcc"
-export CC_i586_pc_windows_gnu="i686-w64-mingw32-gcc"
+export CARGO_TARGET_I586_PC_WINDOWS_GNU_LINKER="$GCC_CMD"
+export CC_i586_pc_windows_gnu="$GCC_CMD"
 export AR_i586_pc_windows_gnu="i686-w64-mingw32-ar"
 export WINDRES="i686-w64-mingw32-windres"
 export RUSTFLAGS="-L $mingw_lib -L $gcc_lib"
 
-cargo +nightly build \
+ACTION="${1:-build}"
+
+cargo +nightly "$ACTION" \
     -Z json-target-spec \
     -Z build-std=std,panic_abort,core,alloc \
     --target build-config/i586-pc-windows-gnu.json \
@@ -74,6 +91,8 @@ cargo +nightly build \
     --bin gui \
     --release
 
-mkdir -p target/dist
-cp target/i586-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
+if [ "$ACTION" = "build" ]; then
+    mkdir -p target/dist
+    cp target/i586-pc-windows-gnu/release/gui.exe target/dist/rustid_x86_32.exe 2>/dev/null || true
+fi
 

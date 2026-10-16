@@ -45,6 +45,7 @@ jobs:
 
       - name: Build Windows GUI binaries
         run: |
+          sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
           just build-windows-gui
           zip -j rustid-windows.zip target/dist/rustid_x86_32.exe target/dist/rustid_x86_64.exe target/dist/rustid_arm64.exe
 

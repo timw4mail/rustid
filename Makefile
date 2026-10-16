@@ -101,8 +101,11 @@ check-windows-gui-x64:
 
 # Compile check for Windows GUI (32-bit x86 GNU)
 check-windows-gui-32:
-	@if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then rustup target add i686-pc-windows-gnu; fi
-	cargo check --target i686-pc-windows-gnu --features gui --bin gui
+ifeq ($(OS),Windows_NT)
+	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1 check
+else
+	bash build-config/build-windows-gui-32.sh check
+endif
 
 # Compile check for Windows GUI (ARM64 GNU)
 check-windows-gui-arm64:

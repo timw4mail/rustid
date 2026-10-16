@@ -3,6 +3,7 @@
 # Must be run from the repo root. Requires nightly toolchain.
 
 param(
+    [string]$Action = "build",
     [string]$CrossCompilerDir = $env:CROSS_COMPILER_DIR
 )
 
@@ -60,7 +61,7 @@ $env:AR_i586_pc_windows_gnu  = "i686-w64-mingw32-ar"
 $env:WINDRES                 = "i686-w64-mingw32-windres"
 $env:RUSTFLAGS = "-L $mingwLib -L $gccLib"
 
-cargo +nightly build `
+cargo +nightly $Action `
     -Z json-target-spec `
     -Z build-std=std,panic_abort,core,alloc `
     --target build-config/i586-pc-windows-gnu.json `
@@ -68,7 +69,7 @@ cargo +nightly build `
     --bin gui `
     --release
 
-if ($LASTEXITCODE -eq 0) {
+if ($LASTEXITCODE -eq 0 -and $Action -eq "build") {
     if (-not (Test-Path "target\dist")) {
         New-Item -ItemType Directory -Path "target\dist" | Out-Null
     }
