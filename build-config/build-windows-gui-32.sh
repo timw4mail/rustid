@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # Build 32-bit Windows GUI targeting original Pentium (no SSE/SSE2).
-# Must be run from the repo root. Requires cargo cross and nightly toolchain.
+# Must be run from the repo root. Requires nightly toolchain.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Ensure the i686 target is installed (cargo cross needs it even for JSON target builds)
+# Ensure the i686 target is installed (rustc needs it for target spec)
 if ! rustup target list --installed | grep -q i686-pc-windows-gnu; then
     echo "Installing i686-pc-windows-gnu target..."
     rustup target add i686-pc-windows-gnu
@@ -20,26 +20,42 @@ if ! rustup component list --installed --toolchain nightly | grep -q rust-src; t
     rustup component add rust-src --toolchain nightly
 fi
 
-# Find the MinGW-w64 toolchain (downloaded by cargo cross)
+# Find or download the MinGW-w64 cross toolchain
 search_base="${CROSS_COMPILER_DIR:-/tmp/rust-cross-compiler}"
 mkdir -p "$search_base"
+dest_dir="$search_base/i686-w64-mingw32-cross"
 
-mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
-
-if [ -z "$mingw_dir" ] || [ ! -d "$mingw_dir/bin" ]; then
-    echo "MinGW-w64 toolchain not found. Downloading via cargo cross..."
-    cargo cross build --target i686-pc-windows-gnu --features gui --bin gui --release
-    mingw_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
+if [ ! -d "$dest_dir/bin" ]; then
+    existing_dir=$(find "$search_base" -maxdepth 1 -type d -name "i686-w64-mingw32*" 2>/dev/null | head -1)
+    if [ -n "$existing_dir" ] && [ -d "$existing_dir/bin" ]; then
+        dest_dir="$existing_dir"
+    fi
 fi
 
-if [ -z "$mingw_dir" ] || [ ! -d "$mingw_dir/bin" ]; then
-    echo "Could not find MinGW-w64 toolchain in $search_base. Set CROSS_COMPILER_DIR or run 'cargo cross build --target i686-pc-windows-gnu' first." >&2
+if [ ! -d "$dest_dir/bin" ]; then
+    if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+        gcc_bin=$(command -v i686-w64-mingw32-gcc)
+        dest_dir="$(cd "$(dirname "$gcc_bin")/.." && pwd)"
+    fi
+fi
+
+if [ ! -d "$dest_dir/bin" ]; then
+    echo "Downloading MinGW-w64 cross toolchain..."
+    tar_url="https://musl.cc/i686-w64-mingw32-cross.tgz"
+    curl -fsSL "$tar_url" -o "$search_base/i686-w64-mingw32-cross.tgz"
+    echo "Extracting MinGW-w64 cross toolchain..."
+    tar -xf "$search_base/i686-w64-mingw32-cross.tgz" -C "$search_base"
+    rm -f "$search_base/i686-w64-mingw32-cross.tgz"
+fi
+
+if [ ! -d "$dest_dir/bin" ]; then
+    echo "Could not find MinGW-w64 toolchain in $search_base." >&2
     exit 1
 fi
 
-mingw_bin="$mingw_dir/bin"
-mingw_lib="$mingw_dir/i686-w64-mingw32/lib"
-gcc_lib=$(find "$mingw_dir/lib/gcc/i686-w64-mingw32" -maxdepth 1 -type d ! -path "*/i686-w64-mingw32" 2>/dev/null | sort -V | tail -1)
+mingw_bin="$dest_dir/bin"
+mingw_lib="$dest_dir/i686-w64-mingw32/lib"
+gcc_lib=$(find "$dest_dir/lib/gcc/i686-w64-mingw32" -maxdepth 1 -type d ! -path "*/i686-w64-mingw32" 2>/dev/null | sort -V | tail -1)
 
 echo "Using MinGW at: $mingw_bin"
 

@@ -29,7 +29,7 @@ if [ ! -d "$dest_dir/bin" ]; then
 fi
 
 if [ ! -d "$dest_dir/bin" ]; then
-    echo "Could not find i486 musl toolchain in $search_base. Set CROSS_COMPILER_DIR or run 'cargo cross check --target i486-unknown-linux-musl' first." >&2
+    echo "Could not find i486 musl toolchain in $search_base. Set CROSS_COMPILER_DIR or run 'cross check --target i486-unknown-linux-musl' first." >&2
     exit 1
 fi
 

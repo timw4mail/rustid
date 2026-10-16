@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
 # Build 32-bit Windows GUI targeting original Pentium (no SSE/SSE2).
-# Must be run from the repo root. Requires cargo cross and nightly toolchain.
+# Must be run from the repo root. Requires nightly toolchain.
 
 param(
     [string]$CrossCompilerDir = $env:CROSS_COMPILER_DIR
 )
 
-# Ensure the i686 target is installed (cargo cross needs it even for JSON target builds)
+# Ensure the i686 target is installed (rustc needs it for target spec)
 if (-not (rustup target list --installed | Select-String "i686-pc-windows-gnu")) {
     Write-Host "Installing i686-pc-windows-gnu target..."
     rustup target add i686-pc-windows-gnu
@@ -18,7 +18,7 @@ if (-not (rustup component list --installed --toolchain nightly | Select-String 
     rustup component add rust-src --toolchain nightly
 }
 
-# Find the MinGW-w64 toolchain (downloaded by cargo cross)
+# Find the MinGW-w64 toolchain
 $searchBase = if ($CrossCompilerDir) { $CrossCompilerDir } else {
     Join-Path ([System.IO.Path]::GetTempPath()) "rust-cross-compiler"
 }
@@ -28,19 +28,21 @@ if (-not (Test-Path $searchBase)) {
 }
 
 $mingwDir = Get-ChildItem -Path $searchBase -Filter "i686-w64-mingw32*" -Directory -ErrorAction SilentlyContinue |
-    Where-Object { Test-Path (Join-Path $_.FullName "bin\dlltool.exe") } |
+    Where-Object { Test-Path (Join-Path $_.FullName "bin\dlltool.exe") -or Test-Path (Join-Path $_.FullName "bin\i686-w64-mingw32-gcc.exe") } |
     Select-Object -First 1
 
 if (-not $mingwDir) {
-    Write-Host "MinGW-w64 toolchain not found. Downloading via cargo cross..."
-    cargo cross build --target i686-pc-windows-gnu --features gui --bin gui --release 2>&1 | Out-Null
-    $mingwDir = Get-ChildItem -Path $searchBase -Filter "i686-w64-mingw32*" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { Test-Path (Join-Path $_.FullName "bin\dlltool.exe") } |
-        Select-Object -First 1
+    # Check if i686-w64-mingw32-gcc is already available in PATH
+    $inPath = Get-Command "i686-w64-mingw32-gcc" -ErrorAction SilentlyContinue
+    if ($inPath) {
+        $binDir = Split-Path -Parent $inPath.Source
+        $rootDir = Split-Path -Parent $binDir
+        $mingwDir = Get-Item $rootDir
+    }
 }
 
 if (-not $mingwDir) {
-    Write-Error "Could not find MinGW-w64 toolchain in $searchBase. Set CROSS_COMPILER_DIR or run 'cargo cross build --target i686-pc-windows-gnu' first."
+    Write-Error "Could not find MinGW-w64 toolchain in $searchBase. Set CROSS_COMPILER_DIR or ensure i686-w64-mingw32-gcc is in PATH."
     exit 1
 }
 

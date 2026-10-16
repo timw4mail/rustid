@@ -199,7 +199,7 @@ else
 endif
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
-build-windows-gui-32: _cargo_cross
+build-windows-gui-32:
 ifeq ($(OS),Windows_NT)
 	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
 else

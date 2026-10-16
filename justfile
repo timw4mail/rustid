@@ -174,12 +174,12 @@ build-windows-gui-x64: _cargo_cross
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 [linux, unix]
-build-windows-gui-32: _cargo_cross
+build-windows-gui-32:
 	bash build-config/build-windows-gui-32.sh
 
 # Build 32-bit Windows GUI using MinGW/GNU target (Pentium baseline, Windows 9x/ME/NT/2000/XP/7/10/11)
 [windows]
-build-windows-gui-32: _cargo_cross
+build-windows-gui-32:
 	powershell -ExecutionPolicy Bypass -File build-config/build-windows-gui-32.ps1
 
 # Build ARM64 Windows GUI using LLVM MinGW/GNU target
