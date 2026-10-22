@@ -59,18 +59,6 @@ fn get_raw_system_name() -> Option<SystemInfo> {
     let prod = get_dmi_field("product_name");
     let family = get_dmi_field("product_family");
 
-    if let Some(f) = family
-        && !is_generic_value(&f)
-    {
-        let sys_vendor = get_dmi_field("sys_vendor");
-        return Some(SystemInfo::new(
-            sys_vendor,
-            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
-            Some(f),
-            DataSource::LinuxSysFs("/sys/class/dmi/id/product_family"),
-        ));
-    }
-
     if let Some(p) = prod
         && !is_generic_value(&p)
     {
@@ -80,6 +68,18 @@ fn get_raw_system_name() -> Option<SystemInfo> {
             DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
             Some(p),
             DataSource::LinuxSysFs("/sys/class/dmi/id/product_name"),
+        ));
+    }
+
+    if let Some(f) = family
+        && !is_generic_value(&f)
+    {
+        let sys_vendor = get_dmi_field("sys_vendor");
+        return Some(SystemInfo::new(
+            sys_vendor,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
+            Some(f),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_family"),
         ));
     }
 
