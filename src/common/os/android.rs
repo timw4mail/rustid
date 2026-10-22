@@ -140,7 +140,7 @@ pub fn extract_system_name(props: &HashMap<String, String>) -> Option<SystemInfo
 }
 
 /// Extracts SoC manufacturer and model name from Android system properties.
-pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
+pub fn extract_soc(props: &HashMap<String, String>) -> Option<SystemInfo> {
     // 1. ro.soc.manufacturer + ro.soc.model (Android 12+ / API 31+)
     let soc_mfg = props
         .get("ro.soc.manufacturer")
@@ -155,17 +155,25 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
         let mfg_clean = cleanup_soc_vendor(mfg);
         let model_lower = model.to_ascii_lowercase();
         let mfg_lower = mfg.to_ascii_lowercase();
-        let mfg_clean_lower = mfg_clean.to_ascii_lowercase();
-
-        if model_lower.starts_with(&mfg_lower) || model_lower.starts_with(&mfg_clean_lower) {
-            return Some(model.to_string());
+        let vendor = if model_lower.starts_with(&mfg_lower) {
+            mfg.to_string()
         } else {
-            return Some(format!("{mfg_clean} {model}"));
-        }
+            mfg_clean
+        };
+
+        return Some(SystemInfo::new(
+            Some(vendor),
+            DataSource::AndroidGetprop("ro.soc.manufacturer"),
+            Some(model.to_string()),
+            DataSource::AndroidGetprop("ro.soc.model"),
+        ));
     }
 
     if let Some(model) = soc_model {
-        return Some(model.to_string());
+        return Some(SystemInfo::from_model(
+            model,
+            DataSource::AndroidGetprop("ro.soc.model"),
+        ));
     }
 
     // 2. Vendor-specific chip name properties
@@ -173,7 +181,10 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
         if let Some(val) = props.get(key) {
             let trimmed = val.trim();
             if !trimmed.is_empty() && !is_generic_value(trimmed) {
-                return Some(cleanup_soc_vendor(trimmed));
+                return Some(SystemInfo::from_model(
+                    cleanup_soc_vendor(trimmed),
+                    DataSource::AndroidGetprop(key),
+                ));
             }
         }
     }
@@ -183,7 +194,10 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
         let trimmed = platform.trim();
         if !trimmed.is_empty() && !is_generic_value(trimmed) && !trimmed.eq_ignore_ascii_case("gki")
         {
-            return Some(trimmed.to_string());
+            return Some(SystemInfo::from_model(
+                trimmed,
+                DataSource::AndroidGetprop("ro.board.platform"),
+            ));
         }
     }
 
@@ -191,7 +205,10 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
     if let Some(hw) = props.get("ro.hardware") {
         let trimmed = hw.trim();
         if !trimmed.is_empty() && !is_generic_value(trimmed) {
-            return Some(cleanup_soc_vendor(trimmed));
+            return Some(SystemInfo::from_model(
+                cleanup_soc_vendor(trimmed),
+                DataSource::AndroidGetprop("ro.hardware"),
+            ));
         }
     }
 
@@ -203,18 +220,21 @@ pub fn extract_soc(props: &HashMap<String, String>) -> Option<String> {
 // ----------------------------------------------------------------------------
 
 impl TOSData for OS {
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         let props = get_props();
         if let Some(soc) = extract_soc(&props) {
             return Some(soc);
         }
 
         if let Some(soc) = get_soc_from_proc_cpuinfo() {
-            return Some(soc);
+            return Some(SystemInfo::from_model(soc, DataSource::LinuxProcCpuinfo));
         }
 
         if let Some(soc) = get_soc_from_devicetree() {
-            return Some(soc);
+            return Some(SystemInfo::from_model(
+                soc,
+                DataSource::DeviceTree("/proc/device-tree/compatible"),
+            ));
         }
 
         None
@@ -346,20 +366,26 @@ mod tests {
     #[test]
     fn test_extract_soc_pixel() {
         let props = parse_getprop_output(PIXEL_GETPROP);
-        assert_eq!(extract_soc(&props), Some("Google Tensor G3".to_string()));
+        assert_eq!(
+            extract_soc(&props).and_then(|s| s.display_name()),
+            Some("Google Tensor G3".to_string())
+        );
     }
 
     #[test]
     fn test_extract_soc_galaxy() {
         let props = parse_getprop_output(GALAXY_GETPROP);
-        assert_eq!(extract_soc(&props), Some("Exynos2400".to_string()));
+        assert_eq!(
+            extract_soc(&props).and_then(|s| s.display_name()),
+            Some("Exynos2400".to_string())
+        );
     }
 
     #[test]
     fn test_extract_soc_qualcomm() {
         let props = parse_getprop_output(QUALCOMM_GETPROP);
         assert_eq!(
-            extract_soc(&props),
+            extract_soc(&props).and_then(|s| s.display_name()),
             Some("Qualcomm Snapdragon 8 Gen 1".to_string())
         );
     }

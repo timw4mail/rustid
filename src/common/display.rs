@@ -554,6 +554,39 @@ impl CpuDisplay {
         }
     }
 
+    #[cfg(not(dos_os))]
+    pub fn display_soc(&mut self, soc: &crate::common::SystemInfo, flags: CliFlags) {
+        if let Some(display_name) = soc.display_name()
+            && !crate::common::is_generic_value(&display_name)
+        {
+            if flags.verbose {
+                self.section_line("SoC", &display_name);
+                if let Some(ref model) = soc.model {
+                    if model != &display_name {
+                        self.section_line(
+                            "SoC Model",
+                            &alloc::format!("{model} ({:?})", soc.model_source),
+                        );
+                    } else {
+                        self.section_line(
+                            "SoC Model Source",
+                            &alloc::format!("{:?}", soc.model_source),
+                        );
+                    }
+                }
+                if let Some(ref vendor) = soc.vendor {
+                    self.section_line(
+                        "SoC Vendor",
+                        &alloc::format!("{vendor} ({:?})", soc.vendor_source),
+                    );
+                }
+                self.newline();
+            } else {
+                self.simple_line("SoC", &display_name);
+            }
+        }
+    }
+
     /// Convert raw Mac model string to friendlier name
     fn format_mac_model(&self, raw: &str) -> String {
         // Based on <https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/host/host_mac.c>
@@ -1094,5 +1127,47 @@ mod tests {
             "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
         ];
         disp.display_features(&features, &keys);
+    }
+
+    #[test]
+    fn test_display_soc_normal_and_verbose() {
+        use crate::common::{DataSource, SystemInfo};
+
+        let soc = SystemInfo::new(
+            Some(String::from("Google")),
+            DataSource::AndroidGetprop("ro.soc.manufacturer"),
+            Some(String::from("Tensor G3")),
+            DataSource::AndroidGetprop("ro.soc.model"),
+        );
+
+        let flags_normal = CliFlags {
+            compact: false,
+            color: false,
+            verbose: false,
+        };
+        let mut disp = CpuDisplay::with_buffer(flags_normal);
+        disp.display_soc(&soc, flags_normal);
+        let out = disp.into_string().unwrap_or_default();
+        assert!(out.contains("SoC: Google Tensor G3"));
+        assert!(!out.contains("SoC Model"));
+
+        let flags_verbose = CliFlags {
+            compact: false,
+            color: false,
+            verbose: true,
+        };
+        let mut disp_v = CpuDisplay::with_buffer(flags_verbose);
+        disp_v.display_soc(&soc, flags_verbose);
+        let out_v = disp_v.into_string().unwrap_or_default();
+        assert!(out_v.contains("SoC: Google Tensor G3"));
+        assert!(out_v.contains("SoC Model: Tensor G3 (AndroidGetprop(\"ro.soc.model\"))"));
+        assert!(out_v.contains("SoC Vendor: Google (AndroidGetprop(\"ro.soc.manufacturer\"))"));
+
+        let soc_single = SystemInfo::from_model("BCM2835", DataSource::LinuxProcCpuinfo);
+        let mut disp_s = CpuDisplay::with_buffer(flags_verbose);
+        disp_s.display_soc(&soc_single, flags_verbose);
+        let out_s = disp_s.into_string().unwrap_or_default();
+        assert!(out_s.contains("SoC: BCM2835"));
+        assert!(out_s.contains("SoC Model Source: LinuxProcCpuinfo"));
     }
 }

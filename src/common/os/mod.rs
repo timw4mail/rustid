@@ -1,6 +1,5 @@
 //! Os-specific data gathering
 use crate::common::{SystemInfo, TopologyTier};
-use alloc::string::String;
 
 #[cfg(bsd)]
 pub mod bsd;
@@ -59,7 +58,7 @@ pub trait TOSData {
         None
     }
 
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         None
     }
 

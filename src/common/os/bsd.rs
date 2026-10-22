@@ -3,7 +3,7 @@ use super::sysctl::{get_sysctl_int_value, get_sysctl_value};
 use crate::common::{DataSource, OS, SystemInfo, TOSData, TopologyTier};
 
 impl TOSData for OS {
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         #[cfg(target_os = "freebsd")]
         {
             if let Some(raw) = get_sysctl_value("hw.fdt.compatible") {
@@ -12,7 +12,10 @@ impl TOSData for OS {
                     .map(str::trim)
                     .rfind(|s| !s.is_empty() && !is_generic_value(s))
                 {
-                    return Some(String::from(last));
+                    return Some(SystemInfo::from_model(
+                        last,
+                        DataSource::Sysctrl("hw.fdt.compatible"),
+                    ));
                 }
             }
             None

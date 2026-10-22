@@ -12,8 +12,8 @@ impl CpuDisplay {
         if verbose {
             return true;
         }
-        if let Some(soc) = &cpu_info.soc_model
-            && Self::is_duplicate(model, soc)
+        if let Some(soc) = cpu_info.soc_model.as_ref().and_then(|s| s.display_name())
+            && Self::is_duplicate(model, &soc)
         {
             return false;
         }
@@ -105,8 +105,8 @@ impl CpuDisplay {
             return None;
         }
 
-        if let Some(soc) = &cpu_info.soc_model
-            && Self::is_duplicate(code_name, soc)
+        if let Some(soc) = cpu_info.soc_model.as_ref().and_then(|s| s.display_name())
+            && Self::is_duplicate(code_name, &soc)
         {
             return None;
         }
@@ -159,13 +159,9 @@ impl CpuDisplay {
             disp.display_system(system, flags);
         }
 
-        disp.simple_line_opt(
-            "SoC",
-            cpu_info
-                .soc_model
-                .as_deref()
-                .filter(|s| !crate::common::is_generic_value(s)),
-        );
+        if let Some(soc) = &cpu_info.soc_model {
+            disp.display_soc(soc, flags);
+        }
 
         if Self::should_show_model(cpu_info, flags.verbose) {
             disp.simple_line("Model", &cpu_info.cpu_arch.model);

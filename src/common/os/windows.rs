@@ -842,7 +842,7 @@ impl TOSData for OS {
         None
     }
 
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         let mut hkey = HKEY::default();
         let subkey = w!(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
         let result =
@@ -855,7 +855,15 @@ impl TOSData for OS {
             if let Some(name) = proc_name
                 && !is_generic_value(&name)
             {
-                return Some(clean_soc_name(&name));
+                let cleaned = clean_soc_name(&name);
+                if !is_generic_value(&cleaned) {
+                    return Some(SystemInfo::from_model(
+                        cleaned,
+                        DataSource::WindowsRegistry(
+                            r"HARDWARE\DESCRIPTION\System\CentralProcessor\0:ProcessorNameString",
+                        ),
+                    ));
+                }
             }
         }
 

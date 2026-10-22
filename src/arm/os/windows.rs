@@ -48,7 +48,9 @@ pub fn detect() -> OsCpuInfo {
     );
     let cores = super::detect_cores(&all_midrs);
 
-    let model = crate::common::OS::get_soc().unwrap_or_default();
+    let model = crate::common::OS::get_soc()
+        .and_then(|s| s.display_name())
+        .unwrap_or_default();
     let raw = get_windows_raw_info();
 
     OsCpuInfo {

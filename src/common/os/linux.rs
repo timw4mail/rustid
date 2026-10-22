@@ -112,17 +112,20 @@ fn get_raw_system_name() -> Option<SystemInfo> {
 }
 
 impl TOSData for OS {
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         if let Some(soc) = get_soc_from_proc_cpuinfo()
             && !is_generic_value(&soc)
         {
-            return Some(soc);
+            return Some(SystemInfo::from_model(soc, DataSource::LinuxProcCpuinfo));
         }
 
         if let Some(soc) = get_soc_from_devicetree()
             && !is_generic_value(&soc)
         {
-            return Some(soc);
+            return Some(SystemInfo::from_model(
+                soc,
+                DataSource::DeviceTree("/proc/device-tree/compatible"),
+            ));
         }
 
         None
