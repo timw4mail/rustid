@@ -7,8 +7,11 @@ impl TOSData for OS {
         #[cfg(target_os = "freebsd")]
         {
             if let Some(raw) = get_sysctl_value("hw.fdt.compatible") {
-                let parts = raw.split(",");
-                if let Some(last) = parts.last() {
+                if let Some(last) = raw
+                    .split(',')
+                    .map(str::trim)
+                    .rfind(|s| !s.is_empty() && !is_generic_value(s))
+                {
                     return Some(String::from(last));
                 }
             }

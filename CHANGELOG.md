@@ -2,6 +2,19 @@
 
 For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 
+## [2.3.1] — SteamOS / Linux GTK GUI fixes, CPUID brand string NUL-termination, and Linux system name improvements
+
+### Added
+- **Steam Deck Test Fixture**: Added AMD Custom APU 0405 (Van Gogh) CPUID dump test fixture and assertions (`tests/cpuid/dump/Amd_Custom_APU_0405.txt`, `tests/cpuid_dump_test.rs`)
+- **Linux GTK Dark Theme Detection**: Added automatic system dark theme detection on startup and explicit monospace font fallbacks for the Linux GTK GUI (`src/gui/linux/window.rs`)
+
+### Changed
+- **Linux DMI System & SoC Name Filtering**: Prioritized `product_name` over `product_family` when resolving Linux DMI system names and filtered generic placeholder values (including `"arm-platform"`) from system and SoC names (`src/common/os/linux.rs`, `src/common/os/common.rs`, `src/arm/display.rs`)
+- **Build Artifact Layout & DOS/32A Binding**: Standardized build output paths under `target/dist/<platform>/`, added direct DOS/32A stub binding to `elf2le`, and removed redundant build configuration files (`Makefile`, `justfile`, `build-config/*`, `tools/elf2le/src/main.rs`)
+
+### Fixed
+- **CPUID Brand String NUL-Termination & SteamOS GUI Text Rendering**: Fixed `read_multi_leaf_str` reading past the NUL terminator into trailing firmware buffer memory (such as on the Steam Deck's `AMD Custom APU 0405`), which embedded a `\0` byte in the model string and caused `GtkTextBuffer` UTF-8 validation to reject the report text (`src/x86/fns.rs`, `src/gui/common.rs`, `src/gui/linux/window.rs`)
+
 ## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), PowerPC detection, and AMD Athlon improvements
 
 ### Added

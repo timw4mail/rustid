@@ -99,10 +99,13 @@ fn get_raw_system_name() -> Option<SystemInfo> {
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {
-        return Some(SystemInfo::from_model(
-            format_compatible_pair(pair),
-            DataSource::DeviceTree("/proc/device-tree/compatible"),
-        ));
+        let model = format_compatible_pair(pair);
+        if !is_generic_value(&model) {
+            return Some(SystemInfo::from_model(
+                model,
+                DataSource::DeviceTree("/proc/device-tree/compatible"),
+            ));
+        }
     }
 
     None
@@ -110,11 +113,15 @@ fn get_raw_system_name() -> Option<SystemInfo> {
 
 impl TOSData for OS {
     fn get_soc() -> Option<String> {
-        if let Some(soc) = get_soc_from_proc_cpuinfo() {
+        if let Some(soc) = get_soc_from_proc_cpuinfo()
+            && !is_generic_value(&soc)
+        {
             return Some(soc);
         }
 
-        if let Some(soc) = get_soc_from_devicetree() {
+        if let Some(soc) = get_soc_from_devicetree()
+            && !is_generic_value(&soc)
+        {
             return Some(soc);
         }
 

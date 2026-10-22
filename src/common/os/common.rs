@@ -54,6 +54,7 @@ pub fn is_generic_value(raw: &str) -> bool {
         "apple - c2",
         "apple - 1",
         "apple - 2",
+        "arm-platform",
         "- c1",
         "- c2",
         "c1",
@@ -285,7 +286,8 @@ pub fn get_devicetree_compatible() -> Option<alloc::vec::Vec<alloc::vec::Vec<Str
     if let Ok(raw) = std::fs::read_to_string("/proc/device-tree/compatible") {
         let res: alloc::vec::Vec<_> = raw
             .split('\0')
-            .filter(|s| !s.is_empty())
+            .map(str::trim)
+            .filter(|s| !s.is_empty() && !is_generic_value(s))
             .map(|p| -> alloc::vec::Vec<_> {
                 // Since Mac Model strings contain commas, we don't want to split on those
                 if !(p.contains("Power") || p.contains("Mac")) {
@@ -294,9 +296,12 @@ pub fn get_devicetree_compatible() -> Option<alloc::vec::Vec<alloc::vec::Vec<Str
                     alloc::vec![String::from(p)]
                 }
             })
+            .filter(|pair| !pair.iter().any(|part| is_generic_value(part)))
             .collect();
 
-        return Some(res);
+        if !res.is_empty() {
+            return Some(res);
+        }
     }
 
     None
@@ -422,6 +427,7 @@ pub fn get_soc_from_proc_cpuinfo() -> Option<String> {
     if let Some(last) = cpuinfo.last()
         && (!last.contains_key("processor"))
         && let Some(raw_soc) = last.get("Hardware")
+        && !is_generic_value(raw_soc.trim())
     {
         return Some(String::from(raw_soc.trim()));
     }
@@ -444,10 +450,16 @@ pub fn get_system_name_from_proc_cpuinfo() -> Option<String> {
 /// Resolves SoC identity from the last entry of `/proc/device-tree/compatible`.
 #[cfg(std_os)]
 pub fn get_soc_from_devicetree() -> Option<String> {
-    if let Some(raw_pairs) = get_devicetree_compatible()
-        && let Some(pair) = raw_pairs.last().cloned()
-    {
-        return Some(format_compatible_pair(pair));
+    if let Some(raw_pairs) = get_devicetree_compatible() {
+        for pair in raw_pairs.into_iter().rev() {
+            if pair.iter().any(|part| is_generic_value(part)) {
+                continue;
+            }
+            let soc = format_compatible_pair(pair);
+            if !is_generic_value(&soc) {
+                return Some(soc);
+            }
+        }
     }
     None
 }

@@ -159,7 +159,13 @@ impl CpuDisplay {
             disp.display_system(system, flags);
         }
 
-        disp.simple_line_opt("SoC", cpu_info.soc_model.as_deref());
+        disp.simple_line_opt(
+            "SoC",
+            cpu_info
+                .soc_model
+                .as_deref()
+                .filter(|s| !crate::common::is_generic_value(s)),
+        );
 
         if Self::should_show_model(cpu_info, flags.verbose) {
             disp.simple_line("Model", &cpu_info.cpu_arch.model);
