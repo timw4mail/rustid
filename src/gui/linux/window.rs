@@ -15,10 +15,39 @@ use crate::Cpu;
 use crate::common::cpu::TDetect;
 use crate::gui::ReportSource;
 use crate::gui::common;
-use crate::gui::styled_text::parse_text_runs;
+use crate::gui::styled_text::{PALETTE_DARK, PALETTE_LIGHT, parse_text_runs};
 
 use super::dialogs::*;
-use super::state::{AppState, ViewMode};
+use super::state::{AppState, GuiTheme, ViewMode};
+
+const CSS_PRIORITY_OVERRIDE: u32 = gtk::STYLE_PROVIDER_PRIORITY_USER + 100;
+
+fn detect_system_theme(window: &Window) -> GuiTheme {
+    if let Some(settings) = gtk::Settings::default() {
+        if settings.is_gtk_application_prefer_dark_theme() {
+            return GuiTheme::Dark;
+        }
+        if let Some(theme_name) = settings.gtk_theme_name() {
+            let lower = theme_name.to_ascii_lowercase();
+            if lower.contains("dark") || lower.contains("vapor") {
+                return GuiTheme::Dark;
+            }
+        }
+    }
+
+    let ctx = window.style_context();
+    if let Some(color) = ctx
+        .lookup_color("theme_base_color")
+        .or_else(|| ctx.lookup_color("theme_bg_color"))
+    {
+        let luminance = 0.299 * color.red() + 0.587 * color.green() + 0.114 * color.blue();
+        if luminance < 0.5 {
+            return GuiTheme::Dark;
+        }
+    }
+
+    GuiTheme::Light
+}
 
 struct UiWidgets {
     window: Window,
@@ -50,15 +79,27 @@ fn render_ui(widgets: &UiWidgets, state: &mut AppState, updating_menu: &Rc<RefCe
 
     state.current_plain_text = common::build_view_text(&cpu, state.mode, state.flags, source);
 
+    let palette = if state.theme.is_dark() {
+        &PALETTE_DARK
+    } else {
+        &PALETTE_LIGHT
+    };
     let (bg_color, runs) =
         parse_text_runs(&state.current_plain_text, state.theme, state.flags.color);
 
     if let Some(buffer) = widgets.text_view.buffer() {
-        buffer.set_text(&state.current_plain_text);
+        let text = &state.current_plain_text;
+        buffer.set_text(text);
         let (start, end) = buffer.bounds();
         buffer.remove_all_tags(&start, &end);
 
         if let Some(tag_table) = buffer.tag_table() {
+            let mut old_tags = Vec::new();
+            tag_table.foreach(|tag| old_tags.push(tag.clone()));
+            for tag in old_tags {
+                tag_table.remove(&tag);
+            }
+
             for run in &runs {
                 let rgba = gdk::RGBA::new(
                     run.color.r as f64 / 255.0,
@@ -68,19 +109,27 @@ fn render_ui(widgets: &UiWidgets, state: &mut AppState, updating_menu: &Rc<RefCe
                 );
                 let tag = gtk::TextTag::new(None);
                 tag.set_foreground_rgba(Some(&rgba));
-                tag.set_weight(if run.bold { 700 } else { 400 });
+                if run.bold {
+                    tag.set_weight(700);
+                }
                 tag_table.add(&tag);
 
-                let start_iter = buffer.iter_at_offset(run.offset as i32);
-                let end_iter = buffer.iter_at_offset((run.offset + run.length) as i32);
+                let start_byte = (run.offset as usize).min(text.len());
+                let end_byte = ((run.offset + run.length) as usize).min(text.len());
+                let start_char = text[..start_byte].chars().count() as i32;
+                let end_char = start_char + text[start_byte..end_byte].chars().count() as i32;
+
+                let start_iter = buffer.iter_at_offset(start_char);
+                let end_iter = buffer.iter_at_offset(end_char);
                 buffer.apply_tag(&tag, &start_iter, &end_iter);
             }
         }
     }
 
+    let body_color = palette.body;
     let css = format!(
-        "textview text, textview {{ background-color: rgb({},{},{}); font-family: monospace; font-size: 10pt; }}\nframe {{ border: 1px solid alpha(currentColor, 0.2); }}\n",
-        bg_color.r, bg_color.g, bg_color.b
+        "textview, textview.view, textview text, .view text {{ background-color: rgb({},{},{}); background-image: none; color: rgb({},{},{}); font-family: \"Noto Sans Mono\", \"Hack\", \"DejaVu Sans Mono\", \"Liberation Mono\", \"Ubuntu Mono\", monospace; font-size: 10pt; }}\ntextview text selection, textview selection {{ background-color: #3584e4; color: #ffffff; }}\nframe {{ border: 1px solid alpha(currentColor, 0.2); }}\n",
+        bg_color.r, bg_color.g, bg_color.b, body_color.r, body_color.g, body_color.b
     );
     let _ = widgets.css_provider.load_from_data(css.as_bytes());
 
@@ -322,12 +371,13 @@ pub fn run() {
 
     let css_provider = CssProvider::new();
     if let Some(screen) = gdk::Screen::default() {
-        StyleContext::add_provider_for_screen(
-            &screen,
-            &css_provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
+        StyleContext::add_provider_for_screen(&screen, &css_provider, CSS_PRIORITY_OVERRIDE);
     }
+    text_view
+        .style_context()
+        .add_provider(&css_provider, CSS_PRIORITY_OVERRIDE);
+
+    let initial_theme = detect_system_theme(&window);
 
     let widgets = Rc::new(UiWidgets {
         window: window.clone(),
@@ -347,7 +397,10 @@ pub fn run() {
         item_opt_compact: item_opt_compact.clone(),
     });
 
-    let state = Rc::new(RefCell::new(AppState::default()));
+    let state = Rc::new(RefCell::new(AppState {
+        theme: initial_theme,
+        ..AppState::default()
+    }));
     let updating_menu = Rc::new(RefCell::new(false));
 
     // Connect window events

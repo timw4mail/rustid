@@ -69,12 +69,14 @@ impl From<bool> for GuiTheme {
 
 #[cfg(windows)]
 pub fn normalize_newlines(s: String) -> String {
-    s.replace("\r\n", "\n").replace('\n', "\r\n")
+    s.replace('\0', "")
+        .replace("\r\n", "\n")
+        .replace('\n', "\r\n")
 }
 
 #[cfg(not(windows))]
 pub fn normalize_newlines(s: String) -> String {
-    s
+    s.replace('\0', "")
 }
 
 /// Formats a plain-text CPU report.

@@ -257,16 +257,19 @@ pub fn read_multi_leaf_str(min_leaf: u32, max_leaf: u32) -> String {
     }
 
     let mut model = String::new();
-    for leaf in min_leaf..=max_leaf {
+    'outer: for leaf in min_leaf..=max_leaf {
         let res = x86_cpuid(leaf);
         for reg in [res.eax, res.ebx, res.ecx, res.edx] {
-            let bytes = reg.to_le_bytes();
-            let s = core::str::from_utf8(&bytes).unwrap_or("");
-            model.push_str(s);
+            for b in reg.to_le_bytes() {
+                if b == 0 {
+                    break 'outer;
+                }
+                model.push(b as char);
+            }
         }
     }
 
-    String::from(model.trim().trim_matches('\0'))
+    String::from(model.trim())
 }
 
 fn is_vendor(v: &str) -> bool {
