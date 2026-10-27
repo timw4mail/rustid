@@ -67,7 +67,7 @@ pub fn detect() -> OsCpuInfo {
 
 /// Query Windows registry for raw processor metadata.
 pub fn get_windows_raw_info() -> BTreeMap<String, String> {
-    use crate::common::os::windows::read_reg_string;
+    use crate::common::os::windows::{read_reg_dword, read_reg_string};
     use windows::Win32::System::Registry::*;
     use windows::core::w;
 
@@ -87,21 +87,7 @@ pub fn get_windows_raw_info() -> BTreeMap<String, String> {
             raw.insert("VendorIdentifier".to_string(), val);
         }
 
-        let mut mhz: u32 = 0;
-        let mut size = std::mem::size_of::<u32>() as u32;
-        let mut dw_type = REG_NONE;
-        let val_mhz = w!("~MHZ");
-        let res = unsafe {
-            RegQueryValueExW(
-                hkey,
-                val_mhz,
-                None,
-                Some(&mut dw_type),
-                Some(&mut mhz as *mut u32 as *mut u8),
-                Some(&mut size),
-            )
-        };
-        if res.is_ok() && dw_type == REG_DWORD {
+        if let Some(mhz) = read_reg_dword(hkey, "~MHZ") {
             raw.insert("~MHZ".to_string(), format!("{mhz} MHz"));
         }
 
@@ -239,9 +225,9 @@ pub fn get_all_features() -> BTreeMap<&'static str, String> {
 
 #[cfg(windows_os)]
 pub fn get_windows_midrs() -> Vec<usize> {
-    use std::mem::size_of;
+    use crate::common::os::windows::{read_reg_dword, read_reg_qword};
     use windows::Win32::System::Registry::*;
-    use windows::core::{HSTRING, w};
+    use windows::core::HSTRING;
 
     let mut midrs = Vec::new();
     let mut i = 0;
@@ -264,46 +250,9 @@ pub fn get_windows_midrs() -> Vec<usize> {
             break;
         }
 
-        let mut midr = None;
-
-        // 1. Try 'CP 4000' (REG_QWORD)
-        let mut cpu_id_qword: u64 = 0;
-        let mut size_qword = size_of::<u64>() as u32;
-        let mut dw_type = REG_NONE;
-        let value_name_4000 = w!("CP 4000");
-        let query_4000 = unsafe {
-            RegQueryValueExW(
-                hkey,
-                value_name_4000,
-                None,
-                Some(&mut dw_type),
-                Some(&mut cpu_id_qword as *mut u64 as *mut u8),
-                Some(&mut size_qword),
-            )
-        };
-
-        if query_4000.is_ok() && dw_type == REG_QWORD {
-            midr = Some(cpu_id_qword as usize);
-        } else {
-            // 2. Fallback to 'CPUID' (REG_DWORD)
-            let mut cpu_id_dword: u32 = 0;
-            let mut size_dword = size_of::<u32>() as u32;
-            let value_name_cpuid = w!("CPUID");
-            let query_cpuid = unsafe {
-                RegQueryValueExW(
-                    hkey,
-                    value_name_cpuid,
-                    None,
-                    Some(&mut dw_type),
-                    Some(&mut cpu_id_dword as *mut u32 as *mut u8),
-                    Some(&mut size_dword),
-                )
-            };
-
-            if query_cpuid.is_ok() && dw_type == REG_DWORD {
-                midr = Some(cpu_id_dword as usize);
-            }
-        }
+        let midr = read_reg_qword(hkey, "CP 4000")
+            .map(|q| q as usize)
+            .or_else(|| read_reg_dword(hkey, "CPUID").map(|d| d as usize));
 
         let _ = unsafe { RegCloseKey(hkey) };
 

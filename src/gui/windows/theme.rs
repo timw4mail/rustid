@@ -10,7 +10,7 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::System::LibraryLoader::LoadLibraryW;
 use windows::Win32::System::Registry::{
-    HKEY, HKEY_CURRENT_USER, KEY_READ, REG_VALUE_TYPE, RegCloseKey, RegOpenKeyExW, RegQueryValueExW,
+    HKEY, HKEY_CURRENT_USER, KEY_READ, RegCloseKey, RegOpenKeyExW,
 };
 use windows::Win32::UI::Controls::{
     ICC_BAR_CLASSES, ICC_STANDARD_CLASSES, INITCOMMONCONTROLSEX, InitCommonControlsEx,
@@ -24,29 +24,16 @@ pub static FONT_MONO: AtomicIsize = AtomicIsize::new(0);
 pub static FONT_UI: AtomicIsize = AtomicIsize::new(0);
 
 pub fn is_system_dark_theme() -> bool {
-    unsafe {
-        let subkey = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
-        let value_name = w!("AppsUseLightTheme");
-        let mut hkey = HKEY::default();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, subkey, None, KEY_READ, &mut hkey).is_ok() {
-            let mut data = 1u32;
-            let mut data_size = std::mem::size_of::<u32>() as u32;
-            let mut val_type = REG_VALUE_TYPE::default();
-            let status = RegQueryValueExW(
-                hkey,
-                value_name,
-                None,
-                Some(&mut val_type),
-                Some(&mut data as *mut u32 as *mut u8),
-                Some(&mut data_size),
-            );
-            let _ = RegCloseKey(hkey);
-            if status.is_ok() {
-                return data == 0;
-            }
+    let subkey = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
+    let mut hkey = HKEY::default();
+    if unsafe { RegOpenKeyExW(HKEY_CURRENT_USER, subkey, None, KEY_READ, &mut hkey) }.is_ok() {
+        let val = crate::common::os::windows::read_reg_dword(hkey, "AppsUseLightTheme");
+        let _ = unsafe { RegCloseKey(hkey) };
+        if let Some(data) = val {
+            return data == 0;
         }
-        false
     }
+    false
 }
 
 pub fn set_window_dark_titlebar(hwnd: HWND, dark: bool) {

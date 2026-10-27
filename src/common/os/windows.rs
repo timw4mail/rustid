@@ -109,6 +109,56 @@ pub fn read_reg_binary(hkey: HKEY, value_name: &str) -> Option<Vec<u8>> {
     Some(buf)
 }
 
+/// Helper function to read a 32-bit unsigned integer registry value (REG_DWORD).
+pub fn read_reg_dword(hkey: HKEY, value_name: &str) -> Option<u32> {
+    let mut data = 0u32;
+    let mut size = core::mem::size_of::<u32>() as u32;
+    let mut dw_type = REG_NONE;
+    let val_name_hstring = HSTRING::from(value_name);
+    let val_pcwstr = PCWSTR(val_name_hstring.as_ptr());
+
+    let res = unsafe {
+        RegQueryValueExW(
+            hkey,
+            val_pcwstr,
+            None,
+            Some(&mut dw_type),
+            Some(&mut data as *mut u32 as *mut u8),
+            Some(&mut size),
+        )
+    };
+    if res.is_ok() && dw_type == REG_DWORD {
+        Some(data)
+    } else {
+        None
+    }
+}
+
+/// Helper function to read a 64-bit unsigned integer registry value (REG_QWORD).
+pub fn read_reg_qword(hkey: HKEY, value_name: &str) -> Option<u64> {
+    let mut data = 0u64;
+    let mut size = core::mem::size_of::<u64>() as u32;
+    let mut dw_type = REG_NONE;
+    let val_name_hstring = HSTRING::from(value_name);
+    let val_pcwstr = PCWSTR(val_name_hstring.as_ptr());
+
+    let res = unsafe {
+        RegQueryValueExW(
+            hkey,
+            val_pcwstr,
+            None,
+            Some(&mut dw_type),
+            Some(&mut data as *mut u64 as *mut u8),
+            Some(&mut size),
+        )
+    };
+    if res.is_ok() && dw_type == REG_QWORD {
+        Some(data)
+    } else {
+        None
+    }
+}
+
 struct BiosRegistrySources {
     mfr: &'static str,
     prod: &'static str,
@@ -486,146 +536,6 @@ fn detect_apple_mac_model() -> Option<SystemInfo> {
 
 type PfnGetSystemFirmwareTable = unsafe extern "system" fn(u32, u32, *mut u8, u32) -> u32;
 
-/// Parse raw SMBIOS structures for system name (matches "System Model" in msinfo32).
-fn parse_smbios_structures_for_system_name(data: &[u8]) -> Option<SystemInfo> {
-    let mut offset = 0;
-    let mut bios_ver: Option<String> = None;
-    let mut sys_family: Option<String> = None;
-    let mut sys_prod: Option<String> = None;
-    let mut sys_mfr: Option<String> = None;
-    let mut board_prod: Option<String> = None;
-    let mut board_mfr: Option<String> = None;
-
-    while offset + 4 <= data.len() {
-        let type_ = data[offset];
-        let length = data[offset + 1] as usize;
-        if length < 4 || offset + length > data.len() {
-            break;
-        }
-
-        let formatted = &data[offset..offset + length];
-        let mut string_offset = offset + length;
-        let mut strings: Vec<String> = Vec::new();
-
-        while string_offset < data.len() {
-            if data[string_offset] == 0 {
-                string_offset += 1;
-                break;
-            }
-            let start = string_offset;
-            while string_offset < data.len() && data[string_offset] != 0 {
-                string_offset += 1;
-            }
-            let s = String::from_utf8_lossy(&data[start..string_offset]).to_string();
-            strings.push(s);
-            if string_offset < data.len() && data[string_offset] == 0 {
-                string_offset += 1;
-            }
-        }
-
-        let get_str = |idx: u8| -> Option<String> {
-            if idx > 0 && (idx as usize) <= strings.len() {
-                let s = strings[idx as usize - 1].trim().to_string();
-                if !s.is_empty() { Some(s) } else { None }
-            } else {
-                None
-            }
-        };
-
-        match type_ {
-            0 => {
-                if formatted.len() >= 6 {
-                    bios_ver = get_str(formatted[5]);
-                }
-            }
-            1 => {
-                if formatted.len() >= 6 {
-                    sys_mfr = get_str(formatted[4]);
-                    sys_prod = get_str(formatted[5]);
-                }
-                if formatted.len() >= 0x1B {
-                    sys_family = get_str(formatted[0x1A]);
-                }
-            }
-            2 => {
-                if formatted.len() >= 6 {
-                    board_mfr = get_str(formatted[4]);
-                    board_prod = get_str(formatted[5]);
-                }
-            }
-            127 => break,
-            _ => {}
-        }
-
-        offset = string_offset;
-    }
-
-    // Check for Apple Mac hardware model identifier first across all SMBIOS fields
-    for candidate in [&sys_prod, &bios_ver, &sys_family, &board_prod]
-        .into_iter()
-        .flatten()
-    {
-        if let Some(mac) = parse_apple_model(candidate) {
-            return Some(SystemInfo::new(
-                Some("Apple Inc.".to_string()),
-                DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
-                Some(mac),
-                DataSource::Smbios("SMBIOS Type 1:Product Name"),
-            ));
-        }
-    }
-
-    let is_apple = [&sys_mfr, &board_mfr, &bios_ver, &sys_prod, &sys_family]
-        .into_iter()
-        .flatten()
-        .any(|s| {
-            let s_lower = s.to_ascii_lowercase();
-            s_lower.starts_with("apple")
-                || s_lower.contains("apple")
-                || parse_apple_model(s).is_some()
-                || s.starts_with("Mac-")
-        });
-
-    // Skip SMBIOS Family on Apple hardware (where Family is often firmware metadata like "4 4 A  ")
-    if !is_apple
-        && let Some(fam) = sys_family
-        && !is_generic_value(&fam)
-    {
-        return Some(SystemInfo::new(
-            sys_mfr,
-            DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
-            Some(fam),
-            DataSource::Smbios("SMBIOS Type 1:Family"),
-        ));
-    }
-
-    if !is_apple
-        && let Some(prod) = sys_prod
-        && !is_generic_value(&prod)
-    {
-        return Some(SystemInfo::new(
-            sys_mfr,
-            DataSource::Smbios("SMBIOS Type 1:Manufacturer"),
-            Some(prod),
-            DataSource::Smbios("SMBIOS Type 1:Product Name"),
-        ));
-    }
-
-    if !is_apple
-        && let Some(board) = board_prod
-        && !is_generic_value(&board)
-    {
-        return Some(SystemInfo::new(
-            board_mfr,
-            DataSource::Smbios("SMBIOS Type 2:BaseBoardManufacturer"),
-            Some(board),
-            DataSource::Smbios("SMBIOS Type 2:BaseBoardProduct"),
-        ));
-    }
-
-    None
-}
-
 /// Reads SMBIOS table via GetSystemFirmwareTable (Windows Vista / 7 / 8 / 10 / 11 / Server 2003 SP1+).
 fn get_system_name_from_firmware_table() -> Option<SystemInfo> {
     use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
@@ -649,38 +559,8 @@ fn get_system_name_from_firmware_table() -> Option<SystemInfo> {
         }
 
         let smbios_data = &buf[8..bytes_written as usize];
-        parse_smbios_structures_for_system_name(smbios_data)
+        crate::common::os::smbios::SmbiosData::parse(smbios_data).get_system_name()
     }
-}
-
-/// Robustly parse an SMBIOS buffer (with or without header or at arbitrary offset).
-fn parse_smbios_buffer(buf: &[u8]) -> Option<SystemInfo> {
-    if buf.len() < 8 {
-        return None;
-    }
-
-    // 1. Try standard 8-byte RawSMBIOSData header
-    if let Some(name) = parse_smbios_structures_for_system_name(&buf[8..]) {
-        return Some(name);
-    }
-
-    // 2. Try raw structures at offset 0
-    if let Some(name) = parse_smbios_structures_for_system_name(buf) {
-        return Some(name);
-    }
-
-    // 3. Scan for Type 1 structure header in buffer
-    for i in 0..buf.len().saturating_sub(8) {
-        if buf[i] == 1
-            && buf[i + 1] >= 8
-            && (buf[i + 1] as usize) < 64
-            && let Some(name) = parse_smbios_structures_for_system_name(&buf[i..])
-        {
-            return Some(name);
-        }
-    }
-
-    None
 }
 
 /// Reads SMBIOS table from mssmbios registry cache (standard on Windows 2000 and Windows XP).
@@ -706,13 +586,47 @@ fn get_system_name_from_mssmbios_reg() -> Option<SystemInfo> {
             let _ = unsafe { RegCloseKey(hkey) };
 
             if let Some(buf) = bin_data
-                && let Some(name) = parse_smbios_buffer(&buf)
+                && let Some(name) = crate::common::os::smbios::parse_smbios_buffer(&buf)
             {
                 return Some(name);
             }
         }
     }
     None
+}
+
+/// Helper to iterate over `SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX` records of a given relationship.
+fn for_each_processor_info_ex<F>(relationship: LOGICAL_PROCESSOR_RELATIONSHIP, mut f: F) -> bool
+where
+    F: FnMut(&SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX),
+{
+    let mut length = 0u32;
+    unsafe {
+        let _ = GetLogicalProcessorInformationEx(relationship, None, &mut length);
+    }
+    if length == 0 {
+        return false;
+    }
+
+    let mut buffer = vec![0u8; length as usize];
+    let ptr = buffer.as_mut_ptr() as *mut SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    let res = unsafe { GetLogicalProcessorInformationEx(relationship, Some(ptr), &mut length) };
+    if res.is_err() {
+        return false;
+    }
+
+    let mut offset = 0usize;
+    while offset < length as usize {
+        let item_ptr =
+            unsafe { buffer.as_ptr().add(offset) as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX };
+        let item = unsafe { &*item_ptr };
+        if item.Size == 0 {
+            break;
+        }
+        f(item);
+        offset += item.Size as usize;
+    }
+    true
 }
 
 impl TOSData for OS {
@@ -859,40 +773,17 @@ impl TOSData for OS {
 
     fn get_socket_count() -> TopologyTier {
         // 1. Try modern GetLogicalProcessorInformationEx (Windows 7+)
-        let mut length = 0u32;
-        unsafe {
-            let _ = GetLogicalProcessorInformationEx(RelationProcessorPackage, None, &mut length);
-        }
-        if length > 0 {
-            let mut buffer = vec![0u8; length as usize];
-            let ptr = buffer.as_mut_ptr() as *mut SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
-            let res = unsafe {
-                GetLogicalProcessorInformationEx(RelationProcessorPackage, Some(ptr), &mut length)
-            };
-            if res.is_ok() {
-                let mut package_count = 0u32;
-                let mut offset = 0usize;
-                while offset < length as usize {
-                    let item_ptr = unsafe {
-                        buffer.as_ptr().add(offset)
-                            as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
-                    };
-                    let item = unsafe { &*item_ptr };
-                    if item.Size == 0 {
-                        break;
-                    }
-                    if item.Relationship == RelationProcessorPackage {
-                        package_count += 1;
-                    }
-                    offset += item.Size as usize;
-                }
-                if package_count > 0 {
-                    return TopologyTier::new(
-                        package_count,
-                        DataSource::WindowsRegistry("GetLogicalProcessorInformationEx"),
-                    );
-                }
+        let mut package_count = 0u32;
+        if for_each_processor_info_ex(RelationProcessorPackage, |item| {
+            if item.Relationship == RelationProcessorPackage {
+                package_count += 1;
             }
+        }) && package_count > 0
+        {
+            return TopologyTier::new(
+                package_count,
+                DataSource::WindowsRegistry("GetLogicalProcessorInformationEx"),
+            );
         }
 
         // 2. Try legacy GetLogicalProcessorInformation (Windows XP SP3 / Server 2003 / Vista)
@@ -937,39 +828,16 @@ impl TDetect for TopologyCount {
         let mut cores = 0u32;
         let mut threads = 0u32;
 
-        let mut length = 0u32;
-        unsafe {
-            let _ = GetLogicalProcessorInformationEx(RelationProcessorCore, None, &mut length);
-        }
-        if length > 0 {
-            let mut buffer = vec![0u8; length as usize];
-            let ptr = buffer.as_mut_ptr() as *mut SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
-            let res = unsafe {
-                GetLogicalProcessorInformationEx(RelationProcessorCore, Some(ptr), &mut length)
-            };
-            if res.is_ok() {
-                let mut offset = 0usize;
-                while offset < length as usize {
-                    let item_ptr = unsafe {
-                        buffer.as_ptr().add(offset)
-                            as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
-                    };
-                    let item = unsafe { &*item_ptr };
-                    if item.Size == 0 {
-                        break;
-                    }
-                    if item.Relationship == RelationProcessorCore {
-                        cores += 1;
-                        let proc_rel = unsafe { &item.Anonymous.Processor };
-                        for g in 0..proc_rel.GroupCount as usize {
-                            let mask = proc_rel.GroupMask[g].Mask;
-                            threads += mask.count_ones();
-                        }
-                    }
-                    offset += item.Size as usize;
+        for_each_processor_info_ex(RelationProcessorCore, |item| {
+            if item.Relationship == RelationProcessorCore {
+                cores += 1;
+                let proc_rel = unsafe { &item.Anonymous.Processor };
+                for g in 0..proc_rel.GroupCount as usize {
+                    let mask = proc_rel.GroupMask[g].Mask;
+                    threads += mask.count_ones();
                 }
             }
-        }
+        });
 
         // Fallback to legacy GetLogicalProcessorInformation (Win XP SP3 / Server 2003 / Vista)
         if (cores == 0 || threads == 0)
@@ -1025,38 +893,13 @@ impl Cache {
 
 impl Cache {
     pub fn from_windows() -> Option<Cache> {
-        let mut length = 0u32;
-        unsafe {
-            let _ = GetLogicalProcessorInformationEx(RelationCache, None, &mut length);
-        }
-        if length == 0 {
-            return None;
-        }
-
-        let mut buffer = vec![0u8; length as usize];
-        let ptr = buffer.as_mut_ptr() as *mut SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
-        let res =
-            unsafe { GetLogicalProcessorInformationEx(RelationCache, Some(ptr), &mut length) };
-        if res.is_err() {
-            return None;
-        }
-
         let mut cache = Cache {
             source: DataSource::WindowsRegistry("GetLogicalProcessorInformationEx"),
             ..Default::default()
         };
         let mut found_cache = false;
 
-        let mut offset = 0usize;
-        while offset < length as usize {
-            let item_ptr = unsafe {
-                buffer.as_ptr().add(offset) as *const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
-            };
-            let item = unsafe { &*item_ptr };
-            if item.Size == 0 {
-                break;
-            }
-
+        let ok = for_each_processor_info_ex(RelationCache, |item| {
             if item.Relationship == RelationCache {
                 let cache_rel = unsafe { &item.Anonymous.Cache };
                 let level = cache_rel.Level;
@@ -1066,10 +909,7 @@ impl Cache {
                     c if c == CacheData => CacheType::Data,
                     c if c == CacheInstruction => CacheType::Instruction,
                     c if c == CacheUnified => CacheType::Unified,
-                    _ => {
-                        offset += item.Size as usize;
-                        continue;
-                    }
+                    _ => return,
                 };
                 let mask = unsafe { cache_rel.Anonymous.GroupMask.Mask };
                 let share_count = mask.count_ones();
@@ -1078,11 +918,9 @@ impl Cache {
                     found_cache = true;
                 }
             }
+        });
 
-            offset += item.Size as usize;
-        }
-
-        if found_cache { Some(cache) } else { None }
+        if ok && found_cache { Some(cache) } else { None }
     }
 }
 
@@ -1131,211 +969,5 @@ Manufacturer=To be filled by O.E.M.
 Model=To be filled by O.E.M.
 "#;
         assert_eq!(parse_oeminfo_content(content_generic), None);
-    }
-
-    #[test]
-    fn test_parse_apple_model() {
-        assert_eq!(
-            parse_apple_model("MB41.88Z.00C1.B00.0802091544"),
-            Some("MacBook4,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("MBP31.88Z.0070.B00.0706281432"),
-            Some("MacBookPro3,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("MBA11.88Z.00BB.B00.0803171226"),
-            Some("MacBookAir1,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("IM81.88Z.00C1.B00.0802091544"),
-            Some("iMac8,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("MM21.88Z.009A.B00.0706281359"),
-            Some("Macmini2,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("MP31.88Z.006C.B05.0802291410"),
-            Some("MacPro3,1".to_string())
-        );
-        assert_eq!(
-            parse_apple_model("MacBook4,1"),
-            Some("MacBook4,1".to_string())
-        );
-        assert_eq!(parse_apple_model("APPLE  - c1"), None);
-        assert_eq!(parse_apple_model("American Megatrends Inc."), None);
-    }
-
-    #[test]
-    fn test_parse_smbios_buffer() {
-        let mut buf = Vec::new();
-        // 8-byte RawSMBIOSData header
-        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]);
-
-        // SMBIOS Type 1: System Information
-        buf.push(1); // Type 1
-        buf.push(0x1B); // Formatted length (27 bytes)
-        buf.extend_from_slice(&[0, 0]); // Handle
-        buf.push(1); // 0x04: Manufacturer string 1 ("Apple Inc.")
-        buf.push(2); // 0x05: Product Name string 2 ("MacBook4,1")
-        buf.push(3); // 0x06: Version string 3 ("1.0")
-        buf.extend_from_slice(&[0; 19]); // Fill up to 0x1A
-        buf.push(4); // 0x1A: Family string 4 ("MacBook")
-
-        // Strings
-        buf.extend_from_slice(b"Apple Inc.\0");
-        buf.extend_from_slice(b"MacBook4,1\0");
-        buf.extend_from_slice(b"1.0\0");
-        buf.extend_from_slice(b"MacBook\0");
-        buf.push(0); // Double null terminator
-
-        // End of table (Type 127)
-        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
-
-        assert_eq!(
-            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
-            Some("MacBook4,1".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_smbios_buffer_family_preferred() {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
-
-        // Type 1 with Family
-        buf.push(1);
-        buf.push(0x1B);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(1); // Mfr: LENOVO
-        buf.push(2); // Prod: 20L5CTO1WW
-        buf.push(0); // Version
-        buf.extend_from_slice(&[0; 19]);
-        buf.push(3); // Family: ThinkPad T480
-
-        buf.extend_from_slice(b"LENOVO\0");
-        buf.extend_from_slice(b"20L5CTO1WW\0");
-        buf.extend_from_slice(b"ThinkPad T480\0");
-        buf.push(0);
-
-        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
-
-        assert_eq!(
-            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
-            Some("LENOVO ThinkPad T480".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_smbios_buffer_baseboard_fallback() {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
-
-        // Type 1: Generic System Product Name
-        buf.push(1);
-        buf.push(0x08);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(1); // Mfr: System manufacturer
-        buf.push(2); // Prod: System Product Name
-        buf.push(0);
-        buf.push(0);
-        buf.extend_from_slice(b"System manufacturer\0");
-        buf.extend_from_slice(b"System Product Name\0");
-        buf.push(0);
-
-        // Type 2: Baseboard
-        buf.push(2);
-        buf.push(0x08);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(1); // Board Mfr: ASUSTeK COMPUTER INC.
-        buf.push(2); // Board Prod: ROG STRIX B550-F GAMING
-        buf.push(0);
-        buf.push(0);
-        buf.extend_from_slice(b"ASUSTeK COMPUTER INC.\0");
-        buf.extend_from_slice(b"ROG STRIX B550-F GAMING\0");
-        buf.push(0);
-
-        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
-
-        assert_eq!(
-            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
-            Some("ASUSTeK COMPUTER INC. ROG STRIX B550-F GAMING".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_smbios_buffer_2008_macbook() {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
-
-        // Type 0: BIOS Information with Apple EFI BIOS Version "MB41.88Z..."
-        buf.push(0);
-        buf.push(0x18);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(1); // Vendor: "Apple Inc."
-        buf.push(2); // BIOS Version: "MB41.88Z.00C1.B00.0802091544"
-        buf.extend_from_slice(&[0; 18]);
-        buf.extend_from_slice(b"Apple Inc.\0");
-        buf.extend_from_slice(b"MB41.88Z.00C1.B00.0802091544\0");
-        buf.push(0);
-
-        // Type 1: System Information with garbage family "4 4 A  "
-        buf.push(1);
-        buf.push(0x1B);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(1); // Mfr: "Apple Inc."
-        buf.push(2); // Prod: "Mac-F4208CC8"
-        buf.push(3); // Version: "1.0"
-        buf.extend_from_slice(&[0; 19]);
-        buf.push(4); // Family: "4 4 A  "
-        buf.extend_from_slice(b"Apple Inc.\0");
-        buf.extend_from_slice(b"Mac-F4208CC8\0");
-        buf.extend_from_slice(b"1.0\0");
-        buf.extend_from_slice(b"4 4 A  \0");
-        buf.push(0);
-
-        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
-
-        assert_eq!(
-            parse_smbios_buffer(&buf).and_then(|s| s.display_name()),
-            Some("MacBook4,1".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_smbios_buffer_2008_macbook_control_chars() {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&[1, 2, 4, 0, 50, 0, 0, 0]); // 8-byte header
-
-        // Type 1: System Information with garbage family "4\u{8}4\u{8}A\u{4}\u{5}" and Board ID "Mac-F4208CC8"
-        buf.push(1);
-        buf.push(0x1B);
-        buf.extend_from_slice(&[0, 0]);
-        buf.push(0); // Mfr: None (0)
-        buf.push(1); // Prod: "Mac-F4208CC8"
-        buf.push(0); // Version: None
-        buf.extend_from_slice(&[0; 19]);
-        buf.push(2); // Family: "4\u{8}4\u{8}A\u{4}\u{5}"
-        buf.extend_from_slice(b"Mac-F4208CC8\0");
-        buf.extend_from_slice(b"4\x084\x08A\x04\x05\0");
-        buf.push(0);
-
-        buf.extend_from_slice(&[127, 4, 0, 0, 0, 0]);
-
-        let parsed = parse_smbios_buffer(&buf);
-        assert!(parsed.is_some());
-        let info = parsed.unwrap();
-        assert_eq!(info.display_name(), Some("MacBook4,1".to_string()));
-        assert_eq!(info.model.as_deref(), Some("MacBook4,1"));
-        assert_eq!(
-            info.model_source,
-            DataSource::Smbios("SMBIOS Type 1:Product Name")
-        );
-        assert_eq!(info.vendor, Some("Apple Inc.".to_string()));
-        assert_eq!(
-            info.vendor_source,
-            DataSource::Smbios("SMBIOS Type 1:Manufacturer")
-        );
     }
 }
