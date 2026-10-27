@@ -388,13 +388,29 @@ pub fn read_devicetree_u64(path: impl AsRef<std::path::Path>) -> Option<u64> {
     None
 }
 
+/// Returns the cached list of available logical processor IDs from `core_affinity`.
+///
+/// Caching the initial list is critical because `core_affinity::set_for_current`
+/// restricts the calling thread's affinity mask to a single core, which would
+/// cause subsequent `core_affinity::get_core_ids()` calls on that thread to only
+/// return that single pinned core.
+#[cfg(all(std_os, not(target_arch = "arm")))]
+pub fn get_logical_core_ids() -> Option<&'static [core_affinity::CoreId]> {
+    static CORE_IDS: std::sync::LazyLock<Option<std::vec::Vec<core_affinity::CoreId>>> =
+        std::sync::LazyLock::new(core_affinity::get_core_ids);
+    CORE_IDS.as_deref()
+}
+
 /// Executes a closure on each available logical processor using `core_affinity`.
 #[cfg(all(std_os, not(target_arch = "arm")))]
 pub fn for_each_logical_core<F: FnMut()>(mut f: F) {
-    if let Some(core_ids) = core_affinity::get_core_ids() {
-        for core_id in core_ids {
+    if let Some(core_ids) = get_logical_core_ids() {
+        for &core_id in core_ids {
             core_affinity::set_for_current(core_id);
             f();
+        }
+        if let Some(&first) = core_ids.first() {
+            core_affinity::set_for_current(first);
         }
     } else {
         f();

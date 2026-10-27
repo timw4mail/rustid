@@ -48,6 +48,7 @@ For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 - **DOS Real-Mode & UEFI Build Fixes**: CFG-gated hybrid topology helpers to non-DOS platforms in `src/x86/cpu.rs` to fix `just build-dos`, and resolved missing `is_intel` symbol import in `src/x86/efi/mod.rs`
 - **RISC-V Crypto & Extended Feature Display**: Fixed category mismatch between `"ScalarCrypto"` in `build_feature_map` and `"Crypto"` in `display_features`, and added display keys for `"Zc"`, `"AmoMaxMin"`, and `"MemModel"` extensions (`src/riscv/features.rs`, `src/riscv/display.rs`)
 - **Windows GUI Export Filename Sanitization**: Fixed `Ctrl+S` export shortcut in Windows GUI missing filename sanitization for `/` and `\` characters and missing completion alert dialog (`src/gui/windows/window.rs`)
+- **Hybrid Core Affinity Persistence Across View Mode Switches & CPUID Dumps**: Cached initial logical core IDs in `get_logical_core_ids` and restored primary core affinity in `for_each_logical_core` and `dump_all_cpus`, fixing hybrid core output disappearing on subsequent GUI view renders (such as switching to "Everything" mode) and fixing multi-core CPUID dumps repeating CPU 0 (`src/common/os/common.rs`, `src/x86/os.rs`, `src/x86/dump.rs`)
 
 ## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), PowerPC detection, and AMD Athlon improvements
 

@@ -99,15 +99,12 @@ fn measure_frequency_tsc() -> u32 {
 pub fn detect_live_core_types() -> Vec<CpuCore> {
     let mut cores: Vec<CpuCore> = Vec::new();
 
-    if let Some(core_ids) = core_affinity::get_core_ids() {
-        for core_id in core_ids {
-            core_affinity::set_for_current(core_id);
-            let speed = Speed::detect_cpuid();
-            if let Some(core) = probe_current_core(Some(speed)) {
-                push_or_merge_core(&mut cores, core);
-            }
+    crate::common::for_each_logical_core(|| {
+        let speed = Speed::detect_cpuid();
+        if let Some(core) = probe_current_core(Some(speed)) {
+            push_or_merge_core(&mut cores, core);
         }
-    }
+    });
 
     finalize_hybrid_cores(&mut cores);
     cores

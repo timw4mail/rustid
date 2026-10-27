@@ -81,7 +81,7 @@ pub fn dump_cpu(f: &mut impl Write, cpu_idx: usize) {
     // Make sure to query each thread/cpu individually, to capture the full dump
     // This is especially important for hybrid cpus
     #[cfg(std_os)]
-    if let Some(core_ids) = core_affinity::get_core_ids()
+    if let Some(core_ids) = crate::common::get_logical_core_ids()
         && let Some(core_id) = core_ids.get(cpu_idx)
     {
         core_affinity::set_for_current(*core_id);
@@ -139,6 +139,12 @@ pub fn dump_all_cpus() -> alloc::string::String {
     let logical_cores = topo.threads.count as usize;
     for i in 0..logical_cores {
         dump_cpu(&mut output, i);
+    }
+    #[cfg(std_os)]
+    if let Some(core_ids) = crate::common::get_logical_core_ids()
+        && let Some(&first) = core_ids.first()
+    {
+        core_affinity::set_for_current(first);
     }
     output
 }
