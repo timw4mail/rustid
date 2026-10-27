@@ -1,7 +1,6 @@
-use super::constants::*;
+use super::cpuid_data_source;
 #[cfg(not(dos_real))]
-use super::x86_cpuid_count;
-use super::{cpuid_data_source, is_valid_leaf, vendor_str};
+use super::{constants::*, is_valid_leaf, vendor_str, x86_cpuid_count};
 pub use crate::common::Topology;
 use crate::common::{Cache, DataSource, Speed, TopologyTier};
 use crate::x86::{cpuid_cores_per_package, cpuid_threads_per_package};
@@ -16,46 +15,52 @@ impl Speed {
     /// Returns default (0 MHz, unmeasured) if frequency is not reported in CPUID.
     #[must_use]
     pub fn detect_cpuid() -> Self {
-        use super::{LEAF_16, x86_cpuid};
-        match &*vendor_str() {
-            VENDOR_INTEL => {
-                if !is_valid_leaf(LEAF_16) {
-                    return Speed::default();
+        #[cfg(dos_real)]
+        return Speed::default();
+
+        #[cfg(not(dos_real))]
+        {
+            use super::{LEAF_16, x86_cpuid};
+            match &*vendor_str() {
+                VENDOR_INTEL => {
+                    if !is_valid_leaf(LEAF_16) {
+                        return Speed::default();
+                    }
+
+                    let res = x86_cpuid(LEAF_16);
+
+                    let base = res.eax;
+                    let boost = res.ebx;
+
+                    if base == 0 {
+                        return Speed::default();
+                    }
+
+                    Speed {
+                        base,
+                        boost,
+                        measured: false,
+                    }
                 }
+                VENDOR_TRANSMETA => {
+                    use crate::x86::TRANSMETA_LEAF_1;
 
-                let res = x86_cpuid(LEAF_16);
+                    if !is_valid_leaf(TRANSMETA_LEAF_1) {
+                        return Speed::default();
+                    }
 
-                let base = res.eax;
-                let boost = res.ebx;
+                    let res = x86_cpuid(TRANSMETA_LEAF_1);
+                    let base = res.ecx;
+                    let boost = res.ecx;
 
-                if base == 0 {
-                    return Speed::default();
+                    Speed {
+                        base,
+                        boost,
+                        measured: false,
+                    }
                 }
-
-                Speed {
-                    base,
-                    boost,
-                    measured: false,
-                }
+                _ => Speed::default(),
             }
-            VENDOR_TRANSMETA => {
-                use crate::x86::TRANSMETA_LEAF_1;
-
-                if !is_valid_leaf(TRANSMETA_LEAF_1) {
-                    return Speed::default();
-                }
-
-                let res = x86_cpuid(TRANSMETA_LEAF_1);
-                let base = res.ecx;
-                let boost = res.ecx;
-
-                Speed {
-                    base,
-                    boost,
-                    measured: false,
-                }
-            }
-            _ => Speed::default(),
         }
     }
 
@@ -229,34 +234,41 @@ impl Topology {
     #[must_use]
     pub fn detect_cpuid() -> Self {
         let speed = Speed::detect_cpuid();
+        #[allow(unused_mut)]
         let mut cache = Cache::detect();
         let domains: DomainList = Self::detect_domains();
         let (sockets, cores, threads) = Self::count_cpuid_domains(&domains);
 
-        if let Some(c) = &mut cache {
-            c.resolve_share_counts(cores.count, threads.count, sockets.count);
-        }
-
-        let mut threads_per_socket = 0u32;
-        let mut threads_per_die = 0u32;
-
-        for d in &domains {
-            if d.count > threads_per_socket {
-                threads_per_socket = d.count;
+        #[cfg(not(dos_real))]
+        let dies = {
+            if let Some(c) = &mut cache {
+                c.resolve_share_counts(cores.count, threads.count, sockets.count);
             }
-            if d.kind == TopologyType::Die {
-                threads_per_die = d.count;
-            }
-        }
 
-        let dies = if threads_per_die > 0 && threads_per_socket > 0 {
-            TopologyTier::new(
-                (threads_per_socket / threads_per_die).max(1),
-                DataSource::Calculated("Cpuid"),
-            )
-        } else {
-            TopologyTier::default()
+            let mut threads_per_socket = 0u32;
+            let mut threads_per_die = 0u32;
+
+            for d in &domains {
+                if d.count > threads_per_socket {
+                    threads_per_socket = d.count;
+                }
+                if d.kind == TopologyType::Die {
+                    threads_per_die = d.count;
+                }
+            }
+
+            if threads_per_die > 0 && threads_per_socket > 0 {
+                TopologyTier::new(
+                    (threads_per_socket / threads_per_die).max(1),
+                    DataSource::Calculated("Cpuid"),
+                )
+            } else {
+                TopologyTier::default()
+            }
         };
+
+        #[cfg(dos_real)]
+        let dies = TopologyTier::default();
 
         Topology {
             sockets,
@@ -284,6 +296,7 @@ impl Topology {
         let threads = self.threads.count.max(cpuid_threads_per_package() * socket_count);
         self.cores = TopologyTier::new(cores, DataSource::Calculated(core_calc_desc));
         self.threads = TopologyTier::new(threads, DataSource::Calculated(thread_calc_desc));
+        #[cfg(not(dos_real))]
         if let Some(ref mut cache) = self.cache {
             cache.resolve_share_counts(cores, threads, socket_count);
         }

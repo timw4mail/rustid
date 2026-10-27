@@ -189,6 +189,38 @@ pub enum MicroArch {
 }
 
 impl MicroArch {
+    #[cfg(dos_real)]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MicroArch::Unknown => UNK,
+
+            // AMD
+            MicroArch::Am486 => "Am486",
+            MicroArch::Am5x86 => "Am5x86",
+
+            // Cyrix
+            MicroArch::Cx486DLC => "Cx486DLC",
+            MicroArch::Cx486DX => "Cx486DX",
+            MicroArch::Cx486S => "Cx486S",
+            MicroArch::Cy5x86 => "Cx5x86",
+            MicroArch::M1 => "M1",
+            MicroArch::M2 => "M2",
+            MicroArch::MediaGx => "MediaGX",
+            MicroArch::Geode => "Geode",
+
+            // Intel
+            MicroArch::I486 => "i486",
+            MicroArch::RapidCad => "RapidCad",
+
+            // UMC
+            MicroArch::U5S => "U5S",
+            MicroArch::U5D => "U5D",
+
+            _ => UNK,
+        }
+    }
+
+    #[cfg(not(dos_real))]
     pub fn as_str(self) -> &'static str {
         match self {
             MicroArch::Unknown => UNK,
@@ -440,69 +472,85 @@ impl CpuArch {
 
         let unknown_model = brand_arch(MicroArch::Unknown, UNK, None);
 
-        // Brand for Centaur CPUs is by signature, not vendor string
-        if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
-            return Centaur::micro_arch(model, s);
-        }
-
-        match brand {
+        #[cfg(dos_real)]
+        return match brand {
             CpuBrand::AMD => Amd::micro_arch(model, s),
-
             CpuBrand::Intel => Intel::micro_arch(model, s),
-
             CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
-
-            CpuBrand::NationalSemiconductor => match (s.family, s.model, s.stepping) {
-                (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some(N180)),
-                (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some(N180)),
-                (5, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
+            CpuBrand::Umc => match (s.family, s.model) {
+                (4, 1) => brand_arch(MicroArch::U5D, "U5D", Some(N600)),
+                (4, 2) => brand_arch(MicroArch::U5S, "U5S", Some(N600)),
                 _ => unknown_model,
             },
+            _ => unknown_model,
+        };
 
-            // From sandpile.org
-            CpuBrand::Rdc => match (s.family, s.model, s.stepping) {
-                (5, 8, _) => brand_arch(MicroArch::Iad, "Iad", None),
-                _ => unknown_model,
-            },
-
-            CpuBrand::Rise => match (s.family, s.model, s.stepping) {
-                (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some(N250)),
-                (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some(N180)),
-
-                // These two come from instlatx64
-                (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some(N250)),
-                (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some(N180)),
-                _ => unknown_model,
-            },
-
-            CpuBrand::Transmeta => Transmeta::micro_arch(model, s),
-
-            // As long as the signature doesn't overlap, might as well match for multiple brands
-            CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => {
-                match (s.family, s.model, s.stepping) {
-                    // UMC
-                    (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some(N600)),
-                    (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some(N600)),
-
-                    // SiS
-                    // See: <https://www.cpushack.com/2010/10/07/the-rise-of-the-vortex86-embedded-x86/>
-                    (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, Some(N180)),
-
-                    // DM&P
-                    // See: <https://www.vortex86.com/compare>
-                    (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", Some(N90)),
-                    (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", Some(N90)),
-                    (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", Some(N40)),
-
-                    _ => unknown_model,
-                }
+        // Brand for Centaur CPUs is by signature, not vendor string
+        #[cfg(not(dos_real))]
+        {
+            if vendor_string == VENDOR_CENTAUR || vendor_string == VENDOR_ZHAOXIN {
+                return Centaur::micro_arch(model, s);
             }
 
-            CpuBrand::NexGen => unknown_model,
+            match brand {
+                CpuBrand::AMD => Amd::micro_arch(model, s),
 
-            CpuBrand::Hygon => unknown_model,
+                CpuBrand::Intel => Intel::micro_arch(model, s),
 
-            _ => unknown_model,
+                CpuBrand::Cyrix => Cyrix::micro_arch(model, s),
+
+                CpuBrand::NationalSemiconductor => match (s.family, s.model, s.stepping) {
+                    (5, 4, _) => brand_arch(MicroArch::Geode, "GX1", Some(N180)),
+                    (5, 9, _) => brand_arch(MicroArch::Geode, "GX2", Some(N180)),
+                    (5, 10, _) => brand_arch(MicroArch::Geode, "GX3", None),
+                    _ => unknown_model,
+                },
+
+                // From sandpile.org
+                CpuBrand::Rdc => match (s.family, s.model, s.stepping) {
+                    (5, 8, _) => brand_arch(MicroArch::Iad, "Iad", None),
+                    _ => unknown_model,
+                },
+
+                CpuBrand::Rise => match (s.family, s.model, s.stepping) {
+                    (5, 0, _) => brand_arch(MicroArch::MP6, "Kirin", Some(N250)),
+                    (5, 2, _) => brand_arch(MicroArch::MP6, "Lynx", Some(N180)),
+
+                    // These two come from instlatx64
+                    (5, 8, _) => brand_arch(MicroArch::MP62, UNK, Some(N250)),
+                    (5, 9, _) => brand_arch(MicroArch::MP62, UNK, Some(N180)),
+                    _ => unknown_model,
+                },
+
+                CpuBrand::Transmeta => Transmeta::micro_arch(model, s),
+
+                // As long as the signature doesn't overlap, might as well match for multiple brands
+                CpuBrand::DMP | CpuBrand::SiS | CpuBrand::Umc => {
+                    match (s.family, s.model, s.stepping) {
+                        // UMC
+                        (4, 1, _) => brand_arch(MicroArch::U5D, "U5D", Some(N600)),
+                        (4, 2, _) => brand_arch(MicroArch::U5S, "U5S", Some(N600)),
+
+                        // SiS
+                        // See: <https://www.cpushack.com/2010/10/07/the-rise-of-the-vortex86-embedded-x86/>
+                        (5, 0, _) => brand_arch(MicroArch::SiS55x, UNK, Some(N180)),
+
+                        // DM&P
+                        // See: <https://www.vortex86.com/compare>
+                        (5, 2, _) => brand_arch(MicroArch::VortexDX, "Vortex86DX", Some(N90)),
+                        (5, 8, _) => brand_arch(MicroArch::VortexMX, "Vortex86MX", Some(N90)),
+                        (6, 1, 1) => brand_arch(MicroArch::VortexDX3, "Vortex86DX3", Some(N40)),
+
+                        _ => unknown_model,
+                    }
+                }
+
+                CpuBrand::NexGen => unknown_model,
+
+                CpuBrand::Hygon => unknown_model,
+
+                _ => unknown_model,
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 use super::Speed;
+#[cfg(not(dos_real))]
 use super::cache::{Cache, Level1Cache};
 use super::constants::*;
 
@@ -92,7 +93,25 @@ impl CpuDisplay {
     pub fn raw_inline_sublabel(label: &str, sub: &str) -> String {
         format!("{:>14}: {:1}: ", label, sub)
     }
+}
 
+#[cfg(dos_real)]
+impl CpuDisplay {
+    pub fn label(&self, s: &str) -> String {
+        Self::raw_label(s)
+    }
+
+    pub fn sublabel(&self, s: &str) -> String {
+        Self::raw_sublabel(s)
+    }
+
+    pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
+        Self::raw_inline_sublabel(label, sub)
+    }
+}
+
+#[cfg(not(dos_real))]
+impl CpuDisplay {
     pub fn label(&self, s: &str) -> String {
         if !self.flags.color {
             Self::raw_label(s)
@@ -142,6 +161,7 @@ impl CpuDisplay {
 /// Consumes `[` and all SGR parameters up to `m`.
 /// Calls `on_sgr(code)` for each decoded parameter.
 /// Returns true if an SGR sequence was parsed and consumed.
+#[cfg(not(dos_real))]
 pub fn parse_ansi_csi_sgr<I, F>(chars: &mut core::iter::Peekable<I>, mut on_sgr: F) -> bool
 where
     I: Iterator<Item = char>,
@@ -419,7 +439,10 @@ impl CpuDisplay {
             self.newline();
         }
     }
+}
 
+#[cfg(not(dos_real))]
+impl CpuDisplay {
     pub fn cache_count(share_count: u32, core_count: u32) -> String {
         if share_count == 0 || (core_count / share_count) <= 1 {
             String::new()
@@ -534,7 +557,21 @@ impl CpuDisplay {
         }
     }
 
-    #[cfg(not(dos_os))]
+    #[inline]
+    fn cache_size(raw_size: u32) -> (u32, &'static str) {
+        let mut num = raw_size / 1024;
+        let unit = if num >= 1024 { "MB" } else { "KB" };
+
+        if num >= 1024 {
+            num /= 1024;
+        }
+
+        (num, unit)
+    }
+}
+
+#[cfg(not(dos_os))]
+impl CpuDisplay {
     fn display_system_info(
         &mut self,
         label: &str,
@@ -569,7 +606,6 @@ impl CpuDisplay {
         }
     }
 
-    #[cfg(not(dos_os))]
     pub fn display_system(&mut self, system: &crate::common::SystemInfo, flags: CliFlags) {
         if let Some(display_name) = system.display_name() {
             let formatted = self.format_system_name(&display_name);
@@ -577,7 +613,6 @@ impl CpuDisplay {
         }
     }
 
-    #[cfg(not(dos_os))]
     pub fn display_soc(&mut self, soc: &crate::common::SystemInfo, flags: CliFlags) {
         if let Some(display_name) = soc.display_name()
             && !crate::common::is_generic_value(&display_name)
@@ -828,18 +863,6 @@ impl CpuDisplay {
     pub fn format_system_name(&self, raw: &str) -> String {
         // For now, just mac models
         self.format_mac_model(raw)
-    }
-
-    #[inline]
-    fn cache_size(raw_size: u32) -> (u32, &'static str) {
-        let mut num = raw_size / 1024;
-        let unit = if num >= 1024 { "MB" } else { "KB" };
-
-        if num >= 1024 {
-            num /= 1024;
-        }
-
-        (num, unit)
     }
 }
 

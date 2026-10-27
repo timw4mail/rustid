@@ -264,7 +264,108 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
-    #[cfg(not(dos_real))]
+    fn detect_brand(&self) -> CpuBrand {
+        if !self.arch.vendor_string.is_empty() && self.arch.vendor_string != UNK {
+            CpuBrand::from(self.arch.vendor_string.as_str())
+        } else {
+            CpuBrand::detect()
+        }
+    }
+
+    fn classic_nocpuid_model(&self) -> Option<&'static str> {
+        if self.arch.model != UNK || self.signature.family > 4 {
+            return None;
+        }
+
+        let s = if is_386() {
+            "'Classic' 386"
+        } else {
+            match (self.signature.family, self.signature.model) {
+                (4, 2) => "'Classic' 486 SX",
+                (4, 3) => "'Classic' 486 DX2",
+                (4, 4) => "Intel 486SL",
+                (4, 5) => "'Classic' 486 SX2",
+                _ => "'Classic' 486",
+            }
+        };
+
+        Some(s)
+    }
+}
+
+#[cfg(dos_real)]
+impl Cpu {
+    /// Returns a human-readable display name for the CPU model.
+    pub fn display_model_string(&self) -> String {
+        match self.detect_brand() {
+            CpuBrand::Cyrix => return Cyrix::model_string(),
+            CpuBrand::Unknown => {
+                if let Some(s) = self.classic_nocpuid_model() {
+                    return String::from(s);
+                }
+            }
+            _ => (),
+        }
+
+        let s = match self.arch.micro_arch {
+            // AMD
+            MicroArch::Am486 => match self.arch.code_name {
+                "Am486DX" => "AMD 486 DX",
+                "Am486DX-40" => "AMD 486 DX-40",
+                "Am486SX" => "AMD 486 SX",
+                "Am486DX2" => "AMD 486 DX2",
+                "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
+                "Am486DX4" => "AMD 486 DX4",
+                "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
+                _ => "'Classic' 486",
+            },
+            MicroArch::Am5x86 => match self.arch.code_name {
+                "Am5x86WB" => "AMD 5x86 with Write-Back Cache",
+                _ => "AMD 5x86",
+            },
+
+            // Intel
+            MicroArch::RapidCad => "Intel RapidCAD",
+            MicroArch::I486 => match self.arch.code_name {
+                "i80486DX" => "Intel 486 DX",
+                "i80486DX-50" => "Intel 486 DX-50",
+                "i80486SX" => "Intel 486 SX",
+                "i80486DX2" => "Intel 486 DX2",
+                "i80486SL" => "Intel 486 SL",
+                "i80486SX2" => "Intel 486 SX2",
+                "i80486DX2WB" => "Intel 486 DX2 with Write-Back Cache",
+                "i80486DX4" => "Intel 486 DX4",
+                "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
+                _ => "'Classic' 486",
+            },
+
+            // UMC
+            MicroArch::U5S => "UMC Green CPU U5S (486 SX)",
+            MicroArch::U5D => "UMC Green CPU U5D (486 DX)",
+
+            _ => {
+                if self.arch.model != UNK {
+                    &self.arch.model
+                } else {
+                    UNK
+                }
+            }
+        };
+
+        String::from(s)
+    }
+
+    pub(crate) fn easter_egg() -> Option<String> {
+        None
+    }
+
+    fn detect_hypervisor() -> Option<String> {
+        None
+    }
+}
+
+#[cfg(not(dos_real))]
+impl Cpu {
     fn intel_brand_index(&self) -> Option<&'static str> {
         let brand_id = get_brand_id();
 
@@ -315,7 +416,6 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(dos_real))]
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
         let mut result = crate::common::collapse_whitespace(&str);
@@ -337,12 +437,7 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String {
-        let brand = if !self.arch.vendor_string.is_empty() && self.arch.vendor_string != UNK {
-            CpuBrand::from(self.arch.vendor_string.as_str())
-        } else {
-            CpuBrand::detect()
-        };
-
+        let brand = self.detect_brand();
         let model_lower = self.arch.model.to_ascii_lowercase();
 
         match brand {
@@ -362,32 +457,15 @@ impl Cpu {
             }
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
-                #[cfg(not(dos_real))]
                 if let Some(model_name) = self.intel_brand_index() {
                     return String::from(model_name);
                 }
             }
             CpuBrand::SiS => return String::from("SiS 550/551/552 SoC"),
-            CpuBrand::Unknown => 'nocpuid: {
-                // Not a 386 or 486
-                if self.arch.model != UNK || self.signature.family > 4 {
-                    break 'nocpuid;
+            CpuBrand::Unknown => {
+                if let Some(s) = self.classic_nocpuid_model() {
+                    return String::from(s);
                 }
-
-                // 486s without cpuid
-                let s = if is_386() {
-                    "'Classic' 386"
-                } else {
-                    match (self.signature.family, self.signature.model) {
-                        (4, 2) => "'Classic' 486 SX",
-                        (4, 3) => "'Classic' 486 DX2",
-                        (4, 4) => "Intel 486SL",
-                        (4, 5) => "'Classic' 486 SX2",
-                        _ => "'Classic' 486",
-                    }
-                };
-
-                return String::from(s);
             }
             _ => (),
         }
@@ -422,7 +500,6 @@ impl Cpu {
             | MicroArch::EzraT
             | MicroArch::Nehemiah => "VIA C3",
             MicroArch::Esther => "VIA C7",
-            #[cfg(not(dos_real))]
             MicroArch::Isaiah => {
                 if self.arch.model.contains("Eden") {
                     &self.arch.model.replace("Eden", "Nano")
@@ -479,11 +556,7 @@ impl Cpu {
             }
         };
 
-        #[cfg(not(dos_real))]
-        return Self::cleanup_model_string(s);
-
-        #[cfg(dos_real)]
-        String::from(s)
+        Self::cleanup_model_string(s)
     }
 
     /// Validates whether a candidate string is a plausible easter egg message.
@@ -557,6 +630,14 @@ impl Cpu {
             None
         }
     }
+
+    fn detect_hypervisor() -> Option<String> {
+        if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
+            Some(hypervisor_str())
+        } else {
+            None
+        }
+    }
 }
 
 impl TDetect for Cpu {
@@ -599,11 +680,7 @@ impl Cpu {
         let extra = X86Data {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
-            hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
-                Some(hypervisor_str())
-            } else {
-                None
-            },
+            hyp_vendor_str: Self::detect_hypervisor(),
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,

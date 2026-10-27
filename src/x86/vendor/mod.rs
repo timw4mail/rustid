@@ -1,15 +1,19 @@
 pub mod amd;
+#[cfg(not(dos_real))]
 pub mod centaur;
 pub mod cyrix;
 pub mod intel;
+#[cfg(not(dos_real))]
 pub mod transmeta;
 
 // ----------------------------------------------------------------------------
 
 pub use amd::Amd;
+#[cfg(not(dos_real))]
 pub use centaur::Centaur;
 pub use cyrix::Cyrix;
 pub use intel::Intel;
+#[cfg(not(dos_real))]
 pub use transmeta::Transmeta;
 
 // ----------------------------------------------------------------------------

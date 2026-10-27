@@ -164,6 +164,7 @@ pub struct Cache {
     pub source: DataSource,
 }
 
+#[cfg(not(dos_real))]
 impl Cache {
     /// Returns true if all cache levels have 0 size and no higher levels exist.
     #[must_use]
