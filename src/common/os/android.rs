@@ -389,18 +389,4 @@ mod tests {
             Some("Qualcomm Snapdragon 8 Gen 1".to_string())
         );
     }
-
-    #[test]
-    fn test_parse_cpu_list_count() {
-        assert_eq!(parse_cpu_list_count("0-7"), 8);
-        assert_eq!(parse_cpu_list_count("0-3,4-7"), 8);
-        assert_eq!(parse_cpu_list_count("0"), 1);
-        assert_eq!(parse_cpu_list_count(""), 0);
-    }
-
-    #[test]
-    fn test_expand_cpu_list() {
-        assert_eq!(expand_cpu_list("0-3"), vec![0, 1, 2, 3]);
-        assert_eq!(expand_cpu_list("0,4,7"), vec![0, 4, 7]);
-    }
 }

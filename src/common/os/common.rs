@@ -1,21 +1,8 @@
 use alloc::string::String;
 
-/// Normalize a string for comparison: trim and collapse runs of whitespace.
+/// Normalize a string for comparison: trim, collapse runs of whitespace, and convert to lowercase.
 pub fn normalize_for_compare(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut last_was_space = false;
-    for c in s.trim().chars() {
-        if c.is_whitespace() {
-            if !last_was_space && !out.is_empty() {
-                out.push(' ');
-            }
-            last_was_space = true;
-        } else {
-            out.push(c.to_ascii_lowercase());
-            last_was_space = false;
-        }
-    }
-    out
+    crate::common::collapse_whitespace(s).to_ascii_lowercase()
 }
 
 /// Returns true when a DMI / device-tree / SMBIOS value is a firmware placeholder or
@@ -217,39 +204,33 @@ pub fn combine_vendor_and_model(vendor: Option<&str>, model: &str) -> String {
     String::from(model)
 }
 
+fn parse_cpu_ranges(s: &str) -> impl Iterator<Item = (u32, u32)> + '_ {
+    s.trim().split(',').filter_map(|part| {
+        let part = part.trim();
+        if let Some(dash) = part.find('-') {
+            let start = part[..dash].parse::<u32>().ok()?;
+            let end = part[dash + 1..].parse::<u32>().ok()?;
+            Some((start, end))
+        } else {
+            let cpu = part.parse::<u32>().ok()?;
+            Some((cpu, cpu))
+        }
+    })
+}
+
 /// Parse a Linux/Android CPU list string (e.g., "0-3", "0-3,8-11", "0") and return
 /// the total number of CPUs it represents.
 pub fn parse_cpu_list_count(s: &str) -> u32 {
-    let mut count = 0;
-    for part in s.trim().split(',') {
-        let part = part.trim();
-        if let Some(dash) = part.find('-') {
-            if let (Ok(start), Ok(end)) =
-                (part[..dash].parse::<u32>(), part[dash + 1..].parse::<u32>())
-            {
-                count += end.saturating_sub(start) + 1;
-            }
-        } else if part.parse::<u32>().is_ok() {
-            count += 1;
-        }
-    }
-    count
+    parse_cpu_ranges(s)
+        .map(|(start, end)| end.saturating_sub(start) + 1)
+        .sum()
 }
 
 /// Expand a Linux/Android CPU list string into a vector of individual CPU IDs.
 pub fn expand_cpu_list(s: &str) -> alloc::vec::Vec<u32> {
     let mut cpus = alloc::vec::Vec::new();
-    for part in s.trim().split(',') {
-        let part = part.trim();
-        if let Some(dash) = part.find('-') {
-            if let (Ok(start), Ok(end)) =
-                (part[..dash].parse::<u32>(), part[dash + 1..].parse::<u32>())
-            {
-                for cpu in start..=end {
-                    cpus.push(cpu);
-                }
-            }
-        } else if let Ok(cpu) = part.parse::<u32>() {
+    for (start, end) in parse_cpu_ranges(s) {
+        for cpu in start..=end {
             cpus.push(cpu);
         }
     }
@@ -420,31 +401,29 @@ pub fn for_each_logical_core<F: FnMut()>(mut f: F) {
     }
 }
 
-/// Reads the `Hardware` SoC name from the trailing non-processor block of `/proc/cpuinfo`.
 #[cfg(std_os)]
-pub fn get_soc_from_proc_cpuinfo() -> Option<String> {
+fn get_trailing_proc_cpuinfo_field(field: &str) -> Option<String> {
     let cpuinfo = get_proc_cpuinfo_data();
     if let Some(last) = cpuinfo.last()
         && (!last.contains_key("processor"))
-        && let Some(raw_soc) = last.get("Hardware")
-        && !is_generic_value(raw_soc.trim())
+        && let Some(val) = last.get(field)
+        && !is_generic_value(val.trim())
     {
-        return Some(String::from(raw_soc.trim()));
+        return Some(String::from(val.trim()));
     }
     None
+}
+
+/// Reads the `Hardware` SoC name from the trailing non-processor block of `/proc/cpuinfo`.
+#[cfg(std_os)]
+pub fn get_soc_from_proc_cpuinfo() -> Option<String> {
+    get_trailing_proc_cpuinfo_field("Hardware")
 }
 
 /// Reads the `Model` system name from the trailing non-processor block of `/proc/cpuinfo`.
 #[cfg(std_os)]
 pub fn get_system_name_from_proc_cpuinfo() -> Option<String> {
-    if let Some(last) = get_proc_cpuinfo_data().last()
-        && (!last.contains_key("processor"))
-        && let Some(raw) = last.get("Model")
-        && !is_generic_value(raw.trim())
-    {
-        return Some(String::from(raw.trim()));
-    }
-    None
+    get_trailing_proc_cpuinfo_field("Model")
 }
 
 /// Resolves SoC identity from the last entry of `/proc/device-tree/compatible`.

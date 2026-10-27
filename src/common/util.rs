@@ -34,6 +34,24 @@ pub fn cleanup_soc_vendor(s: &str) -> String {
     String::from(vendor)
 }
 
+/// Trims leading and trailing whitespace and collapses consecutive internal whitespace characters into a single space.
+pub fn collapse_whitespace(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut last_was_space = false;
+    for c in s.trim().chars() {
+        if c.is_whitespace() {
+            if !last_was_space && !out.is_empty() {
+                out.push(' ');
+            }
+            last_was_space = true;
+        } else {
+            out.push(c);
+            last_was_space = false;
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,5 +109,14 @@ mod tests {
     #[test]
     fn test_cleanup_soc_vendor_other() {
         assert_eq!(cleanup_soc_vendor("unknown_vendor"), "Unknown_vendor");
+    }
+
+    #[test]
+    fn test_collapse_whitespace() {
+        assert_eq!(collapse_whitespace(""), "");
+        assert_eq!(collapse_whitespace("   "), "");
+        assert_eq!(collapse_whitespace("  hello   world  "), "hello world");
+        assert_eq!(collapse_whitespace("foo\t\n  bar \r\n baz"), "foo bar baz");
+        assert_eq!(collapse_whitespace("single"), "single");
     }
 }

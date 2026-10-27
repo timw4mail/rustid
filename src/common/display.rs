@@ -158,7 +158,6 @@ impl CpuDisplay {
     }
 
     /// Case-insensitively checks if either string is contained in the other or if they are equal.
-    #[cfg(any(arm_cpu, test))]
     pub fn is_duplicate(a: &str, b: &str) -> bool {
         if a.is_empty() || b.is_empty() {
             return false;
@@ -400,6 +399,14 @@ impl CpuDisplay {
         self.display_cache(cache, &cc, l3_socket_count);
     }
 
+    fn format_cache_entry(lbl: &str, count: &str, num: u32, unit: &str, assoc: u32) -> String {
+        if assoc > 0 {
+            format!("{lbl}{count}{num} {unit}, {assoc}-way")
+        } else {
+            format!("{lbl}{count}{num} {unit}")
+        }
+    }
+
     pub fn display_cache_ext(
         &mut self,
         cache: Option<Cache>,
@@ -421,24 +428,15 @@ impl CpuDisplay {
                     let instruction_count: String = cache_count(instruction.share_count);
 
                     if data.size > 0 {
-                        if data.assoc > 0 {
-                            let l = format!(
-                                "{}{}{} KB, {}-way",
-                                self.inline_sublabel("Cache", "L1d"),
-                                data_count,
-                                data.size / 1024,
-                                data.assoc
-                            );
-                            self.print_line(&l);
-                        } else {
-                            let l = format!(
-                                "{}{}{} KB",
-                                self.inline_sublabel("Cache", "L1d"),
-                                data_count,
-                                data.size / 1024
-                            );
-                            self.print_line(&l);
-                        }
+                        let lbl = self.inline_sublabel("Cache", "L1d");
+                        let l = Self::format_cache_entry(
+                            &lbl,
+                            &data_count,
+                            data.size / 1024,
+                            "KB",
+                            data.assoc,
+                        );
+                        self.print_line(&l);
                     }
 
                     if instruction.size > 0 {
@@ -447,24 +445,14 @@ impl CpuDisplay {
                         } else {
                             self.inline_sublabel("Cache", "L1i")
                         };
-                        if instruction.assoc > 0 {
-                            let l = format!(
-                                "{}{}{} KB, {}-way",
-                                lbl,
-                                instruction_count,
-                                instruction.size / 1024,
-                                instruction.assoc
-                            );
-                            self.print_line(&l);
-                        } else {
-                            let l = format!(
-                                "{}{}{} KB",
-                                lbl,
-                                instruction_count,
-                                instruction.size / 1024,
-                            );
-                            self.print_line(&l);
-                        }
+                        let l = Self::format_cache_entry(
+                            &lbl,
+                            &instruction_count,
+                            instruction.size / 1024,
+                            "KB",
+                            instruction.assoc,
+                        );
+                        self.print_line(&l);
                     }
                 }
             }
@@ -472,21 +460,9 @@ impl CpuDisplay {
             if let Some(l2) = cache.l2 {
                 let count = cache_count(l2.share_count);
                 let (num, unit) = Self::cache_size(l2.size);
-
-                if l2.assoc > 0 {
-                    let l = format!(
-                        "{} {}{} {}, {}-way",
-                        self.sublabel("L2"),
-                        count,
-                        num,
-                        unit,
-                        l2.assoc
-                    );
-                    self.print_line(&l);
-                } else {
-                    let l = format!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
-                    self.print_line(&l);
-                }
+                let lbl = format!("{} ", self.sublabel("L2"));
+                let l = Self::format_cache_entry(&lbl, &count, num, unit, l2.assoc);
+                self.print_line(&l);
             }
 
             if let Some(l3) = cache.l3 {
@@ -500,21 +476,9 @@ impl CpuDisplay {
                     } else {
                         cache_count(l3.share_count)
                     };
-
-                    if l3.assoc > 0 {
-                        let l = format!(
-                            "{} {}{} {}, {}-way",
-                            self.sublabel("L3"),
-                            count,
-                            num,
-                            unit,
-                            l3.assoc
-                        );
-                        self.print_line(&l);
-                    } else {
-                        let l = format!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
-                        self.print_line(&l);
-                    }
+                    let lbl = format!("{} ", self.sublabel("L3"));
+                    let l = Self::format_cache_entry(&lbl, &count, num, unit, l3.assoc);
+                    self.print_line(&l);
                 }
             }
 
@@ -523,34 +487,45 @@ impl CpuDisplay {
     }
 
     #[cfg(not(dos_os))]
+    fn display_system_info(
+        &mut self,
+        label: &str,
+        info: &crate::common::SystemInfo,
+        formatted: &str,
+        flags: CliFlags,
+    ) {
+        if flags.verbose {
+            self.section_line(label, formatted);
+            if let Some(ref model) = info.model {
+                if model != formatted {
+                    self.section_line(
+                        &alloc::format!("{label} Model"),
+                        &alloc::format!("{model} ({:?})", info.model_source),
+                    );
+                } else {
+                    self.section_line(
+                        &alloc::format!("{label} Model Source"),
+                        &alloc::format!("{:?}", info.model_source),
+                    );
+                }
+            }
+            if let Some(ref vendor) = info.vendor {
+                self.section_line(
+                    &alloc::format!("{label} Vendor"),
+                    &alloc::format!("{vendor} ({:?})", info.vendor_source),
+                );
+            }
+            self.newline();
+        } else {
+            self.simple_line(label, formatted);
+        }
+    }
+
+    #[cfg(not(dos_os))]
     pub fn display_system(&mut self, system: &crate::common::SystemInfo, flags: CliFlags) {
         if let Some(display_name) = system.display_name() {
             let formatted = self.format_system_name(&display_name);
-            if flags.verbose {
-                self.section_line("System", &formatted);
-                if let Some(ref model) = system.model {
-                    if model != &formatted {
-                        self.section_line(
-                            "System Model",
-                            &alloc::format!("{model} ({:?})", system.model_source),
-                        );
-                    } else {
-                        self.section_line(
-                            "System Model Source",
-                            &alloc::format!("{:?}", system.model_source),
-                        );
-                    }
-                }
-                if let Some(ref vendor) = system.vendor {
-                    self.section_line(
-                        "System Vendor",
-                        &alloc::format!("{vendor} ({:?})", system.vendor_source),
-                    );
-                }
-                self.newline();
-            } else {
-                self.simple_line("System", &formatted);
-            }
+            self.display_system_info("System", system, &formatted, flags);
         }
     }
 
@@ -559,31 +534,7 @@ impl CpuDisplay {
         if let Some(display_name) = soc.display_name()
             && !crate::common::is_generic_value(&display_name)
         {
-            if flags.verbose {
-                self.section_line("SoC", &display_name);
-                if let Some(ref model) = soc.model {
-                    if model != &display_name {
-                        self.section_line(
-                            "SoC Model",
-                            &alloc::format!("{model} ({:?})", soc.model_source),
-                        );
-                    } else {
-                        self.section_line(
-                            "SoC Model Source",
-                            &alloc::format!("{:?}", soc.model_source),
-                        );
-                    }
-                }
-                if let Some(ref vendor) = soc.vendor {
-                    self.section_line(
-                        "SoC Vendor",
-                        &alloc::format!("{vendor} ({:?})", soc.vendor_source),
-                    );
-                }
-                self.newline();
-            } else {
-                self.simple_line("SoC", &display_name);
-            }
+            self.display_system_info("SoC", soc, &display_name, flags);
         }
     }
 
@@ -1063,6 +1014,11 @@ mod tests {
 
         assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
         assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
+        assert!(!CpuDisplay::is_duplicate("Apple A18 Pro", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Everest", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Sawtooth", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Apple M1", "Tonga"));
+        assert!(!CpuDisplay::is_duplicate("FireStorm", "Tonga"));
         assert!(!CpuDisplay::is_duplicate("", "Maya"));
         assert!(!CpuDisplay::is_duplicate("Maya", ""));
     }

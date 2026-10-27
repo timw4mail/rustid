@@ -1,8 +1,8 @@
 #![cfg(linux_os)]
 
 use crate::common::{
-    Cache, CacheLevel, CacheType, DataSource, Level1Cache, OS, TDetect, TOSData, TopologyCount,
-    TopologyTier, expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
+    Cache, CacheType, DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier,
+    expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
 };
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -132,62 +132,8 @@ pub fn read_sysfs_cpu_cache(cpu_num: u32) -> Option<Cache> {
             0
         };
 
-        match level {
-            1 => match cache_type {
-                CacheType::Unified => {
-                    cache.l1 = Level1Cache::Unified(CacheLevel::new(
-                        size_bytes,
-                        cache_type,
-                        assoc,
-                        share_count,
-                    ));
-                    found_cache = true;
-                }
-                CacheType::Data => {
-                    match &mut cache.l1 {
-                        Level1Cache::Split { data, .. } => {
-                            *data = CacheLevel::new(size_bytes, cache_type, assoc, share_count);
-                        }
-                        _ => {
-                            cache.l1 = Level1Cache::Split {
-                                data: CacheLevel::new(size_bytes, cache_type, assoc, share_count),
-                                instruction: CacheLevel::default(),
-                            };
-                        }
-                    }
-                    found_cache = true;
-                }
-                CacheType::Instruction => {
-                    match &mut cache.l1 {
-                        Level1Cache::Split { instruction, .. } => {
-                            *instruction =
-                                CacheLevel::new(size_bytes, cache_type, assoc, share_count);
-                        }
-                        _ => {
-                            cache.l1 = Level1Cache::Split {
-                                data: CacheLevel::default(),
-                                instruction: CacheLevel::new(
-                                    size_bytes,
-                                    cache_type,
-                                    assoc,
-                                    share_count,
-                                ),
-                            };
-                        }
-                    }
-                    found_cache = true;
-                }
-                _ => {}
-            },
-            2 => {
-                cache.l2 = Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
-                found_cache = true;
-            }
-            3 => {
-                cache.l3 = Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
-                found_cache = true;
-            }
-            _ => {}
+        if cache.insert_level(level, cache_type, size_bytes, assoc, share_count) {
+            found_cache = true;
         }
     }
 

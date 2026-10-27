@@ -318,17 +318,7 @@ impl Cpu {
     #[cfg(not(dos_real))]
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
-
-        // Single-pass: build result without intermediate Vec
-        let mut result = String::with_capacity(str.len());
-        for part in str.split_ascii_whitespace() {
-            if !part.is_empty() {
-                if !result.is_empty() {
-                    result.push(' ');
-                }
-                result.push_str(part);
-            }
-        }
+        let mut result = crate::common::collapse_whitespace(&str);
 
         // Remove speed suffix after '@'
         if let Some(idx) = result.find('@') {

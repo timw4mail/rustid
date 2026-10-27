@@ -9,20 +9,7 @@ use windows::core::{HSTRING, PCWSTR, w};
 /// Clean up processor name strings (removing trademark symbols like (TM), (R), extra spaces).
 pub fn clean_soc_name(raw: &str) -> String {
     let s = raw.replace("(TM)", "").replace("(R)", "");
-    let mut out = String::with_capacity(s.len());
-    let mut last_was_space = false;
-    for c in s.trim().chars() {
-        if c.is_whitespace() {
-            if !last_was_space && !out.is_empty() {
-                out.push(' ');
-            }
-            last_was_space = true;
-        } else {
-            out.push(c);
-            last_was_space = false;
-        }
-    }
-    out
+    crate::common::collapse_whitespace(&s)
 }
 
 /// Helper function to read a string registry value (REG_SZ, REG_EXPAND_SZ, or REG_MULTI_SZ).
@@ -1027,7 +1014,7 @@ impl TDetect for TopologyCount {
     }
 }
 
-use crate::common::{Cache, CacheLevel, CacheType, Level1Cache};
+use crate::common::{Cache, CacheType};
 
 #[cfg(not(x86_cpu))]
 impl Cache {
@@ -1087,70 +1074,8 @@ impl Cache {
                 let mask = unsafe { cache_rel.Anonymous.GroupMask.Mask };
                 let share_count = mask.count_ones();
 
-                match level {
-                    1 => match cache_type {
-                        CacheType::Unified => {
-                            cache.l1 = Level1Cache::Unified(CacheLevel::new(
-                                size_bytes,
-                                cache_type,
-                                assoc,
-                                share_count,
-                            ));
-                            found_cache = true;
-                        }
-                        CacheType::Data => {
-                            match &mut cache.l1 {
-                                Level1Cache::Split { data, .. } => {
-                                    *data =
-                                        CacheLevel::new(size_bytes, cache_type, assoc, share_count);
-                                }
-                                _ => {
-                                    cache.l1 = Level1Cache::Split {
-                                        data: CacheLevel::new(
-                                            size_bytes,
-                                            CacheType::Data,
-                                            assoc,
-                                            share_count,
-                                        ),
-                                        instruction: CacheLevel::default(),
-                                    };
-                                }
-                            }
-                            found_cache = true;
-                        }
-                        CacheType::Instruction => {
-                            match &mut cache.l1 {
-                                Level1Cache::Split { instruction, .. } => {
-                                    *instruction =
-                                        CacheLevel::new(size_bytes, cache_type, assoc, share_count);
-                                }
-                                _ => {
-                                    cache.l1 = Level1Cache::Split {
-                                        data: CacheLevel::default(),
-                                        instruction: CacheLevel::new(
-                                            size_bytes,
-                                            CacheType::Instruction,
-                                            assoc,
-                                            share_count,
-                                        ),
-                                    };
-                                }
-                            }
-                            found_cache = true;
-                        }
-                        _ => {}
-                    },
-                    2 => {
-                        cache.l2 =
-                            Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
-                        found_cache = true;
-                    }
-                    3 => {
-                        cache.l3 =
-                            Some(CacheLevel::new(size_bytes, cache_type, assoc, share_count));
-                        found_cache = true;
-                    }
-                    _ => {}
+                if cache.insert_level(level, cache_type, size_bytes, assoc, share_count) {
+                    found_cache = true;
                 }
             }
 

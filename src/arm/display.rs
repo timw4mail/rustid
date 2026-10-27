@@ -327,24 +327,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_is_duplicate() {
-        assert!(CpuDisplay::is_duplicate("ARM Cortex-A53", "Cortex-A53"));
-        assert!(CpuDisplay::is_duplicate("Cortex-A53", "ARM Cortex-A53"));
-        assert!(CpuDisplay::is_duplicate("Apple Swift", "Swift"));
-        assert!(CpuDisplay::is_duplicate("AmpereOne", "AmpereOne"));
-        assert!(CpuDisplay::is_duplicate("cortex-a53", "CORTEX-A53"));
-
-        assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
-        assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
-        assert!(!CpuDisplay::is_duplicate("Apple A18 Pro", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Everest", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Sawtooth", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Apple M1", "Tonga"));
-        assert!(!CpuDisplay::is_duplicate("FireStorm", "Tonga"));
-        assert!(!CpuDisplay::is_duplicate("", "Maya"));
-        assert!(!CpuDisplay::is_duplicate("Maya", ""));
-    }
 
     #[test]
     fn test_should_show_model_suppressed_when_matching_core_or_codename() {
