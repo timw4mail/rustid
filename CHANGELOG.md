@@ -9,11 +9,45 @@ For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
 - **Linux GTK Dark Theme Detection**: Added automatic system dark theme detection on startup and explicit monospace font fallbacks for the Linux GTK GUI (`src/gui/linux/window.rs`)
 
 ### Changed
+- **Common Core & OS Deduplication**:
+  - Unified cache level hierarchy insertion via `Cache::insert_level`, removing duplicated multi-level cache match blocks across Linux sysfs and Windows detection (`src/common/cache.rs`, `src/common/os/linux_sysfs.rs`, `src/common/os/windows.rs`)
+  - Consolidated system and SoC detail line formatting in `CpuDisplay` via shared `display_system_info`, streamlined cache entry string construction, and made `is_duplicate` string comparison unconditionally available across all architectures (`src/common/display.rs`, `src/arm/display.rs`)
+  - Replaced multiple manual whitespace-collapsing loops with a shared `collapse_whitespace` utility (`src/common/util.rs`, `src/common/os/common.rs`, `src/common/os/windows.rs`, `src/x86/cpu.rs`)
+  - Streamlined CPU list count and expansion logic using a shared `parse_cpu_ranges` iterator and unified trailing `/proc/cpuinfo` hardware/model lookups (`src/common/os/common.rs`, `src/common/os/android.rs`)
+- **Shared SMBIOS Parser & Windows/UEFI OS Abstractions**:
+  - Extracted cross-platform SMBIOS 2.x and 3.x table parsing and system information resolution into a shared `smbios` module (`src/common/os/smbios.rs`), deduplicating >750 lines across UEFI (`src/x86/efi/smbios.rs`) and Windows (`src/common/os/windows.rs`)
+  - Added Windows registry helper functions `read_reg_dword` and `read_reg_qword` in `src/common/os/windows.rs`, eliminating repetitive registry querying boilerplate across ARM CPU feature detection (`src/arm/os/windows.rs`) and GUI dark mode detection (`src/gui/windows/theme.rs`)
+  - Consolidated repetitive buffer allocation and pointer traversal loops for `GetLogicalProcessorInformationEx` via `for_each_processor_info_ex` across socket counting, topology detection, and cache enumeration (`src/common/os/windows.rs`)
+  - Removed duplicate SMBIOS and Apple hardware model unit tests in Windows and UEFI modules, consolidating test coverage into shared common modules tested on all targets (`src/common/os/smbios.rs`, `src/common/os/common.rs`, `src/common/os/windows.rs`, `src/x86/efi/smbios.rs`)
+- **x86 Core, Topology & CPUID Dump Deduplication**:
+  - Unified hybrid core probing, clustering (`push_or_merge_core`), and thread/cache finalization (`finalize_hybrid_cores`) across CPUID dump detection, live OS thread affinity, and UEFI MP services (`src/x86/cpu.rs`, `src/x86/os.rs`, `src/x86/efi/mod.rs`)
+  - Consolidated multi-socket core, thread, and cache scaling into `Topology::scale_sockets`, replacing duplicate scaling blocks across topology detection, OS enrichment, UEFI MP services, and DOS MP Table (`src/x86/topology.rs`, `src/x86/os.rs`, `src/x86/efi/mod.rs`, `src/x86/dos/mod.rs`)
+  - Extracted `CpuDump::parse_line` and streamlined multi-CPU context detection in `CpuDump::parse_str`, removing duplicated file-wide line parsing loops (`src/x86/provider.rs`)
+- **DOS & UEFI Target Deduplication**:
+  - Extracted shared ANSI CSI SGR parser (`parse_ansi_csi_sgr`) in `src/common/display.rs` with unit tests, replacing duplicate escape sequence parsers across DOS direct VRAM output (`src/x86/dos/mod.rs`) and UEFI screen console output (`src/x86/efi/display.rs`)
+  - Unified conventional memory segment:offset peeking (`peek_u8_so`, `peek_u16_so`) in `src/x86/dos/mod.rs` and removed duplicate memory pointer implementations from MP Table parsing (`src/x86/dos/mp.rs`)
+  - Consolidated real-mode and protected-mode CPU speed measurement and calibration in `src/x86/dos/speed.rs` into unified helpers (`calculate_freq_mhz`, `wait_for_ticks_tsc`, `run_calibrated_loop`)
+- **ARM & RISC-V Architecture Deduplication**:
+  - Extracted shared `display_arm_core_details` helper to unify hybrid and homogeneous cluster formatting across implementer, microarchitecture, codename, frequency, and core cache lines (`src/arm/display.rs`)
+  - Added `MicroArch::as_str` and `From<MicroArch> for &'static str` in `src/arm/micro_arch.rs`, deriving `String` conversion directly from static strings
+  - Used named `IMPL_*` vendor constants in `Vendor::from(usize)` instead of raw hex values (`src/arm/brand.rs`)
+  - Unified RISC-V feature category mapping via `FEATURE_CATEGORIES`, eliminating the duplicate 50-line raw extension name array in `populate_detected_features` (`src/riscv/features.rs`)
+  - Replaced repetitive `CpuArch` struct initialization in RISC-V device tree matching with a declarative `COMPAT_TABLE` lookup (`src/riscv/micro_arch.rs`)
+- **Cross-Platform GUI Deduplication**:
+  - Extracted shared semantic report line tokenizer (`ReportLineToken` and `tokenize_report_line`) in `src/gui/styled_text.rs`, deduplicating report styling logic across Linux/Haiku GTK styled runs and Windows RichEdit RTF generation (`src/gui/styled_text.rs`, `src/gui/windows/rtf.rs`)
+  - Consolidated Windows menu item creation across Unicode (`AppendMenuW`) and ANSI (`AppendMenuA`) modes via a unified `append_menu_item` helper, removing ~200 lines of duplicated menu definitions (`src/gui/windows/menu.rs`)
+  - Unified Win32 message box display and default window procedure delegation via `show_message_box` and `def_window_proc` (`src/gui/windows/window.rs`)
+  - Routed keyboard shortcuts and menu clicks through a single `execute_command` handler (`src/gui/windows/window.rs`)
 - **Linux DMI System & SoC Name Filtering**: Prioritized `product_name` over `product_family` when resolving Linux DMI system names and filtered generic placeholder values (including `"arm-platform"`) from system and SoC names (`src/common/os/linux.rs`, `src/common/os/common.rs`, `src/arm/display.rs`)
 - **Build Artifact Layout & DOS/32A Binding**: Standardized build output paths under `target/dist/<platform>/`, added direct DOS/32A stub binding to `elf2le`, and removed redundant build configuration files (`Makefile`, `justfile`, `build-config/*`, `tools/elf2le/src/main.rs`)
 
 ### Fixed
 - **CPUID Brand String NUL-Termination & SteamOS GUI Text Rendering**: Fixed `read_multi_leaf_str` reading past the NUL terminator into trailing firmware buffer memory (such as on the Steam Deck's `AMD Custom APU 0405`), which embedded a `\0` byte in the model string and caused `GtkTextBuffer` UTF-8 validation to reject the report text (`src/x86/fns.rs`, `src/gui/common.rs`, `src/gui/linux/window.rs`)
+- **Centaur/Zhaoxin SM2 Enabled Check**: Fixed `sm2_enabled` checking bit 0 (support) instead of bit 1 (enabled status) in `src/x86/vendor/centaur.rs`
+- **DOS CLI Compact Flag**: Fixed inverted `"COMPACT"` CLI argument handling in `src/bin/dos.rs`
+- **DOS Real-Mode & UEFI Build Fixes**: CFG-gated hybrid topology helpers to non-DOS platforms in `src/x86/cpu.rs` to fix `just build-dos`, and resolved missing `is_intel` symbol import in `src/x86/efi/mod.rs`
+- **RISC-V Crypto & Extended Feature Display**: Fixed category mismatch between `"ScalarCrypto"` in `build_feature_map` and `"Crypto"` in `display_features`, and added display keys for `"Zc"`, `"AmoMaxMin"`, and `"MemModel"` extensions (`src/riscv/features.rs`, `src/riscv/display.rs`)
+- **Windows GUI Export Filename Sanitization**: Fixed `Ctrl+S` export shortcut in Windows GUI missing filename sanitization for `/` and `\` characters and missing completion alert dialog (`src/gui/windows/window.rs`)
 
 ## [2.3.0] — Classic Macintosh GUI port (68k & PowerPC), PowerPC detection, and AMD Athlon improvements
 

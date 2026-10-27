@@ -53,64 +53,32 @@ pub const MEM_FEATURES: &[&str] = &["ztso", "zama16b", "svinval", "svnapot", "sv
 /// Miscellaneous extensions
 pub const MISC_FEATURES: &[&str] = &["zicsr", "zifencei", "zicntr", "zihintpause", "zihintntl"];
 
+/// All RISC-V feature categories and their corresponding feature sets.
+pub const FEATURE_CATEGORIES: &[(&str, &[&str])] = &[
+    ("Mul", MUL_FEATURES),
+    ("Atomic", ATOMIC_FEATURES),
+    ("Float", FP_FEATURES),
+    ("Compressed", COMPRESSED_FEATURES),
+    ("Zc", ZC_FEATURES),
+    ("Bitmanip", BITMANIP_FEATURES),
+    ("Vector", VECTOR_FEATURES),
+    ("Crypto", CRYPTO_FEATURES),
+    ("AmoMaxMin", AMO_FEATURES),
+    ("Priv", PRIV_FEATURES),
+    ("Cache", CACHE_FEATURES),
+    ("MemModel", MEM_FEATURES),
+    ("Misc", MISC_FEATURES),
+];
+
 /// Populate a detected features map from a platform source map.
 /// Handles multi-letter extensions (e.g. "zba", "zkne") directly.
 pub fn populate_detected_features(src: &BTreeMap<String, bool>) -> BTreeMap<&'static str, bool> {
     let mut d: BTreeMap<&'static str, bool> = BTreeMap::new();
 
-    let all_features: &[&str] = &[
-        "m",
-        "a",
-        "f",
-        "d",
-        "q",
-        "c",
-        "v",
-        "zfh",
-        "zfhmin",
-        "zvfh",
-        "zvfhmin",
-        "zvbb",
-        "zvbc",
-        "zba",
-        "zbb",
-        "zbc",
-        "zbs",
-        "zkne",
-        "zknd",
-        "zksed",
-        "zksh",
-        "zknh",
-        "zkn",
-        "zks",
-        "zbkb",
-        "zkc",
-        "zbkx",
-        "zca",
-        "zcb",
-        "zcmp",
-        "zcmt",
-        "zacas",
-        "ztso",
-        "zama16b",
-        "svinval",
-        "svnapot",
-        "svpbmt",
-        "s",
-        "u",
-        "h",
-        "zicbom",
-        "zicbop",
-        "zicboz",
-        "zicsr",
-        "zifencei",
-        "zicntr",
-        "zihintpause",
-        "zihintntl",
-    ];
-
-    for feat in all_features {
-        d.insert(feat, src.get(*feat).copied().unwrap_or(false));
+    for (_, cat_features) in FEATURE_CATEGORIES {
+        for &feat in *cat_features {
+            d.insert(feat, src.get(feat).copied().unwrap_or(false));
+        }
     }
 
     d
@@ -122,23 +90,7 @@ pub fn build_feature_map(
 ) -> BTreeMap<&'static str, String> {
     let mut result: BTreeMap<&'static str, String> = BTreeMap::new();
 
-    let categories: &[(&str, &[&str])] = &[
-        ("Mul", MUL_FEATURES),
-        ("Atomic", ATOMIC_FEATURES),
-        ("Float", FP_FEATURES),
-        ("Compressed", COMPRESSED_FEATURES),
-        ("Zc", ZC_FEATURES),
-        ("Bitmanip", BITMANIP_FEATURES),
-        ("Vector", VECTOR_FEATURES),
-        ("ScalarCrypto", CRYPTO_FEATURES),
-        ("AmoMaxMin", AMO_FEATURES),
-        ("Priv", PRIV_FEATURES),
-        ("Cache", CACHE_FEATURES),
-        ("MemModel", MEM_FEATURES),
-        ("Misc", MISC_FEATURES),
-    ];
-
-    for (cat_name, cat_features) in categories {
+    for (cat_name, cat_features) in FEATURE_CATEGORIES {
         let features: Vec<&str> = cat_features
             .iter()
             .filter(|f| detected.get(**f).copied().unwrap_or(false))
@@ -213,10 +165,29 @@ mod tests {
         detected.insert("a", true);
         detected.insert("f", true);
         detected.insert("c", true);
+        detected.insert("zkne", true);
         let map = build_feature_map(&detected);
         assert!(map.contains_key("Mul"));
         assert!(map.contains_key("Atomic"));
         assert!(map.contains_key("Float"));
         assert!(map.contains_key("Compressed"));
+        assert!(map.contains_key("Crypto"));
+        assert_eq!(map.get("Crypto"), Some(&String::from("zkne")));
+    }
+
+    #[test]
+    fn test_all_feature_categories_populated() {
+        let mut src = BTreeMap::new();
+        for (_, cat_features) in FEATURE_CATEGORIES {
+            for &f in *cat_features {
+                src.insert(f.to_string(), true);
+            }
+        }
+        let d = populate_detected_features(&src);
+        for (_, cat_features) in FEATURE_CATEGORIES {
+            for &f in *cat_features {
+                assert!(d[f], "Feature {f} was not populated");
+            }
+        }
     }
 }
