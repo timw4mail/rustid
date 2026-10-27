@@ -69,12 +69,14 @@ impl From<bool> for GuiTheme {
 
 #[cfg(windows)]
 pub fn normalize_newlines(s: String) -> String {
-    s.replace("\r\n", "\n").replace('\n', "\r\n")
+    s.replace('\0', "")
+        .replace("\r\n", "\n")
+        .replace('\n', "\r\n")
 }
 
 #[cfg(not(windows))]
 pub fn normalize_newlines(s: String) -> String {
-    s
+    s.replace('\0', "")
 }
 
 /// Formats a plain-text CPU report.
@@ -235,5 +237,32 @@ mod tests {
             !everything_text.contains("\x1b["),
             "build_view_text everything mode must not contain ANSI escape sequences"
         );
+    }
+
+    #[test]
+    fn test_repeated_detect_preserves_cores_across_view_modes() {
+        let flags = CliFlags {
+            color: true,
+            compact: false,
+            verbose: false,
+        };
+        let cpu1 = Cpu::detect();
+        let standard_text = build_view_text(
+            &cpu1,
+            ViewMode::Standard,
+            flags,
+            ReportSource::LiveHardware,
+        );
+
+        let cpu2 = Cpu::detect();
+        let everything_text = build_view_text(
+            &cpu2,
+            ViewMode::Everything,
+            flags,
+            ReportSource::LiveHardware,
+        );
+
+        assert_eq!(cpu1.cores, cpu2.cores);
+        assert!(everything_text.starts_with(&standard_text));
     }
 }

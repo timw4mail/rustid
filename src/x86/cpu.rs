@@ -5,7 +5,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::{DomainList, Topology};
 use super::vendor::Cyrix;
 use super::*;
-#[cfg(std_os)]
+#[cfg(not(dos_os))]
 use crate::common::{Cache, Speed};
 use crate::common::{CoreType, DataSource, TDetect, UNK};
 use alloc::string::String;
@@ -264,7 +264,108 @@ impl Cpu {
         read_multi_leaf_str(EXT_LEAF_2, EXT_LEAF_4)
     }
 
-    #[cfg(not(dos_real))]
+    fn detect_brand(&self) -> CpuBrand {
+        if !self.arch.vendor_string.is_empty() && self.arch.vendor_string != UNK {
+            CpuBrand::from(self.arch.vendor_string.as_str())
+        } else {
+            CpuBrand::detect()
+        }
+    }
+
+    fn classic_nocpuid_model(&self) -> Option<&'static str> {
+        if self.arch.model != UNK || self.signature.family > 4 {
+            return None;
+        }
+
+        let s = if is_386() {
+            "'Classic' 386"
+        } else {
+            match (self.signature.family, self.signature.model) {
+                (4, 2) => "'Classic' 486 SX",
+                (4, 3) => "'Classic' 486 DX2",
+                (4, 4) => "Intel 486SL",
+                (4, 5) => "'Classic' 486 SX2",
+                _ => "'Classic' 486",
+            }
+        };
+
+        Some(s)
+    }
+}
+
+#[cfg(dos_real)]
+impl Cpu {
+    /// Returns a human-readable display name for the CPU model.
+    pub fn display_model_string(&self) -> String {
+        match self.detect_brand() {
+            CpuBrand::Cyrix => return Cyrix::model_string(),
+            CpuBrand::Unknown => {
+                if let Some(s) = self.classic_nocpuid_model() {
+                    return String::from(s);
+                }
+            }
+            _ => (),
+        }
+
+        let s = match self.arch.micro_arch {
+            // AMD
+            MicroArch::Am486 => match self.arch.code_name {
+                "Am486DX" => "AMD 486 DX",
+                "Am486DX-40" => "AMD 486 DX-40",
+                "Am486SX" => "AMD 486 SX",
+                "Am486DX2" => "AMD 486 DX2",
+                "Am486X2WB" => "AMD 486 DX2 with Write-Back Cache",
+                "Am486DX4" => "AMD 486 DX4",
+                "Am486DX4WB" => "AMD 486 DX4 with Write-Back Cache",
+                _ => "'Classic' 486",
+            },
+            MicroArch::Am5x86 => match self.arch.code_name {
+                "Am5x86WB" => "AMD 5x86 with Write-Back Cache",
+                _ => "AMD 5x86",
+            },
+
+            // Intel
+            MicroArch::RapidCad => "Intel RapidCAD",
+            MicroArch::I486 => match self.arch.code_name {
+                "i80486DX" => "Intel 486 DX",
+                "i80486DX-50" => "Intel 486 DX-50",
+                "i80486SX" => "Intel 486 SX",
+                "i80486DX2" => "Intel 486 DX2",
+                "i80486SL" => "Intel 486 SL",
+                "i80486SX2" => "Intel 486 SX2",
+                "i80486DX2WB" => "Intel 486 DX2 with Write-Back Cache",
+                "i80486DX4" => "Intel 486 DX4",
+                "i80486DX4WB" => "Intel 486 DX4 with Write-Back Cache",
+                _ => "'Classic' 486",
+            },
+
+            // UMC
+            MicroArch::U5S => "UMC Green CPU U5S (486 SX)",
+            MicroArch::U5D => "UMC Green CPU U5D (486 DX)",
+
+            _ => {
+                if self.arch.model != UNK {
+                    &self.arch.model
+                } else {
+                    UNK
+                }
+            }
+        };
+
+        String::from(s)
+    }
+
+    pub(crate) fn easter_egg() -> Option<String> {
+        None
+    }
+
+    fn detect_hypervisor() -> Option<String> {
+        None
+    }
+}
+
+#[cfg(not(dos_real))]
+impl Cpu {
     fn intel_brand_index(&self) -> Option<&'static str> {
         let brand_id = get_brand_id();
 
@@ -315,20 +416,9 @@ impl Cpu {
         }
     }
 
-    #[cfg(not(dos_real))]
     fn cleanup_model_string(s: &str) -> String {
         let str = s.replace("CPU", "");
-
-        // Single-pass: build result without intermediate Vec
-        let mut result = String::with_capacity(str.len());
-        for part in str.split_ascii_whitespace() {
-            if !part.is_empty() {
-                if !result.is_empty() {
-                    result.push(' ');
-                }
-                result.push_str(part);
-            }
-        }
+        let mut result = crate::common::collapse_whitespace(&str);
 
         // Remove speed suffix after '@'
         if let Some(idx) = result.find('@') {
@@ -347,12 +437,7 @@ impl Cpu {
     /// detected CPU, falling back to architecture class names for
     /// older or unrecognized processors.
     pub fn display_model_string(&self) -> String {
-        let brand = if !self.arch.vendor_string.is_empty() && self.arch.vendor_string != UNK {
-            CpuBrand::from(self.arch.vendor_string.as_str())
-        } else {
-            CpuBrand::detect()
-        };
-
+        let brand = self.detect_brand();
         let model_lower = self.arch.model.to_ascii_lowercase();
 
         match brand {
@@ -372,32 +457,15 @@ impl Cpu {
             }
             CpuBrand::Intel => {
                 // Check the Intel model lookup table
-                #[cfg(not(dos_real))]
                 if let Some(model_name) = self.intel_brand_index() {
                     return String::from(model_name);
                 }
             }
             CpuBrand::SiS => return String::from("SiS 550/551/552 SoC"),
-            CpuBrand::Unknown => 'nocpuid: {
-                // Not a 386 or 486
-                if self.arch.model != UNK || self.signature.family > 4 {
-                    break 'nocpuid;
+            CpuBrand::Unknown => {
+                if let Some(s) = self.classic_nocpuid_model() {
+                    return String::from(s);
                 }
-
-                // 486s without cpuid
-                let s = if is_386() {
-                    "'Classic' 386"
-                } else {
-                    match (self.signature.family, self.signature.model) {
-                        (4, 2) => "'Classic' 486 SX",
-                        (4, 3) => "'Classic' 486 DX2",
-                        (4, 4) => "Intel 486SL",
-                        (4, 5) => "'Classic' 486 SX2",
-                        _ => "'Classic' 486",
-                    }
-                };
-
-                return String::from(s);
             }
             _ => (),
         }
@@ -432,7 +500,6 @@ impl Cpu {
             | MicroArch::EzraT
             | MicroArch::Nehemiah => "VIA C3",
             MicroArch::Esther => "VIA C7",
-            #[cfg(not(dos_real))]
             MicroArch::Isaiah => {
                 if self.arch.model.contains("Eden") {
                     &self.arch.model.replace("Eden", "Nano")
@@ -489,11 +556,7 @@ impl Cpu {
             }
         };
 
-        #[cfg(not(dos_real))]
-        return Self::cleanup_model_string(s);
-
-        #[cfg(dos_real)]
-        String::from(s)
+        Self::cleanup_model_string(s)
     }
 
     /// Validates whether a candidate string is a plausible easter egg message.
@@ -567,6 +630,14 @@ impl Cpu {
             None
         }
     }
+
+    fn detect_hypervisor() -> Option<String> {
+        if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
+            Some(hypervisor_str())
+        } else {
+            None
+        }
+    }
 }
 
 impl TDetect for Cpu {
@@ -609,11 +680,7 @@ impl Cpu {
         let extra = X86Data {
             has_cpuid: (is_cyrix() && Cyrix::can_enable_cpuid()) || has_cpuid(),
             arch,
-            hyp_vendor_str: if is_hypervisor_guest() && max_hypervisor_leaf() > 0 {
-                Some(hypervisor_str())
-            } else {
-                None
-            },
+            hyp_vendor_str: Self::detect_hypervisor(),
             easter_egg: Self::easter_egg(),
             brand_id: get_brand_id(),
             signature: sig,
@@ -637,80 +704,16 @@ impl Cpu {
     pub fn detect_cpuid_core_types(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
         #[cfg(std_os)]
         if provider::dump_cpu_count() > 1 {
-            use super::vendor::Intel;
-
             let mut cores: Vec<CpuCore> = Vec::new();
-
-            fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
-                if let Some(c) = cores.iter_mut().find(|c| {
-                    c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name
-                }) {
-                    c.count += core.count;
-                    c.threads += core.threads;
-                    if c.speed.is_none() && core.speed.is_some() {
-                        c.speed = core.speed;
-                    }
-                } else {
-                    cores.push(core);
-                }
-            }
-
             let dump_count = provider::dump_cpu_count();
             for cpu_idx in 0..dump_count {
                 provider::set_dump_cpu(cpu_idx);
-
-                let core_type = core_type_from_cpuid();
-                let sig = CpuSignature::detect();
-                let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
-                let micro_arch = if is_intel() {
-                    Intel::core_micro_arch(arch.micro_arch, core_type)
-                } else {
-                    arch.micro_arch
-                };
-
-                // Make sure we know the MicroArch before pushing to core types
-                if micro_arch == MicroArch::Unknown {
-                    continue;
-                }
-
-                let name_str = micro_arch.as_str();
-                let name = if name_str != UNK {
-                    Some(String::from(name_str))
-                } else {
-                    None
-                };
-
-                let cache = Cache::detect();
                 let speed = Speed::detect_cpuid();
-                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-
-                find_or_push(
-                    &mut cores,
-                    CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        implementer: None,
-                        cache,
-                        speed: speed_opt,
-                        count: 1,
-                        threads: 1,
-                    },
-                );
-            }
-
-            for c in &mut cores {
-                let smt = if c.kind == CoreType::Efficiency {
-                    1
-                } else {
-                    cpuid_threads_per_core().max(1)
-                };
-                c.count = (c.threads / smt).max(1);
-                if let Some(ref mut cache) = c.cache {
-                    cache.resolve_share_counts(c.count, c.threads, 1);
+                if let Some(core) = probe_current_core(Some(speed)) {
+                    push_or_merge_core(&mut cores, core);
                 }
             }
-
+            finalize_hybrid_cores(&mut cores);
             provider::set_dump_cpu(0);
 
             if cores.len() > 1 {
@@ -790,6 +793,79 @@ impl Cpu {
         #[cfg(uefi)]
         {
             super::efi::detect_live_core_types()
+        }
+    }
+}
+
+/// Probes the currently executing logical core or active CPUID dump context to construct a single `CpuCore`.
+#[cfg(not(dos_os))]
+pub fn probe_current_core(speed: Option<Speed>) -> Option<CpuCore> {
+    use super::vendor::Intel;
+
+    let core_type = core_type_from_cpuid();
+    let sig = CpuSignature::detect();
+    let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
+    let micro_arch = if is_intel() {
+        Intel::core_micro_arch(arch.micro_arch, core_type)
+    } else {
+        arch.micro_arch
+    };
+
+    if micro_arch == MicroArch::Unknown {
+        return None;
+    }
+
+    let name_str = micro_arch.as_str();
+    let name = if name_str != UNK {
+        Some(String::from(name_str))
+    } else {
+        None
+    };
+
+    let cache = Cache::detect();
+    let speed_opt = speed.filter(|s| s.base > 0);
+
+    Some(CpuCore {
+        kind: core_type,
+        micro_arch,
+        name,
+        implementer: None,
+        cache,
+        speed: speed_opt,
+        count: 1,
+        threads: 1,
+    })
+}
+
+/// Accumulates a single logical core into a list of clustered `CpuCore`s, merging matching microarchitectures.
+#[cfg(not(dos_os))]
+pub fn push_or_merge_core(cores: &mut Vec<CpuCore>, core: CpuCore) {
+    if let Some(c) = cores
+        .iter_mut()
+        .find(|c| c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name)
+    {
+        c.count += core.count;
+        c.threads += core.threads;
+        if c.speed.is_none() && core.speed.is_some() {
+            c.speed = core.speed;
+        }
+    } else {
+        cores.push(core);
+    }
+}
+
+/// Computes final core counts (accounting for SMT on non-efficiency cores) and resolves cache share counts.
+#[cfg(not(dos_os))]
+pub fn finalize_hybrid_cores(cores: &mut [CpuCore]) {
+    for c in cores {
+        let smt = if c.kind == CoreType::Efficiency {
+            1
+        } else {
+            cpuid_threads_per_core().max(1)
+        };
+        c.count = (c.threads / smt).max(1);
+        if let Some(ref mut cache) = c.cache {
+            cache.resolve_share_counts(c.count, c.threads, 1);
         }
     }
 }

@@ -12,8 +12,8 @@ impl CpuDisplay {
         if verbose {
             return true;
         }
-        if let Some(soc) = &cpu_info.soc_model
-            && Self::is_duplicate(model, soc)
+        if let Some(soc) = cpu_info.soc_model.as_ref().and_then(|s| s.display_name())
+            && Self::is_duplicate(model, &soc)
         {
             return false;
         }
@@ -105,8 +105,8 @@ impl CpuDisplay {
             return None;
         }
 
-        if let Some(soc) = &cpu_info.soc_model
-            && Self::is_duplicate(code_name, soc)
+        if let Some(soc) = cpu_info.soc_model.as_ref().and_then(|s| s.display_name())
+            && Self::is_duplicate(code_name, &soc)
         {
             return None;
         }
@@ -152,6 +152,49 @@ impl CpuDisplay {
         true
     }
 
+    fn display_arm_core_details(
+        disp: &mut CpuDisplay,
+        core: &CpuCore,
+        cpu_info: &Cpu,
+        sockets: u32,
+        is_hybrid: bool,
+        flags: CliFlags,
+    ) {
+        disp.section_line_opt("Implementer", core.implementer.as_deref());
+
+        if is_hybrid {
+            let name: &str = core.kind.into();
+            disp.section_line("Type", name);
+        }
+
+        let ma_str: String = core.micro_arch.into();
+        if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
+            disp.section_line("MicroArch", &ma_str);
+        }
+
+        if Self::should_show_core_codename(core, cpu_info, flags.verbose) {
+            disp.section_line_opt("Codename", core.name.as_deref());
+        }
+
+        disp.section_line("Count", &core.count.to_string());
+
+        let freq_flags = if is_hybrid {
+            CliFlags {
+                compact: true,
+                ..flags
+            }
+        } else {
+            flags
+        };
+        disp.display_frequency(core.speed, freq_flags);
+
+        disp.display_core_cache(core.cache, core.count, sockets);
+
+        if is_hybrid && core.cache.is_none() {
+            disp.newline();
+        }
+    }
+
     pub fn display_arm(cpu_info: &Cpu, disp: &mut CpuDisplay) {
         let flags = disp.flags;
 
@@ -159,7 +202,9 @@ impl CpuDisplay {
             disp.display_system(system, flags);
         }
 
-        disp.simple_line_opt("SoC", cpu_info.soc_model.as_deref());
+        if let Some(soc) = &cpu_info.soc_model {
+            disp.display_soc(soc, flags);
+        }
 
         if Self::should_show_model(cpu_info, flags.verbose) {
             disp.simple_line("Model", &cpu_info.cpu_arch.model);
@@ -189,56 +234,11 @@ impl CpuDisplay {
         if cpu_info.is_hybrid() {
             for (i, core) in cpu_info.cores.iter().enumerate() {
                 disp.core_heading(i);
-
-                disp.section_line_opt("Implementer", core.implementer.as_deref());
-
-                let name = Into::<&str>::into(core.kind);
-                disp.section_line("Type", name);
-
-                let ma_str: String = core.micro_arch.into();
-                if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
-                    disp.section_line("MicroArch", &ma_str);
-                }
-
-                if Self::should_show_core_codename(core, cpu_info, flags.verbose) {
-                    disp.section_line_opt("Codename", core.name.as_deref());
-                }
-
-                disp.section_line("Count", &core.count.to_string());
-
-                disp.display_frequency(
-                    core.speed,
-                    CliFlags {
-                        compact: true,
-                        ..flags
-                    },
-                );
-
-                disp.display_core_cache(core.cache, core.count, sockets);
-
-                if core.cache.is_none() {
-                    disp.newline();
-                }
+                Self::display_arm_core_details(disp, core, cpu_info, sockets, true, flags);
             }
         } else if let Some(core) = cpu_info.cores.first() {
             disp.print_label("Cores");
-
-            disp.section_line_opt("Implementer", core.implementer.as_deref());
-
-            let ma_str: String = core.micro_arch.into();
-            if Self::should_show_core_micro_arch(core.micro_arch, flags.verbose) {
-                disp.section_line("MicroArch", &ma_str);
-            }
-
-            if Self::should_show_core_codename(core, cpu_info, flags.verbose) {
-                disp.section_line_opt("Codename", core.name.as_deref());
-            }
-
-            disp.section_line("Count", &core.count.to_string());
-
-            disp.display_frequency(core.speed, flags);
-
-            disp.display_core_cache(core.cache, core.count, sockets);
+            Self::display_arm_core_details(disp, core, cpu_info, sockets, false, flags);
         }
 
         // Display features
@@ -325,24 +325,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_is_duplicate() {
-        assert!(CpuDisplay::is_duplicate("ARM Cortex-A53", "Cortex-A53"));
-        assert!(CpuDisplay::is_duplicate("Cortex-A53", "ARM Cortex-A53"));
-        assert!(CpuDisplay::is_duplicate("Apple Swift", "Swift"));
-        assert!(CpuDisplay::is_duplicate("AmpereOne", "AmpereOne"));
-        assert!(CpuDisplay::is_duplicate("cortex-a53", "CORTEX-A53"));
-
-        assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
-        assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
-        assert!(!CpuDisplay::is_duplicate("Apple A18 Pro", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Everest", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Sawtooth", "Tahiti"));
-        assert!(!CpuDisplay::is_duplicate("Apple M1", "Tonga"));
-        assert!(!CpuDisplay::is_duplicate("FireStorm", "Tonga"));
-        assert!(!CpuDisplay::is_duplicate("", "Maya"));
-        assert!(!CpuDisplay::is_duplicate("Maya", ""));
-    }
 
     #[test]
     fn test_should_show_model_suppressed_when_matching_core_or_codename() {

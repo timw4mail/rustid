@@ -560,53 +560,27 @@ pub fn _print_str(s: &str) {
 
     while let Some(ch) = chars.next() {
         // Parse ANSI escape sequence \x1b[...m
-        if ch == '\x1b' && chars.peek() == Some(&'[') {
-            chars.next(); // Consume '['
-            let mut code = 0u32;
-            let mut has_code = false;
-            while let Some(&c) = chars.peek() {
-                if c.is_ascii_digit() {
-                    code = code * 10 + (c as u32 - '0' as u32);
-                    has_code = true;
-                    chars.next();
-                } else if c == ';' || c == 'm' {
-                    chars.next();
-                    let (attr, gfx_color) = match code {
-                        0 => (0x0F, 0xFFFFFFFF),       // White
-                        32 => (0x0A, 0xFF55FF55),      // Light Green
-                        34 | 94 => (0x0B, 0xFF55FFFF), // Light Cyan
-                        33 | 93 => (0x0E, 0xFFFFFF55), // Yellow
-                        31 | 91 => (0x0C, 0xFFFF5555), // Light Red
-                        36 | 96 => (0x0B, 0xFF55FFFF), // Light Cyan
-                        90 => (0x08, 0xFF888888),      // Dark Gray
-                        _ => (0x0F, 0xFFFFFFFF),
-                    };
-                    flush(&mut utf16_buf, &mut idx);
-                    if !proto.is_null() && !suppress_conout {
-                        unsafe { ((*proto).set_attribute)(proto, attr) };
-                    }
-                    unsafe {
-                        GFX_STATE.fg_color = gfx_color;
-                    }
-                    if c == 'm' {
-                        break;
-                    }
-                    code = 0;
-                    has_code = false;
-                } else {
-                    break;
-                }
-            }
-            if !has_code && chars.peek() == Some(&'m') {
-                chars.next();
+        if ch == '\x1b'
+            && crate::common::parse_ansi_csi_sgr(&mut chars, |code| {
+                let (attr, gfx_color) = match code {
+                    0 => (0x0F, 0xFFFFFFFF),       // White
+                    32 => (0x0A, 0xFF55FF55),      // Light Green
+                    34 | 94 => (0x0B, 0xFF55FFFF), // Light Cyan
+                    33 | 93 => (0x0E, 0xFFFFFF55), // Yellow
+                    31 | 91 => (0x0C, 0xFFFF5555), // Light Red
+                    36 | 96 => (0x0B, 0xFF55FFFF), // Light Cyan
+                    90 => (0x08, 0xFF888888),      // Dark Gray
+                    _ => (0x0F, 0xFFFFFFFF),
+                };
                 flush(&mut utf16_buf, &mut idx);
                 if !proto.is_null() && !suppress_conout {
-                    unsafe { ((*proto).set_attribute)(proto, 0x0F) };
+                    unsafe { ((*proto).set_attribute)(proto, attr) };
                 }
                 unsafe {
-                    GFX_STATE.fg_color = 0xFFFFFFFF;
+                    GFX_STATE.fg_color = gfx_color;
                 }
-            }
+            })
+        {
             continue;
         }
 

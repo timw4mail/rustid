@@ -1,6 +1,7 @@
 //! Plain report formatting and syntax-colored RTF generation.
 
 pub use crate::gui::common::GuiTheme;
+use crate::gui::styled_text::{ReportLineToken, tokenize_report_line};
 
 pub fn rtf_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 10);
@@ -60,73 +61,58 @@ pub fn to_rtf(plain_text: &str, theme: GuiTheme, color: bool) -> String {
     );
 
     for line in plain_text.lines() {
-        if line.trim().is_empty() {
-            rtf.push_str("\\par\r\n");
-            continue;
-        }
-
-        // Header line (e.g. --------------- Rustid ... ---------------)
-        if line.starts_with("---------------") || line.starts_with("--------------------") {
-            rtf.push_str(&format!("\\cf2 {}\\par\r\n", rtf_escape(line)));
-            continue;
-        }
-
-        // Core # heading line
-        if line.trim_start().starts_with("Core #") {
-            rtf.push_str(&format!("\\cf2\\b {}\\b0\\par\r\n", rtf_escape(line)));
-            continue;
-        }
-
-        // Standard line with labels: e.g. "        Vendor: AMD (AuthenticAMD)"
-        if line.len() >= 16 && &line[14..16] == ": " {
-            let label_part = &line[..14];
-            let rest_part = &line[16..];
-
-            // Check for inline sublabel e.g. "Frequency: Base: "
-            if let Some(colon_pos) = rest_part.find(": ")
-                && colon_pos < 12
-            {
-                let sub_label = &rest_part[..colon_pos];
-                let val = &rest_part[colon_pos + 2..];
+        match tokenize_report_line(line) {
+            ReportLineToken::Empty => {
+                rtf.push_str("\\par\r\n");
+            }
+            ReportLineToken::Header(h) => {
+                rtf.push_str(&format!("\\cf2 {}\\par\r\n", rtf_escape(h)));
+            }
+            ReportLineToken::CoreHeading(ch) => {
+                rtf.push_str(&format!("\\cf2\\b {}\\b0\\par\r\n", rtf_escape(ch)));
+            }
+            ReportLineToken::LabeledWithSub {
+                label,
+                sublabel,
+                value,
+            } => {
                 rtf.push_str(&format!(
                     "\\cf1 {}: \\cf2 {}: \\cf3 {}\\par\r\n",
-                    rtf_escape(label_part),
-                    rtf_escape(sub_label),
-                    rtf_escape(val)
+                    rtf_escape(label),
+                    rtf_escape(sublabel),
+                    rtf_escape(value)
                 ));
-                continue;
             }
-
-            rtf.push_str(&format!(
-                "\\cf1 {}: \\cf3 {}\\par\r\n",
-                rtf_escape(label_part),
-                rtf_escape(rest_part)
-            ));
-            continue;
-        }
-
-        // Sublabel line e.g. "                L1i: ..." or "                (11, 15, ...)"
-        if let Some(sub_rest) = line.strip_prefix("                ") {
-            if let Some(colon_idx) = sub_rest.find(": ") {
-                let sub_lbl = &sub_rest[..colon_idx];
-                let sub_val = &sub_rest[colon_idx + 2..];
+            ReportLineToken::Labeled { label, value } => {
                 rtf.push_str(&format!(
-                    "\\cf5                 \\cf2 {}: \\cf3 {}\\par\r\n",
-                    rtf_escape(sub_lbl),
-                    rtf_escape(sub_val)
+                    "\\cf1 {}: \\cf3 {}\\par\r\n",
+                    rtf_escape(label),
+                    rtf_escape(value)
                 ));
-                continue;
-            } else if sub_rest.starts_with('(') {
+            }
+            ReportLineToken::Sublabeled {
+                indent,
+                sublabel,
+                value,
+            } => {
                 rtf.push_str(&format!(
-                    "\\cf5                 \\cf4 {}\\par\r\n",
-                    rtf_escape(sub_rest)
+                    "\\cf5 {}\\cf2 {}: \\cf3 {}\\par\r\n",
+                    indent,
+                    rtf_escape(sublabel),
+                    rtf_escape(value)
                 ));
-                continue;
+            }
+            ReportLineToken::SublabeledHighlight { indent, text } => {
+                rtf.push_str(&format!(
+                    "\\cf5 {}\\cf4 {}\\par\r\n",
+                    indent,
+                    rtf_escape(text)
+                ));
+            }
+            ReportLineToken::Plain(p) => {
+                rtf.push_str(&format!("\\cf3 {}\\par\r\n", rtf_escape(p)));
             }
         }
-
-        // Default line
-        rtf.push_str(&format!("\\cf3 {}\\par\r\n", rtf_escape(line)));
     }
 
     rtf.push('}');

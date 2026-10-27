@@ -151,6 +151,7 @@ impl From<String> for CpuBrand {
     }
 }
 
+#[cfg(not(dos_real))]
 #[derive(PartialEq, Debug)]
 pub enum HypervisorBrand {
     Bhyve,
@@ -165,6 +166,7 @@ pub enum HypervisorBrand {
     Unknown,
 }
 
+#[cfg(not(dos_real))]
 impl HypervisorBrand {
     #[must_use]
     pub fn detect() -> Self {
@@ -189,6 +191,7 @@ impl HypervisorBrand {
     }
 }
 
+#[cfg(not(dos_real))]
 impl From<&str> for HypervisorBrand {
     fn from(s: &str) -> Self {
         match s {

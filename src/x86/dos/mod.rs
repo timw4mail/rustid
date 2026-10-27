@@ -2,7 +2,6 @@
 //! DOS (16-bit real mode and 32-bit protected mode) environment support for rustid.
 
 use super::vendor::cyrix::Cyrix;
-use super::{cpuid_cores_per_package, cpuid_threads_per_package};
 use crate::common::{DataSource, Speed, TopologyTier};
 use crate::x86::cpu::Cpu;
 use core::arch::asm;
@@ -30,30 +29,11 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
     // 1. Multi-socket detection from MP Table
     let mp_table = mp::MpTable::detect();
     let mp_sockets = mp_table.socket_count();
-
-    if mp_sockets > 1 {
-        let sockets = TopologyTier::new(mp_sockets, DataSource::MpTable);
-        cpu.topology.sockets = sockets;
-        let cores = cpu
-            .topology
-            .cores
-            .count
-            .max(cpuid_cores_per_package() * mp_sockets);
-        let threads = cpu
-            .topology
-            .threads
-            .count
-            .max(cpuid_threads_per_package() * mp_sockets);
-        cpu.topology.cores =
-            TopologyTier::new(cores, DataSource::Calculated("MP Table * CPUID cores"));
-        cpu.topology.threads = TopologyTier::new(
-            threads,
-            DataSource::Calculated("MP Table logical processors"),
-        );
-        if let Some(ref mut cache) = cpu.topology.cache {
-            cache.resolve_share_counts(cores, threads, mp_sockets);
-        }
-    }
+    cpu.topology.scale_sockets(
+        TopologyTier::new(mp_sockets, DataSource::MpTable),
+        "MP Table * CPUID cores",
+        "MP Table logical processors",
+    );
 
     // 2. Calibrated PIT/TSC speed measurement fallback
     if cpu.topology.speed.base == 0 {
@@ -222,51 +202,29 @@ fn dos_console_write(s: &str) {
 
     while let Some(ch) = chars.next() {
         // Parse ANSI escape sequence \x1b[...m
-        if ch == '\x1b' && chars.peek() == Some(&'[') {
-            chars.next(); // Consume '['
-            let mut code = 0u32;
-            let mut has_code = false;
-            while let Some(&c) = chars.peek() {
-                if c.is_ascii_digit() {
-                    code = code * 10 + (c as u32 - '0' as u32);
-                    has_code = true;
-                    chars.next();
-                } else if c == ';' || c == 'm' {
-                    chars.next();
-                    let fg = match code {
-                        0 => unsafe { INITIAL_ATTR & 0x0F },
-                        30 => 0x00,      // Black
-                        31 => 0x04,      // Red
-                        32 | 92 => 0x0A, // Light Green
-                        33 | 93 => 0x0E, // Yellow
-                        34 => 0x09,      // Light Blue
-                        35 | 95 => 0x0D, // Light Magenta
-                        36 | 96 => 0x0B, // Light Cyan
-                        37 => 0x07,      // Light Gray
-                        90 => 0x08,      // Dark Gray
-                        91 => 0x0C,      // Light Red
-                        94 => 0x0B,      // Light Cyan
-                        97 => 0x0F,      // High-Intensity White
-                        _ => unsafe { INITIAL_ATTR & 0x0F },
-                    };
-                    unsafe {
-                        CURRENT_ATTR = (INITIAL_ATTR & 0xF0) | fg;
-                    }
-                    if c == 'm' {
-                        break;
-                    }
-                    code = 0;
-                    has_code = false;
-                } else {
-                    break;
-                }
-            }
-            if !has_code && chars.peek() == Some(&'m') {
-                chars.next();
+        if ch == '\x1b'
+            && crate::common::parse_ansi_csi_sgr(&mut chars, |code| {
+                let fg = match code {
+                    0 => unsafe { INITIAL_ATTR & 0x0F },
+                    30 => 0x00,      // Black
+                    31 => 0x04,      // Red
+                    32 | 92 => 0x0A, // Light Green
+                    33 | 93 => 0x0E, // Yellow
+                    34 => 0x09,      // Light Blue
+                    35 | 95 => 0x0D, // Light Magenta
+                    36 | 96 => 0x0B, // Light Cyan
+                    37 => 0x07,      // Light Gray
+                    90 => 0x08,      // Dark Gray
+                    91 => 0x0C,      // Light Red
+                    94 => 0x0B,      // Light Cyan
+                    97 => 0x0F,      // High-Intensity White
+                    _ => unsafe { INITIAL_ATTR & 0x0F },
+                };
                 unsafe {
-                    CURRENT_ATTR = INITIAL_ATTR;
+                    CURRENT_ATTR = (INITIAL_ATTR & 0xF0) | fg;
                 }
-            }
+            })
+        {
             continue;
         }
 
@@ -499,4 +457,40 @@ pub fn peek_u16(addr: u32) -> u16 {
 #[inline(always)]
 pub fn peek_u32(addr: u32) -> u32 {
     unsafe { core::ptr::read_volatile(addr as *const u32) }
+}
+
+/// Reads a byte from segment:offset in both Real Mode and Protected Mode.
+#[inline(always)]
+pub fn peek_u8_so(seg: u16, off: u16) -> u8 {
+    #[cfg(dos_real)]
+    {
+        peek_u8(seg, off)
+    }
+    #[cfg(dos_ext)]
+    {
+        peek_u8(((seg as u32) << 4) + (off as u32))
+    }
+    #[cfg(not(any(dos_real, dos_ext)))]
+    {
+        let _ = (seg, off);
+        0
+    }
+}
+
+/// Reads a 16-bit word from segment:offset in both Real Mode and Protected Mode.
+#[inline(always)]
+pub fn peek_u16_so(seg: u16, off: u16) -> u16 {
+    #[cfg(dos_real)]
+    {
+        peek_u16(seg, off)
+    }
+    #[cfg(dos_ext)]
+    {
+        peek_u16(((seg as u32) << 4) + (off as u32))
+    }
+    #[cfg(not(any(dos_real, dos_ext)))]
+    {
+        let _ = (seg, off);
+        0
+    }
 }

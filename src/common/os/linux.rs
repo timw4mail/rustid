@@ -59,18 +59,6 @@ fn get_raw_system_name() -> Option<SystemInfo> {
     let prod = get_dmi_field("product_name");
     let family = get_dmi_field("product_family");
 
-    if let Some(f) = family
-        && !is_generic_value(&f)
-    {
-        let sys_vendor = get_dmi_field("sys_vendor");
-        return Some(SystemInfo::new(
-            sys_vendor,
-            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
-            Some(f),
-            DataSource::LinuxSysFs("/sys/class/dmi/id/product_family"),
-        ));
-    }
-
     if let Some(p) = prod
         && !is_generic_value(&p)
     {
@@ -80,6 +68,18 @@ fn get_raw_system_name() -> Option<SystemInfo> {
             DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
             Some(p),
             DataSource::LinuxSysFs("/sys/class/dmi/id/product_name"),
+        ));
+    }
+
+    if let Some(f) = family
+        && !is_generic_value(&f)
+    {
+        let sys_vendor = get_dmi_field("sys_vendor");
+        return Some(SystemInfo::new(
+            sys_vendor,
+            DataSource::LinuxSysFs("/sys/class/dmi/id/sys_vendor"),
+            Some(f),
+            DataSource::LinuxSysFs("/sys/class/dmi/id/product_family"),
         ));
     }
 
@@ -99,23 +99,33 @@ fn get_raw_system_name() -> Option<SystemInfo> {
     if let Some(raw_pairs) = get_devicetree_compatible()
         && let Some(pair) = raw_pairs.first().cloned()
     {
-        return Some(SystemInfo::from_model(
-            format_compatible_pair(pair),
-            DataSource::DeviceTree("/proc/device-tree/compatible"),
-        ));
+        let model = format_compatible_pair(pair);
+        if !is_generic_value(&model) {
+            return Some(SystemInfo::from_model(
+                model,
+                DataSource::DeviceTree("/proc/device-tree/compatible"),
+            ));
+        }
     }
 
     None
 }
 
 impl TOSData for OS {
-    fn get_soc() -> Option<String> {
-        if let Some(soc) = get_soc_from_proc_cpuinfo() {
-            return Some(soc);
+    fn get_soc() -> Option<SystemInfo> {
+        if let Some(soc) = get_soc_from_proc_cpuinfo()
+            && !is_generic_value(&soc)
+        {
+            return Some(SystemInfo::from_model(soc, DataSource::LinuxProcCpuinfo));
         }
 
-        if let Some(soc) = get_soc_from_devicetree() {
-            return Some(soc);
+        if let Some(soc) = get_soc_from_devicetree()
+            && !is_generic_value(&soc)
+        {
+            return Some(SystemInfo::from_model(
+                soc,
+                DataSource::DeviceTree("/proc/device-tree/compatible"),
+            ));
         }
 
         None

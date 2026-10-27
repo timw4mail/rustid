@@ -210,93 +210,121 @@ impl CpuArch {
     }
 
     fn match_compatible_entry(entry: &str) -> Option<Self> {
-        match entry {
+        type CompatEntry = (
+            &'static str,
+            Vendor,
+            &'static str,
+            MicroArch,
+            &'static str,
+            Option<&'static str>,
+        );
+
+        const COMPAT_TABLE: &[CompatEntry] = &[
             // SiFive cores
-            "sifive,u74" => Some(CpuArch {
-                vendor: Vendor::SiFive,
-                model: String::from("SiFive U74"),
-                micro_arch: MicroArch::SiFiveU74,
-                code_name: "U74",
-                marchid: 0,
-                technology: Some(N28),
-            }),
-            "sifive,u76" => Some(CpuArch {
-                vendor: Vendor::SiFive,
-                model: String::from("SiFive U76"),
-                micro_arch: MicroArch::SiFiveU76,
-                code_name: "U76",
-                marchid: 0,
-                technology: None,
-            }),
-            "sifive,s7" | "sifive,s76" => Some(CpuArch {
-                vendor: Vendor::SiFive,
-                model: String::from("SiFive S76"),
-                micro_arch: MicroArch::SiFiveS76,
-                code_name: "S76",
-                marchid: 0,
-                technology: None,
-            }),
+            (
+                "sifive,u74",
+                Vendor::SiFive,
+                "SiFive U74",
+                MicroArch::SiFiveU74,
+                "U74",
+                Some(N28),
+            ),
+            (
+                "sifive,u76",
+                Vendor::SiFive,
+                "SiFive U76",
+                MicroArch::SiFiveU76,
+                "U76",
+                None,
+            ),
+            (
+                "sifive,s7",
+                Vendor::SiFive,
+                "SiFive S76",
+                MicroArch::SiFiveS76,
+                "S76",
+                None,
+            ),
+            (
+                "sifive,s76",
+                Vendor::SiFive,
+                "SiFive S76",
+                MicroArch::SiFiveS76,
+                "S76",
+                None,
+            ),
             // T-Head cores
-            "thead,c906" => Some(CpuArch {
-                vendor: Vendor::THead,
-                model: String::from("T-Head C906"),
-                micro_arch: MicroArch::THeadC906,
-                code_name: "C906",
-                marchid: 0,
-                technology: Some(N28),
-            }),
-            "thead,c910" => Some(CpuArch {
-                vendor: Vendor::THead,
-                model: String::from("T-Head C910"),
-                micro_arch: MicroArch::THeadC910,
-                code_name: "C910",
-                marchid: 0,
-                technology: Some(N16),
-            }),
-            "thead,c920" => Some(CpuArch {
-                vendor: Vendor::THead,
-                model: String::from("T-Head C920"),
-                micro_arch: MicroArch::THeadC920,
-                code_name: "C920",
-                marchid: 0,
-                technology: None,
-            }),
-            "thead,c930" => Some(CpuArch {
-                vendor: Vendor::THead,
-                model: String::from("T-Head C930"),
-                micro_arch: MicroArch::THeadC930,
-                code_name: "C930",
-                marchid: 0,
-                technology: None,
-            }),
+            (
+                "thead,c906",
+                Vendor::THead,
+                "T-Head C906",
+                MicroArch::THeadC906,
+                "C906",
+                Some(N28),
+            ),
+            (
+                "thead,c910",
+                Vendor::THead,
+                "T-Head C910",
+                MicroArch::THeadC910,
+                "C910",
+                Some(N16),
+            ),
+            (
+                "thead,c920",
+                Vendor::THead,
+                "T-Head C920",
+                MicroArch::THeadC920,
+                "C920",
+                None,
+            ),
+            (
+                "thead,c930",
+                Vendor::THead,
+                "T-Head C930",
+                MicroArch::THeadC930,
+                "C930",
+                None,
+            ),
             // StarFive SoCs
-            "starfive,jh7100" => Some(CpuArch {
-                vendor: Vendor::SiFive,
-                model: String::from("StarFive JH7100"),
-                micro_arch: MicroArch::SiFiveU74,
-                code_name: "JH7100",
-                marchid: 0,
-                technology: None,
-            }),
-            "starfive,jh7110" => Some(CpuArch {
-                vendor: Vendor::SiFive,
-                model: String::from("StarFive JH7110"),
-                micro_arch: MicroArch::SiFiveU74,
-                code_name: "JH7110",
-                marchid: 0,
-                technology: Some(N28),
-            }),
+            (
+                "starfive,jh7100",
+                Vendor::SiFive,
+                "StarFive JH7100",
+                MicroArch::SiFiveU74,
+                "JH7100",
+                None,
+            ),
+            (
+                "starfive,jh7110",
+                Vendor::SiFive,
+                "StarFive JH7110",
+                MicroArch::SiFiveU74,
+                "JH7110",
+                Some(N28),
+            ),
             // Kendryte
-            "canaan,k210" => Some(CpuArch {
-                vendor: Vendor::Kendryte,
-                model: String::from("Kendryte K210"),
-                micro_arch: MicroArch::KendryteK210,
-                code_name: "K210",
+            (
+                "canaan,k210",
+                Vendor::Kendryte,
+                "Kendryte K210",
+                MicroArch::KendryteK210,
+                "K210",
+                Some(N28),
+            ),
+        ];
+
+        COMPAT_TABLE
+            .iter()
+            .find(|(compat, ..)| *compat == entry)
+            .map(|&(_, vendor, model, micro_arch, code_name, technology)| CpuArch {
+                vendor,
+                model: String::from(model),
+                micro_arch,
+                code_name,
                 marchid: 0,
-                technology: Some(N28),
-            }),
-            _ => None,
-        }
+                technology,
+            })
     }
 
     fn find_impl(

@@ -77,31 +77,7 @@ struct MpFloatingPointer {
     mp_feature5: u8,
 }
 
-#[cfg(dos_real)]
-#[inline(always)]
-fn peek_u8_so(seg: u16, off: u16) -> u8 {
-    crate::x86::dos::peek_u8(seg, off)
-}
-
-#[cfg(dos_real)]
-#[inline(always)]
-fn peek_u16_so(seg: u16, off: u16) -> u16 {
-    crate::x86::dos::peek_u16(seg, off)
-}
-
-#[cfg(dos_ext)]
-#[inline(always)]
-fn peek_u8_so(seg: u16, off: u16) -> u8 {
-    let addr = ((seg as u32) << 4) + (off as u32);
-    crate::x86::dos::peek_u8(addr)
-}
-
-#[cfg(dos_ext)]
-#[inline(always)]
-fn peek_u16_so(seg: u16, off: u16) -> u16 {
-    let addr = ((seg as u32) << 4) + (off as u32);
-    crate::x86::dos::peek_u16(addr)
-}
+use crate::x86::dos::{peek_u16_so, peek_u8_so};
 
 impl MpTable {
     /// Detects the number of sockets using the Intel MP Specification.

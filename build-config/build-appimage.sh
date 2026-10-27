@@ -73,8 +73,10 @@ fi
 cat << 'EOF' > "$APPDIR/AppRun"
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "${0}")")"
-export PATH="${HERE}/usr/bin:${PATH}"
-export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+export PATH="${HERE}/usr/bin${PATH:+:${PATH}}"
+if [ -d "${HERE}/usr/lib" ]; then
+    export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+fi
 export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 exec "${HERE}/usr/bin/rustid-gui" "$@"
 EOF

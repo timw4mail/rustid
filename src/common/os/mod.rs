@@ -1,6 +1,5 @@
 //! Os-specific data gathering
 use crate::common::{SystemInfo, TopologyTier};
-use alloc::string::String;
 
 #[cfg(bsd)]
 pub mod bsd;
@@ -9,6 +8,7 @@ pub mod bsd;
 pub mod efi;
 
 pub mod common;
+pub mod smbios;
 
 #[cfg(target_os = "android")]
 pub mod android;
@@ -34,6 +34,7 @@ pub mod linux_sysfs;
 // ----------------------------------------------------------------------------
 
 pub use common::*;
+pub use smbios::*;
 
 #[cfg(linux_os)]
 pub use linux_sysfs::*;
@@ -59,7 +60,7 @@ pub trait TOSData {
         None
     }
 
-    fn get_soc() -> Option<String> {
+    fn get_soc() -> Option<SystemInfo> {
         None
     }
 

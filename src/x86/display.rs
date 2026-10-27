@@ -396,6 +396,7 @@ impl TCpuDisplay for Cpu {
         disp.simple_line_opt("Process Node", self.arch.technology);
 
         // Easter Egg (AMD K6, K8, Jaguar or Rise mp6)
+        #[cfg(not(dos_real))]
         disp.simple_line_opt("Easter Egg", self.easter_egg.as_deref());
 
         // Overdrive, CPUID support, etc

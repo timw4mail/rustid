@@ -649,6 +649,30 @@ cpuid_testsuite!(
 );
 
 cpuid_testsuite!(
+    amd_custom_apu_0405,
+    "dump/Amd_Custom_APU_0405.txt",
+    {
+        test vendor_detection {
+            assert_vendor(VENDOR_AMD);
+        }
+
+        test brand_string {
+            assert_brand_eq("AMD Custom APU 0405");
+            assert_eq!(Cpu::raw_model_string(), "AMD Custom APU 0405");
+            assert!(!Cpu::raw_model_string().contains('\0'));
+        }
+
+        test signature {
+            assert_eq!(get_signature(), (8, 15, 9, 0, 2));
+        }
+
+        test topology {
+            assert_topology(1, 4, 8);
+        }
+    }
+);
+
+cpuid_testsuite!(
     amd_athlon_6400,
     "dump/Amd_Athlon(tm)_64_X2_6400+.txt",
     {

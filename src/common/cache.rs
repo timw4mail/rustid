@@ -164,6 +164,7 @@ pub struct Cache {
     pub source: DataSource,
 }
 
+#[cfg(not(dos_real))]
 impl Cache {
     /// Returns true if all cache levels have 0 size and no higher levels exist.
     #[must_use]
@@ -179,6 +180,62 @@ impl Cache {
         }
 
         false
+    }
+
+    /// Inserts a cache level into the hierarchy, creating or updating L1 (Unified or Split), L2, or L3.
+    ///
+    /// Returns `true` if the level and type were recognized and inserted, `false` otherwise.
+    pub fn insert_level(
+        &mut self,
+        level: u32,
+        cache_type: CacheType,
+        size_bytes: u32,
+        assoc: u32,
+        share_count: u32,
+    ) -> bool {
+        let entry = CacheLevel::new(size_bytes, cache_type, assoc, share_count);
+        match level {
+            1 => match cache_type {
+                CacheType::Unified => {
+                    self.l1 = Level1Cache::Unified(entry);
+                    true
+                }
+                CacheType::Data => {
+                    match &mut self.l1 {
+                        Level1Cache::Split { data, .. } => *data = entry,
+                        _ => {
+                            self.l1 = Level1Cache::Split {
+                                data: entry,
+                                instruction: CacheLevel::default(),
+                            };
+                        }
+                    }
+                    true
+                }
+                CacheType::Instruction => {
+                    match &mut self.l1 {
+                        Level1Cache::Split { instruction, .. } => *instruction = entry,
+                        _ => {
+                            self.l1 = Level1Cache::Split {
+                                data: CacheLevel::default(),
+                                instruction: entry,
+                            };
+                        }
+                    }
+                    true
+                }
+                _ => false,
+            },
+            2 => {
+                self.l2 = Some(entry);
+                true
+            }
+            3 => {
+                self.l3 = Some(entry);
+                true
+            }
+            _ => false,
+        }
     }
 
     /// Detects cache using platform/OS specific information sources.
@@ -516,5 +573,46 @@ mod tests {
         }
         assert_eq!(c.l2.expect("L2 expected").share_count, 2);
         assert_eq!(c.l3.expect("L3 expected").share_count, 8);
+    }
+
+    #[test]
+    fn test_cache_insert_level() {
+        let mut c = Cache::default();
+        assert!(c.insert_level(1, CacheType::Data, 32 * 1024, 8, 2));
+        assert!(c.insert_level(1, CacheType::Instruction, 32 * 1024, 8, 2));
+        assert!(c.insert_level(2, CacheType::Unified, 512 * 1024, 8, 2));
+        assert!(c.insert_level(3, CacheType::Unified, 16 * 1024 * 1024, 16, 8));
+        assert!(!c.insert_level(4, CacheType::Unified, 32 * 1024 * 1024, 16, 8));
+
+        match c.l1 {
+            Level1Cache::Split { data, instruction } => {
+                assert_eq!(data.size, 32 * 1024);
+                assert_eq!(data.assoc, 8);
+                assert_eq!(data.share_count, 2);
+                assert_eq!(instruction.size, 32 * 1024);
+                assert_eq!(instruction.assoc, 8);
+                assert_eq!(instruction.share_count, 2);
+            }
+            _ => panic!("Expected split L1 cache"),
+        }
+
+        let l2 = c.l2.expect("L2 expected");
+        assert_eq!(l2.size, 512 * 1024);
+        assert_eq!(l2.kind, CacheType::Unified);
+
+        let l3 = c.l3.expect("L3 expected");
+        assert_eq!(l3.size, 16 * 1024 * 1024);
+        assert_eq!(l3.kind, CacheType::Unified);
+
+        let mut c_unified = Cache::default();
+        assert!(c_unified.insert_level(1, CacheType::Unified, 64 * 1024, 4, 1));
+        match c_unified.l1 {
+            Level1Cache::Unified(u) => {
+                assert_eq!(u.size, 64 * 1024);
+                assert_eq!(u.assoc, 4);
+                assert_eq!(u.share_count, 1);
+            }
+            _ => panic!("Expected unified L1 cache"),
+        }
     }
 }

@@ -285,6 +285,139 @@ struct WndClassExA {
     h_icon_sm: *mut c_void,
 }
 
+unsafe fn show_message_box(hwnd: HWND, text: &str, caption: &str) {
+    unsafe {
+        if IS_UNICODE.load(Ordering::Relaxed) {
+            let msg_u16 = to_pcwstr(text);
+            let cap_u16 = to_pcwstr(caption);
+            let _ = MessageBoxW(
+                Some(hwnd),
+                PCWSTR(msg_u16.as_ptr()),
+                PCWSTR(cap_u16.as_ptr()),
+                MB_OK | MB_ICONINFORMATION,
+            );
+        } else {
+            unsafe extern "system" {
+                fn MessageBoxA(
+                    hWnd: *mut c_void,
+                    lpText: *const u8,
+                    lpCaption: *const u8,
+                    uType: u32,
+                ) -> i32;
+            }
+            let txt_a = std::ffi::CString::new(text).unwrap_or_default();
+            let cap_a = std::ffi::CString::new(caption).unwrap_or_default();
+            MessageBoxA(
+                hwnd.0,
+                txt_a.as_ptr() as *const u8,
+                cap_a.as_ptr() as *const u8,
+                0x00000040, // MB_OK | MB_ICONINFORMATION
+            );
+        }
+    }
+}
+
+unsafe fn def_window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    unsafe {
+        if IS_UNICODE.load(Ordering::Relaxed) {
+            DefWindowProcW(hwnd, msg, wparam, lparam)
+        } else {
+            unsafe extern "system" {
+                fn DefWindowProcA(
+                    hWnd: *mut c_void,
+                    Msg: u32,
+                    wParam: usize,
+                    lParam: isize,
+                ) -> isize;
+            }
+            LRESULT(DefWindowProcA(hwnd.0, msg, wparam.0, lparam.0))
+        }
+    }
+}
+
+unsafe fn execute_command(hwnd: HWND, state: &mut AppState, cmd_id: u32) {
+    unsafe {
+        match cmd_id {
+            #[cfg(x86_cpu)]
+            IDM_FILE_OPEN => {
+                if let Some(path) = open_dump_file_dialog(hwnd) {
+                    state.loaded_file = Some(path);
+                    render_current_text(state);
+                }
+            }
+            #[cfg(x86_cpu)]
+            IDM_FILE_EXPORT => {
+                let cpu = Cpu::detect();
+                let default_name = format!(
+                    "cpuid_dump_{}.txt",
+                    cpu.display_model_string().replace([' ', '/', '\\'], "_")
+                );
+                if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
+                    let dump_content = crate::gui::common::generate_dump_info_plain();
+                    if write_string_to_file(&save_path, &dump_content) {
+                        let msg_text = format!("CPUID dump successfully saved to:\n{}", save_path);
+                        show_message_box(hwnd, &msg_text, "Export Complete");
+                    }
+                }
+            }
+            IDM_FILE_COPY => {
+                copy_to_clipboard(hwnd, &state.current_plain_text);
+            }
+            IDM_FILE_REFRESH => {
+                state.loaded_file = None;
+                render_current_text(state);
+            }
+            IDM_FILE_EXIT => {
+                let _ = DestroyWindow(hwnd);
+            }
+            IDM_MODE_STANDARD => {
+                state.mode = ViewMode::Standard;
+                render_current_text(state);
+            }
+            IDM_MODE_DEBUG => {
+                state.mode = ViewMode::Debug;
+                render_current_text(state);
+            }
+            IDM_MODE_EVERYTHING => {
+                state.mode = ViewMode::Everything;
+                render_current_text(state);
+            }
+            #[cfg(x86_cpu)]
+            IDM_MODE_DUMP => {
+                state.mode = ViewMode::Dump;
+                render_current_text(state);
+            }
+            IDM_OPT_COLOR => {
+                state.flags.color = !state.flags.color;
+                render_current_text(state);
+            }
+            IDM_OPT_DARK_THEME => {
+                state.theme.toggle();
+                state.custom_theme_set = true;
+                render_current_text(state);
+            }
+            IDM_OPT_VERBOSE => {
+                state.flags.verbose = !state.flags.verbose;
+                render_current_text(state);
+            }
+            IDM_OPT_COMPACT => {
+                state.flags.compact = !state.flags.compact;
+                render_current_text(state);
+            }
+            IDM_HELP_ABOUT => {
+                let about_text = format!(
+                    "Rustid v{}\nMulti-architecture CPU detection tool\nRunning on {}-{}",
+                    env!("CARGO_PKG_VERSION"),
+                    std::env::consts::ARCH,
+                    std::env::consts::OS
+                );
+                show_message_box(hwnd, &about_text, "About Rustid");
+            }
+            _ => {}
+        }
+    }
+}
+
 unsafe extern "system" fn main_wnd_proc(
     hwnd: HWND,
     msg: u32,
@@ -306,137 +439,7 @@ unsafe extern "system" fn main_wnd_proc(
 
                 if !state_ptr.is_null() {
                     let state = &mut *state_ptr;
-
-                    match cmd_id {
-                        #[cfg(x86_cpu)]
-                        IDM_FILE_OPEN =>
-                        {
-                            #[cfg(x86_cpu)]
-                            if let Some(path) = open_dump_file_dialog(hwnd) {
-                                state.loaded_file = Some(path);
-                                render_current_text(state);
-                            }
-                        }
-                        #[cfg(x86_cpu)]
-                        IDM_FILE_EXPORT => {
-                            let cpu = Cpu::detect();
-                            let default_name = format!(
-                                "cpuid_dump_{}.txt",
-                                cpu.display_model_string().replace([' ', '/', '\\'], "_")
-                            );
-                            if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
-                                let dump_content = crate::gui::common::generate_dump_info_plain();
-                                if write_string_to_file(&save_path, &dump_content) {
-                                    let msg_text =
-                                        format!("CPUID dump successfully saved to:\n{}", save_path);
-                                    if IS_UNICODE.load(Ordering::Relaxed) {
-                                        let msg_u16 = to_pcwstr(&msg_text);
-                                        let _ = MessageBoxW(
-                                            Some(hwnd),
-                                            PCWSTR(msg_u16.as_ptr()),
-                                            w!("Export Complete"),
-                                            MB_OK | MB_ICONINFORMATION,
-                                        );
-                                    } else {
-                                        unsafe extern "system" {
-                                            fn MessageBoxA(
-                                                hWnd: *mut c_void,
-                                                lpText: *const u8,
-                                                lpCaption: *const u8,
-                                                uType: u32,
-                                            ) -> i32;
-                                        }
-                                        let txt_a =
-                                            std::ffi::CString::new(msg_text).unwrap_or_default();
-                                        MessageBoxA(
-                                            hwnd.0,
-                                            txt_a.as_ptr() as *const u8,
-                                            c"Export Complete".as_ptr() as *const u8,
-                                            0x00000040, // MB_OK | MB_ICONINFORMATION
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        IDM_FILE_COPY => {
-                            copy_to_clipboard(hwnd, &state.current_plain_text);
-                        }
-                        IDM_FILE_REFRESH => {
-                            state.loaded_file = None;
-                            render_current_text(state);
-                        }
-                        IDM_FILE_EXIT => {
-                            let _ = DestroyWindow(hwnd);
-                        }
-                        IDM_MODE_STANDARD => {
-                            state.mode = ViewMode::Standard;
-                            render_current_text(state);
-                        }
-                        IDM_MODE_DEBUG => {
-                            state.mode = ViewMode::Debug;
-                            render_current_text(state);
-                        }
-                        IDM_MODE_EVERYTHING => {
-                            state.mode = ViewMode::Everything;
-                            render_current_text(state);
-                        }
-                        #[cfg(x86_cpu)]
-                        IDM_MODE_DUMP => {
-                            state.mode = ViewMode::Dump;
-                            render_current_text(state);
-                        }
-                        IDM_OPT_COLOR => {
-                            state.flags.color = !state.flags.color;
-                            render_current_text(state);
-                        }
-                        IDM_OPT_DARK_THEME => {
-                            state.theme.toggle();
-                            state.custom_theme_set = true;
-                            render_current_text(state);
-                        }
-                        IDM_OPT_VERBOSE => {
-                            state.flags.verbose = !state.flags.verbose;
-                            render_current_text(state);
-                        }
-                        IDM_OPT_COMPACT => {
-                            state.flags.compact = !state.flags.compact;
-                            render_current_text(state);
-                        }
-                        IDM_HELP_ABOUT => {
-                            let about_text = format!(
-                                "Rustid v{}\nMulti-architecture CPU detection tool\nRunning on {}-{}",
-                                env!("CARGO_PKG_VERSION"),
-                                std::env::consts::ARCH,
-                                std::env::consts::OS
-                            );
-                            if IS_UNICODE.load(Ordering::Relaxed) {
-                                let about_u16 = to_pcwstr(&about_text);
-                                let _ = MessageBoxW(
-                                    Some(hwnd),
-                                    PCWSTR(about_u16.as_ptr()),
-                                    w!("About Rustid"),
-                                    MB_OK | MB_ICONINFORMATION,
-                                );
-                            } else {
-                                unsafe extern "system" {
-                                    fn MessageBoxA(
-                                        hWnd: *mut c_void,
-                                        lpText: *const u8,
-                                        lpCaption: *const u8,
-                                        uType: u32,
-                                    ) -> i32;
-                                }
-                                let txt_a = std::ffi::CString::new(about_text).unwrap_or_default();
-                                MessageBoxA(
-                                    hwnd.0,
-                                    txt_a.as_ptr() as *const u8,
-                                    c"About Rustid".as_ptr() as *const u8,
-                                    0x00000040,
-                                );
-                            }
-                        }
-                        _ => {}
-                    }
+                    execute_command(hwnd, state, cmd_id);
                 }
                 LRESULT(0)
             }
@@ -447,75 +450,29 @@ unsafe extern "system" fn main_wnd_proc(
                 if !state_ptr.is_null() {
                     let state = &mut *state_ptr;
                     if key == VK_F5.0 as usize {
-                        state.loaded_file = None;
-                        render_current_text(state);
+                        execute_command(hwnd, state, IDM_FILE_REFRESH);
                         return LRESULT(0);
                     } else if is_ctrl {
-                        match key as u8 {
-                            b'O' => {
-                                #[cfg(x86_cpu)]
-                                if let Some(path) = open_dump_file_dialog(hwnd) {
-                                    state.loaded_file = Some(path);
-                                    render_current_text(state);
-                                }
-                                return LRESULT(0);
-                            }
+                        let cmd_opt = match key as u8 {
                             #[cfg(x86_cpu)]
-                            b'S' => {
-                                let cpu = Cpu::detect();
-                                let default_name = format!(
-                                    "cpuid_dump_{}.txt",
-                                    cpu.display_model_string().replace(' ', "_")
-                                );
-                                if let Some(save_path) = export_dump_dialog(hwnd, &default_name) {
-                                    let dump_content =
-                                        crate::gui::common::generate_dump_info_plain();
-                                    let _ = write_string_to_file(&save_path, &dump_content);
-                                }
-                                return LRESULT(0);
-                            }
-                            b'C' => {
-                                copy_to_clipboard(hwnd, &state.current_plain_text);
-                                return LRESULT(0);
-                            }
-                            b'1' => {
-                                state.mode = ViewMode::Standard;
-                                render_current_text(state);
-                                return LRESULT(0);
-                            }
-                            b'2' => {
-                                state.mode = ViewMode::Debug;
-                                render_current_text(state);
-                                return LRESULT(0);
-                            }
-                            b'3' => {
-                                state.mode = ViewMode::Everything;
-                                render_current_text(state);
-                                return LRESULT(0);
-                            }
+                            b'O' => Some(IDM_FILE_OPEN),
                             #[cfg(x86_cpu)]
-                            b'4' => {
-                                state.mode = ViewMode::Dump;
-                                render_current_text(state);
-                                return LRESULT(0);
-                            }
-                            _ => {}
+                            b'S' => Some(IDM_FILE_EXPORT),
+                            b'C' => Some(IDM_FILE_COPY),
+                            b'1' => Some(IDM_MODE_STANDARD),
+                            b'2' => Some(IDM_MODE_DEBUG),
+                            b'3' => Some(IDM_MODE_EVERYTHING),
+                            #[cfg(x86_cpu)]
+                            b'4' => Some(IDM_MODE_DUMP),
+                            _ => None,
+                        };
+                        if let Some(cmd) = cmd_opt {
+                            execute_command(hwnd, state, cmd);
+                            return LRESULT(0);
                         }
                     }
                 }
-                if IS_UNICODE.load(Ordering::Relaxed) {
-                    DefWindowProcW(hwnd, msg, wparam, lparam)
-                } else {
-                    unsafe extern "system" {
-                        fn DefWindowProcA(
-                            hWnd: *mut c_void,
-                            Msg: u32,
-                            wParam: usize,
-                            lParam: isize,
-                        ) -> isize;
-                    }
-                    LRESULT(DefWindowProcA(hwnd.0, msg, wparam.0, lparam.0))
-                }
+                def_window_proc(hwnd, msg, wparam, lparam)
             }
             WM_SIZE => {
                 if !state_ptr.is_null() {
@@ -611,21 +568,7 @@ unsafe extern "system" fn main_wnd_proc(
                 PostQuitMessage(0);
                 LRESULT(0)
             }
-            _ => {
-                if IS_UNICODE.load(Ordering::Relaxed) {
-                    DefWindowProcW(hwnd, msg, wparam, lparam)
-                } else {
-                    unsafe extern "system" {
-                        fn DefWindowProcA(
-                            hWnd: *mut c_void,
-                            Msg: u32,
-                            wParam: usize,
-                            lParam: isize,
-                        ) -> isize;
-                    }
-                    LRESULT(DefWindowProcA(hwnd.0, msg, wparam.0, lparam.0))
-                }
-            }
+            _ => def_window_proc(hwnd, msg, wparam, lparam),
         }
     }
 }

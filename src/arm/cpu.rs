@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashSet};
 pub struct ArmData {
     pub midrs: HashSet<Midr>,
     pub cpu_arch: CpuArch,
-    pub soc_model: Option<String>,
+    pub soc_model: Option<SystemInfo>,
     pub raw: BTreeMap<String, String>,
     pub midr_source: DataSource,
     pub features_source: DataSource,

@@ -52,6 +52,84 @@ pub const PALETTE_DARK: Palette = Palette {
     divider: RgbColor::new(86, 95, 137),
 };
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum ReportLineToken<'a> {
+    Empty,
+    Header(&'a str),
+    CoreHeading(&'a str),
+    Labeled {
+        label: &'a str,
+        value: &'a str,
+    },
+    LabeledWithSub {
+        label: &'a str,
+        sublabel: &'a str,
+        value: &'a str,
+    },
+    Sublabeled {
+        indent: &'a str,
+        sublabel: &'a str,
+        value: &'a str,
+    },
+    SublabeledHighlight {
+        indent: &'a str,
+        text: &'a str,
+    },
+    Plain(&'a str),
+}
+
+/// Tokenizes a single line from a formatted CPU report into semantic styling components.
+pub fn tokenize_report_line(line: &str) -> ReportLineToken<'_> {
+    let line_trimmed = line.trim_end_matches(['\r', '\n']);
+    if line_trimmed.trim().is_empty() {
+        return ReportLineToken::Empty;
+    }
+
+    if line_trimmed.starts_with("---------------")
+        || line_trimmed.starts_with("--------------------")
+    {
+        return ReportLineToken::Header(line_trimmed);
+    }
+
+    if line_trimmed.trim_start().starts_with("Core #") {
+        return ReportLineToken::CoreHeading(line_trimmed);
+    }
+
+    if line_trimmed.len() >= 16 && &line_trimmed[14..16] == ": " {
+        let label = &line_trimmed[..14];
+        let rest = &line_trimmed[16..];
+        if let Some(pos) = rest.find(": ")
+            && pos < 12
+        {
+            return ReportLineToken::LabeledWithSub {
+                label,
+                sublabel: &rest[..pos],
+                value: &rest[pos + 2..],
+            };
+        } else {
+            return ReportLineToken::Labeled { label, value: rest };
+        }
+    }
+
+    if let Some(sub_rest) = line_trimmed.strip_prefix("                ") {
+        let indent = &line_trimmed[..16];
+        if let Some(pos) = sub_rest.find(": ") {
+            return ReportLineToken::Sublabeled {
+                indent,
+                sublabel: &sub_rest[..pos],
+                value: &sub_rest[pos + 2..],
+            };
+        } else if sub_rest.starts_with('(') {
+            return ReportLineToken::SublabeledHighlight {
+                indent,
+                text: sub_rest,
+            };
+        }
+    }
+
+    ReportLineToken::Plain(line_trimmed)
+}
+
 pub fn parse_text_runs(text: &str, theme: GuiTheme, color: bool) -> (RgbColor, Vec<TextRun>) {
     let palette = if theme.is_dark() {
         &PALETTE_DARK
@@ -78,118 +156,77 @@ pub fn parse_text_runs(text: &str, theme: GuiTheme, color: bool) -> (RgbColor, V
 
     for line in text.split_inclusive('\n') {
         let line_len = line.len() as u32;
-        let line_trimmed = line.trim_end_matches(['\r', '\n']);
 
-        if line_trimmed.trim().is_empty() {
-            current_offset += line_len;
-            continue;
-        }
-
-        // Header line (e.g. --------------- Rustid ... ---------------)
-        if line_trimmed.starts_with("---------------")
-            || line_trimmed.starts_with("--------------------")
-        {
-            runs.push(TextRun {
-                offset: current_offset,
-                length: line_trimmed.len() as u32,
-                color: palette.sublabel,
-                bold: false,
-            });
-            current_offset += line_len;
-            continue;
-        }
-
-        // Core # heading line
-        if line_trimmed.trim_start().starts_with("Core #") {
-            runs.push(TextRun {
-                offset: current_offset,
-                length: line_trimmed.len() as u32,
-                color: palette.sublabel,
-                bold: true,
-            });
-            current_offset += line_len;
-            continue;
-        }
-
-        // Standard line with labels: e.g. "        Vendor: AMD (AuthenticAMD)"
-        if line_trimmed.len() >= 16 && &line_trimmed[14..16] == ": " {
-            let label_len = 14u32;
-            let colon_len = 2u32;
-            let rest_part = &line_trimmed[16..];
-
-            // Label part (Green)
-            runs.push(TextRun {
-                offset: current_offset,
-                length: label_len + colon_len,
-                color: palette.label,
-                bold: false,
-            });
-
-            // Check for inline sublabel e.g. "Frequency: Base: 4.29 GHz"
-            if let Some(colon_pos) = rest_part.find(": ")
-                && colon_pos < 12
-            {
-                let sub_label_len = (colon_pos + 2) as u32;
+        match tokenize_report_line(line) {
+            ReportLineToken::Empty => {}
+            ReportLineToken::Header(h) => {
                 runs.push(TextRun {
-                    offset: current_offset + label_len + colon_len,
-                    length: sub_label_len,
+                    offset: current_offset,
+                    length: h.len() as u32,
                     color: palette.sublabel,
                     bold: false,
                 });
-                let val_len = (rest_part.len() - colon_pos - 2) as u32;
-                if val_len > 0 {
+            }
+            ReportLineToken::CoreHeading(ch) => {
+                runs.push(TextRun {
+                    offset: current_offset,
+                    length: ch.len() as u32,
+                    color: palette.sublabel,
+                    bold: true,
+                });
+            }
+            ReportLineToken::Labeled { label, value } => {
+                let label_full_len = label.len() as u32 + 2;
+                runs.push(TextRun {
+                    offset: current_offset,
+                    length: label_full_len,
+                    color: palette.label,
+                    bold: false,
+                });
+                if !value.is_empty() {
                     runs.push(TextRun {
-                        offset: current_offset + label_len + colon_len + sub_label_len,
-                        length: val_len,
-                        color: palette.body,
-                        bold: false,
-                    });
-                }
-            } else {
-                let rest_len = rest_part.len() as u32;
-                if rest_len > 0 {
-                    runs.push(TextRun {
-                        offset: current_offset + label_len + colon_len,
-                        length: rest_len,
+                        offset: current_offset + label_full_len,
+                        length: value.len() as u32,
                         color: palette.body,
                         bold: false,
                     });
                 }
             }
-
-            current_offset += line_len;
-            continue;
-        }
-
-        // Sublabel line e.g. "                L1i: ..." or "                (11, 15, ...)"
-        if let Some(sub_rest) = line_trimmed.strip_prefix("                ") {
-            let indent_len = 16u32;
-
-            if let Some(colon_idx) = sub_rest.find(": ") {
-                let sub_lbl_len = (colon_idx + 2) as u32;
-                let sub_val_len = (sub_rest.len() - colon_idx - 2) as u32;
-
+            ReportLineToken::LabeledWithSub {
+                label,
+                sublabel,
+                value,
+            } => {
+                let label_full_len = label.len() as u32 + 2;
+                let sub_full_len = sublabel.len() as u32 + 2;
                 runs.push(TextRun {
                     offset: current_offset,
-                    length: indent_len,
-                    color: palette.divider,
+                    length: label_full_len,
+                    color: palette.label,
                     bold: false,
                 });
                 runs.push(TextRun {
-                    offset: current_offset + indent_len,
-                    length: sub_lbl_len,
+                    offset: current_offset + label_full_len,
+                    length: sub_full_len,
                     color: palette.sublabel,
                     bold: false,
                 });
-                if sub_val_len > 0 {
+                if !value.is_empty() {
                     runs.push(TextRun {
-                        offset: current_offset + indent_len + sub_lbl_len,
-                        length: sub_val_len,
+                        offset: current_offset + label_full_len + sub_full_len,
+                        length: value.len() as u32,
                         color: palette.body,
                         bold: false,
                     });
                 }
-            } else if sub_rest.starts_with('(') {
+            }
+            ReportLineToken::Sublabeled {
+                indent,
+                sublabel,
+                value,
+            } => {
+                let indent_len = indent.len() as u32;
+                let sub_full_len = sublabel.len() as u32 + 2;
                 runs.push(TextRun {
                     offset: current_offset,
                     length: indent_len,
@@ -198,30 +235,43 @@ pub fn parse_text_runs(text: &str, theme: GuiTheme, color: bool) -> (RgbColor, V
                 });
                 runs.push(TextRun {
                     offset: current_offset + indent_len,
-                    length: sub_rest.len() as u32,
+                    length: sub_full_len,
+                    color: palette.sublabel,
+                    bold: false,
+                });
+                if !value.is_empty() {
+                    runs.push(TextRun {
+                        offset: current_offset + indent_len + sub_full_len,
+                        length: value.len() as u32,
+                        color: palette.body,
+                        bold: false,
+                    });
+                }
+            }
+            ReportLineToken::SublabeledHighlight { indent, text: hl_text } => {
+                let indent_len = indent.len() as u32;
+                runs.push(TextRun {
+                    offset: current_offset,
+                    length: indent_len,
+                    color: palette.divider,
+                    bold: false,
+                });
+                runs.push(TextRun {
+                    offset: current_offset + indent_len,
+                    length: hl_text.len() as u32,
                     color: palette.highlight,
                     bold: false,
                 });
-            } else {
+            }
+            ReportLineToken::Plain(p) => {
                 runs.push(TextRun {
                     offset: current_offset,
-                    length: line_trimmed.len() as u32,
+                    length: p.len() as u32,
                     color: palette.body,
                     bold: false,
                 });
             }
-
-            current_offset += line_len;
-            continue;
         }
-
-        // Default line
-        runs.push(TextRun {
-            offset: current_offset,
-            length: line_trimmed.len() as u32,
-            color: palette.body,
-            bold: false,
-        });
 
         current_offset += line_len;
     }

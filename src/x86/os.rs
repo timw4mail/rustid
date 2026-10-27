@@ -6,15 +6,9 @@
 //! - Live core enumeration via thread affinity (`core_affinity`)
 //! - Dynamic TSC frequency measurement via OS timer
 
-use super::cpu::{Cpu, CpuCore, CpuSignature};
-use super::micro_arch::{CpuArch, MicroArch};
-use super::vendor::Intel;
-use super::{
-    core_type_from_cpuid, cpuid_cores_per_package, cpuid_threads_per_core,
-    cpuid_threads_per_package, is_intel, vendor_str,
-};
-use crate::common::{Cache, CoreType, DataSource, Speed, SystemInfo, TopologyTier, UNK};
-use alloc::string::String;
+use super::cpu::{Cpu, CpuCore, finalize_hybrid_cores, probe_current_core, push_or_merge_core};
+use super::is_intel;
+use crate::common::{Speed, SystemInfo, TopologyTier};
 use alloc::vec::Vec;
 
 #[cfg(not(dos_os))]
@@ -105,77 +99,14 @@ fn measure_frequency_tsc() -> u32 {
 pub fn detect_live_core_types() -> Vec<CpuCore> {
     let mut cores: Vec<CpuCore> = Vec::new();
 
-    fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
-        if let Some(c) = cores
-            .iter_mut()
-            .find(|c| c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name)
-        {
-            c.count += core.count;
-            c.threads += core.threads;
-            if c.speed.is_none() && core.speed.is_some() {
-                c.speed = core.speed;
-            }
-        } else {
-            cores.push(core);
+    crate::common::for_each_logical_core(|| {
+        let speed = Speed::detect_cpuid();
+        if let Some(core) = probe_current_core(Some(speed)) {
+            push_or_merge_core(&mut cores, core);
         }
-    }
+    });
 
-    if let Some(core_ids) = core_affinity::get_core_ids() {
-        for core_id in core_ids {
-            core_affinity::set_for_current(core_id);
-
-            let core_type = core_type_from_cpuid();
-            let sig = CpuSignature::detect();
-            let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
-            let micro_arch = if is_intel() {
-                Intel::core_micro_arch(arch.micro_arch, core_type)
-            } else {
-                arch.micro_arch
-            };
-
-            if micro_arch == MicroArch::Unknown {
-                continue;
-            }
-
-            let name_str = micro_arch.as_str();
-            let name = if name_str != UNK {
-                Some(String::from(name_str))
-            } else {
-                None
-            };
-
-            let cache = Cache::detect();
-            let speed = Speed::detect_cpuid();
-            let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-
-            find_or_push(
-                &mut cores,
-                CpuCore {
-                    kind: core_type,
-                    micro_arch,
-                    name,
-                    implementer: None,
-                    cache,
-                    speed: speed_opt,
-                    count: 1,
-                    threads: 1,
-                },
-            );
-        }
-    }
-
-    for c in &mut cores {
-        let smt = if c.kind == CoreType::Efficiency {
-            1
-        } else {
-            cpuid_threads_per_core().max(1)
-        };
-        c.count = (c.threads / smt).max(1);
-        if let Some(ref mut cache) = c.cache {
-            cache.resolve_share_counts(c.count, c.threads, 1);
-        }
-    }
-
+    finalize_hybrid_cores(&mut cores);
     cores
 }
 
@@ -186,29 +117,11 @@ pub fn enrich_cpu(cpu: &mut Cpu) {
 
     // 2. Physical platform sockets
     let os_sockets = get_socket_count();
-    if os_sockets.count > 1 {
-        cpu.topology.sockets = os_sockets;
-        let cores = cpu
-            .topology
-            .cores
-            .count
-            .max(cpuid_cores_per_package() * os_sockets.count);
-        let threads = cpu
-            .topology
-            .threads
-            .count
-            .max(cpuid_threads_per_package() * os_sockets.count);
-        cpu.topology.cores =
-            TopologyTier::new(cores, DataSource::Calculated("OS sockets * CPUID cores"));
-        cpu.topology.threads = TopologyTier::new(
-            threads,
-            DataSource::Calculated("OS sockets * CPUID threads"),
-        );
-        let sockets = cpu.topology.sockets.count;
-        if let Some(ref mut cache) = cpu.topology.cache {
-            cache.resolve_share_counts(cores, threads, sockets);
-        }
-    }
+    cpu.topology.scale_sockets(
+        os_sockets,
+        "OS sockets * CPUID cores",
+        "OS sockets * CPUID threads",
+    );
 
     // 3. Dynamic speed measurement if CPUID did not report frequency
     if cpu.topology.speed.base == 0 {

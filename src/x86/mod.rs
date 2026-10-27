@@ -24,6 +24,7 @@ pub mod dos;
 #[cfg(uefi)]
 pub mod efi;
 
+#[cfg(not(dos_real))]
 pub mod dump;
 pub mod features;
 pub mod fns;

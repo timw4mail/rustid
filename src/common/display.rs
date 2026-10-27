@@ -1,4 +1,5 @@
 use super::Speed;
+#[cfg(not(dos_real))]
 use super::cache::{Cache, Level1Cache};
 use super::constants::*;
 
@@ -92,7 +93,25 @@ impl CpuDisplay {
     pub fn raw_inline_sublabel(label: &str, sub: &str) -> String {
         format!("{:>14}: {:1}: ", label, sub)
     }
+}
 
+#[cfg(dos_real)]
+impl CpuDisplay {
+    pub fn label(&self, s: &str) -> String {
+        Self::raw_label(s)
+    }
+
+    pub fn sublabel(&self, s: &str) -> String {
+        Self::raw_sublabel(s)
+    }
+
+    pub fn inline_sublabel(&self, label: &str, sub: &str) -> String {
+        Self::raw_inline_sublabel(label, sub)
+    }
+}
+
+#[cfg(not(dos_real))]
+impl CpuDisplay {
     pub fn label(&self, s: &str) -> String {
         if !self.flags.color {
             Self::raw_label(s)
@@ -135,6 +154,55 @@ impl CpuDisplay {
     pub fn ansi_color(code: &str, s: &str) -> String {
         format!("{}{s}{ANSI_RESET}", Self::ansi(code))
     }
+}
+
+/// Parses an ANSI CSI SGR sequence (e.g. `\x1b[32m`, `\x1b[31;1m`, or `\x1b[m`).
+/// Expects that the leading `\x1b` was just encountered.
+/// Consumes `[` and all SGR parameters up to `m`.
+/// Calls `on_sgr(code)` for each decoded parameter.
+/// Returns true if an SGR sequence was parsed and consumed.
+#[cfg(not(dos_real))]
+pub fn parse_ansi_csi_sgr<I, F>(chars: &mut core::iter::Peekable<I>, mut on_sgr: F) -> bool
+where
+    I: Iterator<Item = char>,
+    F: FnMut(u32),
+{
+    if chars.peek() != Some(&'[') {
+        return false;
+    }
+    chars.next(); // Consume '['
+
+    let mut code = 0u32;
+    let mut has_code = false;
+
+    while let Some(&c) = chars.peek() {
+        if c.is_ascii_digit() {
+            code = code * 10 + (c as u32 - '0' as u32);
+            has_code = true;
+            chars.next();
+        } else if c == ';' || c == 'm' {
+            chars.next();
+            on_sgr(code);
+            if c == 'm' {
+                return true;
+            }
+            code = 0;
+            has_code = false;
+        } else {
+            break;
+        }
+    }
+
+    if !has_code && chars.peek() == Some(&'m') {
+        chars.next();
+        on_sgr(0);
+        return true;
+    }
+
+    false
+}
+
+impl CpuDisplay {
 
     /// Outputs just the label without a value followed by a newline.
     pub fn print_label(&mut self, s: &str) {
@@ -158,7 +226,6 @@ impl CpuDisplay {
     }
 
     /// Case-insensitively checks if either string is contained in the other or if they are equal.
-    #[cfg(any(arm_cpu, test))]
     pub fn is_duplicate(a: &str, b: &str) -> bool {
         if a.is_empty() || b.is_empty() {
             return false;
@@ -372,7 +439,10 @@ impl CpuDisplay {
             self.newline();
         }
     }
+}
 
+#[cfg(not(dos_real))]
+impl CpuDisplay {
     pub fn cache_count(share_count: u32, core_count: u32) -> String {
         if share_count == 0 || (core_count / share_count) <= 1 {
             String::new()
@@ -400,6 +470,14 @@ impl CpuDisplay {
         self.display_cache(cache, &cc, l3_socket_count);
     }
 
+    fn format_cache_entry(lbl: &str, count: &str, num: u32, unit: &str, assoc: u32) -> String {
+        if assoc > 0 {
+            format!("{lbl}{count}{num} {unit}, {assoc}-way")
+        } else {
+            format!("{lbl}{count}{num} {unit}")
+        }
+    }
+
     pub fn display_cache_ext(
         &mut self,
         cache: Option<Cache>,
@@ -421,24 +499,15 @@ impl CpuDisplay {
                     let instruction_count: String = cache_count(instruction.share_count);
 
                     if data.size > 0 {
-                        if data.assoc > 0 {
-                            let l = format!(
-                                "{}{}{} KB, {}-way",
-                                self.inline_sublabel("Cache", "L1d"),
-                                data_count,
-                                data.size / 1024,
-                                data.assoc
-                            );
-                            self.print_line(&l);
-                        } else {
-                            let l = format!(
-                                "{}{}{} KB",
-                                self.inline_sublabel("Cache", "L1d"),
-                                data_count,
-                                data.size / 1024
-                            );
-                            self.print_line(&l);
-                        }
+                        let lbl = self.inline_sublabel("Cache", "L1d");
+                        let l = Self::format_cache_entry(
+                            &lbl,
+                            &data_count,
+                            data.size / 1024,
+                            "KB",
+                            data.assoc,
+                        );
+                        self.print_line(&l);
                     }
 
                     if instruction.size > 0 {
@@ -447,24 +516,14 @@ impl CpuDisplay {
                         } else {
                             self.inline_sublabel("Cache", "L1i")
                         };
-                        if instruction.assoc > 0 {
-                            let l = format!(
-                                "{}{}{} KB, {}-way",
-                                lbl,
-                                instruction_count,
-                                instruction.size / 1024,
-                                instruction.assoc
-                            );
-                            self.print_line(&l);
-                        } else {
-                            let l = format!(
-                                "{}{}{} KB",
-                                lbl,
-                                instruction_count,
-                                instruction.size / 1024,
-                            );
-                            self.print_line(&l);
-                        }
+                        let l = Self::format_cache_entry(
+                            &lbl,
+                            &instruction_count,
+                            instruction.size / 1024,
+                            "KB",
+                            instruction.assoc,
+                        );
+                        self.print_line(&l);
                     }
                 }
             }
@@ -472,21 +531,9 @@ impl CpuDisplay {
             if let Some(l2) = cache.l2 {
                 let count = cache_count(l2.share_count);
                 let (num, unit) = Self::cache_size(l2.size);
-
-                if l2.assoc > 0 {
-                    let l = format!(
-                        "{} {}{} {}, {}-way",
-                        self.sublabel("L2"),
-                        count,
-                        num,
-                        unit,
-                        l2.assoc
-                    );
-                    self.print_line(&l);
-                } else {
-                    let l = format!("{} {}{} {}", self.sublabel("L2"), count, num, unit);
-                    self.print_line(&l);
-                }
+                let lbl = format!("{} ", self.sublabel("L2"));
+                let l = Self::format_cache_entry(&lbl, &count, num, unit, l2.assoc);
+                self.print_line(&l);
             }
 
             if let Some(l3) = cache.l3 {
@@ -500,21 +547,9 @@ impl CpuDisplay {
                     } else {
                         cache_count(l3.share_count)
                     };
-
-                    if l3.assoc > 0 {
-                        let l = format!(
-                            "{} {}{} {}, {}-way",
-                            self.sublabel("L3"),
-                            count,
-                            num,
-                            unit,
-                            l3.assoc
-                        );
-                        self.print_line(&l);
-                    } else {
-                        let l = format!("{} {}{} {}", self.sublabel("L3"), count, num, unit);
-                        self.print_line(&l);
-                    }
+                    let lbl = format!("{} ", self.sublabel("L3"));
+                    let l = Self::format_cache_entry(&lbl, &count, num, unit, l3.assoc);
+                    self.print_line(&l);
                 }
             }
 
@@ -522,35 +557,67 @@ impl CpuDisplay {
         }
     }
 
-    #[cfg(not(dos_os))]
+    #[inline]
+    fn cache_size(raw_size: u32) -> (u32, &'static str) {
+        let mut num = raw_size / 1024;
+        let unit = if num >= 1024 { "MB" } else { "KB" };
+
+        if num >= 1024 {
+            num /= 1024;
+        }
+
+        (num, unit)
+    }
+}
+
+#[cfg(not(dos_os))]
+impl CpuDisplay {
+    fn display_system_info(
+        &mut self,
+        label: &str,
+        info: &crate::common::SystemInfo,
+        formatted: &str,
+        flags: CliFlags,
+    ) {
+        if flags.verbose {
+            self.section_line(label, formatted);
+            if let Some(ref model) = info.model {
+                if model != formatted {
+                    self.section_line(
+                        &alloc::format!("{label} Model"),
+                        &alloc::format!("{model} ({:?})", info.model_source),
+                    );
+                } else {
+                    self.section_line(
+                        &alloc::format!("{label} Model Source"),
+                        &alloc::format!("{:?}", info.model_source),
+                    );
+                }
+            }
+            if let Some(ref vendor) = info.vendor {
+                self.section_line(
+                    &alloc::format!("{label} Vendor"),
+                    &alloc::format!("{vendor} ({:?})", info.vendor_source),
+                );
+            }
+            self.newline();
+        } else {
+            self.simple_line(label, formatted);
+        }
+    }
+
     pub fn display_system(&mut self, system: &crate::common::SystemInfo, flags: CliFlags) {
         if let Some(display_name) = system.display_name() {
             let formatted = self.format_system_name(&display_name);
-            if flags.verbose {
-                self.section_line("System", &formatted);
-                if let Some(ref model) = system.model {
-                    if model != &formatted {
-                        self.section_line(
-                            "System Model",
-                            &alloc::format!("{model} ({:?})", system.model_source),
-                        );
-                    } else {
-                        self.section_line(
-                            "System Model Source",
-                            &alloc::format!("{:?}", system.model_source),
-                        );
-                    }
-                }
-                if let Some(ref vendor) = system.vendor {
-                    self.section_line(
-                        "System Vendor",
-                        &alloc::format!("{vendor} ({:?})", system.vendor_source),
-                    );
-                }
-                self.newline();
-            } else {
-                self.simple_line("System", &formatted);
-            }
+            self.display_system_info("System", system, &formatted, flags);
+        }
+    }
+
+    pub fn display_soc(&mut self, soc: &crate::common::SystemInfo, flags: CliFlags) {
+        if let Some(display_name) = soc.display_name()
+            && !crate::common::is_generic_value(&display_name)
+        {
+            self.display_system_info("SoC", soc, &display_name, flags);
         }
     }
 
@@ -797,18 +864,6 @@ impl CpuDisplay {
         // For now, just mac models
         self.format_mac_model(raw)
     }
-
-    #[inline]
-    fn cache_size(raw_size: u32) -> (u32, &'static str) {
-        let mut num = raw_size / 1024;
-        let unit = if num >= 1024 { "MB" } else { "KB" };
-
-        if num >= 1024 {
-            num /= 1024;
-        }
-
-        (num, unit)
-    }
 }
 
 #[cfg(test)]
@@ -921,6 +976,37 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_ansi_csi_sgr() {
+        // Test single code: \x1b[32m
+        let input = "[32m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![32]);
+
+        // Test compound code: \x1b[31;1m
+        let input = "[31;1m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![31, 1]);
+
+        // Test empty reset code: \x1b[m
+        let input = "[m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![0]);
+
+        // Test non-ANSI sequence
+        let input = "not an ansi";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(!parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert!(codes.is_empty());
+    }
+
+    #[test]
     fn test_cache_count_zero_share() {
         assert_eq!(CpuDisplay::cache_count(0, 4), "");
     }
@@ -1030,6 +1116,11 @@ mod tests {
 
         assert!(!CpuDisplay::is_duplicate("ARM Cortex-A72", "Maya"));
         assert!(!CpuDisplay::is_duplicate("Maya", "Cortex-A72"));
+        assert!(!CpuDisplay::is_duplicate("Apple A18 Pro", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Everest", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Sawtooth", "Tahiti"));
+        assert!(!CpuDisplay::is_duplicate("Apple M1", "Tonga"));
+        assert!(!CpuDisplay::is_duplicate("FireStorm", "Tonga"));
         assert!(!CpuDisplay::is_duplicate("", "Maya"));
         assert!(!CpuDisplay::is_duplicate("Maya", ""));
     }
@@ -1094,5 +1185,47 @@ mod tests {
             "Base", "SSE", "AVX", "AVX512", "Security", "Math", "Other", "Centaur", "Cyrix",
         ];
         disp.display_features(&features, &keys);
+    }
+
+    #[test]
+    fn test_display_soc_normal_and_verbose() {
+        use crate::common::{DataSource, SystemInfo};
+
+        let soc = SystemInfo::new(
+            Some(String::from("Google")),
+            DataSource::AndroidGetprop("ro.soc.manufacturer"),
+            Some(String::from("Tensor G3")),
+            DataSource::AndroidGetprop("ro.soc.model"),
+        );
+
+        let flags_normal = CliFlags {
+            compact: false,
+            color: false,
+            verbose: false,
+        };
+        let mut disp = CpuDisplay::with_buffer(flags_normal);
+        disp.display_soc(&soc, flags_normal);
+        let out = disp.into_string().unwrap_or_default();
+        assert!(out.contains("SoC: Google Tensor G3"));
+        assert!(!out.contains("SoC Model"));
+
+        let flags_verbose = CliFlags {
+            compact: false,
+            color: false,
+            verbose: true,
+        };
+        let mut disp_v = CpuDisplay::with_buffer(flags_verbose);
+        disp_v.display_soc(&soc, flags_verbose);
+        let out_v = disp_v.into_string().unwrap_or_default();
+        assert!(out_v.contains("SoC: Google Tensor G3"));
+        assert!(out_v.contains("SoC Model: Tensor G3 (AndroidGetprop(\"ro.soc.model\"))"));
+        assert!(out_v.contains("SoC Vendor: Google (AndroidGetprop(\"ro.soc.manufacturer\"))"));
+
+        let soc_single = SystemInfo::from_model("BCM2835", DataSource::LinuxProcCpuinfo);
+        let mut disp_s = CpuDisplay::with_buffer(flags_verbose);
+        disp_s.display_soc(&soc_single, flags_verbose);
+        let out_s = disp_s.into_string().unwrap_or_default();
+        assert!(out_s.contains("SoC: BCM2835"));
+        assert!(out_s.contains("SoC Model Source: LinuxProcCpuinfo"));
     }
 }
