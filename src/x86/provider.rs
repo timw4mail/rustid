@@ -135,6 +135,39 @@ impl Default for CpuDump {
 }
 
 impl CpuDump {
+    fn parse_line(line: &str) -> Option<((u32, u32), Cpuid)> {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 2 {
+            return None;
+        }
+
+        let leaf_str = parts[0].trim_start_matches("0x");
+        let subleaf_str = parts[1].trim_end_matches(':').trim_start_matches("0x");
+
+        let leaf = u32::from_str_radix(leaf_str, 16).ok()?;
+        let sub_leaf = u32::from_str_radix(subleaf_str, 16).ok()?;
+
+        let mut eax = 0u32;
+        let mut ebx = 0u32;
+        let mut ecx = 0u32;
+        let mut edx = 0u32;
+
+        for part in &parts[2..] {
+            let reg_val = part.trim_end_matches(',');
+            if let Some(val) = reg_val.strip_prefix("eax=") {
+                eax = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
+            } else if let Some(val) = reg_val.strip_prefix("ebx=") {
+                ebx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
+            } else if let Some(val) = reg_val.strip_prefix("ecx=") {
+                ecx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
+            } else if let Some(val) = reg_val.strip_prefix("edx=") {
+                edx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
+            }
+        }
+
+        Some(((leaf, sub_leaf), Cpuid { eax, ebx, ecx, edx }))
+    }
+
     pub fn parse_file<P: AsRef<Path>>(path: P) -> Self {
         let contents = fs::read_to_string(path).expect("Failed to read dump file");
         Self::parse_str(&contents)
@@ -143,7 +176,8 @@ impl CpuDump {
     pub fn parse_str(contents: &str) -> Self {
         set_dump_cpu(0);
         let mut cpus: Vec<HashMap<(u32, u32), Cpuid>> = Vec::new();
-        let mut current: Option<HashMap<(u32, u32), Cpuid>> = None;
+        let mut current: HashMap<(u32, u32), Cpuid> = HashMap::new();
+        let mut has_cpu_markers = false;
 
         for line in contents.lines() {
             let line = line.trim();
@@ -151,94 +185,20 @@ impl CpuDump {
                 continue;
             }
             if line.starts_with("CPU ") {
-                if let Some(map) = current.take() {
-                    cpus.push(map);
+                if has_cpu_markers || !current.is_empty() {
+                    cpus.push(std::mem::take(&mut current));
                 }
-                current = Some(HashMap::new());
+                has_cpu_markers = true;
                 continue;
             }
 
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 2 {
-                continue;
-            }
-
-            let leaf_str = parts[0].trim_start_matches("0x");
-            let subleaf_str = parts[1].trim_end_matches(':').trim_start_matches("0x");
-
-            let Ok(leaf) = u32::from_str_radix(leaf_str, 16) else {
-                continue;
-            };
-            let Ok(sub_leaf) = u32::from_str_radix(subleaf_str, 16) else {
-                continue;
-            };
-
-            let mut eax = 0u32;
-            let mut ebx = 0u32;
-            let mut ecx = 0u32;
-            let mut edx = 0u32;
-
-            for part in &parts[2..] {
-                let reg_val = part.trim_end_matches(',');
-                if let Some(val) = reg_val.strip_prefix("eax=") {
-                    eax = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                } else if let Some(val) = reg_val.strip_prefix("ebx=") {
-                    ebx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                } else if let Some(val) = reg_val.strip_prefix("ecx=") {
-                    ecx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                } else if let Some(val) = reg_val.strip_prefix("edx=") {
-                    edx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                }
-            }
-
-            if let Some(ref mut map) = current {
-                map.insert((leaf, sub_leaf), Cpuid { eax, ebx, ecx, edx });
+            if let Some(((leaf, sub_leaf), cpuid)) = Self::parse_line(line) {
+                current.insert((leaf, sub_leaf), cpuid);
             }
         }
 
-        if let Some(map) = current {
-            cpus.push(map);
-        }
-
-        // If no CPU sections were found, treat entire file as a single context
-        if cpus.is_empty() {
-            let mut map = HashMap::new();
-            for line in contents.lines() {
-                let line = line.trim();
-                if line.is_empty() {
-                    continue;
-                }
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() < 2 {
-                    continue;
-                }
-                let leaf_str = parts[0].trim_start_matches("0x");
-                let subleaf_str = parts[1].trim_end_matches(':').trim_start_matches("0x");
-                let Ok(leaf) = u32::from_str_radix(leaf_str, 16) else {
-                    continue;
-                };
-                let Ok(sub_leaf) = u32::from_str_radix(subleaf_str, 16) else {
-                    continue;
-                };
-                let mut eax = 0u32;
-                let mut ebx = 0u32;
-                let mut ecx = 0u32;
-                let mut edx = 0u32;
-                for part in &parts[2..] {
-                    let reg_val = part.trim_end_matches(',');
-                    if let Some(val) = reg_val.strip_prefix("eax=") {
-                        eax = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                    } else if let Some(val) = reg_val.strip_prefix("ebx=") {
-                        ebx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                    } else if let Some(val) = reg_val.strip_prefix("ecx=") {
-                        ecx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                    } else if let Some(val) = reg_val.strip_prefix("edx=") {
-                        edx = u32::from_str_radix(val.trim_start_matches("0x"), 16).unwrap_or(0);
-                    }
-                }
-                map.insert((leaf, sub_leaf), Cpuid { eax, ebx, ecx, edx });
-            }
-            cpus.push(map);
+        if !current.is_empty() || cpus.is_empty() {
+            cpus.push(current);
         }
 
         DUMP_CPU_COUNT.with(|c| c.set(cpus.len()));

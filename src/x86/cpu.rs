@@ -5,9 +5,7 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::{DomainList, Topology};
 use super::vendor::Cyrix;
 use super::*;
-#[cfg(std_os)]
-use crate::common::{Cache, Speed};
-use crate::common::{CoreType, DataSource, TDetect, UNK};
+use crate::common::{Cache, CoreType, DataSource, Speed, TDetect, UNK};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -627,80 +625,16 @@ impl Cpu {
     pub fn detect_cpuid_core_types(arch: &CpuArch, topology: &Topology) -> Vec<CpuCore> {
         #[cfg(std_os)]
         if provider::dump_cpu_count() > 1 {
-            use super::vendor::Intel;
-
             let mut cores: Vec<CpuCore> = Vec::new();
-
-            fn find_or_push(cores: &mut Vec<CpuCore>, core: CpuCore) {
-                if let Some(c) = cores.iter_mut().find(|c| {
-                    c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name
-                }) {
-                    c.count += core.count;
-                    c.threads += core.threads;
-                    if c.speed.is_none() && core.speed.is_some() {
-                        c.speed = core.speed;
-                    }
-                } else {
-                    cores.push(core);
-                }
-            }
-
             let dump_count = provider::dump_cpu_count();
             for cpu_idx in 0..dump_count {
                 provider::set_dump_cpu(cpu_idx);
-
-                let core_type = core_type_from_cpuid();
-                let sig = CpuSignature::detect();
-                let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
-                let micro_arch = if is_intel() {
-                    Intel::core_micro_arch(arch.micro_arch, core_type)
-                } else {
-                    arch.micro_arch
-                };
-
-                // Make sure we know the MicroArch before pushing to core types
-                if micro_arch == MicroArch::Unknown {
-                    continue;
-                }
-
-                let name_str = micro_arch.as_str();
-                let name = if name_str != UNK {
-                    Some(String::from(name_str))
-                } else {
-                    None
-                };
-
-                let cache = Cache::detect();
                 let speed = Speed::detect_cpuid();
-                let speed_opt = if speed.base > 0 { Some(speed) } else { None };
-
-                find_or_push(
-                    &mut cores,
-                    CpuCore {
-                        kind: core_type,
-                        micro_arch,
-                        name,
-                        implementer: None,
-                        cache,
-                        speed: speed_opt,
-                        count: 1,
-                        threads: 1,
-                    },
-                );
-            }
-
-            for c in &mut cores {
-                let smt = if c.kind == CoreType::Efficiency {
-                    1
-                } else {
-                    cpuid_threads_per_core().max(1)
-                };
-                c.count = (c.threads / smt).max(1);
-                if let Some(ref mut cache) = c.cache {
-                    cache.resolve_share_counts(c.count, c.threads, 1);
+                if let Some(core) = probe_current_core(Some(speed)) {
+                    push_or_merge_core(&mut cores, core);
                 }
             }
-
+            finalize_hybrid_cores(&mut cores);
             provider::set_dump_cpu(0);
 
             if cores.len() > 1 {
@@ -780,6 +714,76 @@ impl Cpu {
         #[cfg(uefi)]
         {
             super::efi::detect_live_core_types()
+        }
+    }
+}
+
+/// Probes the currently executing logical core or active CPUID dump context to construct a single `CpuCore`.
+pub fn probe_current_core(speed: Option<Speed>) -> Option<CpuCore> {
+    use super::vendor::Intel;
+
+    let core_type = core_type_from_cpuid();
+    let sig = CpuSignature::detect();
+    let arch = CpuArch::find(&Cpu::raw_model_string(), sig, &vendor_str());
+    let micro_arch = if is_intel() {
+        Intel::core_micro_arch(arch.micro_arch, core_type)
+    } else {
+        arch.micro_arch
+    };
+
+    if micro_arch == MicroArch::Unknown {
+        return None;
+    }
+
+    let name_str = micro_arch.as_str();
+    let name = if name_str != UNK {
+        Some(String::from(name_str))
+    } else {
+        None
+    };
+
+    let cache = Cache::detect();
+    let speed_opt = speed.filter(|s| s.base > 0);
+
+    Some(CpuCore {
+        kind: core_type,
+        micro_arch,
+        name,
+        implementer: None,
+        cache,
+        speed: speed_opt,
+        count: 1,
+        threads: 1,
+    })
+}
+
+/// Accumulates a single logical core into a list of clustered `CpuCore`s, merging matching microarchitectures.
+pub fn push_or_merge_core(cores: &mut Vec<CpuCore>, core: CpuCore) {
+    if let Some(c) = cores
+        .iter_mut()
+        .find(|c| c.kind == core.kind && c.micro_arch == core.micro_arch && c.name == core.name)
+    {
+        c.count += core.count;
+        c.threads += core.threads;
+        if c.speed.is_none() && core.speed.is_some() {
+            c.speed = core.speed;
+        }
+    } else {
+        cores.push(core);
+    }
+}
+
+/// Computes final core counts (accounting for SMT on non-efficiency cores) and resolves cache share counts.
+pub fn finalize_hybrid_cores(cores: &mut [CpuCore]) {
+    for c in cores {
+        let smt = if c.kind == CoreType::Efficiency {
+            1
+        } else {
+            cpuid_threads_per_core().max(1)
+        };
+        c.count = (c.threads / smt).max(1);
+        if let Some(ref mut cache) = c.cache {
+            cache.resolve_share_counts(c.count, c.threads, 1);
         }
     }
 }

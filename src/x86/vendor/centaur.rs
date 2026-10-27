@@ -122,7 +122,7 @@ pub fn has_sm2() -> bool {
     centaur_cpu_brand() == CpuBrand::Zhaoxin && has_centaur_feature(0)
 }
 pub fn sm2_enabled() -> bool {
-    has_sm2() && has_centaur_feature(0)
+    has_sm2() && has_centaur_feature(1)
 }
 
 /// Random Number Generator (`xstore` instruction)
