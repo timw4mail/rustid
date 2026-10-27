@@ -14,6 +14,7 @@ pub use smbios::*;
 
 use crate::common::Speed;
 use crate::x86::cpu::{Cpu, CpuCore, finalize_hybrid_cores, probe_current_core, push_or_merge_core};
+use crate::x86::is_intel;
 use alloc::vec::Vec;
 
 /// Enriches a CPU detected via pure CPUID with live UEFI firmware/hardware information

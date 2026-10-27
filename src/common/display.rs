@@ -135,6 +135,54 @@ impl CpuDisplay {
     pub fn ansi_color(code: &str, s: &str) -> String {
         format!("{}{s}{ANSI_RESET}", Self::ansi(code))
     }
+}
+
+/// Parses an ANSI CSI SGR sequence (e.g. `\x1b[32m`, `\x1b[31;1m`, or `\x1b[m`).
+/// Expects that the leading `\x1b` was just encountered.
+/// Consumes `[` and all SGR parameters up to `m`.
+/// Calls `on_sgr(code)` for each decoded parameter.
+/// Returns true if an SGR sequence was parsed and consumed.
+pub fn parse_ansi_csi_sgr<I, F>(chars: &mut core::iter::Peekable<I>, mut on_sgr: F) -> bool
+where
+    I: Iterator<Item = char>,
+    F: FnMut(u32),
+{
+    if chars.peek() != Some(&'[') {
+        return false;
+    }
+    chars.next(); // Consume '['
+
+    let mut code = 0u32;
+    let mut has_code = false;
+
+    while let Some(&c) = chars.peek() {
+        if c.is_ascii_digit() {
+            code = code * 10 + (c as u32 - '0' as u32);
+            has_code = true;
+            chars.next();
+        } else if c == ';' || c == 'm' {
+            chars.next();
+            on_sgr(code);
+            if c == 'm' {
+                return true;
+            }
+            code = 0;
+            has_code = false;
+        } else {
+            break;
+        }
+    }
+
+    if !has_code && chars.peek() == Some(&'m') {
+        chars.next();
+        on_sgr(0);
+        return true;
+    }
+
+    false
+}
+
+impl CpuDisplay {
 
     /// Outputs just the label without a value followed by a newline.
     pub fn print_label(&mut self, s: &str) {
@@ -902,6 +950,37 @@ mod tests {
     fn test_ansi_color() {
         let s = CpuDisplay::ansi_color("32", "green");
         assert_eq!(s, "\x1b[32mgreen\x1b[m");
+    }
+
+    #[test]
+    fn test_parse_ansi_csi_sgr() {
+        // Test single code: \x1b[32m
+        let input = "[32m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![32]);
+
+        // Test compound code: \x1b[31;1m
+        let input = "[31;1m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![31, 1]);
+
+        // Test empty reset code: \x1b[m
+        let input = "[m";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert_eq!(codes, alloc::vec![0]);
+
+        // Test non-ANSI sequence
+        let input = "not an ansi";
+        let mut chars = input.chars().peekable();
+        let mut codes = Vec::new();
+        assert!(!parse_ansi_csi_sgr(&mut chars, |c| codes.push(c)));
+        assert!(codes.is_empty());
     }
 
     #[test]

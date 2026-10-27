@@ -5,7 +5,9 @@ use super::micro_arch::{CpuArch, MicroArch};
 use super::topology::{DomainList, Topology};
 use super::vendor::Cyrix;
 use super::*;
-use crate::common::{Cache, CoreType, DataSource, Speed, TDetect, UNK};
+#[cfg(not(dos_os))]
+use crate::common::{Cache, Speed};
+use crate::common::{CoreType, DataSource, TDetect, UNK};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -719,6 +721,7 @@ impl Cpu {
 }
 
 /// Probes the currently executing logical core or active CPUID dump context to construct a single `CpuCore`.
+#[cfg(not(dos_os))]
 pub fn probe_current_core(speed: Option<Speed>) -> Option<CpuCore> {
     use super::vendor::Intel;
 
@@ -758,6 +761,7 @@ pub fn probe_current_core(speed: Option<Speed>) -> Option<CpuCore> {
 }
 
 /// Accumulates a single logical core into a list of clustered `CpuCore`s, merging matching microarchitectures.
+#[cfg(not(dos_os))]
 pub fn push_or_merge_core(cores: &mut Vec<CpuCore>, core: CpuCore) {
     if let Some(c) = cores
         .iter_mut()
@@ -774,6 +778,7 @@ pub fn push_or_merge_core(cores: &mut Vec<CpuCore>, core: CpuCore) {
 }
 
 /// Computes final core counts (accounting for SMT on non-efficiency cores) and resolves cache share counts.
+#[cfg(not(dos_os))]
 pub fn finalize_hybrid_cores(cores: &mut [CpuCore]) {
     for c in cores {
         let smt = if c.kind == CoreType::Efficiency {

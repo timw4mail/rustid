@@ -914,7 +914,7 @@ impl Cache {
                 let mask = unsafe { cache_rel.Anonymous.GroupMask.Mask };
                 let share_count = mask.count_ones();
 
-                if cache.insert_level(level, cache_type, size_bytes, assoc, share_count) {
+                if cache.insert_level(level as u32, cache_type, size_bytes, assoc, share_count) {
                     found_cache = true;
                 }
             }

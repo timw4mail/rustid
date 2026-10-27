@@ -206,7 +206,7 @@ pub extern "C" fn rust_main() -> ! {
         // Try long-form keywords first (more than one char, not all single-char flags)
         match &upper[..] {
             "COMPACT" => {
-                flags.compact = false;
+                flags.compact = true;
                 continue 'args;
             }
             "VERBOSE" => {

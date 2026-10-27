@@ -4,6 +4,8 @@ use crate::common::{
     Cache, CacheType, DataSource, OS, TDetect, TOSData, TopologyCount, TopologyTier,
     expand_cpu_list, get_proc_cpuinfo_data, parse_cpu_list_count,
 };
+#[cfg(not(x86_cpu))]
+use crate::common::{CacheLevel, Level1Cache};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -279,29 +281,23 @@ impl Cache {
 
             match name {
                 "L1d" => {
-                    cache.l1 = Level1Cache::Split {
-                        data: CacheLevel::new(size_bytes, CacheType::Data, ways, 0),
-                        instruction: CacheLevel::default(),
-                    };
+                    cache.insert_level(1, CacheType::Data, size_bytes, ways, 0);
                     found_cache = true;
                 }
                 "L1i" => {
-                    if let Level1Cache::Split { instruction, .. } = &mut cache.l1 {
-                        instruction.size = size_bytes;
-                        instruction.kind = CacheType::Instruction;
-                        instruction.assoc = ways;
-                    }
+                    cache.insert_level(1, CacheType::Instruction, size_bytes, ways, 0);
+                    found_cache = true;
                 }
                 "L1" => {
-                    cache.l1 = Level1Cache::Unified(CacheLevel::new_unified(size_bytes, ways));
+                    cache.insert_level(1, CacheType::Unified, size_bytes, ways, 0);
                     found_cache = true;
                 }
                 "L2" => {
-                    cache.l2 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
+                    cache.insert_level(2, CacheType::Unified, size_bytes, ways, 0);
                     found_cache = true;
                 }
                 "L3" => {
-                    cache.l3 = Some(CacheLevel::new(size_bytes, CacheType::Unified, ways, 0));
+                    cache.insert_level(3, CacheType::Unified, size_bytes, ways, 0);
                     found_cache = true;
                 }
                 _ => {}
