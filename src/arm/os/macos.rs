@@ -3,7 +3,7 @@ use crate::arm::TArmFeatures;
 use crate::arm::brand::*;
 use crate::arm::micro_arch::*;
 use crate::common::get_full_raw_sysctl_map;
-use crate::common::{Cache, CacheLevel, CacheType, CoreType, DataSource, Level1Cache};
+use crate::common::{Cache, CacheType, CoreType, DataSource};
 use std::collections::{BTreeMap, HashSet};
 
 // ----------------------------------------------------------------------------
@@ -26,31 +26,17 @@ pub fn get_features_from_sysctl() -> BTreeMap<String, bool> {
                 // Extract feature name from key
                 // e.g., "hw.optional.neon" -> "neon"
                 // e.g., "hw.optional.arm.FEAT_AES" -> "aes"
-                let feature_name = if key.starts_with("hw.optional.arm.FEAT_") {
-                    // Remove "hw.optional.arm.FEAT_" prefix
-                    let feat = key
-                        .strip_prefix("hw.optional.arm.FEAT_")
-                        .expect("starts_with guard ensures this matches");
-                    feat.to_lowercase()
-                } else if key.starts_with("hw.optional.arm.FEAT") {
-                    // Handle "hw.optional.arm.FEATXYZ" without underscore
-                    let feat = key
-                        .strip_prefix("hw.optional.arm.FEAT")
-                        .expect("starts_with guard ensures this matches");
-                    feat.to_lowercase()
-                } else if key.starts_with("hw.optional.arm.") {
-                    let feat = key
-                        .strip_prefix("hw.optional.arm.")
-                        .expect("starts_with guard ensures this matches");
-                    feat.to_lowercase()
-                } else if key.starts_with("hw.optional.") {
-                    let feat = key
-                        .strip_prefix("hw.optional.")
-                        .expect("starts_with guard ensures this matches");
-                    feat.to_lowercase()
-                } else {
+                let Some(feat) = [
+                    "hw.optional.arm.FEAT_",
+                    "hw.optional.arm.FEAT",
+                    "hw.optional.arm.",
+                    "hw.optional.",
+                ]
+                .iter()
+                .find_map(|prefix| key.strip_prefix(prefix)) else {
                     continue;
                 };
+                let feature_name = feat.to_lowercase();
 
                 // Map known feature names to canonical lowercase names
                 let canonical = match feature_name.as_str() {
@@ -376,41 +362,22 @@ pub fn detect() -> OsCpuInfo {
     for i in 0..perf_levels {
         let kind_type = values.get(&format!("hw.perflevel{}.name", i));
         let kind = CoreType::from(kind_type.expect("sysctl perflevel name missing").clone());
+        let get_perf_u32 = |prop: &str| -> u32 {
+            values
+                .get(&format!("hw.perflevel{i}.{prop}"))
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0)
+        };
+        let cpus_per_l2 = get_perf_u32("cpusperl2");
+        let l1d_size = get_perf_u32("l1dcachesize");
+        let l1i_size = get_perf_u32("l1icachesize");
+        let l2_size = get_perf_u32("l2cachesize");
+        let count = get_perf_u32("physicalcpu");
+
         let mut cache = Cache::default();
-        let mut l1 = Level1Cache::default_split();
-
-        let cpus_per_l2: u32 = values
-            .get(&format!("hw.perflevel{}.cpusperl2", i))
-            .expect("sysctl perflevel cpusperl2 missing")
-            .parse()
-            .expect("sysctl perflevel cpusperl2 not a valid u32");
-        let l1d_size: u32 = values
-            .get(&format!("hw.perflevel{}.l1dcachesize", i))
-            .expect("sysctl perflevel l1dcachesize missing")
-            .parse()
-            .expect("sysctl perflevel l1dcachesize not a valid u32");
-        let l1i_size: u32 = values
-            .get(&format!("hw.perflevel{}.l1icachesize", i))
-            .expect("sysctl perflevel l1icachesize missing")
-            .parse()
-            .expect("sysctl perflevel l1icachesize not a valid u32");
-        let l2_size: u32 = values
-            .get(&format!("hw.perflevel{}.l2cachesize", i))
-            .expect("sysctl perflevel l2cachesize missing")
-            .parse()
-            .expect("sysctl perflevel l2cachesize not a valid u32");
-        let count: u32 = values
-            .get(&format!("hw.perflevel{}.physicalcpu", i))
-            .expect("sysctl perflevel physicalcpu missing")
-            .parse()
-            .expect("sysctl perflevel physicalcpu not a valid u32");
-
-        l1.set_data(l1d_size, 0);
-        l1.set_data_share_count(1);
-        l1.set_instruction(l1i_size, 0);
-        l1.set_instruction_share_count(1);
-        cache.l1 = l1;
-        cache.l2 = Some(CacheLevel::new(l2_size, CacheType::Unified, 0, cpus_per_l2));
+        cache.insert_level(1, CacheType::Data, l1d_size, 0, 1);
+        cache.insert_level(1, CacheType::Instruction, l1i_size, 0, 1);
+        cache.insert_level(2, CacheType::Unified, l2_size, 0, cpus_per_l2);
 
         let micro_arch = find_core_micro_arch(&midr, kind);
 

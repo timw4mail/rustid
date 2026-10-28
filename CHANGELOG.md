@@ -39,6 +39,10 @@ For changes prior to version 2.0.0, see [CHANGELOG-1.0.md](./CHANGELOG-1.0.md).
   - Consolidated Windows menu item creation across Unicode (`AppendMenuW`) and ANSI (`AppendMenuA`) modes via a unified `append_menu_item` helper, removing ~200 lines of duplicated menu definitions (`src/gui/windows/menu.rs`)
   - Unified Win32 message box display and default window procedure delegation via `show_message_box` and `def_window_proc` (`src/gui/windows/window.rs`)
   - Routed keyboard shortcuts and menu clicks through a single `execute_command` handler (`src/gui/windows/window.rs`)
+- **macOS GUI & Apple Silicon Sysctl Deduplication**:
+  - Integrated macOS attributed report rendering in `src/gui/macos/render.rs` with the shared `tokenize_report_line` and color palettes from `src/gui/styled_text.rs`, eliminating duplicate line prefix parsing and hardcoded float RGB tuples while adding support for inline sublabels
+  - Unified file saving logic across `save_report` and `export_dump` in `src/gui/macos/mod.rs` via a shared `save_text_dialog` helper, and streamlined menu bar assembly
+  - Consolidated sysctl feature prefix parsing and perflevel cache insertion in `src/arm/os/macos.rs` using `Cache::insert_level`
 - **Linux DMI System & SoC Name Filtering**: Prioritized `product_name` over `product_family` when resolving Linux DMI system names and filtered generic placeholder values (including `"arm-platform"`) from system and SoC names (`src/common/os/linux.rs`, `src/common/os/common.rs`, `src/arm/display.rs`)
 - **Build Artifact Layout & DOS/32A Binding**: Standardized build output paths under `target/dist/<platform>/`, added direct DOS/32A stub binding to `elf2le`, and removed redundant build configuration files (`Makefile`, `justfile`, `build-config/*`, `tools/elf2le/src/main.rs`)
 

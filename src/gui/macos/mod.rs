@@ -192,46 +192,17 @@ define_class!(
         }
 
         #[unsafe(method(saveReport:))]
-        #[allow(deprecated)]
         fn save_report(&self, _sender: Option<&AnyObject>) {
-            let mtm = self.mtm();
-            let plain = self.current_text();
-            let nsstr = NSString::from_str(&plain);
-
-            let panel = NSSavePanel::savePanel(mtm);
-            panel.setAllowedFileTypes(Some(&NSArray::from_retained_slice(&[NSString::from_str(
-                "txt",
-            )])));
-            panel.setNameFieldStringValue(&NSString::from_str("rustid-report.txt"));
-            if panel.runModal() == NSModalResponseOK
-                && let Some(url) = panel.URL()
-                && let Some(data) = nsstr.dataUsingEncoding(4)
-            {
-                data.writeToURL_atomically(&url, true);
-            }
+            save_text_dialog(self.mtm(), "rustid-report.txt", &self.current_text());
         }
 
         #[cfg(x86_cpu)]
         #[unsafe(method(exportDump:))]
-        #[allow(deprecated)]
         fn export_dump(&self, _sender: Option<&AnyObject>) {
-            let mtm = self.mtm();
             let cpu = Cpu::detect();
             let model = cpu.display_model_string().replace([' ', '/', '\\'], "_");
             let dump = common::generate_dump_info_plain();
-            let nsstr = NSString::from_str(&dump);
-
-            let panel = NSSavePanel::savePanel(mtm);
-            panel.setAllowedFileTypes(Some(&NSArray::from_retained_slice(&[NSString::from_str(
-                "txt",
-            )])));
-            panel.setNameFieldStringValue(&NSString::from_str(&format!("cpuid_dump_{model}.txt")));
-            if panel.runModal() == NSModalResponseOK
-                && let Some(url) = panel.URL()
-                && let Some(data) = nsstr.dataUsingEncoding(4)
-            {
-                data.writeToURL_atomically(&url, true);
-            }
+            save_text_dialog(self.mtm(), &format!("cpuid_dump_{model}.txt"), &dump);
         }
 
         #[unsafe(method(copyReport:))]
@@ -328,6 +299,22 @@ impl Delegate {
         if let Some(storage) = unsafe { text_view.textStorage() } {
             storage.setAttributedString(&attributed);
         }
+    }
+}
+
+#[allow(deprecated)]
+fn save_text_dialog(mtm: MainThreadMarker, default_filename: &str, content: &str) {
+    let nsstr = NSString::from_str(content);
+    let panel = NSSavePanel::savePanel(mtm);
+    panel.setAllowedFileTypes(Some(&NSArray::from_retained_slice(&[NSString::from_str(
+        "txt",
+    )])));
+    panel.setNameFieldStringValue(&NSString::from_str(default_filename));
+    if panel.runModal() == NSModalResponseOK
+        && let Some(url) = panel.URL()
+        && let Some(data) = nsstr.dataUsingEncoding(4)
+    {
+        data.writeToURL_atomically(&url, true);
     }
 }
 
@@ -478,19 +465,16 @@ fn setup_menus(delegate: &Delegate, mtm: MainThreadMarker) {
         .set(dark_item)
         .expect("dark menu item set once");
 
-    let app_bar_item = make_item(mtm, "Rustid", "", sel!(noop:), None);
-    let file_bar_item = make_item(mtm, "File", "", sel!(noop:), None);
-    let view_bar_item = make_item(mtm, "View", "", sel!(noop:), None);
-    let options_bar_item = make_item(mtm, "Options", "", sel!(noop:), None);
-    app_bar_item.setSubmenu(Some(&app_menu));
-    file_bar_item.setSubmenu(Some(&file_menu));
-    view_bar_item.setSubmenu(Some(&view_menu));
-    options_bar_item.setSubmenu(Some(&options_menu));
-
-    main_menu.addItem(&app_bar_item);
-    main_menu.addItem(&file_bar_item);
-    main_menu.addItem(&view_bar_item);
-    main_menu.addItem(&options_bar_item);
+    for (title, menu) in [
+        ("Rustid", &app_menu),
+        ("File", &file_menu),
+        ("View", &view_menu),
+        ("Options", &options_menu),
+    ] {
+        let bar_item = make_item(mtm, title, "", sel!(noop:), None);
+        bar_item.setSubmenu(Some(menu));
+        main_menu.addItem(&bar_item);
+    }
 
     app.setMainMenu(Some(&main_menu));
     app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
