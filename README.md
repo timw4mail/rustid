@@ -1,6 +1,6 @@
 # Rustid
 
-A cli CPU identification tool for Arm, Risc-V, PowerPC and x86/x86_64 cpus.
+A CLI and GUI CPU identification tool for ARM, RISC-V, PowerPC, Motorola 68k, and x86/x86_64 CPUs.
 
 ### AI Disclaimer:
 
@@ -10,57 +10,76 @@ This application is developed using *some* AI, mostly related to:
 * Assembly code
 
 ## Features
-- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, Risc V and PowerPC.
-- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, and more.
+- **Multi-Architecture Support:** Detects CPUs on x86/x86_64, ARM/AArch64, RISC-V, PowerPC, and Motorola 68k.
+- **Vendor & Model Detection:** Identifies CPUs from Intel, AMD, Cyrix, VIA, Zhaoxin, Rise, Transmeta, Apple Silicon, Qualcomm, IBM, Motorola, and more.
 - **Feature Flag Reporting (x86):** Detects support for FPU, MMX, SSE (up to 4.2), AVX, AVX-512, BMI, and others.
 - **Cache & Topology Info:** Displays cache sizes, associativity, core/thread counts, and socket counts.
 - **DOS Compatibility:** Compiles to a set of binaries that can be run on DOS environments (on real hardware 386-class or better, or with DOSBox/DOSBox-X).
 - **UEFI Compatibility:** Compiles to a standalone UEFI application (32-bit and 64-bit x86)
-- **Native GUI Support:** Lightweight Win32 GUI application for Windows and native Haiku Interface Kit application (`rustid-gui`) for Haiku OS.
-- **Classic Macintosh Port:** Standalone native C port using the Macintosh Toolbox for System 6 through Mac OS 9.2.2 (68k and PowerPC). See [Classic Mac Port](ports/classic_mac/README.md).
+- **Native GUI Support:** Lightweight Win32 GUI application for Windows (Windows 95 through 11), GTK3 GUI and standalone AppImage for Linux, and native Interface Kit application for Haiku OS.
+- **Classic Macintosh Port:** Standalone native C port using the Macintosh Toolbox for System 6 through Mac OS 9.2.2 (68k and PowerPC) and Carbon/Aqua for Mac OS X 10.0–10.5 (PowerPC). See [Classic Mac Port](ports/classic_mac/README.md).
 
 ## Platform Support
 
-### Tier 1
+### CLI — Tier 1
 
-Primary platforms, with the majority of testing effort.
+Primary CLI and standalone boot/real-mode platforms, with the majority of testing effort.
 
-|               | DOS    | EFI    | Windows | macOS  | Linux  | Haiku  |
-|--------------:|:------:|:------:|:-------:|:------:|:------:|:------:|
-| **x86_64**    | —      | ✅     | ✅       | ✅     | 🟢     | ✅     |
-| **x86_32**    | ✅[¹](#note-1) | ✅ | ✅ | — | 🟢 | ✅ |
-| **ARM 64**    | —      | —      | ✅[⁵](#note-5) | ✅ | 🟢 | ❌ |
-| **ARM 32**    | —      | —      | —       | —      | ✅     | —      |
-| **RISC-V 64** | —      | —      | —       | —      | ✅     | —      |
-| **PowerPC**   | —      | —      | —       | —      | ✅     | —      |
-| **PowerPC 64**| —      | —      | —       | —      | ⚠️[⁴](#note-4) | — |
+|               | DOS            | EFI | Windows        | macOS | Linux          | Haiku |
+|--------------:|:--------------:|:---:|:--------------:|:-----:|:--------------:|:-----:|
+| **x86_64**    | —              | 🟢  | ✅             | ✅    | 🟢             | ✅    |
+| **x86_32**    | 🟢[¹](#note-1) | 🟢  | ✅[⁶](#note-6) | —     | 🟢[⁷](#note-7) | ✅    |
+| **ARM 64**    | —              | —   | ✅[⁵](#note-5) | ✅    | 🟢             | ❌    |
+| **ARM 32**    | —              | —   | —              | —     | ✅             | —     |
+| **RISC-V 64** | —              | —   | —              | —     | ✅             | —     |
+| **PowerPC**   | —              | —   | —              | —     | ✅             | —     |
+| **PowerPC 64**| —              | —   | —              | —     | ⚠️[⁴](#note-4) | —     |
 
-### Tier 2
+### CLI — Tier 2
 
-These are best-effort platforms: they should work, but information may be more limited and/or less correct.
+Best-effort CLI platforms: they should work, but information may be more limited and/or less tested.
 
-|               | FreeBSD | NetBSD | OpenBSD | Android |
-|--------------:|:-------:|:------:|:-------:|:-------:|
-| **x86_64**    | ✅      | ✅     | ✅      | ⚠️[²](#note-2) |
-| **x86_32**    | ✅      | ✅     | ✅      | ❌ |
-| **ARM 64**    | ✅      | ✅     | ✅      | ✅      |
+|               | FreeBSD        | NetBSD         | OpenBSD        | Android        |
+|--------------:|:--------------:|:--------------:|:--------------:|:--------------:|
+| **x86_64**    | ✅             | ✅             | ✅             | ⚠️[²](#note-2) |
+| **x86_32**    | ✅             | ✅             | ✅             | ❌             |
+| **ARM 64**    | ✅             | ✅             | ✅             | ✅[²](#note-2) |
 | **ARM 32**    | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[³](#note-3) | ⚠️[²](#note-2) |
-| **RISC-V 64** | ❌      | ❌     | ❌      | —       |
-| **PowerPC**   | ❌      | ❌     | ❌      | —       |
-| **PowerPC 64**| ❌      | ❌     | ❌      | —       |
+| **RISC-V 64** | ❌             | ❌             | ❌             | —              |
+| **PowerPC**   | ❌             | ❌             | ❌             | —              |
+| **PowerPC 64**| ❌             | ❌             | ❌             | —              |
+
+### GUI
+
+Native graphical applications built for each target platform (`rustid-gui` and the standalone Classic Mac port).
+
+|                  | Windows (Win32) | Classic Mac OS / OS X PPC | Linux (GTK3)    | Haiku (Interface Kit) |
+|-----------------:|:---------------:|:-------------------------:|:---------------:|:---------------------:|
+| **x86_64**       | 🟢              | —                         | 🟢[⁹](#note-9)  | ✅                    |
+| **x86_32**       | 🟢[⁶](#note-6)  | —                         | ✅              | ✅                    |
+| **ARM 64**       | 🟢[⁵](#note-5)  | —                         | ✅              | ❌                    |
+| **ARM 32**       | —               | —                         | ✅              | —                     |
+| **RISC-V 64**    | —               | —                         | ✅              | —                     |
+| **PowerPC**      | —               | ✅[⁸](#note-8)            | ✅              | —                     |
+| **PowerPC 64**   | —               | ✅[⁸](#note-8)            | ⚠️[⁴](#note-4)  | —                     |
+| **Motorola 68k** | —               | ✅[⁸](#note-8)            | —               | —                     |
 
 **Legend:**
-- 🟢 Supported and CI-tested (`just test-all` on `ubuntu-latest`)
+- 🟢 Supported and CI-tested / CI-built
 - ✅ Supported
-- ⚠️ Partial
+- ⚠️ Partial / untested
 - ❌ Not supported
 
 **Notes:**
-- <a id="note-1"></a>¹ DOS: requires 386 or newer CPU
-- <a id="note-2"></a>² Android: untested, except on Arm64. Runs through termux.
-- <a id="note-3"></a>³ ARM 32 BSD: less tested than Arm64
-- <a id="note-4"></a>⁴ PowerPC 64 Linux: untested
-- <a id="note-5"></a>⁵ Windows ARM 64: limited data
+- <a id="note-1"></a>¹ **DOS**: Includes both a 32-bit protected-mode DOS/32A executable (`rustid.exe`) and a 16-bit real-mode fallback executable (`rust86.exe`). Requires a 386 or newer CPU. See [DOS.md](DOS.md).
+- <a id="note-2"></a>² **Android**: Runs via Termux. Untested except on ARM 64 (compile-checked in CI).
+- <a id="note-3"></a>³ **ARM 32 BSD**: Less tested than ARM 64.
+- <a id="note-4"></a>⁴ **PowerPC 64 Linux**: Untested.
+- <a id="note-5"></a>⁵ **Windows ARM 64**: Limited hardware data; also supports `arm64ec`.
+- <a id="note-6"></a>⁶ **Windows x86_32**: Built with an original Pentium (`i586`, no SSE/SSE2) baseline and dynamic Win32 API shims; compatible with Windows 95/98/ME and NT 4.0/2000/XP through Windows 11.
+- <a id="note-7"></a>⁷ **Linux x86_32**: Includes a static `i486-unknown-linux-musl` build target (`just build-486`) supporting 486-class CPUs.
+- <a id="note-8"></a>⁸ **Classic Mac OS & Mac OS X PowerPC**: Provided by the standalone C port in [`ports/classic_mac`](ports/classic_mac/README.md). Ships as a Universal Fat Binary (`rustid.bin` / `rustid.dsk`) for System 6.0.8–Mac OS 9.2.2 (Motorola 68000–68060 and PowerPC 601–G4) and a native Aqua Carbon bundle (`Rustid.app`) for Mac OS X 10.0–10.5 (PowerPC G3/G4/G5).
+- <a id="note-9"></a>⁹ **Linux (GTK3)**: Available as a standalone `x86_64` AppImage in releases, or built from source with `--features gui --bin gui` on any supported Linux architecture.
 
 ## Getting Started
 
