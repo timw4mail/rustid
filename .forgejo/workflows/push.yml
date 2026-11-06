@@ -17,25 +17,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Rust
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            export PATH="$HOME/.cargo/bin:$PATH"
+          else
+            rustup update
+          fi
+          rustup toolchain install nightly --profile minimal --component rust-src || true
+
       - name: Install just
         run: |
           if ! command -v just >/dev/null 2>&1; then
             curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin || cargo install just --locked
           fi
 
-      - name: Install DOSBox-X
+      - name: Install system dependencies
         run: |
-          if ! command -v dosbox-x >/dev/null 2>&1; then
-            if command -v sudo >/dev/null 2>&1; then
-              sudo apt-get update && sudo apt-get install -y dosbox-x || true
-            elif command -v apt-get >/dev/null 2>&1; then
-              apt-get update && apt-get install -y dosbox-x || true
-            fi
+          APT_CMD="apt-get"
+          if command -v sudo >/dev/null 2>&1; then
+            APT_CMD="sudo apt-get"
           fi
-
-      - name: Setup nightly toolchain
-        run: |
-          rustup toolchain install nightly --profile minimal --component rust-src || true
+          $APT_CMD update
+          $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev
 
       - name: Compile checks
         run: just check-ci
@@ -50,10 +56,4 @@ jobs:
         run: just build-efi
 
       - name: Build Linux AppImage
-        run: |
-          if command -v sudo >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y libgtk-3-dev || true
-          elif command -v apt-get >/dev/null 2>&1; then
-            apt-get update && apt-get install -y libgtk-3-dev || true
-          fi
-          just build-appimage
+        run: just build-appimage
