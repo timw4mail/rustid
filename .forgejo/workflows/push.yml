@@ -45,6 +45,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
+          export DEBIAN_FRONTEND=noninteractive
           APT_CMD=""
           if command -v sudo >/dev/null 2>&1; then
             APT_CMD="sudo apt-get"
@@ -52,8 +53,28 @@ jobs:
             APT_CMD="apt-get"
           fi
           if [ -n "$APT_CMD" ]; then
-            $APT_CMD update && $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev || true
+            $APT_CMD update && $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev docker.io || true
           fi
+
+      - name: Setup Docker
+        run: |
+          if ! docker info >/dev/null 2>&1; then
+            if [ -S /var/run/docker.sock ]; then
+              chmod 666 /var/run/docker.sock 2>/dev/null || true
+            fi
+            if ! docker info >/dev/null 2>&1; then
+              if command -v service >/dev/null 2>&1; then
+                service docker start 2>/dev/null || true
+              elif command -v dockerd >/dev/null 2>&1; then
+                dockerd >/tmp/dockerd.log 2>&1 &
+              fi
+              for i in $(seq 1 10); do
+                if docker info >/dev/null 2>&1; then break; fi
+                sleep 1
+              done
+            fi
+          fi
+          docker --version || true
 
       - name: Compile checks
         run: just check-ci
