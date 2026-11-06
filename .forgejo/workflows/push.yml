@@ -11,11 +11,22 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: rust-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            if command -v sudo >/dev/null 2>&1; then
+              sudo apt-get update && sudo apt-get install -y git
+            elif command -v apt-get >/dev/null 2>&1; then
+              apt-get update && apt-get install -y git
+            fi
+          fi
+          git init .
+          git remote add origin "${{ github.server_url }}/${{ github.repository }}.git"
+          git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "${{ github.sha }}"
+          git checkout FETCH_HEAD
 
       - name: Setup Rust
         run: |
@@ -23,8 +34,6 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
             export PATH="$HOME/.cargo/bin:$PATH"
-          else
-            rustup update
           fi
           rustup toolchain install nightly --profile minimal --component rust-src || true
 
@@ -36,12 +45,15 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          APT_CMD="apt-get"
+          APT_CMD=""
           if command -v sudo >/dev/null 2>&1; then
             APT_CMD="sudo apt-get"
+          elif command -v apt-get >/dev/null 2>&1; then
+            APT_CMD="apt-get"
           fi
-          $APT_CMD update
-          $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev
+          if [ -n "$APT_CMD" ]; then
+            $APT_CMD update && $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev || true
+          fi
 
       - name: Compile checks
         run: just check-ci
