@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CROSS_CONTAINER_IN_CONTAINER: "true"
 
 jobs:
   test:

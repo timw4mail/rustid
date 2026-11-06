@@ -61,9 +61,9 @@ check-486:
 	cargo +nightly check -Zjson-target-spec -Z build-std=std,core,alloc,panic_abort --target build-config/i486-unknown-linux-musl.json --release
 
 # Compile check for linux arm64
-check-arm64: _cargo_cross
+check-arm64:
 	@if ! rustup target list --installed | grep -q aarch64-unknown-linux-gnu; then rustup target add aarch64-unknown-linux-gnu; fi
-	cross check --target aarch64-unknown-linux-gnu
+	cargo check --target aarch64-unknown-linux-gnu
 
 # Compile check for linux powerpc
 check-ppc: _cargo_cross
