@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.2.3; defaults to ref if omitted)"
+        required: false
+        default: ""
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -25,8 +32,14 @@ jobs:
           fi
           git init .
           git remote add origin "${{ github.server_url }}/${{ github.repository }}.git"
-          git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "${{ github.sha }}"
-          git checkout FETCH_HEAD
+          TARGET_TAG="${{ inputs.tag }}"
+          if [ -n "$TARGET_TAG" ] && git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "refs/tags/$TARGET_TAG" 2>/dev/null; then
+            echo "Fetched tag $TARGET_TAG"
+            git checkout FETCH_HEAD
+          else
+            git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "${{ github.sha }}"
+            git checkout FETCH_HEAD
+          fi
 
       - name: Setup Rust
         run: |
@@ -104,16 +117,22 @@ jobs:
       - name: Extract changelog entry
         id: changelog
         run: |
-          python3 .github/scripts/extract_changelog.py "${{ github.ref_name }}" --output-notes release_notes.md --output-title release_title.txt --github-output
+          RELEASE_TAG="${{ inputs.tag }}"
+          if [ -z "$RELEASE_TAG" ]; then
+            RELEASE_TAG="${{ github.ref_name }}"
+          fi
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          python3 .github/scripts/extract_changelog.py "$RELEASE_TAG" --output-notes release_notes.md --output-title release_title.txt --github-output
 
       - name: Publish Forgejo Release
         env:
           FORGEJO_TOKEN: ${{ github.token }}
           FORGEJO_SERVER_URL: ${{ github.server_url }}
           FORGEJO_REPOSITORY: ${{ github.repository }}
-          FORGEJO_TAG: ${{ github.ref_name }}
+          FORGEJO_TAG: ${{ env.RELEASE_TAG }}
         run: |
           python3 .forgejo/scripts/publish_release.py \
+            --tag "$RELEASE_TAG" \
             --title-file release_title.txt \
             --notes-file release_notes.md \
             --assets \

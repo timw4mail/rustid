@@ -88,13 +88,17 @@ def main():
     elif status == 404:
         print(f"Release for tag {args.tag} does not exist. Creating new release...")
         create_url = f"{api_base}/releases"
-        create_payload = json.dumps({
+        create_data = {
             "tag_name": args.tag,
             "name": title,
             "body": notes,
             "draft": False,
             "prerelease": False,
-        }).encode("utf-8")
+        }
+        commitish = os.environ.get("GITHUB_SHA")
+        if commitish:
+            create_data["target_commitish"] = commitish
+        create_payload = json.dumps(create_data).encode("utf-8")
         create_headers = dict(headers)
         create_headers["Content-Type"] = "application/json"
         c_status, c_body = make_request(create_url, method="POST", headers=create_headers, data=create_payload)
