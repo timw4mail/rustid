@@ -55,7 +55,7 @@ jobs:
             APT_CMD="apt-get"
           fi
           if [ -n "$APT_CMD" ]; then
-            $APT_CMD update && $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev docker.io || true
+            $APT_CMD update && $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev docker.io file || true
           fi
 
       - name: Setup Docker
