@@ -41,6 +41,16 @@ jobs:
             git checkout FETCH_HEAD
           fi
 
+      - name: Install system dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          APT_CMD="apt-get"
+          if command -v sudo >/dev/null 2>&1; then
+            APT_CMD="sudo apt-get"
+          fi
+          $APT_CMD update
+          $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev zip python3 curl docker.io
+
       - name: Setup Rust
         run: |
           if ! command -v rustup >/dev/null 2>&1; then
@@ -57,16 +67,6 @@ jobs:
           if ! command -v just >/dev/null 2>&1; then
             curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin || cargo install just --locked
           fi
-
-      - name: Install system dependencies
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          APT_CMD="apt-get"
-          if command -v sudo >/dev/null 2>&1; then
-            APT_CMD="sudo apt-get"
-          fi
-          $APT_CMD update
-          $APT_CMD install -y dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev zip python3 curl docker.io
 
       - name: Setup Docker
         run: |
