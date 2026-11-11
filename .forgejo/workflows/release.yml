@@ -1,0 +1,153 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.2.3; defaults to ref if omitted)"
+        required: false
+        default: ""
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  CROSS_CONTAINER_IN_CONTAINER: "true"
+
+jobs:
+  generate:
+    name: Create release artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            if command -v sudo >/dev/null 2>&1; then
+              sudo apt-get update && sudo apt-get install -y git
+            elif command -v apt-get >/dev/null 2>&1; then
+              apt-get update && apt-get install -y git
+            fi
+          fi
+          git init .
+          git remote add origin "${{ github.server_url }}/${{ github.repository }}.git"
+          TARGET_TAG="${{ inputs.tag }}"
+          if [ -n "$TARGET_TAG" ] && git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "refs/tags/$TARGET_TAG" 2>/dev/null; then
+            echo "Fetched tag $TARGET_TAG"
+            git checkout FETCH_HEAD
+          else
+            git -c http.extraheader="AUTHORIZATION: token ${{ github.token }}" fetch --depth 1 origin "${{ github.sha }}"
+            git checkout FETCH_HEAD
+          fi
+
+      - name: Install system dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          APT_CMD="apt-get"
+          if command -v sudo >/dev/null 2>&1; then
+            APT_CMD="sudo apt-get"
+          fi
+          $APT_CMD update
+          $APT_CMD install -y build-essential dosbox-x gcc-mingw-w64-i686 mingw-w64-i686-dev libgtk-3-dev zip python3 curl docker.io file
+
+      - name: Setup Rust
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            export PATH="$HOME/.cargo/bin:$PATH"
+          else
+            rustup update
+          fi
+          rustup toolchain install nightly --profile minimal --component rust-src || true
+
+      - name: Install just
+        run: |
+          if ! command -v just >/dev/null 2>&1; then
+            curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin || cargo install just --locked
+          fi
+
+      - name: Setup Docker
+        run: |
+          if ! docker info >/dev/null 2>&1; then
+            if [ -S /var/run/docker.sock ]; then
+              chmod 666 /var/run/docker.sock 2>/dev/null || true
+            fi
+            if ! docker info >/dev/null 2>&1; then
+              if command -v service >/dev/null 2>&1; then
+                service docker start 2>/dev/null || true
+              elif command -v dockerd >/dev/null 2>&1; then
+                dockerd >/tmp/dockerd.log 2>&1 &
+              fi
+              for i in $(seq 1 10); do
+                if docker info >/dev/null 2>&1; then break; fi
+                sleep 1
+              done
+            fi
+          fi
+          docker --version || true
+
+      - name: Clean build environment
+        run: cargo clean && just clean
+
+      - name: Build DOS binaries
+        run: just build-dos
+
+      - name: Package DOS binaries
+        run: |
+          zip -j rustid-dos.zip target/dist/dos/rustid.exe target/dist/dos/rust86.exe
+
+      - name: Build EFI binaries
+        run: just build-efi
+
+      - name: Package EFI binaries
+        run: |
+          (cd target/dist/efi && zip -r ../../../rustid-efi.zip EFI)
+
+      - name: Build Windows GUI binaries
+        run: |
+          just build-windows-gui
+          zip -j rustid-windows.zip target/dist/windows/rustid_x86_32.exe target/dist/windows/rustid_x86_64.exe target/dist/windows/rustid_arm64.exe
+
+      - name: Build Linux AppImage
+        run: |
+          just build-appimage
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          RELEASE_TAG="${{ inputs.tag }}"
+          if [ -z "$RELEASE_TAG" ]; then
+            RELEASE_TAG="${{ github.ref_name }}"
+          fi
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          python3 .github/scripts/extract_changelog.py "$RELEASE_TAG" --output-notes release_notes.md --output-title release_title.txt --github-output
+
+      - name: Publish Forgejo Release
+        env:
+          FORGEJO_TOKEN: ${{ github.token }}
+          FORGEJO_SERVER_URL: ${{ github.server_url }}
+          FORGEJO_REPOSITORY: ${{ github.repository }}
+          FORGEJO_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          python3 .forgejo/scripts/publish_release.py \
+            --tag "$RELEASE_TAG" \
+            --title-file release_title.txt \
+            --notes-file release_notes.md \
+            --assets \
+              rustid-dos.zip \
+              rustid-efi.zip \
+              rustid-windows.zip \
+              "target/dist/linux/rustid-*.AppImage"
+          rm -f release_notes.md release_title.txt
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CRATES_IO_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::warning::CARGO_REGISTRY_TOKEN or CRATES_IO_TOKEN secret is not set in repository secrets; skipping crates.io publish."
+          else
+            cargo publish
+          fi

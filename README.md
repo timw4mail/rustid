@@ -1,6 +1,6 @@
 # Rustid
 
-A CLI and GUI CPU identification tool for ARM, RISC-V, PowerPC, Motorola 68k, and x86/x86_64 CPUs.
+A CPU identification tool for multiple architectures and platforms.
 
 ### AI Disclaimer:
 
@@ -92,7 +92,7 @@ Copy the EFI binaries from the Github release (`BOOTX64.EFI` for 64-bit, `BOOTIA
 ### Installing (MacOS, Linux, Windows, etc.)
 - Rust (`cargo` needs to be installed)
 - For most environments, `cargo install rustid` will add `rustid` to your path
-- Rust on Windows can be slightly more complicated, see [this guide](https://rust-lang.github.io/rustup/installation/windows-msvc.html) for steps to install the MSVC compiler and libraries.
+- For Windows, I recommend building via WSL, or just downloading the binary. Natively building is more complex and frustrating. 
 
 ### Installing (Classic Mac OS)
 See the [Classic Mac Port documentation](ports/classic_mac/README.md) for details on running the Universal Fat binary or standalone 68k / PowerPC binaries on vintage hardware or emulators.

@@ -102,6 +102,16 @@ case "$ARCH" in
         ;;
 esac
 
+# Ensure 'file' command is installed (required by appimagetool)
+if ! command -v file >/dev/null 2>&1; then
+    echo "'file' command is missing, attempting to install..."
+    if command -v sudo >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y file || true
+    elif command -v apt-get >/dev/null 2>&1; then
+        apt-get update && apt-get install -y file || true
+    fi
+fi
+
 # Find or download appimagetool
 APPIMAGETOOL=""
 if command -v appimagetool >/dev/null 2>&1; then
